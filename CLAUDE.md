@@ -409,23 +409,37 @@ wiring, and are still open:
   camera/pose combinations. If Hide Wrist still looks like it does little
   after this fix, check `maxReach`'s actual magnitude against the
   visible scene scale before assuming another wiring bug.
-- **Palm Face Rotation's roll axis (`wristCropNormalAligned`) is nearly
-  aligned with the DEFAULT saved cameras' own view direction** — live-
-  verified extensively (direct quaternion/clip-plane comparisons on both
-  local preview and the real Vercel deployment) that the underlying
-  rotation genuinely updates every time, ruling out stale settings, a
-  dead render loop, backface culling, and camera-framing artifacts one at
-  a time. The remaining, real explanation: rolling around an axis nearly
-  parallel to the camera's own view direction barely changes the visible
-  silhouette (like watching a screw spin along its own axis) for small-
-  to-moderate offset values, and swings the fingers entirely outside the
-  narrow 32° FOV for large ones (confirmed live: widening FOV to 90°
-  brought a "vanished" hand at offset=179° back into view, visibly
-  rotated). This is a real usability problem — the effect is genuinely
-  hard to see from the current default cameras — not a wiring bug. If a
-  future report says this slider "does nothing," verify with a direct
-  `wrapper.quaternion` before/after comparison (not just a screenshot)
-  before concluding the mechanism itself is broken.
+- **CORRECTED 2026-09-21 — the "roll axis nearly aligned with camera /
+  narrow FOV" explanation below (this bullet, an earlier session's own
+  conclusion) was WRONG and has been superseded.** Re-investigated after
+  the user firmly rejected it too. The real problem was 2 testing-
+  methodology confounds in the Claude Code browser-pane sandbox, not
+  anything about the app or the camera: (1) `canvas.toDataURL()` on this
+  project's WebGL canvas (no `preserveDrawingBuffer`) silently returns a
+  stale/blank buffer when read outside the render loop — direct pixel
+  sampling showed fully transparent `[0,0,0,0]` at every point even while
+  the app was visibly rendering a solid hand on screen, so "pixels
+  unchanged" conclusions from `toDataURL()` comparisons (this project's
+  and the earlier session's) were comparing two blanks, not two real
+  frames; (2) `requestAnimationFrame` genuinely stops advancing on a
+  non-fronted/unobserved browser-pane tab in this sandbox — confirmed
+  with an independent, app-code-free rAF counter frozen at 0 until a
+  `computer{action:"screenshot"}` interaction touched the tab. **So: a
+  direct `wrapper.quaternion` before/after comparison is NOT sufficient
+  proof either way** (the earlier session's own recommendation, now
+  retracted) — the quaternion can be completely correct while the actual
+  rendered pixels are frozen or unreadable for reasons that have nothing
+  to do with the app's own code. With both confounds worked around (front
+  the tab via `tabs_select`, pump real frames with a `computer{action:
+  "screenshot"}` between state changes, read pixels by sampling a
+  `drawImage`'d copy rather than `canvas.toDataURL()` on the live
+  canvas), direct screenshot comparison on the live Vercel deployment
+  confirms Palm Face Rotation genuinely, visibly rotates the whole hand,
+  and does so without distorting the finger pose. If a future report says
+  this slider "does nothing," suspect the testing methodology (or
+  localhost's own flaky script delivery, next bullet) before the app
+  code — see `docs/CHANGELOG.txt`'s 2026-09-21 7:05-7:24 AM entry for the
+  full account.
 - **Debugging tip: `THREE.*.prototype` monkey-patching (e.g. patching
   `Quaternion.prototype.slerp`, `Matrix4.prototype.lookAt`,
   `WebGLRenderer.prototype.render` from `javascript_tool` eval) produced

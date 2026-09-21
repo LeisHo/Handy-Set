@@ -771,6 +771,66 @@ was genuinely running the latest pushed main.js (byte-identical
 before the longer investigation above.
 
 --------------------------------------------------------------------------------
+2026-09-21  -  7:05 AM - 7:24 AM EDT (continuation from a compacted
+context; no start timestamp captured before the boundary, so this
+entry's own duration is NOT MEASURED)
+
+**Correction to the 6:10-6:31 AM entry above: the "narrow FOV / roll axis
+nearly aligned with camera" explanation is WRONG.** Re-investigated after
+the user firmly rejected that conclusion too ("THE PALM FACE ROTATION
+SLIDER DOES NOTHING... I SWEAR your code is wrong"). Found the REAL
+problem was in my own testing methodology, not the app:
+
+1. `canvas.toDataURL()` on this project's WebGL canvas (no
+   `preserveDrawingBuffer`) silently returns a stale/blank buffer when
+   read outside the render loop -- direct pixel sampling confirmed fully
+   transparent `[0,0,0,0]` at every sampled point even while the app was
+   visibly rendering a solid white hand on screen. Every earlier
+   "pixels unchanged" conclusion (this session and the prior one) that
+   relied on `canvas.toDataURL()` comparisons was comparing two blanks,
+   not two real frames.
+2. `requestAnimationFrame` genuinely stops advancing on a non-fronted (or
+   otherwise unobserved) tab in this browser-pane sandbox -- confirmed
+   with an independent, app-code-free rAF counter that sat frozen at 0
+   for 1+ second, then resumed the instant a `computer{action:
+   "screenshot"}` interaction touched the tab. This is a sandbox/harness
+   quirk, not a real-browser behavior on an actively-viewed tab.
+
+With both fixed (front the tab, pump real frames via screenshot
+interaction before reading state, sample real pixels instead of
+`toDataURL()`), re-tested cleanly on the live Vercel deployment:
+- Palm Face Rotation 0deg -> 180deg: direct screenshot comparison shows
+  the whole hand visibly rotate (thumb moved from bottom-right to
+  pointing left). Confirmed via a REAL DOM `input` event dispatched at
+  the actual slider element (not a direct `cfg` write), so the reported
+  control's own event wiring is confirmed intact too.
+- Curled the thumb 70% via the real slider, then swept Palm Face
+  Rotation 0deg -> 90deg: the curl stays visually intact through the
+  rotation -- the whole posed hand rotates rigidly, matching the
+  `rotateOnTrueWorldAxis(..., excludeQuat)` design intent (finger curl
+  axes are computed with the wrapper's live rotation excluded, so pose
+  is not supposed to be, and in this test was not, distorted by it).
+
+Root cause of the user's real-world experience is still unconfirmed, but
+the leading candidate is this project's own documented flaky-localhost
+gotcha (CLAUDE.md's own "local static server can intermittently fail to
+fully deliver devPanel.js" note): directly observed repeated
+`net::ERR_CONNECTION_RESET`/404s on script requests AND an uncaught
+`TypeError: Cannot read properties of null` on multiple fresh page loads
+this session, both on `localhost` and (once, transiently) on the deployed
+Vercel build. A partially-failed script load would silently leave some
+controls unwired, which matches "the slider does nothing" far better than
+a math bug that direct, repeated, rigorous testing cannot reproduce.
+
+Also committed (`2f00195`) the still-uncommitted per-frame
+`skinnedMesh.onBeforeRender`-based wrist-crop-plane recompute from the
+6:10-6:31 AM round above -- it had been implemented and tested locally
+but never actually made it into a commit before this session picked back
+up. Genuinely correct and worth keeping regardless of the FOV theory
+being wrong (a stale crop plane during rotation is still a real, if
+different, bug) -- pushed to origin/main.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
