@@ -63,9 +63,9 @@
     "sliderposeOffsetY": 0,
     "sliderposeOffsetZ": 0,
     "sliderPoseScale": 1,
-    "sliderCameraX": 3.5,
-    "sliderCameraY": 31.5,
-    "sliderCameraZ": 60.5,
+    "sliderCameraX": -0.5,
+    "sliderCameraY": -0.5,
+    "sliderCameraZ": 106.5,
     "sliderCameraFov": 32,
     "sliderCameraZoom": 60,
     "checkboxLockCameraPan": false,
@@ -77,9 +77,9 @@
     "checkboxShowTargetMarker": false,
     "checkboxPalmFacesCursor": false,
     "sliderPalmFaceRotationOffset": 0,
-    "sliderKeyAzimuth": 117,
-    "sliderKeyElevation": 56,
-    "sliderKeyTargetHeight": 71,
+    "sliderKeyAzimuth": 147,
+    "sliderKeyElevation": 66,
+    "sliderKeyTargetHeight": 54,
     "sliderKeyIntensity": 6,
     "colorKeyColor": "#ffffff",
     "sliderAmbientIntensity": 0,
@@ -1259,6 +1259,10 @@
         "key": "desktop:Debug",
         "items": [
           {
+            "type": "row",
+            "key": "__row0"
+          },
+          {
             "type": "group",
             "section": {
               "key": "desktop:Mouse Log",
@@ -1298,10 +1302,6 @@
             "key": "checkboxShowWireframe"
           },
           {
-            "type": "row",
-            "key": "__row3"
-          },
-          {
             "type": "group",
             "section": {
               "key": "desktop:Sensors",
@@ -1324,9 +1324,9 @@
           }
         ],
         "rowKeys": [
+          "__row0",
           "checkboxShowGridHelper",
-          "checkboxShowWireframe",
-          "__row3"
+          "checkboxShowWireframe"
         ],
         "subgroups": [
           {
@@ -1382,6 +1382,10 @@
         "items": [
           {
             "type": "row",
+            "key": "__row0"
+          },
+          {
+            "type": "row",
             "key": "sliderTweenT"
           },
           {
@@ -1400,17 +1404,13 @@
               "rowKeys": [],
               "subgroups": []
             }
-          },
-          {
-            "type": "row",
-            "key": "__row4"
           }
         ],
         "rowKeys": [
+          "__row0",
           "sliderTweenT",
           "sliderTweenFrameCount",
-          "textExportFramePrefix",
-          "__row4"
+          "textExportFramePrefix"
         ],
         "subgroups": [
           {
@@ -4271,14 +4271,14 @@
     "desktop:Pose Offset": true,
     "desktop:Saved Poses": true,
     "desktop:Camera": true,
-    "desktop:Saved Cameras": true,
+    "desktop:Saved Cameras": false,
     "desktop:Phone Tilt": true,
     "desktop:Tracking": false,
     "desktop:Target": false,
     "desktop:Palm Facing": false,
     "desktop:Lighting": true,
     "desktop:Saved Lighting": false,
-    "desktop:Toon Shading": true,
+    "desktop:Toon Shading": false,
     "desktop:Saved Toon Shading": false,
     "desktop:Background": false,
     "mobile:Dev Panel": true,
@@ -4629,14 +4629,5 @@
   "devDeviceValues": {
     "mobile": {},
     "landscape": {}
-  },
-  "defaultCamera": {
-    "x": -7.767722237660067,
-    "y": 29.171855438688194,
-    "z": 106.49896040479055,
-    "fov": 32,
-    "tx": -7.767722237660052,
-    "ty": 29.171855438688187,
-    "tz": -25.086977547974953
   }
 }
