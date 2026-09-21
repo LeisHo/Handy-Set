@@ -720,17 +720,42 @@ function createToonMaterial(map) {
 // =======================================================================
 // Device motion ("Phone Tilt") + desktop cursor fallback
 // =======================================================================
-// Both real device tilt and the desktop mouse fallback are reduced to the
-// same abstraction: a normalized 2D tilt vector (0..1 magnitude, radians
-// angle). That vector becomes a target point on the hand's own facing
-// plane, then reuses the exact HANDY DANDIES "rotate toward target"
-// pattern (lookAt + optional roll + slerp damping).
+// CORRECTED 2026-09-21 — the desktop mouse path used to be reduced to the
+// SAME normalized 0-1 magnitude/angle abstraction as real device tilt,
+// mapping onto a FIXED-RADIUS circle around the hand regardless of true
+// camera perspective. Direct report: "look at Palm Face Rotation cursor
+// tracking in Handy Dandies — that implementation doesn't require extreme
+// values or extreme cursor tilt/distance, why does ours?" Read Handy
+// Dandies' own real `updateCursorTarget()` (main.js ~1934) — it doesn't
+// use any normalized-magnitude abstraction at all for its cursor input;
+// it raycasts the ACTUAL cursor position through the camera onto a
+// world-space plane (`targetPlane`, z=0), so even a small mouse movement
+// near screen center produces a proportionate, true-perspective target
+// displacement. HANDYSET's own `tiltMagnitude` normalization divides by
+// `maxDist` (half the smaller screen dimension), so a real screen edge is
+// needed before the signal approaches its max — that mismatch, not a
+// bug in the rotation math itself (confirmed correct many times over
+// this session), is why cursor tracking felt like it needed extreme
+// positions to produce a visible response.
+//
+// Fixed by porting Handy Dandies' raycaster approach verbatim for the
+// MOUSE path specifically (bypassing tiltMagnitude/tiltAngle entirely —
+// `updateTiltTarget()` now branches on `lastInputSource`). Real device
+// orientation (gyroscope) has no on-screen cursor position to raycast
+// from — a physical tilt angle, not a 2D point — so it keeps the
+// normalized magnitude/angle -> circular-offset approach, which is the
+// correct abstraction for that fundamentally different kind of input.
 let tiltMagnitude = 0, tiltAngle = 0
+let lastInputSource = 'device' // 'device' | 'mouse' — which path updateTiltTarget() should use this frame
+const cursorNDC = new THREE.Vector2(0, 0)
+const raycaster = new THREE.Raycaster()
+const cursorTargetPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0)
 let latestOrientation = null
 const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0
 
 function handleDeviceOrientation(e) {
   latestOrientation = e
+  lastInputSource = 'device'
   const beta = THREE.MathUtils.clamp(e.beta || 0, -90, 90)   // front-back tilt
   const gamma = THREE.MathUtils.clamp(e.gamma || 0, -90, 90) // left-right tilt
   const maxTilt = 45
@@ -740,6 +765,18 @@ function handleDeviceOrientation(e) {
   tiltAngle = Math.atan2(ny, nx)
 }
 function handleMouseMoveFallback(e) {
+  lastInputSource = 'mouse'
+  cursorNDC.set((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1)
+  // tiltMagnitude/tiltAngle are ALSO still needed here — Reactive Arm
+  // Length/Responsive Wrist Splay (computeArmLengthT/
+  // computeResponsiveWristSplayDeg) read tiltMagnitude directly, not
+  // cursorNDC/tiltTarget. Found live: removing this (leaving only
+  // cursorNDC, on the assumption tiltTarget's own new raycast made
+  // tiltMagnitude obsolete) left it permanently stuck at whatever it was
+  // before mouse input took over (0 on a fresh load), pinning Reactive
+  // Arm Length/Wrist Splay to a single fixed curve value regardless of
+  // real cursor position and producing an unexpectedly aggressive,
+  // unchanging crop.
   const cx = window.innerWidth / 2, cy = window.innerHeight / 2
   const dx = e.clientX - cx, dy = e.clientY - cy
   const maxDist = Math.min(cx, cy)
@@ -799,9 +836,54 @@ function computeRollQuat(baseDeg) {
   const axis = wristCropNormalAligned || new THREE.Vector3(0, 0, -1)
   return new THREE.Quaternion().setFromAxisAngle(axis, THREE.MathUtils.degToRad(baseDeg || 0) + THREE.MathUtils.degToRad(cfg.palmFaceRotationOffset || 0))
 }
+// See this section's own top comment: mouse input raycasts the true
+// cursor position (ported from Handy Dandies' real updateCursorTarget()),
+// device-orientation input keeps the normalized magnitude/angle circular
+// offset — the correct abstraction for a physical tilt angle that has no
+// on-screen position to raycast from.
+//
+// CORRECTED same round — a straight port of Handy Dandies' own plane-
+// intersection (raw absolute world-space hit point, used directly as the
+// target) made the hand vanish even for a near-center cursor. Root cause,
+// confirmed live: HANDYSET's saved camera is framed so its own AIM POINT
+// (`controls.target`) sits at world Y≈33 (matching FRONTOS's own saved
+// ty≈33.57) — the model's visible geometry, after scale/pivot, sits up
+// there even though the hand's own logical anchor (`h.wrapper.position`)
+// is exactly (0,0,0). A screen-center cursor raycasts to ≈(2.3, 33.5, 0)
+// (confirmed directly, matching controls.target almost exactly) — using
+// that RAW absolute hit as the lookAt target (from an eye at (0,0,0))
+// produces a wildly steep, mostly-vertical direction for what should be
+// a neutral, dead-center cursor. Handy Dandies doesn't hit this because
+// its hands are laid out across a field whose own coordinate range
+// already roughly matches its raycast plane; HANDYSET's single hand at
+// pure origin does not share that assumption.
+//
+// Fixed by using the OFFSET from a screen-CENTER raycast, not the raw
+// absolute hit — screen-center cursor -> zero offset -> neutral gaze
+// (hand faces the camera, exactly like the old normalized-magnitude
+// approach's `tiltMagnitude=0` case), and cursor movement adds a
+// proportionate world-space delta on top of the hand's own true
+// position, matching Handy Dandies' actual sensitivity (a true
+// perspective raycast, not a fixed-radius normalized circle) without
+// depending on the hand's own position matching the camera's aim point.
+const _tiltRaycastHit = new THREE.Vector3()
+const _tiltCenterHit = new THREE.Vector3()
+const _centerNDC = new THREE.Vector2(0, 0)
 function updateTiltTarget() {
-  const maxOffset = sceneState.fieldRadius * 1.2
-  tiltTarget.set(tiltMagnitude * maxOffset * Math.cos(tiltAngle), tiltMagnitude * maxOffset * Math.sin(tiltAngle), sceneState.fieldRadius * cfg.targetDepthFactor)
+  if (lastInputSource === 'mouse') {
+    raycaster.setFromCamera(_centerNDC, camera)
+    const haveCenter = raycaster.ray.intersectPlane(cursorTargetPlane, _tiltCenterHit)
+    raycaster.setFromCamera(cursorNDC, camera)
+    const haveHit = raycaster.ray.intersectPlane(cursorTargetPlane, _tiltRaycastHit)
+    if (haveCenter && haveHit) {
+      tiltTarget.x = hand.wrapper.position.x + (_tiltRaycastHit.x - _tiltCenterHit.x)
+      tiltTarget.y = hand.wrapper.position.y + (_tiltRaycastHit.y - _tiltCenterHit.y)
+    }
+    tiltTarget.z = sceneState.fieldRadius * cfg.targetDepthFactor
+  } else {
+    const maxOffset = sceneState.fieldRadius * 1.2
+    tiltTarget.set(tiltMagnitude * maxOffset * Math.cos(tiltAngle), tiltMagnitude * maxOffset * Math.sin(tiltAngle), sceneState.fieldRadius * cfg.targetDepthFactor)
+  }
 }
 
 // =======================================================================
@@ -845,6 +927,31 @@ function rebuildField() {
       // explicitly after clone() is required every time.
       skinnedMesh.material = toonMaterial.clone()
       skinnedMesh.material.onBeforeCompile = toonMaterial.onBeforeCompile
+      // three.js's default frustum-culling check uses `geometry.
+      // boundingSphere` — computed ONCE from the raw, UNSKINNED bind-pose
+      // vertex data, transformed by the mesh's current matrixWorld — it
+      // never accounts for bone/skin deformation at all. This hand is
+      // heavily re-posed (finger curls, wrist bend, Responsive Wrist
+      // Splay) and its own container (`h.wrapper`) rotates continuously
+      // via Phone Tilt/Palm Face Rotation, so the stale local bounding
+      // sphere, once transformed by a substantially-rotated matrixWorld,
+      // increasingly diverges from where the ACTUAL skinned geometry
+      // ends up — three.js then incorrectly concludes the (very much
+      // on-screen) mesh is outside the camera frustum and skips drawing
+      // it entirely. Found live 2026-09-21: confirmed via an independent
+      // WebGLRenderer instance (bypassing this app's own composer/outline
+      // pipeline entirely) rendering 0 triangles with frustumCulled left
+      // at its `true` default, vs 15,046 triangles with it forced false
+      // — same scene, same camera, same pose, nothing else changed. This
+      // was the real cause of the hand going fully invisible — previously
+      // only reachable at extreme combined rotations (rare), but far more
+      // reachable once cursor tracking became proportionate to normal
+      // mouse movement instead of requiring extreme cursor positions (see
+      // updateTiltTarget()'s own comment). Disabling culling per-mesh is
+      // cheap and safe at this project's own hand-count scale (1 by
+      // default, a modest Field Layout at most) — not worth chasing a
+      // correct dynamically-updated bounding sphere for.
+      skinnedMesh.frustumCulled = false
 
       const handEntry = { wrapper, clone, skinnedMesh, outlineMesh: null, currentBaseQuat: alignQuat.clone(), clipPlane: null, row: r, col: c }
       // Ported from HANDY DANDIES' own real onBeforeRender wiring — see
