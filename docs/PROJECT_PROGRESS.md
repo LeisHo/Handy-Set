@@ -15,38 +15,38 @@ current state.
 
 ## Recently completed
 
-- Dev-panel DOM sync after preset "Use" (Pose/Camera/Lighting/Toon) — the
-  saved-preset apply functions updated `cfg` and the live scene correctly
-  but never updated the panel's own displayed slider/color/checkbox
-  values, making a working "Use" click look like it silently did nothing.
-  Fixed and live-verified.
-- Outline settings group removed entirely per direct request (the
-  composer's `outlinePass` stays permanently disabled rather than being
-  torn out); the git-tracked `dev-panel-settings.json` was also swept of
-  every stale `:Outline`-suffixed key so a leftover reference couldn't
-  rebuild an empty ghost group on next load.
-- Toon Shading's color/rim-light controls (`colorToonTint`,
-  `sliderRimIntensity`/`colorRimColor`/`sliderRimPower`,
-  `sliderTextureInfluence`) had zero visual effect regardless of their
-  values — root-caused to `Material.prototype.copy()` (three.js) not
-  copying `onBeforeCompile`, so every per-hand cloned material silently
-  used the stock toon shader. Fixed by explicitly reassigning
-  `onBeforeCompile` after every `.clone()`; live-verified before/after.
-- A stale dev-panel layout (both `localStorage` and the git-tracked
-  settings file) that was producing duplicate/"ghost" groups and rows
-  was fixed via a schema-version guard plus a one-time file reset.
+- Dev-panel DOM sync after preset "Use" (Pose/Camera/Lighting/Toon), the
+  Outline group removal + stale-settings cleanup, and the Toon Shading
+  `onBeforeCompile`-not-copied-by-`.clone()` root cause (color/rim
+  controls had zero visual effect) — all fixed and live-verified in an
+  earlier round this session.
+- Ghost/misaligned group checkboxes (`.dev-group-cascade-checkbox`
+  rendering in the middle of a group's own content instead of on its
+  title bar — traced to a missing `position: relative` on
+  `.dev-section-title`) — fixed here and folded back into the canonical
+  `.claude/TEMPLATE_DEV_PANEL.html`, which had the identical latent bug.
+- Set as Default (Pose/Camera/Lighting/Toon) silently undone by the next
+  Sync click — `remoteSaveCurrentSettings()` was blind-overwriting the
+  whole remote settings file instead of GET-merge-POSTing, wiping the
+  `defaultPose`/etc fields `saveFieldAsDefault()` had just written. Fixed
+  and verified via an in-page fetch-mock round-trip.
+- Phone Tilt doing nothing on the real Vercel deployment, and the Palm
+  Facing rotation slider having no effect — both traced to
+  `cfg.trackingEnabled` (the whole mechanism's master gate) defaulting to
+  `false`. Defaulted to `true`; live-verified via cursor-hover rotation
+  on the desktop fallback path.
 
 ## What's next
 
 1. Verify all of the above on the user's actual deployed Vercel instance
-   and real device — this session's fixes were only verified against a
-   local static-server preview.
-2. Verify Phone Tilt gyroscope rotation on the user's actual Pixel 9a —
-   only the desktop mouse-fallback path has been directly verified so far.
-3. Tune default Camera/Lighting/Toon values to taste once the color/rim
-   fix above is confirmed live — those controls were effectively inert
-   until this session, so any prior visual tuning attempts likely need
-   revisiting now that they actually work.
+   and real device — every fix this session was only verified against a
+   local static-server preview (no physical phone available here).
+2. Verify Phone Tilt gyroscope rotation specifically on the user's actual
+   Pixel 9a, now that the master `trackingEnabled` gate defaults on.
+3. Tune default Camera/Lighting/Toon values to taste, now that the
+   color/rim controls and the Set-as-Default persistence both actually
+   work — any prior visual tuning attempts made while either was broken
+   likely need revisiting.
 
 ## Open questions / blockers
 

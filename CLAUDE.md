@@ -223,3 +223,53 @@ wiring, and are still open:
   session, used to test Toon Shading controls without needing a native
   OS color-picker dialog). Useful for testing form controls specifically
   even though calling a page-defined FUNCTION by name still fails.
+  **A top-level module (`type="module"`) function is never reachable via
+  `window.fnName` at all, from ANY context, real or isolated** — ES
+  modules don't leak top-level declarations to global scope, unlike a
+  classic script. To test a module function's OWN logic without a real
+  network backend, patch `window.fetch` instead (a real, shared, global
+  API every context can see and every context's real code actually
+  calls at runtime) and drive the page through its real UI (`computer`
+  clicks on the real buttons) — confirmed working this session to verify
+  `remoteSaveCurrentSettings()`'s GET-merge-POST logic against an
+  in-memory mock store, with no real `/api/save-settings` backend
+  available locally.
+- **`.dev-group-cascade-checkbox` (devPanel.js) needs
+  `.dev-section-title { position: relative; }` in `style.css`, or it
+  renders as a "ghost checkbox" floating in the middle of a group's own
+  content instead of on its title bar.** Root cause: the checkbox is
+  appended as a CHILD of `.dev-section-title` and absolutely positioned
+  (`top:50%; right:52px`), but `.dev-section-title` itself never
+  declared a `position`, so the checkbox's absolute positioning escapes
+  to the next positioned ancestor — `.dev-section`, which spans the
+  WHOLE group (title + every row/subgroup inside it), not just the
+  title bar. `top:50%` then resolves against that much taller box.
+  Reported twice this session as two seemingly different bugs ("ghost
+  checkboxes" and, separately, "some checkboxes aren't aligned to the
+  right edge of the dev panel") before being traced to one shared cause.
+  Fixed 2026-09-21, and confirmed `.claude/TEMPLATE_DEV_PANEL.html` has
+  this identical latent bug (folded the fix back into it too).
+- **`remoteSaveCurrentSettings()` (main.js) MUST GET-merge-POST, never
+  blind-POST `captureFullDevPanelState()`'s own snapshot** — that
+  function (devPanel.js-owned) has no knowledge of this project's own
+  extra top-level settings-JSON fields (`defaultPose`/`defaultCamera`/
+  `defaultLighting`/`defaultToon`, written by `saveFieldAsDefault()`), so
+  a blind overwrite from the main Save/Sync button silently wiped
+  whatever `saveFieldAsDefault()` had just written the moment before —
+  confirmed live as the exact cause of "I click [Set as Default], and i
+  click save, and on refresh its still the old settings." Any FUTURE
+  custom top-level field added to this settings JSON needs the same
+  GET-merge-POST discipline everywhere it's written, not just in
+  `saveFieldAsDefault()` — a single blind-overwrite call anywhere in the
+  save pipeline can silently erase it.
+- **`cfg.trackingEnabled` defaults to `true` (corrected 2026-09-21, was
+  `false`)** — it's the master gate for the ENTIRE Phone Tilt / Palm
+  Facing mechanism (`animate()`'s own
+  `if (cfg.trackingEnabled && hands.length) {...}` block is the only
+  place any of that code runs at all, gyroscope or desktop-mouse
+  fallback alike). Defaulting it off meant a fresh visitor with no prior
+  Sync — including the real Vercel deployment — saw the app's own
+  headline mechanic do nothing at all, confirmed as the shared root
+  cause behind 2 separate direct reports ("phone tilting does nothing"
+  and the Palm Facing rotation slider having no visible effect). Don't
+  reintroduce a `false` default here without a real reason.

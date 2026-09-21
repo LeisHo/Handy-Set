@@ -471,6 +471,79 @@ user's own real device/browser (only this session's local static-server
 preview was tested).
 
 --------------------------------------------------------------------------------
+2026-09-21  -  4:58 AM - 5:07 AM EDT (8m25s per two `date` calls, actual/ETA
+ratio not restated here since the ETA was revised twice as new items
+arrived mid-task -- see this session's own chat transcript for each
+revision)
+
+Fixed 5 more directly-reported issues, 2 of which turned out to share one
+root cause each with an item already fixed this session (or with each
+other):
+
+1. **Ghost checkboxes**, also separately reported as "some checkboxes
+   aren't aligned to the right edge of the dev panel" -- both the SAME
+   bug. `.dev-group-cascade-checkbox` is appended as a CHILD of
+   `.dev-section-title` and absolutely positioned (`top:50%; right:52px`),
+   but `.dev-section-title` never declared its own `position`, so the
+   checkbox's absolute positioning escaped past it to the next positioned
+   ancestor -- `.dev-section`, spanning the WHOLE group (title + all its
+   content), not just the title bar. `top:50%` then resolved against that
+   much taller box, visually landing the checkbox somewhere in the middle
+   of the group's own settings rows instead of on its title bar. Fixed by
+   giving `.dev-section-title` its own `position: relative`. Live-verified
+   at 2 different nesting depths (a top-level "TEXT" group and its nested
+   "DEV PANEL TITLE" subgroup) -- both checkboxes now land correctly on
+   their own title bars, consistently aligned to each other. Confirmed
+   `.claude/TEMPLATE_DEV_PANEL.html` has this identical bug (same missing
+   `position:relative`) and folded the same fix back into it (archived via
+   `edit-template-dev-panel.js` per CLAUDE.md §4b's own convention for
+   that file).
+
+2. **Set as Default (Pose/Camera/Lighting/Toon) appearing to do nothing**
+   ("I click it, and i click save, and on refresh its still the old
+   settings"). Root cause: `remoteSaveCurrentSettings()` (the main
+   Save/Sync button's own git-tracked write) POSTed
+   `captureFullDevPanelState()`'s own snapshot directly -- a blind
+   overwrite of the ENTIRE remote settings file. `saveFieldAsDefault()`
+   already did a correct GET-merge-POST to write
+   `defaultPose`/`defaultCamera`/`defaultLighting`/`defaultToon`, but
+   clicking Sync afterward silently wiped those custom fields right back
+   out, since `captureFullDevPanelState()` (a devPanel.js-owned function)
+   has no knowledge of this project's own extra top-level fields. Fixed
+   `remoteSaveCurrentSettings()` to GET-merge-POST too, the same pattern
+   `saveFieldAsDefault()` already used. Verified via an in-page `fetch`
+   mock simulating the settings endpoint (no real backend on this local
+   static-server preview): clicking the real "Set as Default" button
+   correctly wrote `defaultPose` via GET-merge-POST, and a subsequent real
+   click on the real Sync button left `defaultPose` fully intact
+   afterward (confirmed via the mock store's own state, not just code
+   review).
+
+3. **Phone Tilt doing nothing on the real Vercel deployment**, and
+   separately, **4. the Palm Facing rotation slider (Cursor Tracking)
+   having no visible effect** -- both gated behind the exact same
+   `cfg.trackingEnabled` flag (`animate()`'s own
+   `if (cfg.trackingEnabled && hands.length) {...}` block is the ONLY
+   place either mechanism's per-frame code runs at all), which defaulted
+   to `false`. This is the app's own headline mechanic ("rotates in
+   response to the phone's own gyroscope tilt") -- defaulting its master
+   gate off meant a fresh visitor with no prior Sync saw nothing happen at
+   all, on Vercel or locally, matching both reports exactly. Defaulted to
+   `true`. Live-verified: hovering the cursor over the canvas now visibly
+   rotates the rendered hand (the desktop mouse-fallback path) -- the real
+   device gyroscope path on the actual Vercel deployment still needs the
+   user's own confirmation, since this session has no physical device.
+
+Verified: all fixes live-tested in-browser (screenshots for the checkbox
+fix, a hover-triggered rotation screenshot for Phone Tilt, an in-page
+fetch-mock round-trip for Set as Default), not just code-reviewed. A real
+concurrent Save from the user's own browser (commit "Update
+dev-panel-settings.json via Save Settings") landed on `origin/main`
+mid-session -- pulled via `git stash`/fast-forward/`stash pop` before this
+round's own commit, per this file's own documented git-safety convention,
+so nothing was lost.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
