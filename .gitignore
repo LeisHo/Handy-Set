@@ -2,3 +2,7 @@
 Thumbs.db
 *.log
 node_modules/
+# User's own local screen recordings (e.g. bug-report clips) -- not
+# meant to be tracked; a `git add -A` swept one into a commit once,
+# caught and amended out before push (2026-09-21).
+datalog/
