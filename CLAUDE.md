@@ -106,6 +106,18 @@ wiring, and are still open:
 
 ## Gotchas
 
+- **Any dev-panel group/row structural change (rename, split, merge, id
+  change) needs `HANDYSET_SETTINGS_SCHEMA_VERSION` (top of `main.js`)
+  bumped**, or a visitor's own stale `localStorage` (and the git-tracked
+  `data/processed/dev-panel-settings.json`, if also stale) restores the
+  OLD layout on top of the new one — `applySectionOrder()` appends an
+  unmatched old group rather than replacing it, producing literal
+  duplicate groups/rows with dead ids. This was the real cause of a
+  "Pose Offset/Rotation/Thumb in the wrong place" + "miscellaneous
+  unclickable checkboxes" report that looked like two unrelated bugs.
+  Bumping the version constant clears the stale local save automatically
+  on next load; the git file needs a manual reset if it's also stale.
+
 - **`registerDevControlArray()` is REQUIRED, not optional, for the "Show in
   Mobile/Landscape" checkbox to actually do anything.** Every control this
   project builds via `addRow()` is collected into `HANDYSET_CONTROLS` and

@@ -267,6 +267,72 @@ Verified:
   claimed done here.
 
 --------------------------------------------------------------------------------
+2026-09-21  -  3:48 AM - 4:08 AM EDT
+
+Fixed 5 issues reported directly after live testing on the real Vercel
+deployment, plus 2 requests added mid-session (Phone Tilt real-device
+report, group-checkbox retention behavior).
+
+Fixed:
+- Pose Offset/Rotation/Thumb not appearing in their correct subgroups --
+  root cause: the git-tracked dev-panel-settings.json AND the browser's
+  own localStorage both held a saved panel layout captured before this
+  session's earlier Pose-group restructure (Rotation/Thumb split, Pose
+  Offset subgroup); applySectionOrder() APPENDS an unmatched old group
+  rather than replacing it, producing literal duplicate groups/rows with
+  dead ids on top of the correct fresh ones. This is also the real cause
+  of the separately-reported "miscellaneous/redundant checkboxes that
+  flash and can't be clicked." Fixed the git file directly AND added a
+  client-side localStorage schema-version guard (HANDYSET_SETTINGS_SCHEMA_VERSION
+  in main.js) so this can't recur silently on a future structural change
+  -- bump the version constant, the stale local save clears itself.
+- "Set as Default" was missing from Pose/Camera/Lighting/Toon Shading --
+  added a generic saveFieldAsDefault()/loadFieldDefaultIfSaved() pair
+  (ported from Hando's own saveAsDefaultForModel()/loadDefaultForModelIfSaved(),
+  simplified since Handyset has one model, not Hando's multi-model
+  system) and wired a "Set as Default" button into renderPresetPicker()
+  for all 4 groups.
+- Toon Shading was missing the entire rim-light + texture/duotone-tint
+  shader system (a known simplification from the first build) and had no
+  saved-preset UI at all -- ported HANDY DANDIES' own createToonMaterial()
+  onBeforeCompile GLSL injection verbatim (not reconstructed), added the
+  5 missing sliders, and a full "Saved Toon Shading" list-picker with
+  Export/Import + Set as Default.
+- Phone Tilt did nothing on either desktop OR a real Android phone --
+  removed the isTouchDevice branching that gated mousemove vs.
+  deviceorientation as mutually exclusive; both listeners now always
+  attach, so whichever one actually produces real events on a given
+  device just works, without needing to correctly guess the device type
+  first. (The real-device report couldn't be fully root-caused without
+  console access to the actual phone -- pointed the user at the existing
+  Debug > Sensors console to check whether deviceorientation events fire
+  at all as the next diagnostic step if this doesn't resolve it.)
+- Group-level "Show in Mobile/Landscape"/"Independent from Desktop"
+  checkboxes now retain each child row's own individual checked state
+  when the group checkbox is unchecked, and restore those exact
+  per-child states (not a blanket re-check) when it's checked again --
+  devPanel.js's buildGroupCascadeCheckbox(), per direct request.
+
+Verified:
+- Live DOM inspection after each fix confirmed: Pose subgroups no longer
+  duplicated; all 4 "Set as Default" buttons present; Toon Shading's rim
+  slider and Saved Toon Shading list-picker both render; a real
+  group-checkbox uncheck/recheck cycle correctly zeroed then restored
+  exactly the 2 rows that had been individually checked out of 8, not
+  all 8.
+- NOT verified: the Phone Tilt fix's effect on a real phone (no device
+  access this session) -- the underlying diagnosis (isTouchDevice
+  misdetection) was confirmed for the desktop case via a real mouse
+  interaction, not for the reported real-device failure specifically.
+
+Known gap not addressed this round: the Tween settings group still
+doesn't match Hando's own UI (ordered multi-select pose list with drag
+reorder, Hold entries, PNG-sequence export) -- Hando's exact structure
+was researched and documented in this session's own working notes, but
+porting it (including a new generic multi-select control type for
+devPanel.js) was not completed in this pass.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
