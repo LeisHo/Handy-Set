@@ -89,10 +89,19 @@ wiring, and are still open:
 - **Camera Max Extents** only clamps zoom distance (`controls.maxDistance`)
   — HANDY DANDIES' own `enforceCameraPanExtent()` also clamps the PAN
   target to a bounding sphere every frame; not ported.
-- **Wrist bend/splay/rotation axis choices** in `applyWristPoseToSkeleton()`
-  were reconstructed (matching the finger system's own
-  `rotateOnTrueWorldAxis` mechanism) rather than copied from HANDY
-  DANDIES' real function body — still worth a visual sanity check.
+- ~~Wrist bend/splay/rotation axis choices~~ — **fixed 2026-09-21**, ported
+  verbatim from HANDY DANDIES' real `applyWristPoseToSkeleton()`
+  (`bone.rotateX/rotateZ/rotateY`, not `rotateOnTrueWorldAxis`). See
+  `docs/CHANGELOG.txt`'s matching entry.
+- **Pose Offset X/Y/Z is plain world-space** (`h.clone.position.set(...)`),
+  not HANDY DANDIES' own camera-relative resolution
+  (`applyPoseOffsetToPosition()`, against the camera's own right/up/
+  toward-camera basis) — confirmed via direct source read, not yet
+  ported since every seeded saved pose currently has
+  `poseOffsetX/Y/Z: 0` (no visible effect either way yet). Port this
+  before any pose actually uses a nonzero offset, or it will visually
+  point in the wrong direction whenever the camera isn't aligned with
+  world axes.
 - **Shoulder/elbow/forearm pose fields** (`shoulderRaise`, `elbowBend`,
   etc.) in the imported pose JSON are not wired to any bone — every
   provided pose has them at 0, and the wrist crop hides that region
@@ -273,3 +282,54 @@ wiring, and are still open:
   cause behind 2 separate direct reports ("phone tilting does nothing"
   and the Palm Facing rotation slider having no visible effect). Don't
   reintroduce a `false` default here without a real reason.
+- **The "Enable Motion" button was removed entirely (2026-09-21)** — Phone
+  Tilt's on/off is now purely `checkboxTrackingEnabled` (`Tracking
+  Enabled`, Phone Tilt group). Checking it calls
+  `requestMotionPermissionIfNeeded()` directly, which is a real enough
+  user gesture to satisfy iOS's own `DeviceOrientationEvent.requestPermission()`
+  gate. Android was never affected either way — it has no such permission
+  API, so `attachMotionListeners()` already ran unconditionally there.
+  Don't reintroduce a separate button; wire any future motion-permission
+  need through this same checkbox handler.
+- **`applyCameraPreset()` does a LITERAL restore (corrected 2026-09-21,
+  was a "recompute distance from a fit-sphere-to-FOV formula" reconstruction)**
+  — ported verbatim from HANDY DANDIES' own real function after a direct
+  report that Camera Overwrite/Set-as-Default/Use all restored the wrong
+  position despite preserving the correct angle. The recompute version
+  only ever used the saved `tx/ty/tz` to derive a direction, silently
+  discarding the actual saved distance/zoom — any future camera-preset
+  code needs to preserve this literal-restore behavior, not reintroduce a
+  recompute step. `captureCameraFromLive()` now also captures
+  `cfg.cameraZoom`.
+- **`SAVED_CAMERAS`' `FRONTOS` entry had a corrupted `tz` value
+  (-314.7 vs. every other camera's shared -1.789)**, invisible under the
+  old recompute-based `applyCameraPreset()` (which discarded `tz`'s
+  literal magnitude) but producing a badly-framed default view once that
+  was fixed to a literal restore — FRONTOS is `DEFAULT_CAMERA_NAME`, so
+  this was visible on every fresh page load. Corrected in the seed data.
+  If a FUTURE saved-camera entry ever looks badly framed after a
+  literal-restore-based apply, check its own `tx/ty/tz` against sibling
+  cameras' shared target first, before assuming the apply logic is wrong.
+- **`applyWristPoseToSkeleton()` uses `bone.rotateX/rotateZ/rotateY`
+  (corrected 2026-09-21, was `rotateOnTrueWorldAxis()` for all 3 axes)**
+  — ported verbatim from HANDY DANDIES' own real function after a direct
+  report that Saved Poses render differently than in Hando/Handy Dandies,
+  with the user specifically flagging "position and rotation axes/
+  origin/anchor (local/global)" as the thing to verify against real
+  source rather than reconstruct. `rotateOnTrueWorldAxis()` converts a
+  FIXED world-space axis into the bone's current local frame before each
+  rotation; `bone.rotateX/Y/Z()` is three.js's own LOCAL-axis rotation,
+  genuinely sequential (each subsequent rotation spins around the axis as
+  already reoriented by the previous one). The two only agree at
+  near-zero angles — for any real combined bend+splay+rotation pose they
+  diverge. Every OTHER wrist-adjacent axis choice in this file
+  (model-rotation via `alignQuat * Euler(modelRotX/Y/Z)`, finger curl/
+  splay via `rotateOnTrueWorldAxis` with a `wrapperQuat` exclude) was
+  cross-checked against Handy Dandies' real source and found to already
+  match — this was the one genuine divergence. Pose Offset X/Y/Z
+  (`h.clone.position.set(...)`) is a KNOWN remaining gap, not yet
+  ported: Handy Dandies resolves its own pose offset against the
+  camera's own right/up/toward-camera basis (`applyPoseOffsetToPosition()`),
+  not plain world-space axes like this project's own version — currently
+  harmless only because every seeded saved pose has `poseOffsetX/Y/Z: 0`,
+  so port this before any pose actually uses a nonzero offset.

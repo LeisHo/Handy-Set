@@ -544,6 +544,108 @@ round's own commit, per this file's own documented git-safety convention,
 so nothing was lost.
 
 --------------------------------------------------------------------------------
+2026-09-21  -  5:15 AM - 5:28 AM EDT (12m33s per two `date` calls)
+
+Fixed 4 more directly-reported issues -- 2 of them by reading HANDY
+DANDIES' real source per direct instruction ("Handy Dandies already went
+through the slog of figuring out... refer to Handy Dandies on how to
+port it"), rather than reconstructing, which surfaced a 3rd, previously-
+invisible bug along the way.
+
+1. **Camera Overwrite/Set-as-Default/Use restoring the wrong position**
+   ("I pan with right click. I click overwrite... the camera angle is
+   changed, but the position is wrong"). `applyCameraPreset()` only ever
+   used the saved camera's `tx/ty/tz` to derive a DIRECTION, then
+   recomputed distance from a "fit a sphere to this FOV" formula --
+   silently discarding the actual saved position/zoom every time. Read
+   HANDY DANDIES' own real `applyCameraPreset()` (`src/main.js:3288`) and
+   ported it verbatim: a literal `camera.position.set()`/
+   `controls.target.set()` restore, no recompute step at all.
+   `captureCameraFromLive()` now also captures `cfg.cameraZoom`
+   (previously never captured or restored).
+
+   This exposed a genuine pre-existing bug in the seed data: `FRONTOS`
+   (`DEFAULT_CAMERA_NAME`, applied on every fresh load) had `tz: -314.7`
+   where all 6 other saved cameras share `tz: -1.789` -- harmless under
+   the old recompute-based apply (which discarded `tz`'s literal
+   magnitude, only using it for direction), but produced a badly-framed
+   close-up view once the literal restore was correct. Live-confirmed via
+   `camera.position`/`controls.target` readouts before and after
+   correcting the data to match the other cameras' shared target.
+
+2. **Saved Poses "showing up differently than Hando/Handy Dandies"** --
+   per direct instruction, read HANDY DANDIES' real
+   `applyWristPoseToSkeleton()` (`src/main.js:2570`) instead of trusting
+   this project's own reconstructed version (already flagged as a
+   "worth a visual sanity check" gap in this file's own Known
+   Simplifications section). Confirmed a real divergence: the
+   reconstructed version used `rotateOnTrueWorldAxis()` for wrist bend/
+   splay/rotation (converts a FIXED world-space axis into the bone's
+   CURRENT local frame before each rotation); HANDY DANDIES' real
+   function uses plain `bone.rotateX/rotateZ/rotateY` -- three.js's own
+   LOCAL-axis rotation, genuinely sequential (each rotation spins around
+   the axis as already reoriented by the PREVIOUS rotation). The two
+   methods only agree at near-zero angles; for any real combined pose
+   they diverge. Ported verbatim (axis-letter assignment -- X=bend,
+   Z=splay, Y=rotation -- was already correct; only the rotation METHOD
+   was wrong). Cross-checked every other wrist-adjacent axis choice in
+   this file (whole-hand model rotation, finger curl/splay) against Handy
+   Dandies' real source too and confirmed those already matched --this
+   was the one genuine divergence, not a systemic issue.
+
+   Also confirmed, but NOT yet ported (no currently-seeded pose has a
+   nonzero value, so no visible effect yet): HANDY DANDIES' own Pose
+   Offset X/Y/Z is resolved against the CAMERA's own right/up/toward-
+   camera basis (`applyPoseOffsetToPosition()`), not plain world-space
+   axes like this project's own `h.clone.position.set(...)`. Documented
+   as a known remaining gap in CLAUDE.md rather than silently left
+   unmentioned -- port before any pose actually uses a nonzero offset.
+
+3. **Tween group buttons "look like... default white/gray buttons"**
+   ("match hando"). None of "+ Add"/"+ Hold"/"Remove"/"Export Tween PNG
+   Sequence" were inside a `dev-buttons`-classed container, the one thing
+   every other panel button (Save/Overwrite/Use/etc., which the user
+   confirmed already looks right) actually depends on for the template's
+   real button styling -- plain unstyled browser buttons otherwise. Fixed
+   by adding the class to the relevant container rows, plus a scoped CSS
+   rule matching the same look for the inline per-row "Remove" button
+   (which sits beside a select/slider, not alone in its own row, so it
+   can't just reuse the flex:1 `dev-buttons` layout wholesale).
+
+4. **Phone Tilt "does nothing" (both mobile and, per a follow-up report,
+   desktop) + explicit request to remove the "Enable Motion" button** --
+   investigated live against the actual deployed Vercel URL
+   (https://handy-set.vercel.app), not just the local preview: confirmed
+   `cfg.trackingEnabled` was already `true` there (last round's fix had
+   deployed correctly) and a cursor-hover test DID visibly rotate the
+   hand, so the underlying mechanism was working as of this round's start
+   -- the "still doesn't work" report most likely predated that
+   deployment finishing, or a stale un-refreshed tab. Per the explicit
+   follow-up request, removed `#motionPermissionBtn` entirely (DOM +
+   CSS); Phone Tilt on/off is now purely `checkboxTrackingEnabled`, whose
+   own onChange calls `requestMotionPermissionIfNeeded()` directly when
+   checked -- a real user gesture, satisfying iOS's own
+   `DeviceOrientationEvent.requestPermission()` gate the same way the old
+   dedicated button did. Android (the actual target device) was never
+   gated by this at all -- `attachMotionListeners()` already ran
+   unconditionally there both before and after this change.
+
+Verified: syntax-checked after every edit; Camera fix live-verified via
+direct `camera.position`/`controls.target` readouts before/after; wrist-
+pose fix live-verified via 2 saved poses (Fist -- all-zero wrist values,
+confirms no regression at identity -- and Big Open Palm (S), wristSplay
+=-55, confirms a real nonzero case renders as a plausible open hand, not
+broken/NaN geometry) with screenshots. NOT verified: the real device
+gyroscope path on an actual phone, or any of this on the live Vercel
+deployment (only local preview + one direct read of the live deployment's
+`cfg.trackingEnabled`/cursor-tracking behavior).
+
+A real concurrent Save from the user's own browser (commit "Update
+dev-panel-settings.json via Save Settings") landed on `origin/main` a 2nd
+time mid-session -- pulled via `git stash`/fast-forward/`stash pop`
+again before this round's own commit, same as last round.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
