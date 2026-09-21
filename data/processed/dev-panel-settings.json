@@ -4011,10 +4011,10 @@
     "desktop:Toon Shading": true,
     "desktop:Outline": true,
     "desktop:Background": true,
-    "mobile:Dev Panel": true,
-    "mobile:MECHANICS": false,
+    "mobile:Dev Panel": false,
+    "mobile:MECHANICS": true,
     "mobile:PANEL UI": false,
-    "mobile:TEXT": false,
+    "mobile:TEXT": true,
     "mobile:Dev Panel Title": false,
     "mobile:Group Title": false,
     "mobile:Setting Title": false,
@@ -4184,7 +4184,8 @@
     "checkboxSensorStream": false,
     "sliderSensorInterval": false,
     "selectTweenAddPose": true,
-    "sliderTweenSpeedMs": true
+    "sliderTweenSpeedMs": true,
+    "sliderHandScale": true
   },
   "devIndependence": {
     "mobile": {},
