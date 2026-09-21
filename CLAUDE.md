@@ -74,18 +74,24 @@ centered hand) per direct instruction, ready for more hands later.
 Genuine remaining gaps — these need real new subsystems, not just
 wiring, and are still open:
 
-- ~~Reactive Arm Length~~ / ~~Responsive Wrist Splay~~ — **fixed
-  2026-09-21**, ported verbatim from HANDY DANDIES' real curve-editor
-  widgets (Catmull-Rom spline + optional bezier handles, SVG draggable-
-  point editor, dual-handle range bar) and reactive math, genericized into
-  2 shared widget builders. One deliberate, disclosed adaptation: HANDY
-  DANDIES normalizes "distance" against the live min/max distance across
-  a whole FIELD of hands each frame — a concept that doesn't exist for
-  this project's single-hand case — so `tiltMagnitude` (already computed
-  every frame for Phone Tilt) stands in as the distance input instead.
-  Every control (reactive on/off, default value, min/max range, curve
-  editor) is otherwise a full port. See `docs/CHANGELOG.txt`'s matching
-  entry for live-verification details.
+- ~~Reactive Arm Length~~ — **fixed 2026-09-21**, ported verbatim from
+  HANDY DANDIES' real curve-editor widgets (Catmull-Rom spline + optional
+  bezier handles, SVG draggable-point editor, dual-handle range bar) and
+  reactive math. One deliberate, disclosed adaptation: HANDY DANDIES
+  normalizes "distance" against the live min/max distance across a whole
+  FIELD of hands each frame — a concept that doesn't exist for this
+  project's single-hand case — so `tiltMagnitude` (already computed every
+  frame for Phone Tilt) stands in as the distance input instead. Every
+  control (reactive on/off, default value, min/max range, curve editor)
+  is otherwise a full port. See `docs/CHANGELOG.txt`'s matching entry.
+- **Responsive Wrist Splay — built, then REMOVED ENTIRELY 2026-09-21**,
+  same day, per direct request ("you didn't fix it, I'm going to build it
+  from scratch with you... remove this group entirely from the code").
+  Not a scope gap to silently re-fill — a future rebuild of this feature
+  needs fresh direction from the user, not a repeat of this session's own
+  port. `buildReactiveRangeWidget()`/`buildReactiveCurveWidget()` (the
+  generic curve-editor widgets Reactive Arm Length still uses) were kept,
+  since they're genuinely shared infrastructure, not wrist-splay-specific.
 - ~~Toon rim-lighting~~ — **fixed 2026-09-21**, ported verbatim from HANDY
   DANDIES' real `createToonMaterial()` onBeforeCompile GLSL patch (not
   reconstructed). See `docs/CHANGELOG.txt`'s matching entry.
@@ -486,33 +492,55 @@ wiring, and are still open:
   `wrapper.quaternion` comparison at that same position (offset 0 vs 180)
   showed it changing substantially regardless. Fixed alongside the crop
   bug itself — see that entry for the mechanism.
-- **`updateWristClipPlaneForHand()`'s clip-plane normal must track the
-  wrist bone's OWN live rotation, not just `h.wrapper.quaternion`
-  (fixed 2026-09-21, 2nd round same day)** — real bug, found after the
-  user reported wrist-splay tracking the cursor but not overall/palm
-  rotation, AND separately that heavy wrist splay crops into the top of
-  the hand, and correctly guessed both were the same root cause. They
-  were: the plane's normal was derived from `wristCropNormalAligned`, a
-  FIXED bind-pose forearm->wrist direction, only ever rotated by
-  `h.wrapper.quaternion` (Phone Tilt) — never by the wrist bone's own
-  rotation (wristBend/wristSplay/wristRotation + Responsive Wrist Splay's
-  live `extraSplayDeg`, which reaches up to 71 real degrees). The plane's
-  ANCHOR point was never wrong (a bone's own local rotation doesn't move
-  its own world position — confirmed directly), but its ORIENTATION
-  stayed pinned to the pre-bend forearm axis while the actual hand
-  geometry (distal to the wrist, which DOES rotate with wrist bend) swung
-  away from it — clipping away most of the hand at extreme splay. Fixed
-  by deriving the normal from the LIVE wrist->fingertip direction
-  (`rHand` -> `rMid3`, both read via `getWorldPosition()` every frame)
-  instead of the static forearm->wrist axis — `rMid3` is a skeleton
-  descendant of `rHand`, so it moves with every wrist-pose axis, keeping
-  the plane's orientation aligned with wherever the hand is actually
-  currently pointing. Live-verified across several cursor positions:
-  consistent, plausible hand silhouette, no crescent-sliver clipping.
-  **RESOLVED 2026-09-21, later same day** — see the frustum-culling
-  gotcha below for the real cause and fix (it was never crop or backface
-  culling; `skinnedMesh.frustumCulled = false` is now set unconditionally
-  at hand creation).
+- **`updateWristClipPlaneForHand()` — REWRITTEN 2026-09-21, 3rd round
+  same day; the 2nd round's own fix (below, kept for history) was ITSELF
+  wrong per a direct correction.** The 2nd round switched the plane's
+  normal from a static forearm->wrist axis to a LIVE wrist->fingertip
+  axis (`rHand`->`rMid3`), reasoning it needed to track wrist bend. The
+  user directly identified this as backwards: "the cropping plane doesn't
+  seem like the right rotation... it should be the plane perpendicular to
+  the axis of the first bone, the arm bone" — plus 2 more real bugs: the
+  crop was removing the HAND instead of the ARM (a sign/direction bug),
+  and 0%/100% were inverted with even 100% still cropping the whole hand.
+  Root cause of the misdiagnosis: a bone's own local rotation does NOT
+  move its own or its parent's world position (confirmed directly,
+  multiple times this session) — so `rForearmBend`/`rHand`'s own axis is
+  genuinely wrist-bend-INVARIANT, and switching away from it in round 2
+  was solving a problem (the axis "not tracking wrist bend") that was
+  never actually the bug; the real, still-live cause at that point was
+  the frustum-culling bug below, not the crop axis. Current, correct
+  implementation — ported EXACTLY from HANDO's own real
+  `updateWristClipPlane()` (background research agent extracted it
+  verbatim, not reconstructed) — see `docs/CHANGELOG.txt`'s matching
+  entry for the full formula, bone names, and live-verification account.
+  **If this ever looks wrong again: re-read HANDO's real source first,
+  don't re-derive from first principles** — this exact function has now
+  been gotten wrong twice in one session by reasoning about it fresh.
+- **`h.clone.quaternion` must actually receive `modelRotX/Y/Z` — it never
+  did before 2026-09-21, so all 3 "Whole-Hand Rotation" sliders had ZERO
+  visible effect on the rendered hand.** Direct report: "the Whole Hand
+  rotation sliders, all 3, dont rotate the hand correctly... check Hando
+  and see what axes and anchors are used." Found live: `computeBaseQuatFromValues()`
+  correctly folded modelRotX/Y/Z into a quaternion, but that quaternion
+  (`h.currentBaseQuat`) was ONLY ever consumed as a finger-curl axis
+  reference — `h.clone.quaternion`, the object that actually holds the
+  rendered geometry, was set exactly once at hand creation (to
+  `alignQuat`) and never touched again by anything. Fixed by porting
+  HANDO's own real fix for this exact bug class (its docs/CHANGELOG.txt,
+  2026-09-11): apply the quaternion to `h.clone` directly, pivoted around
+  `modelRotationPivot` (palm center — midpoint of the wrist bone `rHand`
+  and the middle finger's own base joint `rMid1`, measured once at model
+  load BEFORE any posing touches the skeleton — HANDO's own docs document
+  a second regression from measuring this AFTER default posing had
+  already bent the skeleton), with `h.clone.position` recomputed every
+  change via the standard rotate-about-an-arbitrary-point formula
+  (`position = pivot - rotation*(scale*pivot)`) so the palm stays fixed
+  in `h.wrapper`-local space regardless of rotation — HANDYSET's own
+  extra `wrapper` layer (Phone Tilt) that HANDO doesn't have. Live-
+  verified: the wrist bone's world position read byte-identical across 2
+  very different `modelRotZ` values, and the visible hand now dramatically
+  and correctly reorients when any of the 3 sliders change.
+- **`skinnedMesh.frustumCulled` must stay `false` for every hand (set at
 - **`skinnedMesh.frustumCulled` must stay `false` for every hand (set at
   creation in `rebuildField()`) — three.js's default culling check uses
   `geometry.boundingSphere`, computed once from raw UNSKINNED bind-pose

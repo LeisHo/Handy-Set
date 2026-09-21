@@ -1044,6 +1044,104 @@ throughout). Committed as `6f3d8df` and pushed (no concurrent remote
 commits this round, confirmed via `git fetch` before pushing).
 
 --------------------------------------------------------------------------------
+2026-09-21  -  6:47 PM - 6:58 PM EDT (11m01s per two `date` calls)
+
+Direct feedback after the prior cursor-tracking round: "okay you didnt
+fix it. Im going to build it from scratch with you." -- 3 concrete asks
+followed, plus a 4th added mid-turn.
+
+**1. Removed the "Responsive Wrist Splay" group entirely.** User asked to
+remove "Responsive Palm Rotation and all settings within it" and to check
+git-synced settings for the real group name first. Checked
+data/processed/dev-panel-settings.json's own sectionOrder -- no group
+named "Responsive Palm Rotation" exists; the only match (confirmed by the
+same 2 checkboxes the user separately asked to have explained) is
+"Responsive Wrist Splay", built earlier this session. Removed the cfg
+fields, parse/compute functions, per-frame reapplication
+(applyReactiveWristSplayFrame), and dev-panel group entirely -- not
+disabled, not hidden, actually deleted from the source. The shared curve-
+editor widget builders (buildReactiveRangeWidget/buildReactiveCurveWidget)
+were kept since Reactive Arm Length still uses them.
+
+**2. Wrist crop was fundamentally wrong** -- wrong axis, wrong direction,
+and silently clamped. Direct, precise report: "the cropping plane doesnt
+seem like the right rotation... it should be the plane perpendicular to
+the axis of the first bone, the arm bone... its currently cropping the
+hand not the arm, should be the other way. when i set crop to 0%, the
+hand is most cropped, at 100% its less but still crops the whole hand,
+and 200% does nothing since the slider caps at 100." Two EARLIER rounds
+this same session both got this wrong in different ways -- a background
+research agent read HANDO's own real `updateWristClipPlane()` verbatim
+this round instead of reasoning about it fresh again, and it was ported
+exactly: normal = (rHand - rForearmBend), normalized, used DIRECTLY as
+the plane normal (the prior 2 rounds both negated it -- the actual
+direction bug); clip point = farPos + normal*armToWristDist*t, t =
+hideWrist/100 completely UNCLAMPED (the prior version clamped t to
+[0,1], silently eating any value past 100). Live-verified: 0% now shows
+a long, fully-extended forearm; 100% crops it away with the hand
+completely intact (a short, flat shape, not the whole hand missing);
+setting cfg.hideWrist directly to 150 (bypassing the slider's own native
+HTML max=100, which still clamps a raw .value assignment even though the
+dev panel's own click-to-type auto-expand should handle a real typed
+value) correctly pushed the crop further, into the hand itself, proving
+the unclamped math now does something instead of nothing past 100%.
+
+**3. "Responsive Wrist Splay (Master On/Off)" vs "Reactive Wrist Splay
+(By Cursor Distance)" -- now moot**, since the whole group was removed
+per #1, but for the record: the first was the feature's own overall
+on/off gate (checkbox off = zero effect, full stop); the second only
+mattered when the first was on, and chose between a single static
+default value (reactive off) or a live, cursor-distance-driven curve
+(reactive on). Two genuinely different questions the old UI answered
+with 2 separate checkboxes rather than 1 -- a real, if confusing,
+design, not a duplicate control.
+
+**4. Added mid-turn: "I think your entire Rotation mechanic is anchored
+incorrectly... check Hando... may also explain the palm rotation
+thing."** This was the big one. The same research agent extracted
+HANDO's real Whole-Hand Rotation X/Y/Z mechanism verbatim. Found live:
+`h.clone.quaternion` -- the object that actually holds the rendered
+hand -- was set exactly ONCE, at hand creation, to `alignQuat`, and
+NEVER updated again by anything. `computeBaseQuatFromValues()` correctly
+computed a quaternion incorporating modelRotX/Y/Z, but that quaternion
+(`h.currentBaseQuat`) was only ever used as a finger-curl axis reference
+-- the 3 Whole-Hand Rotation sliders had LITERALLY ZERO visible effect
+on the rendered hand this entire time, not a subtle anchor bug, a
+complete disconnection. Ported HANDO's own real fix for this exact bug
+class (its own docs/CHANGELOG.txt, 2026-09-11: "make the center of
+rotation the center of the palm", plus a second regression from
+measuring the pivot after default posing had already bent the skeleton):
+`h.clone.quaternion` now actually receives the computed rotation,
+pivoted around `modelRotationPivot` (palm center -- midpoint of the
+wrist bone `rHand` and the middle finger's own base joint `rMid1`,
+measured once at model load, before rebuildField()/applyDefaultSelections()
+ever pose the skeleton), with `h.clone.position` recomputed via the
+standard rotate-about-an-arbitrary-point formula every time rotation or
+scale changes, so the palm stays fixed in `h.wrapper`-local space (the
+extra layer HANDYSET has that HANDO doesn't -- Phone Tilt's own outer
+rotation). Live-verified: the wrist bone's own world position read
+byte-identical (`[7.18e-15, 24.515161514282223, -4.195592021469745e-7]`,
+to full float precision) at modelRotZ=45 vs modelRotZ=-60 -- proving the
+pivot is genuinely fixed, not just approximately stable -- and the
+visible hand now dramatically, correctly reorients (individual splayed
+fingers clearly visible at modelRotY=90, where the default view had
+only ever shown an ambiguous sliver/blob).
+
+This also directly explains a chunk of the "palm rotation doesn't seem
+to do anything" confusion from earlier sessions: Whole-Hand Rotation
+(the Pose group's modelRotX/Y/Z sliders) and Palm Face Rotation (the
+Phone Tilt group's cursor-tracking roll, a completely separate
+mechanism via h.wrapper.quaternion) are 2 different features the user
+may have been describing together -- the Phone Tilt one was already
+independently verified working multiple times this session; THIS one
+was never wired up at all until now.
+
+Committed as `d3d2564`, rebased cleanly onto 2 of the user's own
+concurrent "Update dev-panel-settings.json via Save Settings" commits
+from their live testing session (confirmed via `git show --stat` that
+both only touched the settings JSON before rebasing), pushed as `d1128ab`.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
