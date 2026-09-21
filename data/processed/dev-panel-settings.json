@@ -5842,5 +5842,17 @@
   "devDeviceValues": {
     "mobile": {},
     "landscape": {}
+  },
+  "defaultToon": {
+    "toonSteps": 2,
+    "toonStepThreshold": 2.7,
+    "toonShadowFloor": 7,
+    "toonLightCeiling": 100,
+    "toonBaseTint": "#ffffff",
+    "textureInfluence": 0,
+    "toonTint": "#ffffff",
+    "rimIntensity": 0,
+    "rimPower": 0.5,
+    "rimColor": "#ffffff"
   }
 }
