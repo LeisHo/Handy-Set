@@ -187,6 +187,86 @@ Verified:
   cost real time before being correctly identified.
 
 --------------------------------------------------------------------------------
+2026-09-21  -  1:23 AM - 1:41 AM EDT
+
+Direct, pointed feedback that the dev panel did NOT match Handy Dandies
+"exactly" as requested: group/setting names differed, ROTATION/THUMB were
+bundled together, Pose Offset wasn't its own group, and the Saved Poses/
+Cameras/Lighting UI was a plain dropdown instead of Handy Dandies' real
+Save/Overwrite/Use/Rename/Delete/+Group/Import/Export widget. A follow-up
+"do a full check" request then surfaced that Field Layout had been gutted
+to just Hand Scale.
+
+Root cause (same for the naming and the list-picker gaps): earlier work
+this session pulled from Handy Dandies' ORIGINAL SOURCE CODE defaults
+(DEV_GROUPS) rather than the user's actual LIVE, customized panel (whose
+real group names/layout only exist in
+HANDY DANDIES/data/processed/dev-panel-settings.json's saved `order`/
+`textOverrides`), and silently substituted a simpler list-picker
+replacement instead of surfacing that the raw template engine has no
+such control type and asking first. See CLAUDE.md's own updated section
+for the full account.
+
+Fixed:
+- Cross-checked Handy Dandies' actual saved settings JSON directly (not
+  just its source code) for real group names/groupings -- ROTATION/THUMB
+  split apart, Pose Offset moved into its own subgroup, exact label text
+  (including 2 thumb-specific label irregularities: "Thumb Tip Splay"
+  and "Thumb 2nd Segment Curl" vs. every other finger's "2nd Segment
+  Splay"/"Mid-Only Curl" pattern) throughout Pose/Camera/Lighting/Toon
+  Shading/Phone Tilt, grepped from Handy Dandies' own main.js rather than
+  reconstructed.
+- Built a real list-picker widget (`buildListPicker()`, main.js) --
+  scrollable, Save/Overwrite/Use/Rename/Delete/+Group, with Export/Import
+  on Saved Poses only (matching Handy Dandies exactly: only its own
+  savedPoses control has those 2 buttons). Items mutate in place (never
+  reassigned) so other code holding the same array reference (Tween's
+  own pose list) sees live updates.
+- Field Layout: full multi-hand grid system ported (Rows/Columns/Row
+  Spacing/Column Spacing/Hand Scale/Alternate Row Offset/Progressive Row
+  Offset/Use Progressive Offset/Hide Hands), defaulted to 1 row x 1
+  column (a single centered hand) per direct instruction, ready for more
+  hands later. This required converting the single-hand `hand` variable
+  into a `hands` array throughout (pose application, wrist-crop clipping
+  planes -- now one per hand, since each hand can face a different
+  direction once Phone Tilt rotates it -- tilt-tracking rotation,
+  material/wireframe/tint toggles, outlinePass.selectedObjects); `hand`
+  stays as an alias to `hands[0]` for the still-single-hand-scoped code
+  (camera targeting, pose-editing reference frame).
+- Also added: Crop Wrist (Master On/Off) toggle, Camera Zoom/Lock Camera
+  Pan/Lock Camera Zoom/Set Default Camera As Max Extents (max-extents
+  simplified to zoom-distance-only, not the full pan-clamp-to-boundary-
+  sphere behavior -- flagged in CLAUDE.md, not silently done), Debug
+  PAUSE button (gates tilt-tracking + Tween playback, not rendering
+  itself), and a Saved Tween Sequences list-picker.
+- Folded a real, verified bug back into the canonical
+  `.claude/TEMPLATE_DEV_PANEL.html`: the group-level cascade checkbox
+  (the one left of the undock icon) shipped with `display:none`
+  hardcoded and nothing anywhere in that file ever reset it -- affects
+  every project built from the template, not just this one.
+- Added a new "Full fidelity or ask" subsection to the parent workspace
+  `CLAUDE.md` (Sec 0a) -- any future "port this template/reference project"
+  task now requires surfacing a fidelity-vs-speed fork and getting the
+  user's choice BEFORE building the simpler version, not disclosing the
+  simplification afterward in docs.
+
+Verified:
+- Live UI: found and clicked through ROTATION/THUMB/Pose Offset/Saved
+  Poses groups, confirmed exact label text rendered (including the 2
+  thumb irregularities) and the Saved Poses list showed real items
+  ("Fist", "Fist - Bent Back") via `find`.
+- Live JS: bumped `fieldCols` to 3 via a real dispatched slider `input`
+  event, confirmed `hands.length === 3` and correct X-axis spacing
+  (-14, 0, 14 at columnSpacing=14) via `window.__debug.hands`, then
+  reverted to 1 column. Confirmed the group-level cascade checkbox is no
+  longer `display:none` after the template fix.
+- NOT verified: the 4 items CLAUDE.md's "Known simplifications" section
+  still lists as genuinely missing (Reactive Arm Length, Responsive
+  Wrist Splay, toon rim-lighting, the Hull-shader outline alternative) --
+  these need their real source read and ported as a following task, not
+  claimed done here.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
