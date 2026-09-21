@@ -43,7 +43,7 @@
     "slidermidOnlyCurlMiddle": 0,
     "slidertipOnlyCurlMiddle": -1,
     "slidertipTwistMiddle": 0,
-    "slidercurlRing": 98,
+    "slidercurlRing": 8,
     "slidersplayRing": 40,
     "slidersplayRing2": 0,
     "slidercurlBiasRing": 0,
@@ -102,10 +102,10 @@
     "sliderSensorInterval": 200
   },
   "layout": {
-    "left": 20,
-    "top": 20,
-    "width": 385,
-    "height": 783
+    "left": 26,
+    "top": 52,
+    "width": 274,
+    "height": 545
   },
   "devPanelStyle": {
     "titleFontSize": 17,
@@ -3178,8 +3178,65 @@
             "type": "group",
             "section": {
               "key": "mobile:Whole-Hand Rotation & Thumb",
-              "items": [],
-              "rowKeys": [],
+              "items": [
+                {
+                  "type": "row",
+                  "key": "sliderMobilemodelRotX"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderMobilemodelRotY"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderMobilemodelRotZ"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderMobilethumbCurl"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderMobilethumbSplay"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderMobilethumbSplay2"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderMobilecurlBiasThumb"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderMobilebaseOnlyCurlThumb"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderMobilemidOnlyCurlThumb"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderMobiletipOnlyCurlThumb"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderMobiletipTwistThumb"
+                }
+              ],
+              "rowKeys": [
+                "sliderMobilemodelRotX",
+                "sliderMobilemodelRotY",
+                "sliderMobilemodelRotZ",
+                "sliderMobilethumbCurl",
+                "sliderMobilethumbSplay",
+                "sliderMobilethumbSplay2",
+                "sliderMobilecurlBiasThumb",
+                "sliderMobilebaseOnlyCurlThumb",
+                "sliderMobilemidOnlyCurlThumb",
+                "sliderMobiletipOnlyCurlThumb",
+                "sliderMobiletipTwistThumb"
+              ],
               "subgroups": []
             }
           },
@@ -3187,8 +3244,35 @@
             "type": "group",
             "section": {
               "key": "mobile:Wrist",
-              "items": [],
-              "rowKeys": [],
+              "items": [
+                {
+                  "type": "row",
+                  "key": "checkboxMobileCropWristEnabled"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderMobilewristBend"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderMobilewristSplay"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderMobilewristRotation"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderMobileHideWrist"
+                }
+              ],
+              "rowKeys": [
+                "checkboxMobileCropWristEnabled",
+                "sliderMobilewristBend",
+                "sliderMobilewristSplay",
+                "sliderMobilewristRotation",
+                "sliderMobileHideWrist"
+              ],
               "subgroups": []
             }
           },
@@ -3196,8 +3280,50 @@
             "type": "group",
             "section": {
               "key": "mobile:Index",
-              "items": [],
-              "rowKeys": [],
+              "items": [
+                {
+                  "type": "row",
+                  "key": "sliderMobilecurlIndex"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderMobilesplayIndex"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderMobilesplayIndex2"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderMobilecurlBiasIndex"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderMobilebaseOnlyCurlIndex"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderMobilemidOnlyCurlIndex"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderMobiletipOnlyCurlIndex"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderMobiletipTwistIndex"
+                }
+              ],
+              "rowKeys": [
+                "sliderMobilecurlIndex",
+                "sliderMobilesplayIndex",
+                "sliderMobilesplayIndex2",
+                "sliderMobilecurlBiasIndex",
+                "sliderMobilebaseOnlyCurlIndex",
+                "sliderMobilemidOnlyCurlIndex",
+                "sliderMobiletipOnlyCurlIndex",
+                "sliderMobiletipTwistIndex"
+              ],
               "subgroups": []
             }
           },
@@ -3205,8 +3331,50 @@
             "type": "group",
             "section": {
               "key": "mobile:Middle",
-              "items": [],
-              "rowKeys": [],
+              "items": [
+                {
+                  "type": "row",
+                  "key": "sliderMobilecurlMiddle"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderMobilesplayMiddle"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderMobilesplayMiddle2"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderMobilecurlBiasMiddle"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderMobilebaseOnlyCurlMiddle"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderMobilemidOnlyCurlMiddle"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderMobiletipOnlyCurlMiddle"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderMobiletipTwistMiddle"
+                }
+              ],
+              "rowKeys": [
+                "sliderMobilecurlMiddle",
+                "sliderMobilesplayMiddle",
+                "sliderMobilesplayMiddle2",
+                "sliderMobilecurlBiasMiddle",
+                "sliderMobilebaseOnlyCurlMiddle",
+                "sliderMobilemidOnlyCurlMiddle",
+                "sliderMobiletipOnlyCurlMiddle",
+                "sliderMobiletipTwistMiddle"
+              ],
               "subgroups": []
             }
           },
@@ -3214,8 +3382,50 @@
             "type": "group",
             "section": {
               "key": "mobile:Ring",
-              "items": [],
-              "rowKeys": [],
+              "items": [
+                {
+                  "type": "row",
+                  "key": "sliderMobilecurlRing"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderMobilesplayRing"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderMobilesplayRing2"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderMobilecurlBiasRing"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderMobilebaseOnlyCurlRing"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderMobilemidOnlyCurlRing"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderMobiletipOnlyCurlRing"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderMobiletipTwistRing"
+                }
+              ],
+              "rowKeys": [
+                "sliderMobilecurlRing",
+                "sliderMobilesplayRing",
+                "sliderMobilesplayRing2",
+                "sliderMobilecurlBiasRing",
+                "sliderMobilebaseOnlyCurlRing",
+                "sliderMobilemidOnlyCurlRing",
+                "sliderMobiletipOnlyCurlRing",
+                "sliderMobiletipTwistRing"
+              ],
               "subgroups": []
             }
           },
@@ -3223,10 +3433,68 @@
             "type": "group",
             "section": {
               "key": "mobile:Pinky",
-              "items": [],
-              "rowKeys": [],
+              "items": [
+                {
+                  "type": "row",
+                  "key": "sliderMobilecurlPinky"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderMobilesplayPinky"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderMobilesplayPinky2"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderMobilecurlBiasPinky"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderMobilebaseOnlyCurlPinky"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderMobilemidOnlyCurlPinky"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderMobiletipOnlyCurlPinky"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderMobiletipTwistPinky"
+                }
+              ],
+              "rowKeys": [
+                "sliderMobilecurlPinky",
+                "sliderMobilesplayPinky",
+                "sliderMobilesplayPinky2",
+                "sliderMobilecurlBiasPinky",
+                "sliderMobilebaseOnlyCurlPinky",
+                "sliderMobilemidOnlyCurlPinky",
+                "sliderMobiletipOnlyCurlPinky",
+                "sliderMobiletipTwistPinky"
+              ],
               "subgroups": []
             }
+          },
+          {
+            "type": "row",
+            "key": "sliderMobileposeOffsetX"
+          },
+          {
+            "type": "row",
+            "key": "sliderMobileposeOffsetY"
+          },
+          {
+            "type": "row",
+            "key": "sliderMobileposeOffsetZ"
+          },
+          {
+            "type": "row",
+            "key": "sliderMobilePoseScale"
           },
           {
             "type": "group",
@@ -3238,7 +3506,12 @@
             }
           }
         ],
-        "rowKeys": [],
+        "rowKeys": [
+          "sliderMobileposeOffsetX",
+          "sliderMobileposeOffsetY",
+          "sliderMobileposeOffsetZ",
+          "sliderMobilePoseScale"
+        ],
         "subgroups": [
           {
             "key": "mobile:ROTATION",
@@ -3260,38 +3533,290 @@
           },
           {
             "key": "mobile:Whole-Hand Rotation & Thumb",
-            "items": [],
-            "rowKeys": [],
+            "items": [
+              {
+                "type": "row",
+                "key": "sliderMobilemodelRotX"
+              },
+              {
+                "type": "row",
+                "key": "sliderMobilemodelRotY"
+              },
+              {
+                "type": "row",
+                "key": "sliderMobilemodelRotZ"
+              },
+              {
+                "type": "row",
+                "key": "sliderMobilethumbCurl"
+              },
+              {
+                "type": "row",
+                "key": "sliderMobilethumbSplay"
+              },
+              {
+                "type": "row",
+                "key": "sliderMobilethumbSplay2"
+              },
+              {
+                "type": "row",
+                "key": "sliderMobilecurlBiasThumb"
+              },
+              {
+                "type": "row",
+                "key": "sliderMobilebaseOnlyCurlThumb"
+              },
+              {
+                "type": "row",
+                "key": "sliderMobilemidOnlyCurlThumb"
+              },
+              {
+                "type": "row",
+                "key": "sliderMobiletipOnlyCurlThumb"
+              },
+              {
+                "type": "row",
+                "key": "sliderMobiletipTwistThumb"
+              }
+            ],
+            "rowKeys": [
+              "sliderMobilemodelRotX",
+              "sliderMobilemodelRotY",
+              "sliderMobilemodelRotZ",
+              "sliderMobilethumbCurl",
+              "sliderMobilethumbSplay",
+              "sliderMobilethumbSplay2",
+              "sliderMobilecurlBiasThumb",
+              "sliderMobilebaseOnlyCurlThumb",
+              "sliderMobilemidOnlyCurlThumb",
+              "sliderMobiletipOnlyCurlThumb",
+              "sliderMobiletipTwistThumb"
+            ],
             "subgroups": []
           },
           {
             "key": "mobile:Wrist",
-            "items": [],
-            "rowKeys": [],
+            "items": [
+              {
+                "type": "row",
+                "key": "checkboxMobileCropWristEnabled"
+              },
+              {
+                "type": "row",
+                "key": "sliderMobilewristBend"
+              },
+              {
+                "type": "row",
+                "key": "sliderMobilewristSplay"
+              },
+              {
+                "type": "row",
+                "key": "sliderMobilewristRotation"
+              },
+              {
+                "type": "row",
+                "key": "sliderMobileHideWrist"
+              }
+            ],
+            "rowKeys": [
+              "checkboxMobileCropWristEnabled",
+              "sliderMobilewristBend",
+              "sliderMobilewristSplay",
+              "sliderMobilewristRotation",
+              "sliderMobileHideWrist"
+            ],
             "subgroups": []
           },
           {
             "key": "mobile:Index",
-            "items": [],
-            "rowKeys": [],
+            "items": [
+              {
+                "type": "row",
+                "key": "sliderMobilecurlIndex"
+              },
+              {
+                "type": "row",
+                "key": "sliderMobilesplayIndex"
+              },
+              {
+                "type": "row",
+                "key": "sliderMobilesplayIndex2"
+              },
+              {
+                "type": "row",
+                "key": "sliderMobilecurlBiasIndex"
+              },
+              {
+                "type": "row",
+                "key": "sliderMobilebaseOnlyCurlIndex"
+              },
+              {
+                "type": "row",
+                "key": "sliderMobilemidOnlyCurlIndex"
+              },
+              {
+                "type": "row",
+                "key": "sliderMobiletipOnlyCurlIndex"
+              },
+              {
+                "type": "row",
+                "key": "sliderMobiletipTwistIndex"
+              }
+            ],
+            "rowKeys": [
+              "sliderMobilecurlIndex",
+              "sliderMobilesplayIndex",
+              "sliderMobilesplayIndex2",
+              "sliderMobilecurlBiasIndex",
+              "sliderMobilebaseOnlyCurlIndex",
+              "sliderMobilemidOnlyCurlIndex",
+              "sliderMobiletipOnlyCurlIndex",
+              "sliderMobiletipTwistIndex"
+            ],
             "subgroups": []
           },
           {
             "key": "mobile:Middle",
-            "items": [],
-            "rowKeys": [],
+            "items": [
+              {
+                "type": "row",
+                "key": "sliderMobilecurlMiddle"
+              },
+              {
+                "type": "row",
+                "key": "sliderMobilesplayMiddle"
+              },
+              {
+                "type": "row",
+                "key": "sliderMobilesplayMiddle2"
+              },
+              {
+                "type": "row",
+                "key": "sliderMobilecurlBiasMiddle"
+              },
+              {
+                "type": "row",
+                "key": "sliderMobilebaseOnlyCurlMiddle"
+              },
+              {
+                "type": "row",
+                "key": "sliderMobilemidOnlyCurlMiddle"
+              },
+              {
+                "type": "row",
+                "key": "sliderMobiletipOnlyCurlMiddle"
+              },
+              {
+                "type": "row",
+                "key": "sliderMobiletipTwistMiddle"
+              }
+            ],
+            "rowKeys": [
+              "sliderMobilecurlMiddle",
+              "sliderMobilesplayMiddle",
+              "sliderMobilesplayMiddle2",
+              "sliderMobilecurlBiasMiddle",
+              "sliderMobilebaseOnlyCurlMiddle",
+              "sliderMobilemidOnlyCurlMiddle",
+              "sliderMobiletipOnlyCurlMiddle",
+              "sliderMobiletipTwistMiddle"
+            ],
             "subgroups": []
           },
           {
             "key": "mobile:Ring",
-            "items": [],
-            "rowKeys": [],
+            "items": [
+              {
+                "type": "row",
+                "key": "sliderMobilecurlRing"
+              },
+              {
+                "type": "row",
+                "key": "sliderMobilesplayRing"
+              },
+              {
+                "type": "row",
+                "key": "sliderMobilesplayRing2"
+              },
+              {
+                "type": "row",
+                "key": "sliderMobilecurlBiasRing"
+              },
+              {
+                "type": "row",
+                "key": "sliderMobilebaseOnlyCurlRing"
+              },
+              {
+                "type": "row",
+                "key": "sliderMobilemidOnlyCurlRing"
+              },
+              {
+                "type": "row",
+                "key": "sliderMobiletipOnlyCurlRing"
+              },
+              {
+                "type": "row",
+                "key": "sliderMobiletipTwistRing"
+              }
+            ],
+            "rowKeys": [
+              "sliderMobilecurlRing",
+              "sliderMobilesplayRing",
+              "sliderMobilesplayRing2",
+              "sliderMobilecurlBiasRing",
+              "sliderMobilebaseOnlyCurlRing",
+              "sliderMobilemidOnlyCurlRing",
+              "sliderMobiletipOnlyCurlRing",
+              "sliderMobiletipTwistRing"
+            ],
             "subgroups": []
           },
           {
             "key": "mobile:Pinky",
-            "items": [],
-            "rowKeys": [],
+            "items": [
+              {
+                "type": "row",
+                "key": "sliderMobilecurlPinky"
+              },
+              {
+                "type": "row",
+                "key": "sliderMobilesplayPinky"
+              },
+              {
+                "type": "row",
+                "key": "sliderMobilesplayPinky2"
+              },
+              {
+                "type": "row",
+                "key": "sliderMobilecurlBiasPinky"
+              },
+              {
+                "type": "row",
+                "key": "sliderMobilebaseOnlyCurlPinky"
+              },
+              {
+                "type": "row",
+                "key": "sliderMobilemidOnlyCurlPinky"
+              },
+              {
+                "type": "row",
+                "key": "sliderMobiletipOnlyCurlPinky"
+              },
+              {
+                "type": "row",
+                "key": "sliderMobiletipTwistPinky"
+              }
+            ],
+            "rowKeys": [
+              "sliderMobilecurlPinky",
+              "sliderMobilesplayPinky",
+              "sliderMobilesplayPinky2",
+              "sliderMobilecurlBiasPinky",
+              "sliderMobilebaseOnlyCurlPinky",
+              "sliderMobilemidOnlyCurlPinky",
+              "sliderMobiletipOnlyCurlPinky",
+              "sliderMobiletipTwistPinky"
+            ],
             "subgroups": []
           },
           {
@@ -4077,8 +4602,65 @@
             "type": "group",
             "section": {
               "key": "landscape:Whole-Hand Rotation & Thumb",
-              "items": [],
-              "rowKeys": [],
+              "items": [
+                {
+                  "type": "row",
+                  "key": "sliderLandscapemodelRotX"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderLandscapemodelRotY"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderLandscapemodelRotZ"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderLandscapethumbCurl"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderLandscapethumbSplay"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderLandscapethumbSplay2"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderLandscapecurlBiasThumb"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderLandscapebaseOnlyCurlThumb"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderLandscapemidOnlyCurlThumb"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderLandscapetipOnlyCurlThumb"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderLandscapetipTwistThumb"
+                }
+              ],
+              "rowKeys": [
+                "sliderLandscapemodelRotX",
+                "sliderLandscapemodelRotY",
+                "sliderLandscapemodelRotZ",
+                "sliderLandscapethumbCurl",
+                "sliderLandscapethumbSplay",
+                "sliderLandscapethumbSplay2",
+                "sliderLandscapecurlBiasThumb",
+                "sliderLandscapebaseOnlyCurlThumb",
+                "sliderLandscapemidOnlyCurlThumb",
+                "sliderLandscapetipOnlyCurlThumb",
+                "sliderLandscapetipTwistThumb"
+              ],
               "subgroups": []
             }
           },
@@ -4086,8 +4668,35 @@
             "type": "group",
             "section": {
               "key": "landscape:Wrist",
-              "items": [],
-              "rowKeys": [],
+              "items": [
+                {
+                  "type": "row",
+                  "key": "checkboxLandscapeCropWristEnabled"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderLandscapewristBend"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderLandscapewristSplay"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderLandscapewristRotation"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderLandscapeHideWrist"
+                }
+              ],
+              "rowKeys": [
+                "checkboxLandscapeCropWristEnabled",
+                "sliderLandscapewristBend",
+                "sliderLandscapewristSplay",
+                "sliderLandscapewristRotation",
+                "sliderLandscapeHideWrist"
+              ],
               "subgroups": []
             }
           },
@@ -4095,8 +4704,50 @@
             "type": "group",
             "section": {
               "key": "landscape:Index",
-              "items": [],
-              "rowKeys": [],
+              "items": [
+                {
+                  "type": "row",
+                  "key": "sliderLandscapecurlIndex"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderLandscapesplayIndex"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderLandscapesplayIndex2"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderLandscapecurlBiasIndex"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderLandscapebaseOnlyCurlIndex"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderLandscapemidOnlyCurlIndex"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderLandscapetipOnlyCurlIndex"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderLandscapetipTwistIndex"
+                }
+              ],
+              "rowKeys": [
+                "sliderLandscapecurlIndex",
+                "sliderLandscapesplayIndex",
+                "sliderLandscapesplayIndex2",
+                "sliderLandscapecurlBiasIndex",
+                "sliderLandscapebaseOnlyCurlIndex",
+                "sliderLandscapemidOnlyCurlIndex",
+                "sliderLandscapetipOnlyCurlIndex",
+                "sliderLandscapetipTwistIndex"
+              ],
               "subgroups": []
             }
           },
@@ -4104,8 +4755,50 @@
             "type": "group",
             "section": {
               "key": "landscape:Middle",
-              "items": [],
-              "rowKeys": [],
+              "items": [
+                {
+                  "type": "row",
+                  "key": "sliderLandscapecurlMiddle"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderLandscapesplayMiddle"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderLandscapesplayMiddle2"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderLandscapecurlBiasMiddle"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderLandscapebaseOnlyCurlMiddle"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderLandscapemidOnlyCurlMiddle"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderLandscapetipOnlyCurlMiddle"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderLandscapetipTwistMiddle"
+                }
+              ],
+              "rowKeys": [
+                "sliderLandscapecurlMiddle",
+                "sliderLandscapesplayMiddle",
+                "sliderLandscapesplayMiddle2",
+                "sliderLandscapecurlBiasMiddle",
+                "sliderLandscapebaseOnlyCurlMiddle",
+                "sliderLandscapemidOnlyCurlMiddle",
+                "sliderLandscapetipOnlyCurlMiddle",
+                "sliderLandscapetipTwistMiddle"
+              ],
               "subgroups": []
             }
           },
@@ -4113,8 +4806,50 @@
             "type": "group",
             "section": {
               "key": "landscape:Ring",
-              "items": [],
-              "rowKeys": [],
+              "items": [
+                {
+                  "type": "row",
+                  "key": "sliderLandscapecurlRing"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderLandscapesplayRing"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderLandscapesplayRing2"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderLandscapecurlBiasRing"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderLandscapebaseOnlyCurlRing"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderLandscapemidOnlyCurlRing"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderLandscapetipOnlyCurlRing"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderLandscapetipTwistRing"
+                }
+              ],
+              "rowKeys": [
+                "sliderLandscapecurlRing",
+                "sliderLandscapesplayRing",
+                "sliderLandscapesplayRing2",
+                "sliderLandscapecurlBiasRing",
+                "sliderLandscapebaseOnlyCurlRing",
+                "sliderLandscapemidOnlyCurlRing",
+                "sliderLandscapetipOnlyCurlRing",
+                "sliderLandscapetipTwistRing"
+              ],
               "subgroups": []
             }
           },
@@ -4122,10 +4857,68 @@
             "type": "group",
             "section": {
               "key": "landscape:Pinky",
-              "items": [],
-              "rowKeys": [],
+              "items": [
+                {
+                  "type": "row",
+                  "key": "sliderLandscapecurlPinky"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderLandscapesplayPinky"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderLandscapesplayPinky2"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderLandscapecurlBiasPinky"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderLandscapebaseOnlyCurlPinky"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderLandscapemidOnlyCurlPinky"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderLandscapetipOnlyCurlPinky"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderLandscapetipTwistPinky"
+                }
+              ],
+              "rowKeys": [
+                "sliderLandscapecurlPinky",
+                "sliderLandscapesplayPinky",
+                "sliderLandscapesplayPinky2",
+                "sliderLandscapecurlBiasPinky",
+                "sliderLandscapebaseOnlyCurlPinky",
+                "sliderLandscapemidOnlyCurlPinky",
+                "sliderLandscapetipOnlyCurlPinky",
+                "sliderLandscapetipTwistPinky"
+              ],
               "subgroups": []
             }
+          },
+          {
+            "type": "row",
+            "key": "sliderLandscapeposeOffsetX"
+          },
+          {
+            "type": "row",
+            "key": "sliderLandscapeposeOffsetY"
+          },
+          {
+            "type": "row",
+            "key": "sliderLandscapeposeOffsetZ"
+          },
+          {
+            "type": "row",
+            "key": "sliderLandscapePoseScale"
           },
           {
             "type": "group",
@@ -4137,7 +4930,12 @@
             }
           }
         ],
-        "rowKeys": [],
+        "rowKeys": [
+          "sliderLandscapeposeOffsetX",
+          "sliderLandscapeposeOffsetY",
+          "sliderLandscapeposeOffsetZ",
+          "sliderLandscapePoseScale"
+        ],
         "subgroups": [
           {
             "key": "landscape:ROTATION",
@@ -4159,38 +4957,290 @@
           },
           {
             "key": "landscape:Whole-Hand Rotation & Thumb",
-            "items": [],
-            "rowKeys": [],
+            "items": [
+              {
+                "type": "row",
+                "key": "sliderLandscapemodelRotX"
+              },
+              {
+                "type": "row",
+                "key": "sliderLandscapemodelRotY"
+              },
+              {
+                "type": "row",
+                "key": "sliderLandscapemodelRotZ"
+              },
+              {
+                "type": "row",
+                "key": "sliderLandscapethumbCurl"
+              },
+              {
+                "type": "row",
+                "key": "sliderLandscapethumbSplay"
+              },
+              {
+                "type": "row",
+                "key": "sliderLandscapethumbSplay2"
+              },
+              {
+                "type": "row",
+                "key": "sliderLandscapecurlBiasThumb"
+              },
+              {
+                "type": "row",
+                "key": "sliderLandscapebaseOnlyCurlThumb"
+              },
+              {
+                "type": "row",
+                "key": "sliderLandscapemidOnlyCurlThumb"
+              },
+              {
+                "type": "row",
+                "key": "sliderLandscapetipOnlyCurlThumb"
+              },
+              {
+                "type": "row",
+                "key": "sliderLandscapetipTwistThumb"
+              }
+            ],
+            "rowKeys": [
+              "sliderLandscapemodelRotX",
+              "sliderLandscapemodelRotY",
+              "sliderLandscapemodelRotZ",
+              "sliderLandscapethumbCurl",
+              "sliderLandscapethumbSplay",
+              "sliderLandscapethumbSplay2",
+              "sliderLandscapecurlBiasThumb",
+              "sliderLandscapebaseOnlyCurlThumb",
+              "sliderLandscapemidOnlyCurlThumb",
+              "sliderLandscapetipOnlyCurlThumb",
+              "sliderLandscapetipTwistThumb"
+            ],
             "subgroups": []
           },
           {
             "key": "landscape:Wrist",
-            "items": [],
-            "rowKeys": [],
+            "items": [
+              {
+                "type": "row",
+                "key": "checkboxLandscapeCropWristEnabled"
+              },
+              {
+                "type": "row",
+                "key": "sliderLandscapewristBend"
+              },
+              {
+                "type": "row",
+                "key": "sliderLandscapewristSplay"
+              },
+              {
+                "type": "row",
+                "key": "sliderLandscapewristRotation"
+              },
+              {
+                "type": "row",
+                "key": "sliderLandscapeHideWrist"
+              }
+            ],
+            "rowKeys": [
+              "checkboxLandscapeCropWristEnabled",
+              "sliderLandscapewristBend",
+              "sliderLandscapewristSplay",
+              "sliderLandscapewristRotation",
+              "sliderLandscapeHideWrist"
+            ],
             "subgroups": []
           },
           {
             "key": "landscape:Index",
-            "items": [],
-            "rowKeys": [],
+            "items": [
+              {
+                "type": "row",
+                "key": "sliderLandscapecurlIndex"
+              },
+              {
+                "type": "row",
+                "key": "sliderLandscapesplayIndex"
+              },
+              {
+                "type": "row",
+                "key": "sliderLandscapesplayIndex2"
+              },
+              {
+                "type": "row",
+                "key": "sliderLandscapecurlBiasIndex"
+              },
+              {
+                "type": "row",
+                "key": "sliderLandscapebaseOnlyCurlIndex"
+              },
+              {
+                "type": "row",
+                "key": "sliderLandscapemidOnlyCurlIndex"
+              },
+              {
+                "type": "row",
+                "key": "sliderLandscapetipOnlyCurlIndex"
+              },
+              {
+                "type": "row",
+                "key": "sliderLandscapetipTwistIndex"
+              }
+            ],
+            "rowKeys": [
+              "sliderLandscapecurlIndex",
+              "sliderLandscapesplayIndex",
+              "sliderLandscapesplayIndex2",
+              "sliderLandscapecurlBiasIndex",
+              "sliderLandscapebaseOnlyCurlIndex",
+              "sliderLandscapemidOnlyCurlIndex",
+              "sliderLandscapetipOnlyCurlIndex",
+              "sliderLandscapetipTwistIndex"
+            ],
             "subgroups": []
           },
           {
             "key": "landscape:Middle",
-            "items": [],
-            "rowKeys": [],
+            "items": [
+              {
+                "type": "row",
+                "key": "sliderLandscapecurlMiddle"
+              },
+              {
+                "type": "row",
+                "key": "sliderLandscapesplayMiddle"
+              },
+              {
+                "type": "row",
+                "key": "sliderLandscapesplayMiddle2"
+              },
+              {
+                "type": "row",
+                "key": "sliderLandscapecurlBiasMiddle"
+              },
+              {
+                "type": "row",
+                "key": "sliderLandscapebaseOnlyCurlMiddle"
+              },
+              {
+                "type": "row",
+                "key": "sliderLandscapemidOnlyCurlMiddle"
+              },
+              {
+                "type": "row",
+                "key": "sliderLandscapetipOnlyCurlMiddle"
+              },
+              {
+                "type": "row",
+                "key": "sliderLandscapetipTwistMiddle"
+              }
+            ],
+            "rowKeys": [
+              "sliderLandscapecurlMiddle",
+              "sliderLandscapesplayMiddle",
+              "sliderLandscapesplayMiddle2",
+              "sliderLandscapecurlBiasMiddle",
+              "sliderLandscapebaseOnlyCurlMiddle",
+              "sliderLandscapemidOnlyCurlMiddle",
+              "sliderLandscapetipOnlyCurlMiddle",
+              "sliderLandscapetipTwistMiddle"
+            ],
             "subgroups": []
           },
           {
             "key": "landscape:Ring",
-            "items": [],
-            "rowKeys": [],
+            "items": [
+              {
+                "type": "row",
+                "key": "sliderLandscapecurlRing"
+              },
+              {
+                "type": "row",
+                "key": "sliderLandscapesplayRing"
+              },
+              {
+                "type": "row",
+                "key": "sliderLandscapesplayRing2"
+              },
+              {
+                "type": "row",
+                "key": "sliderLandscapecurlBiasRing"
+              },
+              {
+                "type": "row",
+                "key": "sliderLandscapebaseOnlyCurlRing"
+              },
+              {
+                "type": "row",
+                "key": "sliderLandscapemidOnlyCurlRing"
+              },
+              {
+                "type": "row",
+                "key": "sliderLandscapetipOnlyCurlRing"
+              },
+              {
+                "type": "row",
+                "key": "sliderLandscapetipTwistRing"
+              }
+            ],
+            "rowKeys": [
+              "sliderLandscapecurlRing",
+              "sliderLandscapesplayRing",
+              "sliderLandscapesplayRing2",
+              "sliderLandscapecurlBiasRing",
+              "sliderLandscapebaseOnlyCurlRing",
+              "sliderLandscapemidOnlyCurlRing",
+              "sliderLandscapetipOnlyCurlRing",
+              "sliderLandscapetipTwistRing"
+            ],
             "subgroups": []
           },
           {
             "key": "landscape:Pinky",
-            "items": [],
-            "rowKeys": [],
+            "items": [
+              {
+                "type": "row",
+                "key": "sliderLandscapecurlPinky"
+              },
+              {
+                "type": "row",
+                "key": "sliderLandscapesplayPinky"
+              },
+              {
+                "type": "row",
+                "key": "sliderLandscapesplayPinky2"
+              },
+              {
+                "type": "row",
+                "key": "sliderLandscapecurlBiasPinky"
+              },
+              {
+                "type": "row",
+                "key": "sliderLandscapebaseOnlyCurlPinky"
+              },
+              {
+                "type": "row",
+                "key": "sliderLandscapemidOnlyCurlPinky"
+              },
+              {
+                "type": "row",
+                "key": "sliderLandscapetipOnlyCurlPinky"
+              },
+              {
+                "type": "row",
+                "key": "sliderLandscapetipTwistPinky"
+              }
+            ],
+            "rowKeys": [
+              "sliderLandscapecurlPinky",
+              "sliderLandscapesplayPinky",
+              "sliderLandscapesplayPinky2",
+              "sliderLandscapecurlBiasPinky",
+              "sliderLandscapebaseOnlyCurlPinky",
+              "sliderLandscapemidOnlyCurlPinky",
+              "sliderLandscapetipOnlyCurlPinky",
+              "sliderLandscapetipTwistPinky"
+            ],
             "subgroups": []
           },
           {
@@ -4349,10 +5399,10 @@
     "desktop:Saved Tween Sequences": false,
     "desktop:Field Layout": true,
     "desktop:Pose": false,
-    "desktop:ROTATION": true,
+    "desktop:ROTATION": false,
     "desktop:THUMB": true,
     "desktop:Pose Offset": true,
-    "desktop:Whole-Hand Rotation & Thumb": true,
+    "desktop:Whole-Hand Rotation & Thumb": false,
     "desktop:Wrist": true,
     "desktop:Index": true,
     "desktop:Middle": true,
@@ -4367,7 +5417,7 @@
     "desktop:Palm Facing": false,
     "desktop:Lighting": true,
     "desktop:Saved Lighting": true,
-    "desktop:Toon Shading": true,
+    "desktop:Toon Shading": false,
     "desktop:Outline": true,
     "desktop:Background": true,
     "mobile:Dev Panel": false,
@@ -4551,7 +5601,111 @@
     "sliderLandscapeHandScale": null,
     "landscape:ROTATION": null,
     "landscape:THUMB": null,
-    "landscape:Pose Offset": null
+    "landscape:Pose Offset": null,
+    "sliderMobileposeOffsetX": null,
+    "sliderLandscapeposeOffsetX": null,
+    "sliderMobileposeOffsetY": null,
+    "sliderLandscapeposeOffsetY": null,
+    "sliderMobileposeOffsetZ": null,
+    "sliderLandscapeposeOffsetZ": null,
+    "sliderMobilePoseScale": null,
+    "sliderLandscapePoseScale": null,
+    "sliderMobilemodelRotX": null,
+    "sliderLandscapemodelRotX": null,
+    "sliderMobilemodelRotY": null,
+    "sliderLandscapemodelRotY": null,
+    "sliderMobilemodelRotZ": null,
+    "sliderLandscapemodelRotZ": null,
+    "sliderMobilethumbCurl": null,
+    "sliderLandscapethumbCurl": null,
+    "sliderMobilethumbSplay": null,
+    "sliderLandscapethumbSplay": null,
+    "sliderMobilethumbSplay2": null,
+    "sliderLandscapethumbSplay2": null,
+    "sliderMobilecurlBiasThumb": null,
+    "sliderLandscapecurlBiasThumb": null,
+    "sliderMobilebaseOnlyCurlThumb": null,
+    "sliderLandscapebaseOnlyCurlThumb": null,
+    "sliderMobilemidOnlyCurlThumb": null,
+    "sliderLandscapemidOnlyCurlThumb": null,
+    "sliderMobiletipOnlyCurlThumb": null,
+    "sliderLandscapetipOnlyCurlThumb": null,
+    "sliderMobiletipTwistThumb": null,
+    "sliderLandscapetipTwistThumb": null,
+    "checkboxMobileCropWristEnabled": null,
+    "checkboxLandscapeCropWristEnabled": null,
+    "sliderMobilewristBend": null,
+    "sliderLandscapewristBend": null,
+    "sliderMobilewristSplay": null,
+    "sliderLandscapewristSplay": null,
+    "sliderMobilewristRotation": null,
+    "sliderLandscapewristRotation": null,
+    "sliderMobileHideWrist": null,
+    "sliderLandscapeHideWrist": null,
+    "sliderMobilecurlIndex": null,
+    "sliderLandscapecurlIndex": null,
+    "sliderMobilesplayIndex": null,
+    "sliderLandscapesplayIndex": null,
+    "sliderMobilesplayIndex2": null,
+    "sliderLandscapesplayIndex2": null,
+    "sliderMobilecurlBiasIndex": null,
+    "sliderLandscapecurlBiasIndex": null,
+    "sliderMobilebaseOnlyCurlIndex": null,
+    "sliderLandscapebaseOnlyCurlIndex": null,
+    "sliderMobilemidOnlyCurlIndex": null,
+    "sliderLandscapemidOnlyCurlIndex": null,
+    "sliderMobiletipOnlyCurlIndex": null,
+    "sliderLandscapetipOnlyCurlIndex": null,
+    "sliderMobiletipTwistIndex": null,
+    "sliderLandscapetipTwistIndex": null,
+    "sliderMobilecurlMiddle": null,
+    "sliderLandscapecurlMiddle": null,
+    "sliderMobilesplayMiddle": null,
+    "sliderLandscapesplayMiddle": null,
+    "sliderMobilesplayMiddle2": null,
+    "sliderLandscapesplayMiddle2": null,
+    "sliderMobilecurlBiasMiddle": null,
+    "sliderLandscapecurlBiasMiddle": null,
+    "sliderMobilebaseOnlyCurlMiddle": null,
+    "sliderLandscapebaseOnlyCurlMiddle": null,
+    "sliderMobilemidOnlyCurlMiddle": null,
+    "sliderLandscapemidOnlyCurlMiddle": null,
+    "sliderMobiletipOnlyCurlMiddle": null,
+    "sliderLandscapetipOnlyCurlMiddle": null,
+    "sliderMobiletipTwistMiddle": null,
+    "sliderLandscapetipTwistMiddle": null,
+    "sliderMobilecurlRing": null,
+    "sliderLandscapecurlRing": null,
+    "sliderMobilesplayRing": null,
+    "sliderLandscapesplayRing": null,
+    "sliderMobilesplayRing2": null,
+    "sliderLandscapesplayRing2": null,
+    "sliderMobilecurlBiasRing": null,
+    "sliderLandscapecurlBiasRing": null,
+    "sliderMobilebaseOnlyCurlRing": null,
+    "sliderLandscapebaseOnlyCurlRing": null,
+    "sliderMobilemidOnlyCurlRing": null,
+    "sliderLandscapemidOnlyCurlRing": null,
+    "sliderMobiletipOnlyCurlRing": null,
+    "sliderLandscapetipOnlyCurlRing": null,
+    "sliderMobiletipTwistRing": null,
+    "sliderLandscapetipTwistRing": null,
+    "sliderMobilecurlPinky": null,
+    "sliderLandscapecurlPinky": null,
+    "sliderMobilesplayPinky": null,
+    "sliderLandscapesplayPinky": null,
+    "sliderMobilesplayPinky2": null,
+    "sliderLandscapesplayPinky2": null,
+    "sliderMobilecurlBiasPinky": null,
+    "sliderLandscapecurlBiasPinky": null,
+    "sliderMobilebaseOnlyCurlPinky": null,
+    "sliderLandscapebaseOnlyCurlPinky": null,
+    "sliderMobilemidOnlyCurlPinky": null,
+    "sliderLandscapemidOnlyCurlPinky": null,
+    "sliderMobiletipOnlyCurlPinky": null,
+    "sliderLandscapetipOnlyCurlPinky": null,
+    "sliderMobiletipTwistPinky": null,
+    "sliderLandscapetipTwistPinky": null
   },
   "devTextOverridesManual": [],
   "lockedGroups": [],
@@ -4566,7 +5720,59 @@
     "sliderSensorInterval": false,
     "selectTweenAddPose": true,
     "sliderTweenSpeedMs": true,
-    "sliderHandScale": true
+    "sliderHandScale": true,
+    "sliderposeOffsetX": true,
+    "sliderposeOffsetY": true,
+    "sliderposeOffsetZ": true,
+    "sliderPoseScale": true,
+    "slidermodelRotX": true,
+    "slidermodelRotY": true,
+    "slidermodelRotZ": true,
+    "sliderthumbCurl": true,
+    "sliderthumbSplay": true,
+    "sliderthumbSplay2": true,
+    "slidercurlBiasThumb": true,
+    "sliderbaseOnlyCurlThumb": true,
+    "slidermidOnlyCurlThumb": true,
+    "slidertipOnlyCurlThumb": true,
+    "slidertipTwistThumb": true,
+    "checkboxCropWristEnabled": true,
+    "sliderwristBend": true,
+    "sliderwristSplay": true,
+    "sliderwristRotation": true,
+    "sliderHideWrist": true,
+    "slidercurlIndex": true,
+    "slidersplayIndex": true,
+    "slidersplayIndex2": true,
+    "slidercurlBiasIndex": true,
+    "sliderbaseOnlyCurlIndex": true,
+    "slidermidOnlyCurlIndex": true,
+    "slidertipOnlyCurlIndex": true,
+    "slidertipTwistIndex": true,
+    "slidercurlMiddle": true,
+    "slidersplayMiddle": true,
+    "slidersplayMiddle2": true,
+    "slidercurlBiasMiddle": true,
+    "sliderbaseOnlyCurlMiddle": true,
+    "slidermidOnlyCurlMiddle": true,
+    "slidertipOnlyCurlMiddle": true,
+    "slidertipTwistMiddle": true,
+    "slidercurlRing": true,
+    "slidersplayRing": true,
+    "slidersplayRing2": true,
+    "slidercurlBiasRing": true,
+    "sliderbaseOnlyCurlRing": true,
+    "slidermidOnlyCurlRing": true,
+    "slidertipOnlyCurlRing": true,
+    "slidertipTwistRing": true,
+    "slidercurlPinky": true,
+    "slidersplayPinky": true,
+    "slidersplayPinky2": true,
+    "slidercurlBiasPinky": true,
+    "sliderbaseOnlyCurlPinky": true,
+    "slidermidOnlyCurlPinky": true,
+    "slidertipOnlyCurlPinky": true,
+    "slidertipTwistPinky": true
   },
   "devIndependence": {
     "mobile": {},
