@@ -23,7 +23,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
 // this simply clears the stale local save; it does not touch the
 // separate git-tracked save (data/processed/dev-panel-settings.json,
 // reset directly when this was first found).
-const HANDYSET_SETTINGS_SCHEMA_VERSION = '2026-09-21d'
+const HANDYSET_SETTINGS_SCHEMA_VERSION = '2026-09-21e'
 try {
   if (localStorage.getItem('handysetSettingsSchemaVersion') !== HANDYSET_SETTINGS_SCHEMA_VERSION) {
     localStorage.removeItem('devPanelSettings')
@@ -77,12 +77,6 @@ const cfg = {
   reactiveArmLengthEnabled: true,
   armLengthRange: '{"min":0,"max":85}',
   armLengthCurve: '[{"x":0,"y":1},{"x":0.148333740234375,"y":0.6613540649414062},{"x":0.4100001017252604,"y":0.31468760172526045},{"x":0.5316670735677084,"y":0.2680206298828125},{"x":0.748333740234375,"y":0.19468739827473958},{"x":1,"y":0}]',
-  // Responsive Wrist Splay — same porting/adaptation note as Reactive Arm
-  // Length above (tiltMagnitude stands in for HANDY DANDIES' per-field
-  // live distance range).
-  wristSplayResponsiveEnabled: true, wristSplayDefault: 7, wristSplayReactiveEnabled: true,
-  wristSplayRange: '{"min":5,"max":-71}',
-  wristSplayCurve: '[{"x":0,"y":1},{"x":0.31833343505859374,"y":0.6961458841959636},{"x":1,"y":0.042812347412109375}]',
   // Lighting
   keyAzimuth: 117, keyElevation: 56, keyTargetHeight: 71, keyIntensity: 6, keyColor: '#ffffff',
   ambientIntensity: 0, ambientSkyColor: '#ffffff', ambientGroundColor: '#3a2f2a',
@@ -228,6 +222,7 @@ const boneRestQuat = {}
 let wristPosRaw = new THREE.Vector3()
 let forearmPosRaw = new THREE.Vector3()
 let wristCropNormalAligned = null
+const modelRotationPivot = new THREE.Vector3()
 const sceneState = { fieldRadius: 10 }
 let toonMaterial = null
 let outlineMaterial = null
@@ -238,16 +233,14 @@ let hand = null // hands[0] — the "primary" hand: pose-editing reference frame
 function computeBaseScale() { return (8 / handLengthRaw) * cfg.handScale }
 
 // ---------------------------------------------------------------------
-// Reactive Arm Length + Responsive Wrist Splay — curve math, ported
-// verbatim from HANDY DANDIES (see cfg's own declaration comment for the
-// single-hand distance-input adaptation). `armLengthRangeParsed`/etc are
-// parsed once (parse*Config(), called from each control's own onChange
-// and once at startup) rather than JSON.parse'd every frame.
+// Reactive Arm Length — curve math, ported verbatim from HANDY DANDIES
+// (see cfg's own declaration comment for the single-hand distance-input
+// adaptation). `armLengthRangeParsed`/etc are parsed once (parse*Config(),
+// called from each control's own onChange and once at startup) rather
+// than JSON.parse'd every frame.
 // ---------------------------------------------------------------------
 let armLengthRangeParsed = { min: 0, max: 85 }
 let armLengthCurveParsed = [{ x: 0, y: 1 }, { x: 1, y: 0 }]
-let wristSplayRangeParsed = { min: 5, max: -71 }
-let wristSplayCurveParsed = [{ x: 0, y: 1 }, { x: 1, y: 0 }]
 const curveWidgetResyncs = []
 
 function catmullRomY(y0, y1, y2, y3, t) {
@@ -294,10 +287,6 @@ function parseArmLengthConfig() {
   try { armLengthRangeParsed = JSON.parse(cfg.armLengthRange) } catch (e) { /* keep last-good value */ }
   try { armLengthCurveParsed = JSON.parse(cfg.armLengthCurve).sort((a, b) => a.x - b.x) } catch (e) { /* keep last-good value */ }
 }
-function parseWristSplayConfig() {
-  try { wristSplayRangeParsed = JSON.parse(cfg.wristSplayRange) } catch (e) { /* keep last-good value */ }
-  try { wristSplayCurveParsed = JSON.parse(cfg.wristSplayCurve).sort((a, b) => a.x - b.x) } catch (e) { /* keep last-good value */ }
-}
 // Returns a 0-1 crop fraction (0 = full arm, 1 = fully cropped at wrist).
 // `distanceT` is `tiltMagnitude` (0-1) — see cfg's own comment.
 function computeArmLengthT(distanceT) {
@@ -306,14 +295,6 @@ function computeArmLengthT(distanceT) {
   const curveY = THREE.MathUtils.clamp(evaluateReactiveCurve(armLengthCurveParsed, distanceT), 0, 1)
   const minT = armLengthRangeParsed.min / 100, maxT = armLengthRangeParsed.max / 100
   return minT + (maxT - minT) * curveY
-}
-// Returns the EXTRA wrist-splay rotation (degrees) on top of cfg.wristSplay.
-function computeResponsiveWristSplayDeg(distanceT) {
-  if (!cfg.wristSplayResponsiveEnabled) return 0
-  if (!cfg.wristSplayReactiveEnabled) return cfg.wristSplayDefault
-  const curveY = THREE.MathUtils.clamp(evaluateReactiveCurve(wristSplayCurveParsed, distanceT), 0, 1)
-  const { min, max } = wristSplayRangeParsed
-  return min + (max - min) * curveY
 }
 
 // applyCurlToSkeleton — ported verbatim from HANDY DANDIES.
@@ -435,16 +416,13 @@ function applyCurl(fingerName) {
 // "shows up differently" describes. Axis-letter assignment (X=bend,
 // Z=splay, Y=rotation/twist) was already correct; only the rotation
 // METHOD was wrong.
-// `extraSplayDeg` (default 0) is Responsive Wrist Splay's own live
-// contribution, added onto values.wristSplay before the single rotateZ
-// call — ported from HANDY DANDIES' own identical parameter.
-function applyWristPoseToSkeleton(skeleton, values, extraSplayDeg = 0) {
+function applyWristPoseToSkeleton(skeleton, values) {
   const bone = skeleton.getBoneByName('rHand')
   if (!bone) return
   const rest = boneRestQuat.rHand
   if (rest) bone.quaternion.copy(rest)
   bone.rotateX(THREE.MathUtils.degToRad(values.wristBend || 0))
-  bone.rotateZ(THREE.MathUtils.degToRad((values.wristSplay || 0) + extraSplayDeg))
+  bone.rotateZ(THREE.MathUtils.degToRad(values.wristSplay || 0))
   bone.rotateY(THREE.MathUtils.degToRad(values.wristRotation || 0))
 }
 
@@ -454,111 +432,113 @@ function computeBaseQuatFromValues(values) {
   ))
 }
 
+// CORRECTED 2026-09-21 — real bug found after a direct report ("the Whole
+// Hand rotation sliders, all 3, dont rotate the hand correctly"), per
+// direct instruction to check HANDO's own real implementation. The old
+// version of this function computed `h.currentBaseQuat` (via
+// computeBaseQuatFromValues(), which DOES correctly fold in modelRotX/Y/Z)
+// but only ever used it as a reference axis for finger-curl math — it was
+// NEVER applied to `h.clone.quaternion`, the object that actually holds
+// the hand's rendered geometry. `h.clone.quaternion` was set exactly ONCE,
+// at hand creation (rebuildField(), `clone.quaternion.copy(alignQuat)`),
+// and never touched again — so the 3 Whole-Hand Rotation sliders had NO
+// visible effect on the rendered hand whatsoever, only a subtle secondary
+// effect on finger-curl axis orientation.
+//
+// Fixed by actually applying the computed quaternion to `h.clone`, AND by
+// porting HANDO's own real pivot mechanism (its docs/CHANGELOG.txt,
+// 2026-09-11, documents this exact bug class: rotating around the
+// object's own unrelated local origin instead of the palm) — HANDO
+// pivots `modelRoot` around `modelRotationPivot` (palm center: the
+// midpoint of the wrist bone and the middle finger's own base joint) by
+// recomputing `modelRoot.position` every time rotation/scale changes so
+// that fixed local point renders at the same spot regardless of the
+// current rotation: `position = pivot - rotation*(scale*pivot)`. Applied
+// here at HANDYSET's own `h.clone` level (HANDYSET has an EXTRA outer
+// `h.wrapper` layer HANDO doesn't — Phone Tilt's own rotation — so this
+// pivot math keeps the palm fixed within `h.wrapper`'s own frame, exactly
+// analogous to HANDO keeping it fixed within `scene`'s frame). Pose
+// Offset X/Y/Z is added AFTERWARD as a plain additive translation on top,
+// matching HANDO's own function structure exactly.
+const _rotatedScaledPivot = new THREE.Vector3()
+function applyModelRootTransform(h, poseValues) {
+  h.clone.quaternion.copy(h.currentBaseQuat)
+  const scale = computeBaseScale() * (poseValues.poseScale ?? 1)
+  h.clone.scale.setScalar(scale)
+  _rotatedScaledPivot.copy(modelRotationPivot).multiplyScalar(scale).applyQuaternion(h.clone.quaternion)
+  h.clone.position.copy(modelRotationPivot).sub(_rotatedScaledPivot)
+  h.clone.position.x += poseValues.poseOffsetX || 0
+  h.clone.position.y += poseValues.poseOffsetY || 0
+  h.clone.position.z += poseValues.poseOffsetZ || 0
+}
+
 // Single entry point: apply a full pose-values object to every hand in
 // the field. Used directly by Pose-group sliders, saved-pose "Use", and
 // Tween — same cfg applied uniformly to all hands (matching HANDY
 // DANDIES' own design: one shared pose, N independent field positions).
 function applyPoseValuesToHand(poseValues) {
-  const extraSplay = computeResponsiveWristSplayDeg(tiltMagnitude)
   hands.forEach((h) => {
     h.currentBaseQuat.copy(computeBaseQuatFromValues(poseValues))
-    applyWristPoseToSkeleton(h.skinnedMesh.skeleton, poseValues, extraSplay)
+    applyModelRootTransform(h, poseValues)
+    applyWristPoseToSkeleton(h.skinnedMesh.skeleton, poseValues)
     FINGER_NAMES.forEach((name) => applyCurlToSkeleton(name, h.skinnedMesh.skeleton, h.currentBaseQuat, h.wrapper.quaternion, poseValues))
-    h.clone.position.set(poseValues.poseOffsetX || 0, poseValues.poseOffsetY || 0, poseValues.poseOffsetZ || 0)
-    h.clone.scale.setScalar(computeBaseScale() * (poseValues.poseScale ?? 1))
   })
   cfg.hideWrist = poseValues.hideWrist || 0
   updateWristCrop()
 }
-// Per-frame refresh for Responsive Wrist Splay's live/reactive mode —
-// ported concept from HANDY DANDIES' own "idle repose" (see
-// docs/CHANGELOG.txt): applyPoseValuesToHand() above only bakes a wrist
-// splay value once, at pose-apply time, so it goes stale the moment
-// tiltMagnitude changes afterward unless reapplied every frame. Finger
-// curl is re-baked alongside the wrist for the same reason HANDY DANDIES
-// documents — every finger's base joint is a descendant of the wrist
-// bone, so its curl axis depends on the wrist's current orientation.
-// Only runs when reactive mode is genuinely live (master AND reactive
-// both on) — a static wristSplayDefault value doesn't need per-frame
-// reapplication, it's already baked in by the call above.
-function applyReactiveWristSplayFrame() {
-  if (!cfg.wristSplayResponsiveEnabled || !cfg.wristSplayReactiveEnabled) return
-  const extraSplay = computeResponsiveWristSplayDeg(tiltMagnitude)
-  hands.forEach((h) => {
-    applyWristPoseToSkeleton(h.skinnedMesh.skeleton, cfg, extraSplay)
-    FINGER_NAMES.forEach((name) => applyCurlToSkeleton(name, h.skinnedMesh.skeleton, h.currentBaseQuat, h.wrapper.quaternion, cfg))
-  })
-}
 
 // Wrist crop — one clipping plane PER HAND (each hand faces a different
-// direction once Phone Tilt rotates it, so each needs its own plane/
-// normal), along the measured wrist->forearm normal, lerped from "no
-// crop" (hideWrist=0) to "cropped at the wrist" (hideWrist=100).
-// Simplified from HANDY DANDIES' own reactive-arm-length system (not
-// ported — not part of this project's requested scope).
-//
+// direction once Phone Tilt rotates it, so each needs its own plane).
 // RECOMPUTED EVERY FRAME via skinnedMesh.onBeforeRender (wired in
-// rebuildField()), not just on slider/checkbox/pose-apply triggers —
-// real root cause, found 2026-09-21 after the user firmly (and
-// correctly) disputed "Palm Face Rotation does nothing"/"the hand
-// doesn't move at all": this used to only recompute the plane's world
-// normal on specific UI events, using whatever `h.wrapper.quaternion`
-// was AT THAT MOMENT. Phone Tilt and Palm Face Rotation continuously
-// change `h.wrapper.quaternion` every frame in animate(), so the STALE
-// plane increasingly misaligned with the model's actual current
-// orientation as it rotated — clipping away exactly the geometry that
-// would have shown the rotation, making genuinely-working rotation look
-// like it was doing nothing. Confirmed by reading HANDY DANDIES' own
-// real source: it recomputes its own equivalent clip plane inside
-// `skinnedMesh.onBeforeRender = (r) => { updateWristClipPlaneForHand(hand); r.clearDepth() }`
-// for exactly this reason (its own comment there predates this bug).
-// `wristPosRaw`/`wristCropNormalAligned` are still used by computeRollQuat()
-// (Palm Face Rotation's own roll axis) — deliberately a FIXED, bind-pose
-// direction there, unrelated to this function.
+// rebuildField()) from LIVE bone world positions — necessary so the plane
+// tracks Phone Tilt/Whole-Hand Rotation correctly frame to frame (ported
+// reasoning from HANDY DANDIES' own identical onBeforeRender wiring).
 //
-// CORRECTED 2026-09-21 (2nd round, same day) — real bug found live after
-// the user reported "wrist splay is the only thing tracking the cursor,
-// why isn't palm rotation" AND, separately, that heavy wrist splay crops
-// into the top of the hand, worse at some Default Arm Length values, and
-// that the crop disappearing when Crop Wrist is off "is probably the same
-// bug as the palm rotation thing." It was — ONE root cause explained both:
-// the plane's normal was derived from `wristCropNormalAligned`, a FIXED
-// bind-pose forearm->wrist direction that only ever gets rotated by
-// `h.wrapper.quaternion` (Phone Tilt) — it never accounted for the WRIST
-// BONE's own live rotation (wristBend/wristSplay/wristRotation +
-// Responsive Wrist Splay's extraSplayDeg). A bone's own rotation doesn't
-// move ITS OWN world position (confirmed: `rHand`'s world position is
-// unaffected by its own local rotation), so the plane's ANCHOR point was
-// never wrong — but its ORIENTATION stayed pinned to the pre-bend forearm
-// axis while the actual HAND geometry (distal to the wrist, which DOES
-// rotate with wrist bend) swung up to 71 real degrees away from it.
-// Live-verified: at a heavily-splayed cursor position, disabling Crop
-// Wrist revealed the FULL hand (5 fingers, full palm) where, with Crop
-// Wrist on, only a thin uncropped sliver remained — confirming the crop
-// was eating nearly the whole hand at extreme splay, which also explains
-// why Palm Face Rotation looked like it "did nothing": there was barely
-// any asymmetric geometry left on screen to show it rotating. Direct
-// quaternion comparison at that same cursor position, offset 0 vs 180,
-// showed `h.wrapper.quaternion` DID change substantially — the rotation
-// math itself was never broken (matches every earlier round of testing).
-//
-// Fix: derive the plane's normal from the LIVE wrist->fingertip direction
-// (`rHand` -> `rMid3`, both read via `getWorldPosition()` every frame)
-// instead of the static forearm->wrist axis. `rMid3` is a descendant of
-// `rHand` in the skeleton, so its world position DOES move with every
-// wrist-pose axis — this direction bends right along with the hand, so
-// the plane's orientation tracks wherever the hand is actually currently
-// pointing, not just wherever the forearm was in the bind pose.
-const _clipWristPos = new THREE.Vector3()
-const _clipTipPos = new THREE.Vector3()
+// REWRITTEN 2026-09-21 (3rd round, same day) — the prior 2 rounds this
+// session both got the geometry wrong in different ways (first: a static
+// bind-pose axis that didn't track live rotation at all; second: switched
+// to a wrist->fingertip axis that tracks wrist BEND, which the user
+// directly identified as wrong — "the cropping plane doesn't seem like
+// the right rotation, it should be the plane perpendicular to the axis of
+// the first bone, the arm bone" — and separately reported the crop was
+// removing the HAND instead of the ARM, and that 0%/100% were inverted).
+// Ported EXACTLY from HANDO's own real `updateWristClipPlane()` this
+// round (a background research agent extracted it verbatim; not
+// reconstructed) instead of guessing again:
+//   farBone = rForearmBend, nearBone = rHand (the actual "first"/arm
+//   bone and the wrist bone — a FIXED anatomical relationship; neither
+//   bone's own WORLD POSITION moves due to the wrist's own local
+//   rotation, so this axis is correctly wrist-bend-invariant, matching
+//   the user's own explicit spec).
+//   dir = (nearPos - farPos).normalized() — points from the arm TOWARD
+//   the wrist/hand (NOT negated — HANDO's own code uses this direction
+//   as the plane normal directly). Three.js clipping keeps the side the
+//   normal points into and clips the opposite side, so this plane keeps
+//   the HAND side and clips the ARM side — the direction the user
+//   reported as backwards is fixed by removing the `.negate()` the prior
+//   2 rounds both had.
+//   t = hideWrist/100 (or the Reactive Arm Length curve's own output),
+//   NOT clamped to [0,1] — HANDO's own slider has no lockRange, so a
+//   typed value past 100 pushes the clip point past the wrist bone and
+//   into the hand itself, exactly matching the user's own "setting it to
+//   200 should do something" expectation.
+//   clipPoint = farPos + dir * armToWristDist * t — t=0 -> exactly
+//   farPos (the arm bone; HANDO's own comment confirms this coincides
+//   with the mesh's real lower bound for this same rig, so 0% = no crop
+//   at all) -> t=1 -> exactly nearPos (the wrist bone; 100% = the entire
+//   forearm cropped away, hand fully intact).
+const _clipFarPos = new THREE.Vector3()
+const _clipNearPos = new THREE.Vector3()
+const _clipDir = new THREE.Vector3()
+const _clipPoint = new THREE.Vector3()
 function updateWristClipPlaneForHand(h) {
   if (!cfg.cropWristEnabled) {
     h.skinnedMesh.material.clippingPlanes = []
     return
   }
-  const wristBone = h.skinnedMesh.skeleton.getBoneByName('rHand')
-  const tipBone = h.skinnedMesh.skeleton.getBoneByName('rMid3')
-  if (!wristBone || !tipBone) {
+  const farBone = h.skinnedMesh.skeleton.getBoneByName('rForearmBend')
+  const nearBone = h.skinnedMesh.skeleton.getBoneByName('rHand')
+  if (!farBone || !nearBone) {
     h.skinnedMesh.material.clippingPlanes = []
     return
   }
@@ -568,26 +548,21 @@ function updateWristClipPlaneForHand(h) {
   // `material.clippingPlanes` to a fresh `[]` but never clears
   // `h.clipPlane` itself, so once crop was ever toggled off and back on,
   // this guard's `if (!h.clipPlane)` stayed false forever and the plane
-  // was never re-attached to the material — the plane object kept
-  // getting its normal/constant updated internally but had no effect on
-  // rendering at all. Unconditionally reassigning here (cheap, a plain
-  // array set, and now happening every frame anyway) makes this immune
-  // to that history regardless of how many times crop has been toggled
-  // off/on before.
+  // was never re-attached to the material. Unconditionally reassigning
+  // here (cheap, a plain array set, and now happening every frame
+  // anyway) makes this immune to that history regardless of how many
+  // times crop has been toggled off/on before.
   h.skinnedMesh.material.clippingPlanes = [h.clipPlane]
+  farBone.getWorldPosition(_clipFarPos)
+  nearBone.getWorldPosition(_clipNearPos)
+  _clipDir.subVectors(_clipNearPos, _clipFarPos).normalize()
+  const armToWristDist = _clipFarPos.distanceTo(_clipNearPos)
   // Reactive Arm Length — see computeArmLengthT()'s own comment; falls
-  // back to the plain cfg.hideWrist/100 static value when Reactive is off.
-  const t = THREE.MathUtils.clamp(computeArmLengthT(tiltMagnitude), 0, 1)
-  const maxReach = handLengthRaw * computeBaseScale() * 0.35
-  wristBone.getWorldPosition(_clipWristPos)
-  tipBone.getWorldPosition(_clipTipPos)
-  // Points toward the forearm/sleeve side (three.js discards the
-  // POSITIVE side of a clipping plane's normal) — negating the LIVE
-  // wrist->fingertip (distal) direction, same convention the old
-  // wrapper-only version used.
-  const worldNormal = _clipTipPos.clone().sub(_clipWristPos).normalize().negate()
-  const planePoint = _clipWristPos.clone().addScaledVector(worldNormal, (1 - t) * maxReach)
-  h.clipPlane.setFromNormalAndCoplanarPoint(worldNormal, planePoint)
+  // back to the plain cfg.hideWrist/100 static value when Reactive is
+  // off. Deliberately NOT clamped — see this function's own top comment.
+  const t = computeArmLengthT(tiltMagnitude)
+  _clipPoint.copy(_clipFarPos).addScaledVector(_clipDir, armToWristDist * t)
+  h.clipPlane.setFromNormalAndCoplanarPoint(_clipDir, _clipPoint)
 }
 // Kept as the explicit multi-hand entry point for UI triggers (slider/
 // checkbox/pose-apply) — still useful for an immediate update the same
@@ -768,15 +743,13 @@ function handleMouseMoveFallback(e) {
   lastInputSource = 'mouse'
   cursorNDC.set((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1)
   // tiltMagnitude/tiltAngle are ALSO still needed here — Reactive Arm
-  // Length/Responsive Wrist Splay (computeArmLengthT/
-  // computeResponsiveWristSplayDeg) read tiltMagnitude directly, not
+  // Length (computeArmLengthT) reads tiltMagnitude directly, not
   // cursorNDC/tiltTarget. Found live: removing this (leaving only
   // cursorNDC, on the assumption tiltTarget's own new raycast made
   // tiltMagnitude obsolete) left it permanently stuck at whatever it was
   // before mouse input took over (0 on a fresh load), pinning Reactive
-  // Arm Length/Wrist Splay to a single fixed curve value regardless of
-  // real cursor position and producing an unexpectedly aggressive,
-  // unchanging crop.
+  // Arm Length to a single fixed curve value regardless of real cursor
+  // position and producing an unexpectedly aggressive, unchanging crop.
   const cx = window.innerWidth / 2, cy = window.innerHeight / 2
   const dx = e.clientX - cx, dy = e.clientY - cy
   const maxDist = Math.min(cx, cy)
@@ -1035,6 +1008,26 @@ new GLTFLoader().load(MODEL_URL, async (gltf) => {
     forearmPosRaw = forearmBasePos
   }
   wristPosRaw = wristPos.clone()
+  // Whole-Hand Rotation's own pivot point — ported from HANDO's real
+  // modelRotationPivot (direct request: "make the center of rotation the
+  // center of the palm" — HANDO's own docs/CHANGELOG.txt, 2026-09-11,
+  // documents the exact same bug this project had: rotating around the
+  // object's own unrelated local origin instead). Midpoint of the wrist
+  // bone (`rHand`) and the middle finger's own base joint (`rMid1`),
+  // measured here — BEFORE rebuildField()/applyDefaultSelections() ever
+  // pose the skeleton — matching HANDO's own second, later fix for this
+  // exact mechanism (its pivot was originally captured AFTER default
+  // posing had already bent the skeleton, silently measuring an
+  // already-bent "rest" position instead of the true bind pose).
+  // Stored in the SAME raw, pre-alignQuat local frame as wristPosRaw
+  // (not rotated by alignQuat) — this is the frame h.clone's own TRS
+  // (position/quaternion/scale) operates in.
+  const midBaseBone = skinned.skeleton.getBoneByName('rMid1')
+  if (midBaseBone) {
+    const midBasePos = new THREE.Vector3()
+    midBaseBone.getWorldPosition(midBasePos)
+    modelRotationPivot.addVectors(wristPos, midBasePos).multiplyScalar(0.5)
+  }
 
   handCenterLocal.copy(wristPos).lerp(tipPos, 0.5)
   handBoundsRadiusLocal = handLengthRaw * 0.65 // effective visible-hand radius for camera framing (wrist->fingertip based, not whole-mesh)
@@ -1313,7 +1306,6 @@ function animate() {
         h.wrapper.quaternion.slerp(desired, cfg.trackingDamping)
       })
     }
-    applyReactiveWristSplayFrame()
   }
   curveWidgetResyncs.forEach((fn) => fn())
   composer.render()
@@ -1409,12 +1401,14 @@ function wireColor(id, onChange) { const el = document.getElementById(id); if (e
 function wireTextInput(id, onChange) { const el = document.getElementById(id); if (el) el.addEventListener('input', (e) => onChange(e.target.value)) }
 
 // =======================================================================
-// Reactive Arm Length / Responsive Wrist Splay — custom curve-editor and
-// dual-handle range widgets, ported from HANDY DANDIES (its own generic
-// engine has no equivalent control type, so these are hand-built DOM/SVG
-// on top of a plain devPanel.js 'text' control, same convention as this
-// project's other custom widgets). Genericized into 2 parametrized
-// builders (HANDY DANDIES has 4 near-duplicate functions; behavior here
+// Reactive Arm Length — custom curve-editor and dual-handle range
+// widgets, ported from HANDY DANDIES (its own generic engine has no
+// equivalent control type, so these are hand-built DOM/SVG on top of a
+// plain devPanel.js 'text' control, same convention as this project's
+// other custom widgets). Genericized into 2 parametrized builders
+// (originally shared with Responsive Wrist Splay too, removed 2026-09-21
+// per direct request — kept generic since a future feature may reuse
+// them; HANDY DANDIES itself has 4 near-duplicate functions; behavior here
 // is identical, just DRY'd) rather than duplicated per feature.
 // =======================================================================
 function elLocal(tag, styles, attrs) {
@@ -1846,29 +1840,6 @@ function renderPoseGroup(content) {
   renderPresetPicker(content, 'Saved Poses', SAVED_POSES, DEFAULT_POSE_NAME, applyPosePreset, capturePoseFromCfg, { exportable: true, importable: true, defaultFieldKey: 'defaultPose' })
 }
 
-// Ported from HANDY DANDIES (its own top-level "Responsive Wrist Splay"
-// group — same structure as Reactive Arm Length above, different unit
-// (degrees) and application (adds onto cfg.wristSplay every frame while
-// reactive, via applyReactiveWristSplayFrame() in animate() — see that
-// function's own comment). Single-hand distance-input adaptation: see
-// cfg's own declaration comment.
-function renderResponsiveWristSplayGroup(content) {
-  addRow(content, { id: 'checkboxWristSplayResponsiveEnabled', label: 'Responsive Wrist Splay (Master On/Off)', type: 'checkbox' })
-  document.getElementById('checkboxWristSplayResponsiveEnabled').checked = cfg.wristSplayResponsiveEnabled
-  wireCheckbox('checkboxWristSplayResponsiveEnabled', (v) => { cfg.wristSplayResponsiveEnabled = v; applyPoseValuesToHand(cfg) })
-  addRow(content, { id: 'sliderWristSplayDefault', label: 'Default Wrist Splay (Deg, Reactive Off)', type: 'slider', min: -180, max: 180, step: 1, value: cfg.wristSplayDefault })
-  wireSlider('sliderWristSplayDefault', (v) => { cfg.wristSplayDefault = v; applyPoseValuesToHand(cfg) })
-  addRow(content, { id: 'checkboxWristSplayReactiveEnabled', label: 'Reactive Wrist Splay (By Cursor Distance)', type: 'checkbox' })
-  document.getElementById('checkboxWristSplayReactiveEnabled').checked = cfg.wristSplayReactiveEnabled
-  wireCheckbox('checkboxWristSplayReactiveEnabled', (v) => { cfg.wristSplayReactiveEnabled = v; applyPoseValuesToHand(cfg) })
-  const splayRangeRow = addRow(content, { id: 'textWristSplayRange', label: 'Min / Max Wrist Splay (Deg)', type: 'text', inputType: 'text', value: cfg.wristSplayRange })
-  wireTextInput('textWristSplayRange', (v) => { cfg.wristSplayRange = v; parseWristSplayConfig() })
-  buildReactiveRangeWidget(splayRangeRow, { trackMin: -180, trackMax: 180, isPercent: false, crossClamp: false, minLabel: 'Min (Center)', maxLabel: 'Max (Full Tilt)', unit: '°', onExternalChange: (v) => { cfg.wristSplayRange = v; parseWristSplayConfig() } })
-  const splayCurveRow = addRow(content, { id: 'textWristSplayCurve', label: 'Splay Scaling Curve (Distance -> Splay)', type: 'text', inputType: 'text', value: cfg.wristSplayCurve })
-  wireTextInput('textWristSplayCurve', (v) => { cfg.wristSplayCurve = v; parseWristSplayConfig() })
-  buildReactiveCurveWidget(splayCurveRow, { caption: 'X: Tilt/Cursor Distance From Center (0-1)  ·  Y: Splay Fraction (0=Min End, 1=Max End)', onExternalChange: (v) => { cfg.wristSplayCurve = v; parseWristSplayConfig() } })
-}
-
 function renderCameraGroup(content) {
   addRow(content, { id: 'sliderCameraX', label: 'Camera X Position (x)', type: 'slider', min: -500, max: 500, step: 0.5, value: cfg.cameraX })
   wireSlider('sliderCameraX', (v) => { cfg.cameraX = v; camera.position.x = v })
@@ -2184,7 +2155,6 @@ function renderHandysetDevGroups() {
   wireCheckbox('checkboxHideHands', (v) => { cfg.hideHands = v; relayoutField() })
 
   renderPoseGroup(addGroup('Pose'))
-  renderResponsiveWristSplayGroup(addGroup('Responsive Wrist Splay'))
   renderCameraGroup(addGroup('Camera'))
   renderPhoneTiltGroup(addGroup('Phone Tilt'))
   renderLightingGroup(addGroup('Lighting'))
