@@ -7,40 +7,47 @@ append-only history.
 
 ## Currently working on
 
-Nothing in progress — first build just completed and pushed (or pending
-push, see What's next). See `docs/PROJECT_SUMMARY.txt` for full current
-state.
+Nothing in progress. Pushed to `https://github.com/LeisHo/Handy-Set`
+(deployed via the Vercel project at `https://vercel.com/lpeis/handy-set`,
+with `GITHUB_TOKEN`/`DEV_PANEL_SAVE_SECRET` configured by the user for the
+git-tracked Save/Sync path). See `docs/PROJECT_SUMMARY.txt` for full
+current state.
 
 ## Recently completed
 
-- First working build (2026-09-21): single centered hand, Phone Tilt
-  gyroscope + desktop mouse-fallback rotation, dev panel built from the
-  real `TEMPLATE_DEV_PANEL.html` engine with all 9 requested groups
-  (Tween/Field Layout/Pose/Camera/Phone Tilt/Lighting/Toon Shading/
-  Background/Debug), Debug-group sensor console, seeded pose/camera/
-  lighting presets with configured defaults. See `CLAUDE.md`'s own
-  Gotchas/Known Simplifications sections for the real debugging history
-  (zero-size-framebuffer self-heal, wrist-crop plane math, camera preset
-  retargeting, dev-mode gating script) — several genuine bugs were found
-  and fixed live during this session's own verification pass, not just
-  assumed working.
+- Dev-panel DOM sync after preset "Use" (Pose/Camera/Lighting/Toon) — the
+  saved-preset apply functions updated `cfg` and the live scene correctly
+  but never updated the panel's own displayed slider/color/checkbox
+  values, making a working "Use" click look like it silently did nothing.
+  Fixed and live-verified.
+- Outline settings group removed entirely per direct request (the
+  composer's `outlinePass` stays permanently disabled rather than being
+  torn out); the git-tracked `dev-panel-settings.json` was also swept of
+  every stale `:Outline`-suffixed key so a leftover reference couldn't
+  rebuild an empty ghost group on next load.
+- Toon Shading's color/rim-light controls (`colorToonTint`,
+  `sliderRimIntensity`/`colorRimColor`/`sliderRimPower`,
+  `sliderTextureInfluence`) had zero visual effect regardless of their
+  values — root-caused to `Material.prototype.copy()` (three.js) not
+  copying `onBeforeCompile`, so every per-hand cloned material silently
+  used the stock toon shader. Fixed by explicitly reassigning
+  `onBeforeCompile` after every `.clone()`; live-verified before/after.
+- A stale dev-panel layout (both `localStorage` and the git-tracked
+  settings file) that was producing duplicate/"ghost" groups and rows
+  was fixed via a schema-version guard plus a one-time file reset.
 
 ## What's next
 
-1. Push to https://github.com/LeisHo/Handy-Set.
-2. Deploy to Vercel.
-3. Verify on the user's actual Pixel 9a (real gyroscope/accelerometer —
-   this session could only verify the desktop mouse-fallback path and
-   that the motion-permission/gating logic runs without crashing).
-4. Tune default Camera/Lighting to taste — the sliders all work, but the
-   shipped defaults (FRONTOS camera + FLABOVE lighting + Fist pose) look
-   tightly-framed and under-lit together.
-5. Investigate the one observed `RangeError: Maximum call stack size
-   exceeded` (devPanel.js's own dynamicDevice mirroring code) if it
-   recurs — not reproduced deliberately yet, didn't block functionality.
+1. Verify all of the above on the user's actual deployed Vercel instance
+   and real device — this session's fixes were only verified against a
+   local static-server preview.
+2. Verify Phone Tilt gyroscope rotation on the user's actual Pixel 9a —
+   only the desktop mouse-fallback path has been directly verified so far.
+3. Tune default Camera/Lighting/Toon values to taste once the color/rim
+   fix above is confirmed live — those controls were effectively inert
+   until this session, so any prior visual tuning attempts likely need
+   revisiting now that they actually work.
 
 ## Open questions / blockers
 
-- GitHub push not yet done as of this doc's last update — confirm
-  `https://github.com/LeisHo/Handy-Set` is the correct, already-existing
-  remote (given mid-task by the user) before pushing.
+None currently blocking.

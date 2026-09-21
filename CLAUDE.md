@@ -192,3 +192,34 @@ wiring, and are still open:
   verified in this session** — no physical device was available; only the
   gating logic (touch-device detection, iOS permission-request flow,
   Desktop-silence) was verified to run without crashing.
+- **`Material.prototype.copy()` (three.js) does NOT copy `onBeforeCompile`
+  — a `.clone()`'d material silently falls back to the inherited no-op
+  stub, not the source material's own custom shader-injection function.**
+  Confirmed 2026-09-21 by fetching and reading three.js 0.169.0's actual
+  `src/materials/Material.js` `copy()` method body from unpkg — no such
+  line exists. `rebuildField()` clones a shared `toonMaterial` per hand
+  (`skinnedMesh.material = toonMaterial.clone()`) on the strength of an
+  in-code comment that asserted the opposite; that assumption was wrong,
+  and it meant the ENTIRE Toon Shading rim-light + diffuse-tint-override
+  system had zero effect on any rendered hand — only `material.color`
+  (a normal, correctly-copied property) had any visible effect, which is
+  exactly the shape of the report that surfaced this ("with all color
+  pickers as black or white, our hand is still showing up with color").
+  Live-confirmed both before (colorToonTint=red and rimIntensity=3 with
+  rimColor=green both produced literally zero visual change) and after
+  (same inputs produced a fully red hand / a visible green rim glow) the
+  fix: explicitly reassign
+  `skinnedMesh.material.onBeforeCompile = toonMaterial.onBeforeCompile`
+  immediately after every `.clone()` call. Any future material clone in
+  this file that relies on a custom `onBeforeCompile` needs the same
+  explicit reassignment — it is never implicit.
+- **Isolated `javascript_tool` eval can't see the page's own classic-
+  script-declared globals (`ensureDevPanelBuilt is not defined`, etc. —
+  same documented HANDY DANDIES gotcha) but CAN drive real DOM event
+  listeners** — setting `el.value` and dispatching a real
+  `new Event('input', {bubbles:true})` on a dev-panel slider/color input
+  correctly triggers `wireSlider()`/`wireColor()`'s own
+  `addEventListener('input', ...)` handlers (confirmed live this
+  session, used to test Toon Shading controls without needing a native
+  OS color-picker dialog). Useful for testing form controls specifically
+  even though calling a page-defined FUNCTION by name still fails.

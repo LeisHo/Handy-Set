@@ -386,6 +386,91 @@ own append-only rule, the original entry is left as-is rather than
 edited in place -- this entry is the correction.
 
 --------------------------------------------------------------------------------
+2026-09-21  -  start NOT MEASURED - 4:52 AM EDT
+
+Fixed 3 more directly-reported issues (saved poses "not showing up
+correctly", a request to remove Outline entirely, and color/toon
+settings not visibly working) plus one issue this uncovered along the
+way. Start time not measured -- this work continued from a prior
+context-compacted summary rather than a fresh timed task, so per
+CLAUDE.md Section 1 this is logged as NOT MEASURED rather than a guess;
+the 3 commit timestamps below ARE real, from `git log`.
+
+1. Saved Pose/Camera/Lighting/Toon "Use" clicks correctly updated cfg
+   and the live scene but never updated the dev panel's own displayed
+   slider/color/checkbox values -- live-confirmed via a real Saved
+   Poses "Use" click (cfg.thumbCurl 75->0, hand visibly changed) while
+   the Thumb Curl slider stayed frozen at 75 on screen. Added
+   syncControlDom()/syncPairsFromCfg() with explicit (domId, cfgKey)
+   pairs checked against each render*Group()'s actual addRow() calls
+   (sliderHideWrist/sliderPoseScale use different casing than their
+   cfg key -- a wrong guess here would have silently synced nothing).
+   Wired into all 4 apply*Preset() functions. Live-verified for Pose
+   (Big Open Palm (S): Thumb Curl 75->0, Thumb Splay 0->-48, hand
+   visibly changed pose) and Camera (Top preset: Camera Z 106.5->-5.4,
+   view visibly changed to top-down). [commit 570c811]
+
+2. Removed the Outline settings subgroup entirely, per direct request
+   ("I dont need that") -- outlinePass itself stays permanently
+   disabled rather than removing the composer pass, so this is a pure
+   UI/config change. Bumped HANDYSET_SETTINGS_SCHEMA_VERSION since this
+   changes dev-panel structure. [commit 570c811]
+
+   Follow-up, same round: the git-tracked settings file
+   (data/processed/dev-panel-settings.json) still had a REAL "Outline"
+   subgroup recorded in sectionOrder under Toon Shading (the user's own
+   browser had synced it there before this fix existed). Traced
+   applySectionOrder()'s placeSection() (devPanel.js) and confirmed: a
+   saved group key with no matching live DOM group is treated as a
+   custom group and recreated via createDevGroupElement() -- since
+   Outline's own controls no longer exist to populate it, this would
+   have rebuilt it as a real, empty ghost "Outline" group on the very
+   next load, the same class of bug already reported this session
+   ("ghost checkboxes"). Stripped every :Outline-suffixed key from
+   sectionOrder/sectionCollapseState/devVisibility/devIndependence/
+   devTextOverrides; verified no "Outline" substring remains anywhere
+   in the file and the JSON still parses. [commit e5424fe]
+
+3. Investigated "with all color pickers as black or white, our hand is
+   still showing up with color" from scratch (no prior hypothesis).
+   Live-tested via direct DOM value + input-event dispatch (isolated
+   javascript_tool eval can drive real addEventListener('input', ...)
+   listeners even though it can't see the page's own classic-script
+   globals -- confirmed useful this round): at default settings
+   (toonBaseTint/toonTint white, textureInfluence 0) the hand rendered
+   in raw skin-texture color instead of toon-shaded white/gray;
+   colorToonTint set to pure red had ZERO visual effect; rimIntensity=3
+   with rimColor=bright green also had ZERO visual effect. Only
+   material.color (toonBaseTint, a stock MeshToonMaterial property) had
+   any effect at all -- e.g. black fully blacked out the hand.
+
+   Root cause, confirmed by fetching and reading three.js 0.169.0's own
+   src/materials/Material.js from unpkg: Material.prototype.copy() does
+   NOT copy onBeforeCompile -- there is no such line in it, verified by
+   reading the actual method body, not assumed. rebuildField() clones a
+   shared toonMaterial per hand via toonMaterial.clone() on the strength
+   of an in-code comment asserting "`.clone()` copies onBeforeCompile
+   too" -- that assumption was wrong. Every rendered hand's material
+   silently fell back to the inherited no-op onBeforeCompile() stub, so
+   the entire custom diffuse-tint-override + rim-light shader injection
+   never ran on anything actually drawn, only on the one unused shared
+   template material object.
+
+   Fix: explicitly reassign
+   `skinnedMesh.material.onBeforeCompile = toonMaterial.onBeforeCompile`
+   immediately after every `.clone()` in rebuildField(). Live-verified
+   the exact same before/after test sequence: after the fix, defaults
+   now render correct white/gray toon shading (not skin color),
+   colorToonTint=red produces a fully red hand, and
+   rimIntensity=3/rimColor=green produces a clearly visible green rim
+   glow along the silhouette. [commit def2327]
+
+Verified: all 3 fixes live-tested in-browser with before/after
+screenshots per fix, not just code-reviewed. Not yet verified: on the
+user's own real device/browser (only this session's local static-server
+preview was tested).
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
