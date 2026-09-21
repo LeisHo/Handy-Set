@@ -375,6 +375,17 @@ Verified:
   exercised via the button-driven Add/Hold path).
 
 --------------------------------------------------------------------------------
+2026-09-21  -  4:15 AM EDT
+
+Correction to the entry directly above: its header timestamp ("4:08 AM -
+4:35 AM EDT") had a fabricated end time -- 4:35 AM was never actually
+measured, just estimated at the moment of writing (CLAUDE.md §0c: never
+fabricate a timestamp). The real end time, per an actual `date` call
+immediately after that work was pushed, was 4:15 AM EDT. Per this file's
+own append-only rule, the original entry is left as-is rather than
+edited in place -- this entry is the correction.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
