@@ -5,6 +5,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
 import { OutlinePass } from 'three/addons/postprocessing/OutlinePass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
+import { SkeletonUtils } from 'three/addons/utils/SkeletonUtils.js'
 
 // Dev panel schema-version guard — runs synchronously, before devPanel.js
 // (main.js loads first, see index.html's own script-order comment) ever
@@ -967,7 +968,28 @@ function rebuildField() {
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
       const wrapper = new THREE.Group()
-      const clone = modelRoot.clone(true)
+      // SkeletonUtils.clone(), NOT modelRoot.clone(true) -- root cause found
+      // live 2026-09-21 (Whole Hand Rotation investigation): a plain
+      // Object3D.clone(true) clones the Bone objects as part of the scene
+      // graph, but SkinnedMesh.copy() does NOT rebind skeleton.bones to
+      // those new bone objects -- confirmed via direct uuid comparison
+      // (skeleton.getBoneByName('rIndex1').uuid !== the bone of the same
+      // name found by walking DOWN from the clone itself; the skeleton's
+      // own bones' root ancestor was a completely different, disconnected
+      // "Scene" object with no parent, never reachable from `clone` at
+      // all). This meant every bone read via `skeleton.getBoneByName()`
+      // (used everywhere: wrist bend, curl, splay) was never actually a
+      // descendant of `clone`, so rotating `clone` (Whole Hand Rotation
+      // X/Y/Z) never affected those bones' world orientation at all --
+      // explaining both the reported bug ("sliders seem to control finger
+      // splay") and why 2 earlier rounds of curl-axis-exclusion fixes
+      // (alignQuat, curlExcludeQuatForHand) could not work: they were
+      // built on the false premise that bones lived inside `clone`.
+      // SkeletonUtils.clone() is three.js's own documented fix for
+      // exactly this case -- it clones the hierarchy AND rebinds every
+      // SkinnedMesh's skeleton.bones to the corresponding new bone
+      // objects.
+      const clone = SkeletonUtils.clone(modelRoot)
       clone.quaternion.copy(alignQuat)
       clone.scale.setScalar(computeBaseScale())
       wrapper.add(clone)
