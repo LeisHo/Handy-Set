@@ -5487,7 +5487,7 @@
     "desktop:Lighting": true,
     "desktop:Saved Lighting": false,
     "desktop:Toon Shading": false,
-    "desktop:Outline": false,
+    "desktop:Outline": true,
     "desktop:Saved Toon Shading": false,
     "desktop:Background": false,
     "mobile:Dev Panel": true,
@@ -5842,27 +5842,5 @@
   "devDeviceValues": {
     "mobile": {},
     "landscape": {}
-  },
-  "defaultToon": {
-    "toonSteps": 2,
-    "toonStepThreshold": 2.7,
-    "toonShadowFloor": 7,
-    "toonLightCeiling": 100,
-    "toonBaseTint": "#ffffff",
-    "textureInfluence": 0,
-    "toonTint": "#ffffff",
-    "rimIntensity": 0,
-    "rimPower": 0.5,
-    "rimColor": "#ffffff"
-  },
-  "defaultLighting": {
-    "keyAzimuth": 71,
-    "keyElevation": 7,
-    "keyTargetHeight": 100,
-    "keyIntensity": 6,
-    "keyColor": "#ffffff",
-    "ambientIntensity": 0,
-    "ambientSkyColor": "#ffffff",
-    "ambientGroundColor": "#3a2f2a"
   }
 }
