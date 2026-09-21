@@ -25,9 +25,9 @@
     "sliderwristRotation": 0,
     "sliderwristBend": 0,
     "sliderwristSplay": -30,
-    "checkboxCropWristEnabled": true,
-    "sliderHideWrist": 78,
-    "checkboxReactiveArmLengthEnabled": true,
+    "checkboxCropWristEnabled": false,
+    "sliderHideWrist": 100,
+    "checkboxReactiveArmLengthEnabled": false,
     "slidercurlIndex": 0,
     "slidersplayIndex": -68,
     "slidersplayIndex2": 0,
@@ -64,7 +64,7 @@
     "sliderposeOffsetY": 0,
     "sliderposeOffsetZ": 0,
     "sliderPoseScale": 1,
-    "checkboxWristSplayResponsiveEnabled": true,
+    "checkboxWristSplayResponsiveEnabled": false,
     "sliderWristSplayDefault": 7,
     "checkboxWristSplayReactiveEnabled": true,
     "sliderCameraX": -1.5,
@@ -78,7 +78,7 @@
     "checkboxTrackingEnabled": true,
     "sliderTrackingDamping": 1,
     "sliderTargetDepthFactor": 0.6,
-    "checkboxShowTargetMarker": false,
+    "checkboxShowTargetMarker": true,
     "checkboxPalmFacesCursor": true,
     "sliderPalmFaceRotationOffset": 0,
     "sliderKeyAzimuth": 360,
@@ -1508,11 +1508,11 @@
                 },
                 {
                   "type": "row",
-                  "key": "sliderWristSplayDefault"
+                  "key": "checkboxWristSplayReactiveEnabled"
                 },
                 {
                   "type": "row",
-                  "key": "checkboxWristSplayReactiveEnabled"
+                  "key": "sliderWristSplayDefault"
                 },
                 {
                   "type": "row",
@@ -1546,8 +1546,8 @@
               ],
               "rowKeys": [
                 "checkboxWristSplayResponsiveEnabled",
-                "sliderWristSplayDefault",
                 "checkboxWristSplayReactiveEnabled",
+                "sliderWristSplayDefault",
                 "textWristSplayRange",
                 "textWristSplayCurve"
               ],
@@ -1580,7 +1580,15 @@
               "items": [
                 {
                   "type": "row",
+                  "key": "checkboxCropWristEnabled"
+                },
+                {
+                  "type": "row",
                   "key": "checkboxReactiveArmLengthEnabled"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderHideWrist"
                 },
                 {
                   "type": "row",
@@ -1589,17 +1597,14 @@
                 {
                   "type": "row",
                   "key": "textArmLengthCurve"
-                },
-                {
-                  "type": "row",
-                  "key": "checkboxCropWristEnabled"
                 }
               ],
               "rowKeys": [
+                "checkboxCropWristEnabled",
                 "checkboxReactiveArmLengthEnabled",
+                "sliderHideWrist",
                 "textArmLengthRange",
-                "textArmLengthCurve",
-                "checkboxCropWristEnabled"
+                "textArmLengthCurve"
               ],
               "subgroups": []
             }
@@ -1655,11 +1660,11 @@
               },
               {
                 "type": "row",
-                "key": "sliderWristSplayDefault"
+                "key": "checkboxWristSplayReactiveEnabled"
               },
               {
                 "type": "row",
-                "key": "checkboxWristSplayReactiveEnabled"
+                "key": "sliderWristSplayDefault"
               },
               {
                 "type": "row",
@@ -1693,8 +1698,8 @@
             ],
             "rowKeys": [
               "checkboxWristSplayResponsiveEnabled",
-              "sliderWristSplayDefault",
               "checkboxWristSplayReactiveEnabled",
+              "sliderWristSplayDefault",
               "textWristSplayRange",
               "textWristSplayCurve"
             ],
@@ -1724,7 +1729,15 @@
             "items": [
               {
                 "type": "row",
+                "key": "checkboxCropWristEnabled"
+              },
+              {
+                "type": "row",
                 "key": "checkboxReactiveArmLengthEnabled"
+              },
+              {
+                "type": "row",
+                "key": "sliderHideWrist"
               },
               {
                 "type": "row",
@@ -1733,17 +1746,14 @@
               {
                 "type": "row",
                 "key": "textArmLengthCurve"
-              },
-              {
-                "type": "row",
-                "key": "checkboxCropWristEnabled"
               }
             ],
             "rowKeys": [
+              "checkboxCropWristEnabled",
               "checkboxReactiveArmLengthEnabled",
+              "sliderHideWrist",
               "textArmLengthRange",
-              "textArmLengthCurve",
-              "checkboxCropWristEnabled"
+              "textArmLengthCurve"
             ],
             "subgroups": []
           },
@@ -1863,17 +1873,12 @@
                 {
                   "type": "row",
                   "key": "sliderwristSplay"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderHideWrist"
                 }
               ],
               "rowKeys": [
                 "sliderwristRotation",
                 "sliderwristBend",
-                "sliderwristSplay",
-                "sliderHideWrist"
+                "sliderwristSplay"
               ],
               "subgroups": []
             }
@@ -2210,17 +2215,12 @@
               {
                 "type": "row",
                 "key": "sliderwristSplay"
-              },
-              {
-                "type": "row",
-                "key": "sliderHideWrist"
               }
             ],
             "rowKeys": [
               "sliderwristRotation",
               "sliderwristBend",
-              "sliderwristSplay",
-              "sliderHideWrist"
+              "sliderwristSplay"
             ],
             "subgroups": []
           },
@@ -4579,7 +4579,7 @@
     "desktop:Responsive Wrist Splay": true,
     "desktop:Tracking": false,
     "desktop:New Group": true,
-    "desktop:Palm Facing": true,
+    "desktop:Palm Facing": false,
     "desktop:Pose": false,
     "desktop:ROTATION": true,
     "desktop:THUMB": true,
