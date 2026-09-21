@@ -52,7 +52,17 @@ const cfg = {
   cameraZoom: 60, lockCameraPan: false, lockCameraZoom: false, cameraMaxExtentsEnabled: false,
   cropWristEnabled: true,
   // Phone Tilt (renamed from Cursor Tracking)
-  trackingEnabled: false, trackingDamping: 1, targetDepthFactor: 0.6,
+  // trackingEnabled defaults true (corrected 2026-09-21, was false) --
+  // this is the app's own headline mechanic ("rotates in response to the
+  // phone's own gyroscope tilt"); defaulting its master gate off meant a
+  // fresh visitor with no prior Sync saw nothing happen at all, on
+  // Vercel or locally, matching 2 separate direct reports ("phone
+  // tilting does nothing" and the Palm Facing rotation slider having no
+  // effect -- both symptoms of the SAME gate, confirmed via
+  // animate()'s own `if (cfg.trackingEnabled && hands.length) {...}`
+  // block, which is the only place either mechanism's per-frame code
+  // runs at all).
+  trackingEnabled: true, trackingDamping: 1, targetDepthFactor: 0.6,
   showTargetMarker: false, palmFacesCursor: false, palmFaceRotationOffset: 0,
   // Lighting
   keyAzimuth: 117, keyElevation: 56, keyTargetHeight: 71, keyIntensity: 6, keyColor: '#ffffff',
@@ -1598,13 +1608,29 @@ function setSyncStatusText(text) {
   if (status) status.textContent = text
 }
 
+// GET-merge-POST, not a blind overwrite — REQUIRED (real bug, found live
+// 2026-09-21): this used to POST captureFullDevPanelState()'s own
+// snapshot directly, which wholesale-replaced the entire remote settings
+// file. captureFullDevPanelState() (a devPanel.js-owned function) has no
+// knowledge of this project's own extra top-level fields
+// (defaultPose/defaultCamera/defaultLighting/defaultToon, written by
+// saveFieldAsDefault() below) — so clicking the main Save/Sync button
+// after "Set as Default" silently stripped the just-set default field
+// right back out, exactly matching the reported repro ("I click it, and
+// i click save, and on refresh its still the old settings"). Merging
+// onto a fresh GET first preserves any field this function doesn't know
+// about, the same pattern saveFieldAsDefault() already used correctly.
 async function remoteSaveCurrentSettings() {
   const capture = await waitForDevPanelGlobal('captureFullDevPanelState')
   const snapshot = capture()
+  const getResp = await fetch(SAVE_SETTINGS_ENDPOINT, { cache: 'no-store' })
+  const getBody = await getResp.json().catch(() => ({}))
+  const base = (getResp.ok && getBody.ok === true && getBody.settings && typeof getBody.settings === 'object') ? getBody.settings : {}
+  const merged = Object.assign({}, base, snapshot)
   const resp = await fetch(SAVE_SETTINGS_ENDPOINT, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Dev-Panel-Secret': DEV_PANEL_SAVE_SECRET },
-    body: JSON.stringify(snapshot)
+    body: JSON.stringify(merged)
   })
   const data = await resp.json().catch(() => ({ ok: false, error: 'Invalid server response' }))
   if (!data.ok) throw new Error(data.error || ('HTTP ' + resp.status))

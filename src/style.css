@@ -542,6 +542,29 @@ html, body {
        needed at all). */
     .dev-section { margin-bottom: 15px; position: relative; }
     .dev-section-title {
+        /* FIX (project-side, not upstream — same "genuine template bug"
+           class as the group-cascade-checkbox display:none fix above):
+           .dev-group-cascade-checkbox is appended as a CHILD of this
+           element (title.appendChild(...) in devPanel.js) and positioned
+           `position:absolute; top:50%; right:52px` — but this rule never
+           declared its own `position`, so it defaulted to `static` and
+           the checkbox's absolute positioning escaped past it to the
+           next positioned ancestor, `.dev-section` (position:relative,
+           spanning the WHOLE group including all its content, not just
+           the title bar). `top:50%` then resolved against that much
+           taller box, visually landing the checkbox somewhere in the
+           middle of the group's own settings rows — a literal "ghost
+           checkbox" floating among unrelated controls, exactly the
+           reported symptom. `position:relative` here gives the checkbox
+           the correct, much smaller anchor (this title bar itself), so
+           top:50%/right:52px now center it vertically in the title bar
+           and flush it against the title bar's own right inner edge, in
+           the same reserved right-padding strip as the lock icon (right:
+           8px) and undock button (right:30px) below. Confirmed via
+           direct source inspection that the canonical
+           .claude/TEMPLATE_DEV_PANEL.html has this identical bug — worth
+           folding back per its own MAINTENANCE note. */
+        position: relative;
         /* Was a fixed accent-color reference - decoupled to its own
            independent Group Text Color control (2026-09-14, matching
            Clicko's own current Dev Panel group, which made this exact
