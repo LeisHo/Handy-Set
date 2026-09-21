@@ -5,7 +5,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
 import { OutlinePass } from 'three/addons/postprocessing/OutlinePass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
-import { SkeletonUtils } from 'three/addons/utils/SkeletonUtils.js'
+import { clone as cloneSkinnedSkeleton } from 'three/addons/utils/SkeletonUtils.js'
 
 // Dev panel schema-version guard — runs synchronously, before devPanel.js
 // (main.js loads first, see index.html's own script-order comment) ever
@@ -989,7 +989,7 @@ function rebuildField() {
       // exactly this case -- it clones the hierarchy AND rebinds every
       // SkinnedMesh's skeleton.bones to the corresponding new bone
       // objects.
-      const clone = SkeletonUtils.clone(modelRoot)
+      const clone = cloneSkinnedSkeleton(modelRoot)
       clone.quaternion.copy(alignQuat)
       clone.scale.setScalar(computeBaseScale())
       wrapper.add(clone)
