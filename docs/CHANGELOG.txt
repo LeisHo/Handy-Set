@@ -983,6 +983,67 @@ touched the settings JSON before rebasing, per this workspace's own
 concurrent-session preservation rule) and pushed.
 
 --------------------------------------------------------------------------------
+2026-09-21  -  6:22 PM - 6:36 PM EDT (13m53s per two `date` calls)
+
+Direct report: "take a look at the Palm Face Rotation cursor tracking in
+Handy Dandies. That implementation doesn't require extreme values or
+extreme cursor tilt/distance. so i dont understand why we need that?"
+Read Handy Dandies' own real `updateCursorTarget()` (main.js ~1934) --
+it raycasts the actual cursor position through the camera onto a
+world-space plane, no normalized-magnitude abstraction anywhere.
+HANDYSET's own `tiltMagnitude` (dividing screen distance from center by
+half the smaller screen dimension) needed a near-screen-edge cursor
+position before the signal approached its max -- that mismatch, not a
+math bug, was why tracking looked like it needed extreme values.
+
+Ported Handy Dandies' raycaster approach for the MOUSE path only --
+device-orientation input keeps the normalized magnitude/angle circular
+offset, the correct abstraction for a physical tilt angle with no
+on-screen position to raycast from. Required one adaptation beyond a
+literal port: HANDYSET's single hand sits at world origin, but its own
+saved camera is framed/aimed at a completely different point (roughly
+y=33, matching the model's visible geometry after scale/pivot, not the
+hand's own logical anchor) -- a literal absolute raycast hit produced
+wildly wrong, near-vertical rotations even for a dead-center cursor.
+Fixed by using the OFFSET from a screen-center raycast (screen center =
+zero offset = neutral gaze) instead of the raw absolute hit.
+
+Found and fixed 2 further issues during live verification:
+
+1. `tiltMagnitude`/`tiltAngle` still needed to update for mouse input in
+   parallel with the new raycast -- Reactive Arm Length/Responsive Wrist
+   Splay read them directly, not the new `cursorNDC`/`tiltTarget`. An
+   initial cut removed them entirely (reasoning they were now redundant),
+   silently freezing both reactive systems at their startup value the
+   instant mouse input took over.
+
+2. The REAL cause of the hand going fully invisible -- both this
+   session's own earlier "extreme combined rotation" finding (flagged as
+   unresolved) AND a new regression this exact round, where the hand
+   started vanishing at completely ORDINARY cursor positions once
+   tracking became proportionate: three.js's default frustum culling uses
+   `geometry.boundingSphere`, computed once from raw UNSKINNED bind-pose
+   vertex data -- it never accounts for skin/bone deformation. Confirmed
+   directly via an independent `WebGLRenderer` instance (bypassing this
+   app's own composer/outline pipeline entirely, ruling out any composer-
+   specific cause): 0 triangles drawn with `frustumCulled` left at its
+   `true` default, 15,046 triangles drawn with it forced `false`, same
+   scene/camera/pose, nothing else changed. Fixed by disabling frustum
+   culling unconditionally at hand creation -- cheap and safe at this
+   project's own small hand-count scale. This also retroactively explains
+   an EARLIER session's own "hand vanished at offset=179, widening FOV to
+   90 brought it back" observation, previously misdiagnosed as "the roll
+   axis is just hard to see in general" -- it was really this same
+   culling bug, reachable at any sufficiently-rotated pose.
+
+Live-verified across several cursor positions (dead center, modest
+offsets in multiple directions, a larger-but-not-extreme offset): stable,
+visible, proportionate response every time, no vanishing, wrist crop
+still correctly scoped (confirmed still on and not over-cropping
+throughout). Committed as `6f3d8df` and pushed (no concurrent remote
+commits this round, confirmed via `git fetch` before pushing).
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

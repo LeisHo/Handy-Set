@@ -509,18 +509,57 @@ wiring, and are still open:
   the plane's orientation aligned with wherever the hand is actually
   currently pointing. Live-verified across several cursor positions:
   consistent, plausible hand silhouette, no crescent-sliver clipping.
-  **Not yet fully resolved**: at an extreme COMBINED rotation (manual
-  Palm Face Rotation offset near 180° stacked on an already-large
-  cursor-driven tilt), the hand can go fully invisible — confirmed NOT a
-  crop issue (persists with Crop Wrist off) and NOT backface culling
-  (persists with `material.side` forced to `THREE.DoubleSide`) — root
-  cause still unknown, not reproduced under normal single-axis operation.
-  Matches the OLD, wrongly-dismissed "hand vanished at offset=179°,
-  widening FOV to 90° brought it back" observation from an earlier
-  session — that observation was real, just misdiagnosed as "narrow FOV
-  in general" rather than this specific extreme-combined-rotation case.
-  Worth investigating if a future report describes total invisibility
-  (not just cropping) at an extreme pose.
+  **RESOLVED 2026-09-21, later same day** — see the frustum-culling
+  gotcha below for the real cause and fix (it was never crop or backface
+  culling; `skinnedMesh.frustumCulled = false` is now set unconditionally
+  at hand creation).
+- **`skinnedMesh.frustumCulled` must stay `false` for every hand (set at
+  creation in `rebuildField()`) — three.js's default culling check uses
+  `geometry.boundingSphere`, computed once from raw UNSKINNED bind-pose
+  vertex data, and never accounts for skin/bone deformation.** This was
+  the real cause of "the hand goes fully invisible at an extreme combined
+  rotation" (flagged as unresolved earlier the same day) AND, once cursor
+  tracking became proportionate to normal mouse movement (see the
+  `updateTiltTarget()` gotcha below), the same culling bug started
+  triggering at completely ORDINARY cursor positions too — confirmed
+  directly via an independent `WebGLRenderer` instance (bypassing this
+  app's own composer/outline pipeline entirely): 0 triangles drawn with
+  `frustumCulled` at its `true` default, 15,046 triangles drawn with it
+  forced `false`, same scene/camera/pose, nothing else changed. This also
+  retroactively explains the OLD, previously-misdiagnosed "hand vanished
+  at offset=179°, widening FOV to 90° brought it back" observation from
+  an earlier session (wrongly generalized to "the roll axis is just hard
+  to see in general" — it was really this culling bug, reachable at any
+  sufficiently-rotated pose, not a property of the axis itself).
+- **`updateTiltTarget()`'s mouse path raycasts the true cursor position
+  through the camera (ported from Handy Dandies' real
+  `updateCursorTarget()`), it does NOT use the normalized `tiltMagnitude`/
+  `tiltAngle` circular-offset abstraction that device-orientation input
+  still uses** — fixed 2026-09-21 after a direct report ("look at Palm
+  Face Rotation cursor tracking in Handy Dandies, that implementation
+  doesn't require extreme values, why does ours?"). The old shared
+  abstraction divided screen distance by half the smaller screen
+  dimension, so a cursor near screen center produced only a tiny signal —
+  a real screen-edge position was needed before tracking looked like it
+  was doing anything. **Adaptation beyond a literal port, required by
+  this project's own geometry**: HANDYSET's single hand sits at world
+  origin `(0,0,0)`, but its saved camera is framed/aimed at a completely
+  different point (`controls.target` ≈ `(2.3, 33.6, -1.8)`, matching the
+  model's own visible geometry after scale/pivot) — a literal absolute
+  raycast hit used directly as the lookAt target (Handy Dandies' own
+  approach, correct for ITS field where hands and the raycast plane share
+  a coordinate range) produced wildly wrong, near-vertical rotations even
+  for a dead-center cursor here. Fixed by using the OFFSET from a
+  screen-CENTER raycast (screen center → zero offset → neutral gaze,
+  hand faces the camera) added onto the hand's own true position, instead
+  of the raw absolute hit. `tiltMagnitude`/`tiltAngle` still need to be
+  computed for mouse input too, in parallel with the new raycast — found
+  live: an initial cut removed them from `handleMouseMoveFallback()`
+  entirely (reasoning they were now redundant with `cursorNDC`), which
+  silently froze Reactive Arm Length/Responsive Wrist Splay
+  (`computeArmLengthT()`/`computeResponsiveWristSplayDeg()`, which read
+  `tiltMagnitude` directly, not `tiltTarget`) at their startup value the
+  instant mouse input took over.
 - **Debugging tip: `THREE.*.prototype` monkey-patching (e.g. patching
   `Quaternion.prototype.slerp`, `Matrix4.prototype.lookAt`,
   `WebGLRenderer.prototype.render` from `javascript_tool` eval) produced
