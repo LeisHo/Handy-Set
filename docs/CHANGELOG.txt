@@ -333,6 +333,48 @@ porting it (including a new generic multi-select control type for
 devPanel.js) was not completed in this pass.
 
 --------------------------------------------------------------------------------
+2026-09-21  -  4:08 AM - 4:35 AM EDT
+
+Closed the "known gap" from the previous entry: rebuilt the Tween group
+to match Hando's real UI, researched directly from Hando's own source
+(devPanel.js buildMultiSelectRow()/renderMultiSelectRows(), main.js's own
+Tween/Export DEV_GROUPS entry) rather than reconstructed from memory.
+
+Added:
+- `buildMultiSelectWidget()` (main.js) -- an ordered, drag-reorderable
+  list of per-row pose dropdowns or Hold entries, with "+ Add"/"+ Hold"
+  above and a "Remove" button per row. Matches Hando's own interaction
+  design (Add defaults to the next option after the previous row's pick;
+  Hold defaults to the last Hold's own percent) exactly; the reorder
+  MECHANISM itself uses native HTML5 drag-and-drop rather than Hando's
+  own pointer-capture-based engine drag system, since that infra isn't
+  part of the raw TEMPLATE_DEV_PANEL.html this project is built on --
+  disclosed as a mechanism-only simplification, not a UI/behavior gap.
+- `resolveTweenTimeline()`/`applyTweenAtT()` -- a weighted-segment model
+  (Hold entries pause at a percentage of one normal transition's own
+  weight, matching Hando's own semantics) driving a manual "Tween
+  (0=First, 1=Last)" scrub slider, replacing the previous auto-play "Run
+  Tween" button entirely (Hando has no auto-play/Loop/Oscillate mechanism
+  at all -- confirmed by direct source grep, not assumed).
+- `exportTweenSequence()` -- one-shot PNG-sequence export (Export Frame
+  Count + Export Filename Prefix controls), rendering each sampled frame
+  via canvas.toDataURL() and triggering a download. Hando's own exact
+  implementation wasn't available to extract verbatim; this is a
+  faithful from-scratch rebuild of the same standard browser-native
+  render-and-download behavior, not a verbatim port.
+
+Verified:
+- Live: clicking "+ Add" twice correctly added "Big Open Palm" then
+  defaulted the 2nd row to "Big Open Palm (S)" (the next option after the
+  first row's pick); "+ Hold" added a 25%-default Hold entry;
+  `cfg.tweenPoses` correctly reflected all 3 entries in order. Moving the
+  Tween scrub slider to 0.5 visibly re-posed the rendered hand to the
+  interpolated pose (screenshot-confirmed, not just state-inspected).
+- NOT verified: the PNG export's actual file output, or drag-reorder via
+  a real drag gesture (only the underlying array-splice logic was
+  exercised via the button-driven Add/Hold path).
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

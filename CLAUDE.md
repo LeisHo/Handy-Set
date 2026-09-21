@@ -80,11 +80,9 @@ wiring, and are still open:
 - **Responsive Wrist Splay** (Master On/Off, stagger, default, reactive
   on/off, Min/Max range, a distance→splay curve editor) — not built at
   all yet.
-- **Toon rim-lighting** (Texture Influence, Toon Texture Tint, Rim
-  Intensity/Power/Color) — needs HANDY DANDIES' actual `onBeforeCompile`
-  GLSL patch (`createToonMaterial()`, that project's main.js), not
-  reconstructed from scratch. `makeGradientTexture()`'s plain step-gradient
-  stays as the base, this adds on top of it.
+- ~~Toon rim-lighting~~ — **fixed 2026-09-21**, ported verbatim from HANDY
+  DANDIES' real `createToonMaterial()` onBeforeCompile GLSL patch (not
+  reconstructed). See `docs/CHANGELOG.txt`'s matching entry.
 - **Outline: Use OutlinePass toggle + Hull-shader alternative** (Hull
   Outline Thickness) — this project only ever built the OutlinePass
   technique; HANDY DANDIES lets you switch between 2.
@@ -103,6 +101,16 @@ wiring, and are still open:
   target the PRIMARY hand (`hands[0]`) only — reasonable for the current
   1x1 default, but once more hands are added the camera won't automatically
   frame the whole field; needs its own follow-up.
+- ~~Tween group doesn't match Hando's UI~~ — **fixed 2026-09-21**,
+  rebuilt with a real ordered multi-select pose list, Hold entries, a
+  manual scrub slider, and PNG export, researched directly from Hando's
+  own source. Two disclosed sub-simplifications remain: the drag-reorder
+  MECHANISM uses native HTML5 drag-and-drop rather than Hando's own
+  pointer-capture engine drag (that infra isn't part of the raw
+  TEMPLATE_DEV_PANEL.html this project is built on), and
+  `exportTweenSequence()` is a faithful from-scratch rebuild of the
+  render-and-download behavior, not a verbatim port (Hando's own exact
+  implementation wasn't available to extract).
 
 ## Gotchas
 
