@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Handyset</title>
+<script>
+    (function() {
+        var isDevAllowed = location.protocol === 'file:' ||
+            location.hostname === 'localhost' ||
+            location.hostname === '127.0.0.1' ||
+            new URLSearchParams(location.search).get('dev') === '1';
+        if (isDevAllowed) document.documentElement.classList.add('dev-mode');
+    })();
+</script>
+<link rel="stylesheet" href="src/style.css?v=1">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.169.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.169.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+
+    <canvas id="c"></canvas>
+    <div id="loading">Loading hand…</div>
+    <button id="motionPermissionBtn" class="hidden">Enable Motion</button>
+
+    <button class="dev-toggle-btn" id="devToggleBtn" onclick="ensureDevPanelBuilt(); devPanel.classList.toggle('hidden')">DEV</button>
+
+    <div class="dev-panel" id="devPanel">
+        <div class="dev-panel-scroll-content">
+            <div class="dev-header" id="devPanelHeader">
+                <span class="dev-panel-title">DEV</span>
+                <div class="dev-header-buttons">
+                    <button class="dev-header-icon-btn" id="devTextEditModeBtn" title="Toggle Label Rename Mode">✎</button>
+                    <button class="dev-header-icon-btn" id="devAddGroupBtn" title="Add Group (right-click: select settings/groups to fold in)">+</button>
+                    <button class="dev-header-icon-btn" id="devDeleteGroupBtn" title="Delete Group/Setting (click, then click a group or setting to delete it)">🗑</button>
+                    <button class="dev-header-icon-btn" id="devUndoBtn" title="Undo (Ctrl+Z) - undoes any dev panel change back to the last Sync">↶</button>
+                    <button class="dev-header-icon-btn" id="devCollapseAllBtn" title="Collapse All Groups">⊟</button>
+                    <button class="dev-header-icon-btn" id="devHeaderSyncBtn" onclick="saveDevPanelSettings()" title="Sync (Save)">💾</button>
+                    <button class="dev-collapse-btn" id="devCollapseBtn" onclick="toggleDevPanelCollapsed()">▁</button>
+                    <button class="dev-hide-btn" onclick="devPanel.classList.add('hidden')">X</button>
+                </div>
+            </div>
+
+            <div class="dev-buttons">
+                <button onclick="copyDevPanelSettings()">COPY</button>
+                <button onclick="resetDevPanelSettings()">RESET</button>
+                <button onclick="saveDevPanelSettings()">SYNC</button>
+                <span class="dev-save-sync-status" id="devSaveSyncStatus"></span>
+            </div>
+
+            <div class="dev-search-row">
+                <input type="text" id="devSearchInput" class="dev-search-input" placeholder="Search..." autocomplete="off">
+                <span class="dev-search-count" id="devSearchCount"></span>
+            </div>
+
+            <div class="dev-section">
+                <div class="dev-section-title" onclick="toggleSection(this)">▼ Saved Dev Settings</div>
+                <div class="dev-section-content">
+                    <select class="dev-select" id="devSavedStatesSelect" style="width:100%; margin-bottom:5px;"></select>
+                    <div class="dev-buttons">
+                        <button onclick="saveNamedDevPanelState()">SAVE</button>
+                        <button onclick="useNamedDevPanelState()">USE</button>
+                        <button onclick="deleteNamedDevPanelState()">DELETE</button>
+                        <button onclick="setNamedDevPanelStateAsDefault()">SET DEFAULT</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dev-tabs">
+                <button class="dev-tab-btn active" id="devTabDesktopBtn" onclick="switchDevPanelTab('desktop')">DESKTOP</button>
+                <button class="dev-tab-btn" id="devTabMobileBtn" onclick="switchDevPanelTab('mobile')">MOBILE</button>
+                <button class="dev-tab-btn" id="devTabLandscapeBtn" onclick="switchDevPanelTab('landscape')">LANDSCAPE</button>
+            </div>
+
+            <div id="desktopTabContent">
+                <div class="dev-section">
+                    <div class="dev-section-title" onclick="toggleSection(this)" data-sid="Dev Panel">▼ Dev Panel</div>
+                    <div class="dev-section-content"></div>
+                </div>
+                <div class="dev-section">
+                    <div class="dev-section-title" onclick="toggleSection(this)" data-sid="Debug">▼ Debug</div>
+                    <div class="dev-section-content"></div>
+                </div>
+                <!-- Handyset's own groups are appended here by main.js's renderHandysetDevGroups() -->
+            </div>
+
+            <div id="mobileTabContent" class="hidden">
+                <div class="dev-section">
+                    <div class="dev-section-title" onclick="toggleSection(this)" data-sid="Dev Panel">▼ Dev Panel</div>
+                    <div class="dev-section-content"></div>
+                </div>
+                <div class="dev-section">
+                    <div class="dev-section-title" onclick="toggleSection(this)" data-sid="Debug">▼ Debug</div>
+                    <div class="dev-section-content"></div>
+                </div>
+            </div>
+
+            <div id="landscapeTabContent" class="hidden">
+                <div class="dev-section">
+                    <div class="dev-section-title" onclick="toggleSection(this)" data-sid="Dev Panel">▼ Dev Panel</div>
+                    <div class="dev-section-content"></div>
+                </div>
+                <div class="dev-section">
+                    <div class="dev-section-title" onclick="toggleSection(this)" data-sid="Debug">▼ Debug</div>
+                    <div class="dev-section-content"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="dev-panel-resize-edge edge-top" id="devPanelResizeTop"></div>
+        <div class="dev-panel-resize-edge edge-bottom" id="devPanelResizeBottom"></div>
+        <div class="dev-panel-resize-edge edge-left" id="devPanelResizeLeft"></div>
+        <div class="dev-panel-resize-edge edge-right" id="devPanelResizeRight"></div>
+        <div class="dev-panel-resize-corner corner-tl" id="devPanelResizeTL"></div>
+        <div class="dev-panel-resize-corner corner-tr" id="devPanelResizeTR"></div>
+        <div class="dev-panel-resize-corner corner-bl" id="devPanelResizeBL"></div>
+        <div class="dev-panel-resize-corner corner-br" id="devPanelResizeBR"></div>
+    </div>
+
+    <!-- main.js (a module script) is always deferred; devPanel.js is marked
+         `defer` too and placed AFTER it so both execute in this same relative
+         order (module + defer scripts run in document order after parsing) —
+         main.js must define window.renderHandysetDevGroups before devPanel.js's
+         own eager ensureDevPanelBuilt() call (localhost/dev-mode auto-open) runs,
+         or that call finds nothing to render (caught during initial live
+         verification: the panel opened with only the built-in Dev Panel/Debug
+         groups, none of this project's own). devPanel.js's top-level
+         functions/consts still land in the shared global scope either way,
+         reachable from main.js at call time regardless of definition order. -->
+    <script type="module" src="src/main.js?v=15"></script>
+    <script src="src/devpanel/devPanel.js?v=2" defer></script>
+</body>
+</html>

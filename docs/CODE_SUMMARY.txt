@@ -1,0 +1,86 @@
+HANDYSET -- CODE SUMMARY
+================================================================================
+
+Status: see ../README.md for the project-structure layout and how to run
+it; this file is a quick orientation pointer into the actual code.
+
+--------------------------------------------------------------------------------
+FILE MAP
+
+- `index.html` -- import map (three.js@0.169.0 via CDN, matching HANDY
+  DANDIES' pinned version), canvas/loading/motion-permission markup, the
+  dev panel's body markup (copied verbatim from TEMPLATE_DEV_PANEL.html),
+  and the early `html.dev-mode` gating script (also copied verbatim --
+  easy to miss, see CLAUDE.md's own Gotchas).
+- `src/main.js` -- everything else. Roughly, top to bottom: live `cfg`
+  state object; seeded SAVED_POSES/SAVED_CAMERAS/SAVED_LIGHTING arrays;
+  finger-rig constants (FINGER_JOINTS/MAX_DEG/SIGN/CURL_AXIS/etc, ported
+  verbatim from HANDY DANDIES); `rotateOnTrueWorldAxis`/
+  `applyCurlToSkeleton`/`applyWristPoseToSkeleton`/`applyPoseValuesToHand`
+  (the actual finger/wrist posing math); renderer/scene/camera/
+  OrbitControls/composer+OutlinePass/lights setup; toon material +
+  gradient-map builder; Phone Tilt input handling (`handleDeviceOrientation`/
+  `handleMouseMoveFallback`/`initMotionInput`) reducing both real-device
+  tilt and the desktop mouse fallback to one shared normalized-vector
+  abstraction, then the `lookAt`+slerp rotation loop (reused pattern from
+  HANDY DANDIES' own Cursor Tracking); `rebuildField()` (builds the single
+  centered hand); the GLTFLoader model-load callback (bind-pose
+  measurement: alignQuat, handLengthRaw, boneRestQuat, wristCropNormalAligned,
+  handCenterLocal); camera/lighting/pose preset apply functions; Tween
+  playback (`playTween`/`updateTween`); the render loop (`animate()`,
+  with the documented zero-size-framebuffer self-heal); the sensor-console
+  logging functions; and, at the bottom, every dev-panel `render*Group()`
+  function plus the shared `addGroup`/`addRow`/`wireSlider`/etc. helpers,
+  exposed via `window.renderHandysetDevGroups`.
+- `src/style.css` -- page-level styles (canvas, loading screen, motion
+  button) followed by the template's own dev-panel CSS, copied verbatim.
+- `src/devpanel/devPanel.js` -- TEMPLATE_DEV_PANEL.html's engine
+  `<script>` block, copied verbatim except for one inserted line at the
+  documented `ensureDevPanelBuilt()` splice point (calls
+  `window.renderHandysetDevGroups()`).
+
+--------------------------------------------------------------------------------
+ARCHITECTURE
+
+Single hand, not a field: `cfg.fieldRows`/`fieldCols` don't exist here
+(removed vs. HANDY DANDIES) -- `rebuildField()` always builds exactly one
+`wrapper` (THREE.Group) containing one cloned `modelRoot`, positioned at
+world origin.
+
+Pose application is a single entry point, `applyPoseValuesToHand(poseValues)`,
+called by: individual Pose-group sliders (via `applyCurl(finger)` for a
+single-finger change, or the full function for wrist/whole-hand/offset/
+scale changes), the Saved Poses "Use" button, and Tween playback (lerping
+between two saved poses each frame). This mirrors HANDY DANDIES' own
+single-entry-point design, adapted to skip the "for every hand in the
+field" loop.
+
+The dev panel is two independent layers that only touch at one point:
+`devpanel/devPanel.js` (the generic, project-agnostic template engine --
+never edited except at its documented splice point) and `main.js`'s own
+`render*Group()` functions (which call the engine's exported
+`createDevGroupElement`/`findGroupContent`/`buildUniformControlRow`/
+`buildTextInputRow` to build rows, then wire plain `addEventListener`
+calls to `main.js`'s own scene state -- the template API has no inline
+`onChange`, unlike HANDY DANDIES' own devPanel.js).
+
+Camera/Lighting/Pose presets are plain data (imported verbatim from the
+user's own HANDY DANDIES exports) -- `applyCameraPreset()` is the one
+exception that transforms its input: it retargets each preset onto
+`getHandCenterWorld()` (this hand's own wrist-to-fingertip midpoint,
+in world space) rather than using the imported tx/ty/tz verbatim, since
+those were captured against a much larger scene.
+
+--------------------------------------------------------------------------------
+UNTOUCHABLE SYSTEMS
+
+None formally designated yet.
+
+--------------------------------------------------------------------------------
+GOTCHAS
+
+See this project's own CLAUDE.md -- it holds the full, detailed gotcha
+list (script load order/defer, the early dev-mode script, stale `?v=`
+caching, the zero-size-framebuffer self-heal, the unresolved stack-
+overflow observed once during live verification) rather than duplicating
+it here.

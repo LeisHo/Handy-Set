@@ -1,0 +1,117 @@
+# HANDYSET — Project Conventions
+
+A mobile-first three.js scene rendering a single rigged hand (offshoot of
+`J:\CLAUDE\PROJECTS\HANDY DANDIES`, reusing its rigged hand asset and pose/
+camera/lighting/toon-shading systems) that rotates in response to the
+phone's own gyroscope/accelerometer tilt. On desktop, cursor distance/angle
+from the viewport center stands in for phone tilt. Deployed/tested on
+Vercel. See `docs/PROJECT_SUMMARY.txt` for full scope and
+`docs/CODE_SUMMARY.txt` for architecture.
+
+The dev panel follows the workspace-wide standard in the parent
+`CLAUDE.md` §12, built from the ACTUAL `.claude/TEMPLATE_DEV_PANEL.html`
+engine (`src/devpanel/devPanel.js` is that file's own `<script>` block,
+copied verbatim — not a divergent hand-rolled copy the way HANDY DANDIES'
+own devPanel.js is). Only extend `devPanel.js` itself for a genuinely
+generic engine capability it doesn't have yet; add project settings via
+`src/main.js`'s own `render*Group()` functions, called from
+`window.renderHandysetDevGroups` (wired into the template's
+`ensureDevPanelBuilt()` splice point).
+
+## File map
+
+- `index.html` — import map (three.js via CDN, matching HANDY DANDIES'
+  pinned version), canvas, loading/motion-permission UI, and the dev
+  panel's body markup (copied verbatim from the template). Script load
+  order matters: `src/main.js` (a module, always deferred) loads BEFORE
+  `src/devpanel/devPanel.js` (`defer` attribute added so it participates
+  in the same deferred-execution queue) — `main.js` must define
+  `window.renderHandysetDevGroups` before `devPanel.js`'s own eager
+  `ensureDevPanelBuilt()` call (auto-open on localhost/dev-mode) runs, or
+  that call finds nothing to render. See index.html's own comment.
+- `src/main.js` — all real logic: bind-pose measurement, finger/wrist
+  posing (ported verbatim from HANDY DANDIES' `applyCurlToSkeleton`/
+  `rotateOnTrueWorldAxis`), toon material + gradient map, wrist-crop
+  clipping plane, camera/lighting preset system, Phone Tilt mechanic
+  (device orientation + desktop mouse fallback, both reduced to the same
+  normalized tilt-vector abstraction), Tween playback, and every dev-panel
+  group's render/wire functions.
+- `src/style.css` — page styles + the template's own dev-panel CSS,
+  copied verbatim (see its own header comment for the exact source).
+- `src/devpanel/devPanel.js` — the template's engine `<script>` block,
+  copied verbatim except for one inserted line at the documented splice
+  point inside `ensureDevPanelBuilt()`.
+- `data/processed/HAND3D/Hand2.glb` — the rigged hand asset, already
+  present from before this project's reset (same asset HANDY DANDIES
+  uses).
+
+## Known simplifications vs. HANDY DANDIES
+
+These were deliberate scope cuts, made under real time pressure to ship a
+working build — see `docs/PROJECT_PROGRESS.md` for the fuller account and
+what's worth porting properly later:
+
+- **Wrist crop ("Hide Wrist %")** is a single clipping plane positioned by
+  a fixed multiple of the hand's own measured length, NOT HANDY DANDIES'
+  own "Reactive Arm Length" curve system (never ported — out of scope).
+  The exact crop-plane reach (`maxReach` in `updateWristCrop()`) was tuned
+  by eye against one pose/camera combination and may need further
+  adjustment for other poses.
+- **Wrist bend/splay/rotation math** reuses the same `rotateOnTrueWorldAxis`
+  mechanism as the finger system (ported verbatim) but the axis choices
+  were reconstructed by this session (HANDY DANDIES' own
+  `applyWristPoseToSkeleton` body wasn't available to extract) — worth a
+  visual sanity check against a HANDY DANDIES build.
+- **Toon shading** re-derives a standard step-gradient (`makeGradientTexture()`)
+  rather than porting HANDY DANDIES' own rim-light shader injection
+  (`onBeforeCompile` GLSL patch) — the Toon Shading group has no Rim
+  Intensity/Power/Color or Texture Influence controls as a result.
+- **Camera preset retargeting**: HANDY DANDIES' saved cameras were
+  captured against its own much larger multi-hand field (default field
+  radius ~138 world units vs. this project's single-hand ~15-20) —
+  `applyCameraPreset()` preserves each preset's viewing DIRECTION but
+  recomputes distance from a "fit the hand in this FOV" formula rather
+  than the raw captured distance, which otherwise put the camera wildly
+  too far away. The default framing (FRONTOS/Fist/FLABOVE together) still
+  looks under-lit/tightly-framed as shipped — tune via the Camera/Pose/
+  Lighting sliders, which are all confirmed working.
+- **Saved-preset UI** (Pose/Camera/Lighting "Saved X" subgroups) is a
+  `select` + Use/Save-As-New/Delete button row, not a full drag-reorder
+  list-picker widget — the raw `TEMPLATE_DEV_PANEL.html` engine has no
+  generic list-picker control type (confirmed by direct inspection; that
+  feature is specific to HANDY DANDIES'/Hando's own divergent devPanel.js
+  copies), and building one from scratch was out of scope here.
+- **Shoulder/elbow/forearm pose fields** present in the imported pose JSON
+  (`shoulderRaise`, `elbowBend`, etc.) are not wired to any bone — every
+  provided pose has them at 0, and the wrist crop hides that region
+  regardless.
+
+## Gotchas
+
+- **The `html.dev-mode` class comes from a tiny early `<head>` script**
+  (before `<link rel="stylesheet">`), not from `devPanel.js` itself —
+  missing it (an early mistake this session made when first assembling
+  `index.html`) leaves the DEV toggle button and panel permanently
+  `display:none` even though `devPanel.js` itself loads and runs fine.
+  Copy it from `TEMPLATE_DEV_PANEL.html` lines 178-186 verbatim if ever
+  rebuilding `index.html` from scratch.
+- **Script tag order/defer matters** — see the File Map note above.
+- **`window.innerWidth`/`innerHeight` can read 0 at script-parse time in
+  this sandbox** (same documented HANDY DANDIES gotcha) — `animate()`
+  self-heals every frame by comparing `renderer.getSize()` against the
+  live window size, same fix shape as that project's own.
+- **Bump `?v=` on `src/main.js`/`devpanel/devPanel.js` in `index.html`
+  when their content changes** — this static server can serve a stale
+  cached copy otherwise (same documented HANDY DANDIES gotcha; caused
+  real confusion this session before being caught).
+- **A stack-overflow error** (`RangeError: Maximum call stack size
+  exceeded`, inside `devPanel.js`'s own dynamicDevice mirroring code,
+  `onDevTargetControlEdited`) was observed once during this session's own
+  live verification, after clicking a Debug-group checkbox. Not yet
+  root-caused or reproduced deliberately — the panel kept working
+  afterward (checkbox toggled correctly, rendering unaffected), so it
+  wasn't fatal, but flag it if it recurs.
+- **Real device sensor data (accelerometer/gyroscope/compass) could not be
+  verified in this session** — no physical device was available; only the
+  gating logic (touch-device detection, iOS permission-request flow,
+  Desktop-silence) was verified to run without crashing.

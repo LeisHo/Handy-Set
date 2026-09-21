@@ -1,0 +1,107 @@
+HANDYSET -- PROJECT SUMMARY
+================================================================================
+
+Status: working first build (single hand, gyroscope/mouse-fallback tilt
+tracking, dev panel with all 9 requested groups, seeded pose/camera/
+lighting presets), as of 2026-09-21. Not yet deployed to Vercel or pushed
+to GitHub as of this writing -- see PROJECT_PROGRESS.md.
+
+--------------------------------------------------------------------------------
+OBJECTIVE
+
+A mobile-first three.js app: a single rigged hand, centered on screen,
+that rotates to reflect the phone's own gyroscope/accelerometer tilt (a
+"stand-in" rotational control, per direct request, not a full 1:1
+orientation mapping). Desktop testing uses cursor distance/angle from the
+viewport center as the tilt stand-in. Offshoot of HANDY DANDIES -- reuses
+its rigged hand asset (data/processed/HAND3D/Hand2.glb) and its pose/
+camera/lighting/toon-shading/tween systems, ported and adapted for a
+single hand rather than a field of many.
+
+--------------------------------------------------------------------------------
+SCOPE
+
+In scope: single-hand rendering, Phone Tilt rotation mechanic (real
+device + desktop fallback), dev panel with Tween/Field Layout/Pose/
+Camera/Phone Tilt/Lighting/Toon Shading/Background/Debug groups (matching
+HANDY DANDIES' own settings within those groups), a Debug-group sensor
+console (accelerometer/gyroscope/compass, opt-in streaming, silent on
+Desktop), seeded saved poses/cameras/lighting with configured defaults,
+Vercel deployment.
+
+Out of scope (deliberately, this round): HANDY DANDIES' multi-hand field/
+click-trigger system, its Reactive Arm Length crop system, its toon
+rim-light shader, its generic list-picker dev-panel widget (the real
+TEMPLATE_DEV_PANEL.html engine has no such control type -- see this
+project's own CLAUDE.md for the full list of simplifications made).
+
+Audience / how it's used: a personal mobile demo/prototype, tested on the
+user's own Pixel 9a via a deployed Vercel URL.
+
+--------------------------------------------------------------------------------
+CURRENT STATE
+
+Built and locally verified (desktop browser, mouse-fallback tilt only --
+no physical device available this session):
+- Single hand loads, bind-pose measured, poses correctly via the ported
+  HANDY DANDIES finger-curl/splay/wrist system.
+- Camera/Lighting/Pose preset system works (seeded with the user's own
+  4 poses / 7 cameras / 7 lighting presets), defaults applied on load
+  (Fist / FRONTOS / FLABOVE).
+- Dev panel built from the real TEMPLATE_DEV_PANEL.html engine (not HANDY
+  DANDIES' divergent copy) -- confirmed via live UI interaction that
+  every one of the 9 requested groups renders and its controls wire up
+  correctly (verified: Debug's Show Wireframe checkbox, live-toggled via
+  a real click, correctly changed the rendered material).
+- Debug group's Sensors console renders, gated to show "No sensor data on
+  Desktop." and never stream on a non-touch device.
+- Resize self-heal (documented HANDY DANDIES zero-size-framebuffer
+  sandbox gotcha) ported and confirmed fixing an initially-blank canvas.
+
+Not yet done: Vercel deployment, GitHub push (repo target given mid-task:
+https://github.com/LeisHo/Handy-Set), real-device sensor verification.
+
+--------------------------------------------------------------------------------
+DECISIONS
+
+- Dev panel built from the actual .claude/TEMPLATE_DEV_PANEL.html engine,
+  not ported from HANDY DANDIES' own devPanel.js -- direct mid-task
+  request ("the style and visual characteristics and functionality of the
+  dev panel should match the template exactly... reference Clicko for an
+  implemented version"). This meant translating every HANDY DANDIES
+  setting into the template's real (narrower) control-type API rather
+  than a 1:1 port.
+- Saved-preset UI (Pose/Camera/Lighting) is a select+buttons row, not a
+  full list-picker widget -- the real template has no generic list-picker
+  control type; building one from scratch was judged out of scope given
+  the session's time budget.
+- Camera presets retarget onto the hand's actual (wrist-to-fingertip
+  midpoint) position rather than using imported world coordinates
+  verbatim -- HANDY DANDIES' saved cameras were captured against a much
+  larger multi-hand field and would otherwise frame nothing.
+
+--------------------------------------------------------------------------------
+KNOWN LIMITATIONS
+
+- Default camera/lighting/pose combination (FRONTOS/FLABOVE/Fist) looks
+  tightly-framed and under-lit as shipped -- the underlying Camera/
+  Lighting/Pose sliders are all confirmed working; this is a starting-
+  point tuning issue, not a functional bug. See this project's own
+  CLAUDE.md Gotchas section for the full account of what was diagnosed
+  and fixed this session, and what's left approximate.
+- A `RangeError: Maximum call stack size exceeded` was observed once
+  during live verification (inside devPanel.js's own dynamicDevice
+  mirroring code) after a Debug-group checkbox click -- not fatal
+  (panel kept working), not yet reproduced deliberately or root-caused.
+- No real-device gyroscope/accelerometer verification yet -- only the
+  gating/permission-request logic was checked (runs without crashing).
+- Wrist-crop reach, wrist bend/splay/rotation axis conventions, and toon
+  shading are all simplified/reconstructed vs. HANDY DANDIES -- see this
+  project's own CLAUDE.md for the full list.
+
+--------------------------------------------------------------------------------
+NEXT ACTION
+
+Push to https://github.com/LeisHo/Handy-Set and deploy to Vercel; then
+verify on the user's actual Pixel 9a and tune Camera/Lighting defaults to
+taste.

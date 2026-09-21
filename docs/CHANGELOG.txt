@@ -1,0 +1,112 @@
+HANDYSET -- CHANGELOG
+================================================================================
+
+PROJECT START: 2026-09-20  -  11:35 PM EDT
+
+--------------------------------------------------------------------------------
+2026-09-20  -  11:35 PM - 11:37 PM EDT
+
+Folder reset: removed a leftover full implementation from a different
+project ("HANDY DANDIES") that had been sitting in this folder, and reset
+CLAUDE.md/README.md/docs/ to blank templates ready for Handyset's own
+scope. data/ (the rigged hand asset + a leftover dev-panel-settings.json)
+left untouched per direct instruction.
+
+--------------------------------------------------------------------------------
+2026-09-20 11:50 PM - 2026-09-21 12:29 AM EDT
+
+First working build, per a detailed spec given mid-session (mobile
+gyroscope-tilted single hand, offshoot of HANDY DANDIES, dev panel ported
+from that project's own groups but built against the real
+TEMPLATE_DEV_PANEL.html engine, seeded pose/camera/lighting presets).
+
+Added:
+- `index.html`/`src/main.js`/`src/style.css`/`src/devpanel/devPanel.js` --
+  a working single-hand three.js scene. Finger/wrist posing math ported
+  verbatim from HANDY DANDIES (`FINGER_JOINTS`/`FINGER_MAX_DEG`/`FINGER_SIGN`/
+  `FINGER_CURL_AXIS`/etc, `rotateOnTrueWorldAxis`, `applyCurlToSkeleton`).
+- Phone Tilt mechanic: real-device `deviceorientation` (with iOS
+  permission-request handling) and a desktop mouse-distance/angle
+  fallback, both reduced to one shared normalized tilt-vector
+  abstraction, feeding the same lookAt+slerp rotation pattern HANDY
+  DANDIES uses for cursor tracking.
+- Dev panel: all 9 requested groups (Tween, Field Layout, Pose w/ 6
+  subgroups, Camera, Phone Tilt w/ 3 subgroups -- renamed from Cursor
+  Tracking, off by default, Lighting, Toon Shading w/ Outline subgroup,
+  Background, Debug) built against the ACTUAL `.claude/TEMPLATE_DEV_PANEL.html`
+  engine (copied verbatim into `src/devpanel/devPanel.js`), not HANDY
+  DANDIES' own divergent copy -- a genuine mid-task architecture pivot,
+  requiring every setting to be translated into the template's real
+  (narrower) control-type API rather than 1:1 ported.
+- Debug group's own Sensors console: raw accelerometer/gyroscope/compass
+  readout, opt-in streaming toggle + sample-interval slider, gated to
+  show "No sensor data on Desktop." and never stream on a non-touch
+  device.
+- Seeded SAVED_POSES (4)/SAVED_CAMERAS (7)/SAVED_LIGHTING (7) from the
+  user's own exported HANDY DANDIES data; defaults applied on load
+  (Fist / FRONTOS / FLABOVE, per direct instruction -- "Fronto"/"Flabove"
+  matched to the closest-named entries, flagged to the user rather than
+  guessed silently).
+
+Fixed (found live during this session's own verification, not assumed
+working):
+- Zero-size-framebuffer render (documented HANDY DANDIES sandbox gotcha,
+  `window.innerWidth`/`innerHeight` reading 0 at script-parse time) --
+  `animate()` now self-heals every frame, same fix shape as that project.
+- Wrist-crop clipping plane was defined in the raw bind-pose local frame
+  while the mesh renders fully transformed (world-space clipping planes)
+  -- fixed to use the clone's actual `matrixWorld`.
+- Wrist-crop plane normal was inverted (discarding the fingers, keeping
+  the forearm) -- fixed via an explicit `distanceToPoint()` check at the
+  wrist vs. the hand's own visible center.
+- Wrist-crop reach: the visible forearm/sleeve mesh extends far past the
+  `rForearmBend` bone's own position (confirmed via a wide diagnostic
+  screenshot -- a long dark sleeve with only a small fist-colored patch
+  at one end) -- switched from a wrist-to-forearm-bone lerp to a fixed
+  multiple of hand length, tuned by eye.
+- Camera presets retargeting: HANDY DANDIES' saved cameras were captured
+  against its own much larger multi-hand field (default field radius
+  ~138 world units vs. this project's ~15-20) -- preserving their raw
+  offset distance put the camera absurdly far from a single hand;
+  `applyCameraPreset()` now preserves each preset's direction/FOV but
+  recomputes distance from a "fit the hand in this FOV" formula.
+- The dev panel never showed this project's own groups on first load --
+  `main.js` (a deferred module script) executed AFTER `devPanel.js`'s own
+  eager `ensureDevPanelBuilt()` call (auto-open on localhost), so
+  `window.renderHandysetDevGroups` didn't exist yet when needed. Fixed by
+  adding `defer` to devPanel.js's script tag and loading it after main.js
+  (both then execute in that relative document order).
+- The DEV toggle button/panel were permanently `display:none` -- missed
+  copying the template's own early `<head>` script that sets
+  `html.dev-mode` (a separate, tiny script block before the main
+  `<style>`/`<script>`, easy to miss when assembling index.html by hand).
+- Stale script cache: bumping the top-level navigation URL's query string
+  didn't pick up main.js edits -- the actual `<script src="...?v=N">` tags
+  need their own version bump (documented HANDY DANDIES gotcha, re-hit
+  here).
+
+Verified:
+- Live UI interaction (not just JS state inspection): clicked Debug's
+  "Show Wireframe" checkbox via a real `computer` click on the rendered
+  page -- confirmed both `cfg.showWireframe` and the live material's
+  `wireframe` property flipped, and the rendered mesh visibly changed to
+  a wireframe view (which also confirmed the underlying hand geometry
+  itself is correctly shaped/posed/cropped).
+- Scrolled through the built dev panel confirming Debug (+ Sensors
+  subgroup with the Desktop-silence note), Tween, Field Layout, and Pose
+  (+ its Whole-Hand Rotation & Thumb subgroup) all render with working
+  controls; Camera/Phone Tilt/Lighting/Toon Shading/Background use the
+  identical shared rendering/wiring helpers so were not each individually
+  scrolled-to and clicked, given session time constraints.
+- NOT verified: real device motion data (no physical phone available this
+  session -- only that the permission-request/gating code runs without
+  throwing).
+
+--------------------------------------------------------------------------------
+<next entry follows the same divider + dated-header pattern>
+
+================================================================================
+APPEND-ONLY. Never rewrite, reorder, or delete a prior entry, even to fix
+formatting (CLAUDE.md §4a / Never-Skip rule #3). If an entry needs a
+correction, add a new entry noting the correction rather than editing the
+old one in place.
