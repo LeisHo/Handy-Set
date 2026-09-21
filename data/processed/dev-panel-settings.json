@@ -4175,7 +4175,17 @@
   "devTextOverridesManual": [],
   "lockedGroups": [],
   "textEditModeEnabled": false,
-  "devVisibility": {},
+  "devVisibility": {
+    "checkboxShowGridHelper": false,
+    "checkboxShowWireframe": false,
+    "checkboxMouseLogPosition": false,
+    "checkboxMouseLogScroll": false,
+    "checkboxMouseLogKeystrokes": false,
+    "checkboxSensorStream": false,
+    "sliderSensorInterval": false,
+    "selectTweenAddPose": true,
+    "sliderTweenSpeedMs": true
+  },
   "devIndependence": {
     "mobile": {},
     "landscape": {}
