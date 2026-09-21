@@ -243,39 +243,6 @@
   "sectionOrder": {
     "desktopTabContent": [
       {
-        "key": "desktop:Responsive Wrist Splay",
-        "items": [
-          {
-            "type": "row",
-            "key": "checkboxWristSplayResponsiveEnabled"
-          },
-          {
-            "type": "row",
-            "key": "sliderWristSplayDefault"
-          },
-          {
-            "type": "row",
-            "key": "checkboxWristSplayReactiveEnabled"
-          },
-          {
-            "type": "row",
-            "key": "textWristSplayRange"
-          },
-          {
-            "type": "row",
-            "key": "textWristSplayCurve"
-          }
-        ],
-        "rowKeys": [
-          "checkboxWristSplayResponsiveEnabled",
-          "sliderWristSplayDefault",
-          "checkboxWristSplayReactiveEnabled",
-          "textWristSplayRange",
-          "textWristSplayCurve"
-        ],
-        "subgroups": []
-      },
-      {
         "key": "desktop:Dev Panel",
         "items": [
           {
@@ -1507,6 +1474,300 @@
         "subgroups": []
       },
       {
+        "key": "desktop:Phone Tilt",
+        "items": [
+          {
+            "type": "group",
+            "section": {
+              "key": "desktop:Target",
+              "items": [
+                {
+                  "type": "row",
+                  "key": "sliderTargetDepthFactor"
+                },
+                {
+                  "type": "row",
+                  "key": "checkboxShowTargetMarker"
+                }
+              ],
+              "rowKeys": [
+                "sliderTargetDepthFactor",
+                "checkboxShowTargetMarker"
+              ],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "group",
+            "section": {
+              "key": "desktop:Responsive Wrist Splay",
+              "items": [
+                {
+                  "type": "row",
+                  "key": "checkboxWristSplayResponsiveEnabled"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderWristSplayDefault"
+                },
+                {
+                  "type": "row",
+                  "key": "checkboxWristSplayReactiveEnabled"
+                },
+                {
+                  "type": "row",
+                  "key": "textWristSplayRange"
+                },
+                {
+                  "type": "row",
+                  "key": "textWristSplayCurve"
+                },
+                {
+                  "type": "group",
+                  "section": {
+                    "key": "desktop:Tracking",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "checkboxTrackingEnabled"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderTrackingDamping"
+                      }
+                    ],
+                    "rowKeys": [
+                      "checkboxTrackingEnabled",
+                      "sliderTrackingDamping"
+                    ],
+                    "subgroups": []
+                  }
+                }
+              ],
+              "rowKeys": [
+                "checkboxWristSplayResponsiveEnabled",
+                "sliderWristSplayDefault",
+                "checkboxWristSplayReactiveEnabled",
+                "textWristSplayRange",
+                "textWristSplayCurve"
+              ],
+              "subgroups": [
+                {
+                  "key": "desktop:Tracking",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "checkboxTrackingEnabled"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderTrackingDamping"
+                    }
+                  ],
+                  "rowKeys": [
+                    "checkboxTrackingEnabled",
+                    "sliderTrackingDamping"
+                  ],
+                  "subgroups": []
+                }
+              ]
+            }
+          },
+          {
+            "type": "group",
+            "section": {
+              "key": "desktop:New Group",
+              "items": [
+                {
+                  "type": "row",
+                  "key": "checkboxReactiveArmLengthEnabled"
+                },
+                {
+                  "type": "row",
+                  "key": "textArmLengthRange"
+                },
+                {
+                  "type": "row",
+                  "key": "textArmLengthCurve"
+                },
+                {
+                  "type": "row",
+                  "key": "checkboxCropWristEnabled"
+                }
+              ],
+              "rowKeys": [
+                "checkboxReactiveArmLengthEnabled",
+                "textArmLengthRange",
+                "textArmLengthCurve",
+                "checkboxCropWristEnabled"
+              ],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "group",
+            "section": {
+              "key": "desktop:Palm Facing",
+              "items": [
+                {
+                  "type": "row",
+                  "key": "checkboxPalmFacesCursor"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderPalmFaceRotationOffset"
+                }
+              ],
+              "rowKeys": [
+                "checkboxPalmFacesCursor",
+                "sliderPalmFaceRotationOffset"
+              ],
+              "subgroups": []
+            }
+          }
+        ],
+        "rowKeys": [],
+        "subgroups": [
+          {
+            "key": "desktop:Target",
+            "items": [
+              {
+                "type": "row",
+                "key": "sliderTargetDepthFactor"
+              },
+              {
+                "type": "row",
+                "key": "checkboxShowTargetMarker"
+              }
+            ],
+            "rowKeys": [
+              "sliderTargetDepthFactor",
+              "checkboxShowTargetMarker"
+            ],
+            "subgroups": []
+          },
+          {
+            "key": "desktop:Responsive Wrist Splay",
+            "items": [
+              {
+                "type": "row",
+                "key": "checkboxWristSplayResponsiveEnabled"
+              },
+              {
+                "type": "row",
+                "key": "sliderWristSplayDefault"
+              },
+              {
+                "type": "row",
+                "key": "checkboxWristSplayReactiveEnabled"
+              },
+              {
+                "type": "row",
+                "key": "textWristSplayRange"
+              },
+              {
+                "type": "row",
+                "key": "textWristSplayCurve"
+              },
+              {
+                "type": "group",
+                "section": {
+                  "key": "desktop:Tracking",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "checkboxTrackingEnabled"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderTrackingDamping"
+                    }
+                  ],
+                  "rowKeys": [
+                    "checkboxTrackingEnabled",
+                    "sliderTrackingDamping"
+                  ],
+                  "subgroups": []
+                }
+              }
+            ],
+            "rowKeys": [
+              "checkboxWristSplayResponsiveEnabled",
+              "sliderWristSplayDefault",
+              "checkboxWristSplayReactiveEnabled",
+              "textWristSplayRange",
+              "textWristSplayCurve"
+            ],
+            "subgroups": [
+              {
+                "key": "desktop:Tracking",
+                "items": [
+                  {
+                    "type": "row",
+                    "key": "checkboxTrackingEnabled"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderTrackingDamping"
+                  }
+                ],
+                "rowKeys": [
+                  "checkboxTrackingEnabled",
+                  "sliderTrackingDamping"
+                ],
+                "subgroups": []
+              }
+            ]
+          },
+          {
+            "key": "desktop:New Group",
+            "items": [
+              {
+                "type": "row",
+                "key": "checkboxReactiveArmLengthEnabled"
+              },
+              {
+                "type": "row",
+                "key": "textArmLengthRange"
+              },
+              {
+                "type": "row",
+                "key": "textArmLengthCurve"
+              },
+              {
+                "type": "row",
+                "key": "checkboxCropWristEnabled"
+              }
+            ],
+            "rowKeys": [
+              "checkboxReactiveArmLengthEnabled",
+              "textArmLengthRange",
+              "textArmLengthCurve",
+              "checkboxCropWristEnabled"
+            ],
+            "subgroups": []
+          },
+          {
+            "key": "desktop:Palm Facing",
+            "items": [
+              {
+                "type": "row",
+                "key": "checkboxPalmFacesCursor"
+              },
+              {
+                "type": "row",
+                "key": "sliderPalmFaceRotationOffset"
+              }
+            ],
+            "rowKeys": [
+              "checkboxPalmFacesCursor",
+              "sliderPalmFaceRotationOffset"
+            ],
+            "subgroups": []
+          }
+        ]
+      },
+      {
         "key": "desktop:Pose",
         "items": [
           {
@@ -1593,18 +1854,6 @@
               "items": [
                 {
                   "type": "row",
-                  "key": "checkboxReactiveArmLengthEnabled"
-                },
-                {
-                  "type": "row",
-                  "key": "textArmLengthRange"
-                },
-                {
-                  "type": "row",
-                  "key": "textArmLengthCurve"
-                },
-                {
-                  "type": "row",
                   "key": "sliderwristRotation"
                 },
                 {
@@ -1617,21 +1866,13 @@
                 },
                 {
                   "type": "row",
-                  "key": "checkboxCropWristEnabled"
-                },
-                {
-                  "type": "row",
                   "key": "sliderHideWrist"
                 }
               ],
               "rowKeys": [
-                "checkboxReactiveArmLengthEnabled",
-                "textArmLengthRange",
-                "textArmLengthCurve",
                 "sliderwristRotation",
                 "sliderwristBend",
                 "sliderwristSplay",
-                "checkboxCropWristEnabled",
                 "sliderHideWrist"
               ],
               "subgroups": []
@@ -1960,18 +2201,6 @@
             "items": [
               {
                 "type": "row",
-                "key": "checkboxReactiveArmLengthEnabled"
-              },
-              {
-                "type": "row",
-                "key": "textArmLengthRange"
-              },
-              {
-                "type": "row",
-                "key": "textArmLengthCurve"
-              },
-              {
-                "type": "row",
                 "key": "sliderwristRotation"
               },
               {
@@ -1984,21 +2213,13 @@
               },
               {
                 "type": "row",
-                "key": "checkboxCropWristEnabled"
-              },
-              {
-                "type": "row",
                 "key": "sliderHideWrist"
               }
             ],
             "rowKeys": [
-              "checkboxReactiveArmLengthEnabled",
-              "textArmLengthRange",
-              "textArmLengthCurve",
               "sliderwristRotation",
               "sliderwristBend",
               "sliderwristSplay",
-              "checkboxCropWristEnabled",
               "sliderHideWrist"
             ],
             "subgroups": []
@@ -2291,131 +2512,6 @@
             "key": "desktop:Saved Cameras",
             "items": [],
             "rowKeys": [],
-            "subgroups": []
-          }
-        ]
-      },
-      {
-        "key": "desktop:Phone Tilt",
-        "items": [
-          {
-            "type": "group",
-            "section": {
-              "key": "desktop:Tracking",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "checkboxTrackingEnabled"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderTrackingDamping"
-                }
-              ],
-              "rowKeys": [
-                "checkboxTrackingEnabled",
-                "sliderTrackingDamping"
-              ],
-              "subgroups": []
-            }
-          },
-          {
-            "type": "group",
-            "section": {
-              "key": "desktop:Target",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "sliderTargetDepthFactor"
-                },
-                {
-                  "type": "row",
-                  "key": "checkboxShowTargetMarker"
-                }
-              ],
-              "rowKeys": [
-                "sliderTargetDepthFactor",
-                "checkboxShowTargetMarker"
-              ],
-              "subgroups": []
-            }
-          },
-          {
-            "type": "group",
-            "section": {
-              "key": "desktop:Palm Facing",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "checkboxPalmFacesCursor"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderPalmFaceRotationOffset"
-                }
-              ],
-              "rowKeys": [
-                "checkboxPalmFacesCursor",
-                "sliderPalmFaceRotationOffset"
-              ],
-              "subgroups": []
-            }
-          }
-        ],
-        "rowKeys": [],
-        "subgroups": [
-          {
-            "key": "desktop:Tracking",
-            "items": [
-              {
-                "type": "row",
-                "key": "checkboxTrackingEnabled"
-              },
-              {
-                "type": "row",
-                "key": "sliderTrackingDamping"
-              }
-            ],
-            "rowKeys": [
-              "checkboxTrackingEnabled",
-              "sliderTrackingDamping"
-            ],
-            "subgroups": []
-          },
-          {
-            "key": "desktop:Target",
-            "items": [
-              {
-                "type": "row",
-                "key": "sliderTargetDepthFactor"
-              },
-              {
-                "type": "row",
-                "key": "checkboxShowTargetMarker"
-              }
-            ],
-            "rowKeys": [
-              "sliderTargetDepthFactor",
-              "checkboxShowTargetMarker"
-            ],
-            "subgroups": []
-          },
-          {
-            "key": "desktop:Palm Facing",
-            "items": [
-              {
-                "type": "row",
-                "key": "checkboxPalmFacesCursor"
-              },
-              {
-                "type": "row",
-                "key": "sliderPalmFaceRotationOffset"
-              }
-            ],
-            "rowKeys": [
-              "checkboxPalmFacesCursor",
-              "sliderPalmFaceRotationOffset"
-            ],
             "subgroups": []
           }
         ]
@@ -4463,7 +4559,6 @@
   },
   "sectionCollapseState": {
     "desktop:Saved Dev Settings": false,
-    "desktop:Responsive Wrist Splay": false,
     "desktop:Dev Panel": true,
     "desktop:MECHANICS": false,
     "desktop:PANEL UI": false,
@@ -4479,7 +4574,13 @@
     "desktop:Tween": true,
     "desktop:Saved Tween Sequences": false,
     "desktop:Field Layout": true,
-    "desktop:Pose": true,
+    "desktop:Phone Tilt": false,
+    "desktop:Target": true,
+    "desktop:Responsive Wrist Splay": true,
+    "desktop:Tracking": false,
+    "desktop:New Group": true,
+    "desktop:Palm Facing": true,
+    "desktop:Pose": false,
     "desktop:ROTATION": true,
     "desktop:THUMB": true,
     "desktop:Wrist": false,
@@ -4491,10 +4592,6 @@
     "desktop:Saved Poses": false,
     "desktop:Camera": true,
     "desktop:Saved Cameras": false,
-    "desktop:Phone Tilt": false,
-    "desktop:Tracking": false,
-    "desktop:Target": false,
-    "desktop:Palm Facing": false,
     "desktop:Lighting": true,
     "desktop:Saved Lighting": true,
     "desktop:Toon Shading": true,
@@ -4795,9 +4892,14 @@
     "sliderMobilePalmFaceRotationOffset": null,
     "sliderLandscapePalmFaceRotationOffset": null,
     "mobile:Responsive Wrist Splay": null,
-    "landscape:Responsive Wrist Splay": null
+    "landscape:Responsive Wrist Splay": null,
+    "desktop:New Group": "RESPONSIVE WRIST CROP",
+    "desktop:Palm Facing": "RESPONSIVE PALM ROTATION"
   },
-  "devTextOverridesManual": [],
+  "devTextOverridesManual": [
+    "desktop:New Group",
+    "desktop:Palm Facing"
+  ],
   "lockedGroups": [],
   "textEditModeEnabled": false,
   "devVisibility": {
