@@ -71,11 +71,11 @@
     "checkboxLockCameraPan": false,
     "checkboxLockCameraZoom": false,
     "checkboxCameraMaxExtentsEnabled": false,
-    "checkboxTrackingEnabled": false,
+    "checkboxTrackingEnabled": true,
     "sliderTrackingDamping": 1,
     "sliderTargetDepthFactor": 0.6,
     "checkboxShowTargetMarker": false,
-    "checkboxPalmFacesCursor": false,
+    "checkboxPalmFacesCursor": true,
     "sliderPalmFaceRotationOffset": 0,
     "sliderKeyAzimuth": 147,
     "sliderKeyElevation": 66,
@@ -85,7 +85,7 @@
     "sliderAmbientIntensity": 0,
     "colorAmbientSkyColor": "#ffffff",
     "colorAmbientGroundColor": "#3a2f2a",
-    "sliderToonSteps": 2,
+    "sliderToonSteps": 4,
     "sliderToonStepThreshold": 2.7,
     "sliderToonShadowFloor": 0,
     "sliderToonLightCeiling": 100,
@@ -104,8 +104,8 @@
   "layout": {
     "left": 20,
     "top": 20,
-    "width": 356,
-    "height": 671
+    "width": 350,
+    "height": 652
   },
   "devPanelStyle": {
     "titleFontSize": 17,
@@ -3277,8 +3277,20 @@
             "type": "group",
             "section": {
               "key": "mobile:Tracking",
-              "items": [],
-              "rowKeys": [],
+              "items": [
+                {
+                  "type": "row",
+                  "key": "checkboxMobileTrackingEnabled"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderMobileTrackingDamping"
+                }
+              ],
+              "rowKeys": [
+                "checkboxMobileTrackingEnabled",
+                "sliderMobileTrackingDamping"
+              ],
               "subgroups": []
             }
           },
@@ -3286,8 +3298,20 @@
             "type": "group",
             "section": {
               "key": "mobile:Target",
-              "items": [],
-              "rowKeys": [],
+              "items": [
+                {
+                  "type": "row",
+                  "key": "sliderMobileTargetDepthFactor"
+                },
+                {
+                  "type": "row",
+                  "key": "checkboxMobileShowTargetMarker"
+                }
+              ],
+              "rowKeys": [
+                "sliderMobileTargetDepthFactor",
+                "checkboxMobileShowTargetMarker"
+              ],
               "subgroups": []
             }
           },
@@ -3295,8 +3319,20 @@
             "type": "group",
             "section": {
               "key": "mobile:Palm Facing",
-              "items": [],
-              "rowKeys": [],
+              "items": [
+                {
+                  "type": "row",
+                  "key": "checkboxMobilePalmFacesCursor"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderMobilePalmFaceRotationOffset"
+                }
+              ],
+              "rowKeys": [
+                "checkboxMobilePalmFacesCursor",
+                "sliderMobilePalmFaceRotationOffset"
+              ],
               "subgroups": []
             }
           }
@@ -3305,20 +3341,56 @@
         "subgroups": [
           {
             "key": "mobile:Tracking",
-            "items": [],
-            "rowKeys": [],
+            "items": [
+              {
+                "type": "row",
+                "key": "checkboxMobileTrackingEnabled"
+              },
+              {
+                "type": "row",
+                "key": "sliderMobileTrackingDamping"
+              }
+            ],
+            "rowKeys": [
+              "checkboxMobileTrackingEnabled",
+              "sliderMobileTrackingDamping"
+            ],
             "subgroups": []
           },
           {
             "key": "mobile:Target",
-            "items": [],
-            "rowKeys": [],
+            "items": [
+              {
+                "type": "row",
+                "key": "sliderMobileTargetDepthFactor"
+              },
+              {
+                "type": "row",
+                "key": "checkboxMobileShowTargetMarker"
+              }
+            ],
+            "rowKeys": [
+              "sliderMobileTargetDepthFactor",
+              "checkboxMobileShowTargetMarker"
+            ],
             "subgroups": []
           },
           {
             "key": "mobile:Palm Facing",
-            "items": [],
-            "rowKeys": [],
+            "items": [
+              {
+                "type": "row",
+                "key": "checkboxMobilePalmFacesCursor"
+              },
+              {
+                "type": "row",
+                "key": "sliderMobilePalmFaceRotationOffset"
+              }
+            ],
+            "rowKeys": [
+              "checkboxMobilePalmFacesCursor",
+              "sliderMobilePalmFaceRotationOffset"
+            ],
             "subgroups": []
           }
         ]
@@ -4143,8 +4215,20 @@
             "type": "group",
             "section": {
               "key": "landscape:Tracking",
-              "items": [],
-              "rowKeys": [],
+              "items": [
+                {
+                  "type": "row",
+                  "key": "checkboxLandscapeTrackingEnabled"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderLandscapeTrackingDamping"
+                }
+              ],
+              "rowKeys": [
+                "checkboxLandscapeTrackingEnabled",
+                "sliderLandscapeTrackingDamping"
+              ],
               "subgroups": []
             }
           },
@@ -4152,8 +4236,20 @@
             "type": "group",
             "section": {
               "key": "landscape:Target",
-              "items": [],
-              "rowKeys": [],
+              "items": [
+                {
+                  "type": "row",
+                  "key": "sliderLandscapeTargetDepthFactor"
+                },
+                {
+                  "type": "row",
+                  "key": "checkboxLandscapeShowTargetMarker"
+                }
+              ],
+              "rowKeys": [
+                "sliderLandscapeTargetDepthFactor",
+                "checkboxLandscapeShowTargetMarker"
+              ],
               "subgroups": []
             }
           },
@@ -4161,8 +4257,20 @@
             "type": "group",
             "section": {
               "key": "landscape:Palm Facing",
-              "items": [],
-              "rowKeys": [],
+              "items": [
+                {
+                  "type": "row",
+                  "key": "checkboxLandscapePalmFacesCursor"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderLandscapePalmFaceRotationOffset"
+                }
+              ],
+              "rowKeys": [
+                "checkboxLandscapePalmFacesCursor",
+                "sliderLandscapePalmFaceRotationOffset"
+              ],
               "subgroups": []
             }
           }
@@ -4171,20 +4279,56 @@
         "subgroups": [
           {
             "key": "landscape:Tracking",
-            "items": [],
-            "rowKeys": [],
+            "items": [
+              {
+                "type": "row",
+                "key": "checkboxLandscapeTrackingEnabled"
+              },
+              {
+                "type": "row",
+                "key": "sliderLandscapeTrackingDamping"
+              }
+            ],
+            "rowKeys": [
+              "checkboxLandscapeTrackingEnabled",
+              "sliderLandscapeTrackingDamping"
+            ],
             "subgroups": []
           },
           {
             "key": "landscape:Target",
-            "items": [],
-            "rowKeys": [],
+            "items": [
+              {
+                "type": "row",
+                "key": "sliderLandscapeTargetDepthFactor"
+              },
+              {
+                "type": "row",
+                "key": "checkboxLandscapeShowTargetMarker"
+              }
+            ],
+            "rowKeys": [
+              "sliderLandscapeTargetDepthFactor",
+              "checkboxLandscapeShowTargetMarker"
+            ],
             "subgroups": []
           },
           {
             "key": "landscape:Palm Facing",
-            "items": [],
-            "rowKeys": [],
+            "items": [
+              {
+                "type": "row",
+                "key": "checkboxLandscapePalmFacesCursor"
+              },
+              {
+                "type": "row",
+                "key": "sliderLandscapePalmFaceRotationOffset"
+              }
+            ],
+            "rowKeys": [
+              "checkboxLandscapePalmFacesCursor",
+              "sliderLandscapePalmFaceRotationOffset"
+            ],
             "subgroups": []
           }
         ]
@@ -4278,7 +4422,7 @@
     "desktop:Palm Facing": false,
     "desktop:Lighting": true,
     "desktop:Saved Lighting": false,
-    "desktop:Toon Shading": false,
+    "desktop:Toon Shading": true,
     "desktop:Saved Toon Shading": false,
     "desktop:Background": false,
     "mobile:Dev Panel": true,
@@ -4560,7 +4704,19 @@
     "sliderMobileposeOffsetZ": null,
     "sliderLandscapeposeOffsetZ": null,
     "sliderMobilePoseScale": null,
-    "sliderLandscapePoseScale": null
+    "sliderLandscapePoseScale": null,
+    "checkboxMobileTrackingEnabled": null,
+    "checkboxLandscapeTrackingEnabled": null,
+    "sliderMobileTrackingDamping": null,
+    "sliderLandscapeTrackingDamping": null,
+    "sliderMobileTargetDepthFactor": null,
+    "sliderLandscapeTargetDepthFactor": null,
+    "checkboxMobileShowTargetMarker": null,
+    "checkboxLandscapeShowTargetMarker": null,
+    "checkboxMobilePalmFacesCursor": null,
+    "checkboxLandscapePalmFacesCursor": null,
+    "sliderMobilePalmFaceRotationOffset": null,
+    "sliderLandscapePalmFaceRotationOffset": null
   },
   "devTextOverridesManual": [],
   "lockedGroups": [],
@@ -4620,7 +4776,13 @@
     "sliderposeOffsetX": false,
     "sliderposeOffsetY": false,
     "sliderposeOffsetZ": false,
-    "sliderPoseScale": false
+    "sliderPoseScale": false,
+    "checkboxTrackingEnabled": true,
+    "sliderTrackingDamping": true,
+    "sliderTargetDepthFactor": true,
+    "checkboxShowTargetMarker": true,
+    "checkboxPalmFacesCursor": true,
+    "sliderPalmFaceRotationOffset": true
   },
   "devIndependence": {
     "mobile": {},
