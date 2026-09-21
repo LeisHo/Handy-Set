@@ -4364,7 +4364,7 @@
     "desktop:Tween": true,
     "desktop:Saved Tween Sequences": false,
     "desktop:Field Layout": true,
-    "desktop:Pose": false,
+    "desktop:Pose": true,
     "desktop:ROTATION": true,
     "desktop:THUMB": true,
     "desktop:Wrist": true,
@@ -4375,12 +4375,12 @@
     "desktop:Pose Offset": true,
     "desktop:Saved Poses": true,
     "desktop:Camera": false,
-    "desktop:Saved Cameras": false,
-    "desktop:Phone Tilt": false,
+    "desktop:Saved Cameras": true,
+    "desktop:Phone Tilt": true,
     "desktop:Tracking": false,
     "desktop:Target": false,
     "desktop:Palm Facing": false,
-    "desktop:Lighting": false,
+    "desktop:Lighting": true,
     "desktop:Saved Lighting": false,
     "desktop:Toon Shading": false,
     "desktop:Outline": false,
@@ -4574,14 +4574,5 @@
   "devDeviceValues": {
     "mobile": {},
     "landscape": {}
-  },
-  "defaultCamera": {
-    "x": -0.9036587519864522,
-    "y": 36.118615633291526,
-    "z": 106.49896040479055,
-    "fov": 32,
-    "tx": -0.9036587519864362,
-    "ty": 36.11861563329152,
-    "tz": -25.086977547974946
   }
 }
