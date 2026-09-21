@@ -145,6 +145,48 @@ Verified:
   and confirm a new commit appears in the GitHub repo.
 
 --------------------------------------------------------------------------------
+2026-09-21  -  1:18 AM - 1:25 AM EDT
+
+Fixed 2 dev panel checkbox bugs reported directly by the user after
+comparing the real behavior against TEMPLATE_DEV_PANEL.html's own
+documented functionality.
+
+Fixed:
+- Every setting row on the Desktop tab showed "Independent from Desktop"
+  instead of "Show in Mobile/Landscape" -- root cause: `addRow()`
+  (main.js) never set `ctrl.tab = 'desktop'` on any control object, and
+  `buildUniformControlRow()` (devPanel.js) checks `ctrl.tab === 'desktop'`
+  explicitly to decide which checkbox to attach, silently falling through
+  to the wrong one for every one of this project's ~150 controls. Fixed
+  centrally in `addRow()`.
+- No group-level "show in mobile/landscape" checkbox ever appeared next
+  to any group's undock icon -- root cause: `buildGroupCascadeCheckbox()`
+  in the RAW TEMPLATE_DEV_PANEL.html file itself sets `cb.style.display =
+  'none'` unconditionally at creation, and nothing anywhere in that
+  ~5700-line file ever sets it back to visible (confirmed by exhaustive
+  grep of both this project's copy and the source template). This is a
+  genuine latent bug in the template as shipped, not a simplification
+  made in this project. Fixed locally by removing that line.
+
+Verified:
+- Direct DOM/computed-style inspection (getBoundingClientRect,
+  getComputedStyle) on a live-reloaded page confirmed the group checkbox
+  now has real dimensions and `display: block`, and a Camera-group row's
+  checkbox is now `.dev-visibility-checkbox` titled "Show in Mobile/
+  Landscape" (was `.dev-independence-checkbox`).
+- Visual screenshot confirmation: every group title now shows its own
+  checkbox left of the lock/undock icons; Debug's individual rows
+  (Show Grid Helper, Show Wireframe, etc.) each show their own row-level
+  checkbox on the right.
+- Along the way, hit the documented sandbox-networking gotcha (devPanel.js,
+  4557 lines, intermittently failing to fully load under this sandbox's
+  local static server -- `200 OK` + `net::ERR_CONNECTION_RESET` on the
+  same request) which produced a completely empty dev panel and looked
+  like a real regression until traced to a plain failed network request,
+  resolved by retrying the navigation. Logged as its own gotcha since it
+  cost real time before being correctly identified.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

@@ -97,6 +97,32 @@ what's worth porting properly later:
 
 ## Gotchas
 
+- **`addRow()` (main.js) must set `ctrl.tab = 'desktop'` on every control**,
+  or `buildUniformControlRow()` (devPanel.js) silently attaches the wrong
+  per-row device checkbox ("Independent from Desktop" instead of "Show in
+  Mobile/Landscape") since it checks `ctrl.tab === 'desktop'` explicitly
+  with no sensible default for a missing field. Missed on the first pass
+  across every control literal in every `render*Group()` function — fixed
+  centrally in `addRow()` itself (the one choke point every control passes
+  through) rather than touching ~150 individual control objects.
+- **The group-level cascade checkbox (`buildGroupCascadeCheckbox()` in
+  devPanel.js) ships from `TEMPLATE_DEV_PANEL.html` with
+  `cb.style.display = 'none'` hardcoded at creation, and nothing anywhere
+  in that ~5700-line file ever sets it back to visible** (confirmed by
+  exhaustive grep) — a real latent bug in the template file itself, not a
+  simplification made here. Fixed locally by removing that line (see the
+  function's own comment). Worth folding back into
+  `.claude/TEMPLATE_DEV_PANEL.html` itself per its own MAINTENANCE note,
+  since every other project built from this template has the same bug.
+- **This sandbox's local static server can intermittently fail to fully
+  deliver `devPanel.js`** (`200 OK` but also `net::ERR_CONNECTION_RESET`
+  on the same request, per `read_network_requests`) — when the dev panel
+  loads with every group showing 0 children and devPanel.js's own globals
+  never become available, this is very likely the cause, not a real code
+  regression. Same documented gotcha as HANDY DANDIES' own `main.js` size
+  issue, just hitting `devPanel.js` here (4557 lines) instead. Retry the
+  navigation before assuming a just-made change broke something.
+
 - **The `html.dev-mode` class comes from a tiny early `<head>` script**
   (before `<link rel="stylesheet">`), not from `devPanel.js` itself —
   missing it (an early mistake this session made when first assembling

@@ -1607,7 +1607,12 @@
         cb.className = 'dev-group-cascade-checkbox';
         cb.dataset.cascadeKind = kind;
         cb.title = kind === 'visibility' ? 'Show in Mobile/Landscape (whole group)' : 'Independent from Desktop (whole group)';
-        cb.style.display = 'none';
+        // FIX (project-side, not upstream): this was `cb.style.display =
+        // 'none'` unconditionally, with no code path anywhere in this file
+        // that ever set it back — confirmed by exhaustive grep. The
+        // checkbox was permanently invisible despite being fully wired
+        // (click handler, cascade logic, CSS position rule all correct).
+        // Left visible via the CSS class's own default display now.
         cb.addEventListener('click', e => e.stopPropagation());
         cb.addEventListener('change', () => {
             const checked = cb.checked;

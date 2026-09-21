@@ -702,6 +702,15 @@ function addSubgroup(parentContent, name) {
   return el.querySelector(':scope > .dev-section-content')
 }
 function addRow(content, ctrl) {
+  // buildUniformControlRow() (devPanel.js) checks `ctrl.tab === 'desktop'`
+  // to decide which per-row device checkbox to attach (visibility on
+  // Desktop, independence on Mobile/Landscape) — every control built here
+  // is a Desktop-tab control (addGroup()/addSubgroup() always pass
+  // 'desktop'), so this must be set explicitly or the check silently
+  // fails and every row gets the wrong ("Independent from Desktop")
+  // checkbox instead. Missed on the first pass — every control literal
+  // across every render*Group() function lacked this field.
+  if (!ctrl.tab) ctrl.tab = 'desktop'
   const row = (ctrl.type === 'text' || ctrl.type === 'number') ? buildTextInputRow(ctrl) : buildUniformControlRow(ctrl)
   content.appendChild(row)
   return row
