@@ -12,55 +12,38 @@ Nothing in progress. Pushed to `https://github.com/LeisHo/Handy-Set`
 
 ## Recently completed
 
+- **Fixed the real cause of "wrist splay tracks the cursor but palm
+  rotation doesn't" and "wrist crop cuts into the top of the hand"** —
+  the user correctly guessed both were the same bug. The wrist-crop
+  plane's normal only accounted for Phone Tilt's own wrapper rotation,
+  never the wrist bone's own live rotation, so at large Responsive Wrist
+  Splay angles it clipped away most of the hand — leaving too little
+  visible geometry to perceive Palm Face Rotation working at all (the
+  rotation math itself was, yet again, confirmed correct). Fixed by
+  deriving the plane's normal from the live wrist->fingertip direction
+  each frame instead of a static forearm->wrist axis. See CLAUDE.md's
+  wrist-crop gotcha and `CHANGELOG.txt`'s 8:11-8:26 AM entry for the full
+  account. One secondary finding not yet fixed: the hand can go fully
+  invisible at an extreme combined rotation (large manual Palm Face
+  Rotation offset stacked on an already-large cursor tilt) — not a crop
+  or backface-culling issue, cause still unknown.
 - Ported Reactive Arm Length and Responsive Wrist Splay from Handy
   Dandies (both explicitly, repeatedly requested) — real curve-editor
   widgets and reactive math ported verbatim, genericized into 2 shared
   widget builders. `tiltMagnitude` (already computed for Phone Tilt)
   stands in for Handy Dandies' own per-field live-distance-across-hands
   normalization, since that concept doesn't apply to this project's
-  single-hand case — a disclosed adaptation, not a scope cut; every
-  actual control is a full port. Live-verified on localhost: both
-  widgets render/drag correctly, the master toggles genuinely gate the
-  behavior (direct clip-plane-constant comparison), and cursor movement
-  produces real, measured live changes to both the wrist bone's
-  quaternion and the wrist-crop clip plane.
-- Dev-panel DOM sync after preset "Use", Outline removal, the Toon
-  Shading `onBeforeCompile` root cause, ghost/misaligned group
-  checkboxes, Set-as-Default being wiped by the main Sync click, Phone
-  Tilt/Palm Facing defaulting off, Camera literal-restore + a corrupted
-  `FRONTOS` seed value, Tween button styling, and the Enable Motion
-  button removal — all fixed and live-verified in earlier rounds this
-  session (see `CHANGELOG.txt`).
-- Finger curl/splay axis not tracking wrist bend/splay — found by reading
-  Handy Dandies' own CHANGELOG for this exact bug class and porting its
-  real, twice-corrected formula verbatim (`computeCurlAxisRefQuat()`).
-- Hide Wrist not applying to the live model — the crop's clip plane
-  stopped being attached to the material forever the first time Crop
-  Wrist was ever toggled off and back on (`h.clipPlane` persisted but
-  never got re-added to `material.clippingPlanes`). Fixed, then also
-  made the plane recompute every frame via `onBeforeRender` (matches
-  Handy Dandies' own pattern) so it stays correctly aligned while the
-  hand is actively rotating, not just at the moment a slider changes.
-- **Palm Face Rotation "does nothing" / "messes up poses"** — a PRIOR
-  session's conclusion here ("roll axis nearly aligned with camera") was
-  itself wrong and has been corrected (see `CHANGELOG.txt`'s 7:05-7:24 AM
-  entry for the full account). The real problem was 2 testing-
-  methodology confounds in this environment (`canvas.toDataURL()`
-  silently returning a stale/blank buffer without
-  `preserveDrawingBuffer`; `requestAnimationFrame` freezing on a
-  non-fronted browser-pane tab). With both fixed, direct screenshot
-  comparison on the live Vercel deployment confirms rotation and
-  finger-pose decoupling both work correctly. Leading candidate for the
-  user's real-world experience: this project's own documented flaky-
-  localhost script-delivery gotcha, directly observed again this
-  session (repeated connection resets / 404s / a null-reference crash
-  on page load).
+  single-hand case — a disclosed adaptation, not a scope cut.
+- Earlier this session: dev-panel DOM sync fixes, Toon Shading
+  `onBeforeCompile` root cause, finger curl/splay not tracking wrist
+  bend/splay, Hide Wrist not applying to the live model — see
+  `CHANGELOG.txt` for the full history.
 
 ## What's next
 
-1. Confirm with the user whether they were testing Palm Face Rotation on
-   `localhost` or the deployed Vercel URL — localhost's flaky script
-   delivery is the leading remaining explanation for their experience.
+1. Investigate the "hand goes fully invisible at extreme combined
+   rotation" finding above — confirmed not crop or backface culling;
+   possibly the mesh landing outside the camera's narrow 32° FOV.
 2. Verify Phone Tilt gyroscope rotation specifically on the user's actual
    Pixel 9a — still unverified, no physical device available here.
 3. Decide on a visible default color scheme (current all-white default

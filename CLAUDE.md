@@ -472,6 +472,55 @@ wiring, and are still open:
   localhost's own flaky script delivery, next bullet) before the app
   code — see `docs/CHANGELOG.txt`'s 2026-09-21 7:05-7:24 AM entry for the
   full account.
+- **CORRECTED AGAIN, same day — the "genuinely works, testing methodology
+  was the problem" conclusion directly above was INCOMPLETE, not wrong.**
+  The rotation math was always fine (never in question again), but there
+  WAS a real, separate app bug making it LOOK broken in practice: the
+  wrist-crop plane (`updateWristClipPlaneForHand()`) didn't account for
+  the wrist bone's own live rotation (see the dedicated wrist-crop gotcha
+  below), so at large Responsive Wrist Splay angles it clipped away most
+  of the hand — leaving too little visible geometry on screen to perceive
+  Palm Face Rotation working at all. User's own diagnosis, confirmed
+  live: disabling Crop Wrist revealed the full hand at a cursor position
+  where, with Crop Wrist on, only a thin sliver remained; direct
+  `wrapper.quaternion` comparison at that same position (offset 0 vs 180)
+  showed it changing substantially regardless. Fixed alongside the crop
+  bug itself — see that entry for the mechanism.
+- **`updateWristClipPlaneForHand()`'s clip-plane normal must track the
+  wrist bone's OWN live rotation, not just `h.wrapper.quaternion`
+  (fixed 2026-09-21, 2nd round same day)** — real bug, found after the
+  user reported wrist-splay tracking the cursor but not overall/palm
+  rotation, AND separately that heavy wrist splay crops into the top of
+  the hand, and correctly guessed both were the same root cause. They
+  were: the plane's normal was derived from `wristCropNormalAligned`, a
+  FIXED bind-pose forearm->wrist direction, only ever rotated by
+  `h.wrapper.quaternion` (Phone Tilt) — never by the wrist bone's own
+  rotation (wristBend/wristSplay/wristRotation + Responsive Wrist Splay's
+  live `extraSplayDeg`, which reaches up to 71 real degrees). The plane's
+  ANCHOR point was never wrong (a bone's own local rotation doesn't move
+  its own world position — confirmed directly), but its ORIENTATION
+  stayed pinned to the pre-bend forearm axis while the actual hand
+  geometry (distal to the wrist, which DOES rotate with wrist bend) swung
+  away from it — clipping away most of the hand at extreme splay. Fixed
+  by deriving the normal from the LIVE wrist->fingertip direction
+  (`rHand` -> `rMid3`, both read via `getWorldPosition()` every frame)
+  instead of the static forearm->wrist axis — `rMid3` is a skeleton
+  descendant of `rHand`, so it moves with every wrist-pose axis, keeping
+  the plane's orientation aligned with wherever the hand is actually
+  currently pointing. Live-verified across several cursor positions:
+  consistent, plausible hand silhouette, no crescent-sliver clipping.
+  **Not yet fully resolved**: at an extreme COMBINED rotation (manual
+  Palm Face Rotation offset near 180° stacked on an already-large
+  cursor-driven tilt), the hand can go fully invisible — confirmed NOT a
+  crop issue (persists with Crop Wrist off) and NOT backface culling
+  (persists with `material.side` forced to `THREE.DoubleSide`) — root
+  cause still unknown, not reproduced under normal single-axis operation.
+  Matches the OLD, wrongly-dismissed "hand vanished at offset=179°,
+  widening FOV to 90° brought it back" observation from an earlier
+  session — that observation was real, just misdiagnosed as "narrow FOV
+  in general" rather than this specific extreme-combined-rotation case.
+  Worth investigating if a future report describes total invisibility
+  (not just cropping) at an extreme pose.
 - **Debugging tip: `THREE.*.prototype` monkey-patching (e.g. patching
   `Quaternion.prototype.slerp`, `Matrix4.prototype.lookAt`,
   `WebGLRenderer.prototype.render` from `javascript_tool` eval) produced

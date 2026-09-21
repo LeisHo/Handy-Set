@@ -910,6 +910,79 @@ for the new "Responsive Wrist Splay" group and the new rows inside Pose >
 Wrist, per this project's own documented convention.
 
 --------------------------------------------------------------------------------
+2026-09-21  -  8:11 AM - 8:26 AM EDT (real, measured via two `date` calls;
+see the final timing line below)
+
+Fixed the REAL root cause behind "wrist splay is the only thing tracking
+the cursor, why isn't the palm rotation" and a separately-reported wrist-
+crop issue ("as I move the cursor, which splays the wrist, the top of the
+hand gets cropped") -- the user directly suspected both were the same
+bug, and they were right. Provided a screen recording (`datalog/Recording
+2026-09-21 080827.mp4`) as evidence; the browser pane could open the file
+but not play/scrub it (renders as a static first-frame snapshot), so the
+investigation proceeded via direct live testing instead, which was
+sufficient to find and confirm the bug independently.
+
+**Root cause**: `updateWristClipPlaneForHand()`'s clip-plane normal was
+derived from `wristCropNormalAligned`, a FIXED bind-pose forearm->wrist
+direction, only ever rotated by `h.wrapper.quaternion` (Phone Tilt) --
+never by the wrist bone's own live rotation (wristBend/wristSplay/
+wristRotation + this session's own new Responsive Wrist Splay, which
+reaches up to 71 real degrees). The plane's ANCHOR point was never wrong
+(confirmed directly: a bone's own local rotation doesn't move its own
+world position), but its ORIENTATION stayed pinned to the pre-bend
+forearm axis while the actual hand geometry -- distal to the wrist, which
+DOES rotate with wrist bend -- swung up to 71 degrees away from it,
+clipping away most of the hand at extreme splay. This was a genuinely new
+failure mode: Responsive Wrist Splay (added this session, earlier today)
+made wristSplay reach a much larger, more dynamic range than anything
+this project had before, which is what exposed it so severely.
+
+**Why this also explained the palm-rotation complaint**: live-verified at
+a heavily-splayed cursor position that disabling Crop Wrist revealed the
+FULL hand (5 fingers, full palm) where, with Crop Wrist on, only a thin
+crescent sliver remained. Direct `h.wrapper.quaternion` comparison at
+that exact same position (Palm Face Rotation offset 0 vs 180) showed it
+changing substantially regardless of the crop state -- the rotation math
+was never broken (yet again confirmed) -- there was just too little
+visible hand geometry left, once cropped, to perceive it rotating.
+
+**Fix**: derive the plane's normal from the LIVE wrist->fingertip
+direction (`rHand` -> `rMid3`, both read via `getWorldPosition()` every
+frame) instead of the static forearm->wrist axis -- `rMid3` is a skeleton
+descendant of `rHand`, so its world position moves with every wrist-pose
+axis, keeping the plane's orientation aligned with wherever the hand is
+actually currently pointing, not just wherever the forearm was in the
+bind pose. Live-verified across several different cursor positions (top,
+bottom, right of screen, with and without a manual Palm Face Rotation
+offset): consistent, plausible hand silhouette every time, no crescent-
+sliver clipping, and clearly distinguishable shape/orientation changes
+between positions.
+
+**One separate, secondary finding, not yet fixed**: at an extreme
+COMBINED rotation (manual Palm Face Rotation offset near 180 degrees
+stacked on an already-large cursor-driven tilt), the hand can go fully
+invisible -- confirmed NOT the crop bug (persists with Crop Wrist off)
+and NOT backface culling (persists with `material.side` forced to
+`THREE.DoubleSide`, `frustumCulled` forced false, no NaN in any matrix).
+An independent secondary WebGLRenderer render of the same scene/camera
+DID show non-white pixels, suggesting the geometry itself may just be
+landing outside the app's own narrow 32-degree-FOV camera's effective
+frame at that extreme combined angle -- not confirmed, flagged as a
+follow-up. This matches (and finally explains, at least partially) an
+EARLIER session's own "hand vanished at offset=179, widening FOV to 90
+brought it back" observation, which had been wrongly generalized to "the
+roll axis is just hard to see" -- it was really this narrower, extreme-
+combined-rotation case, not the effect being subtle in general.
+
+Timing: start 8:11:03 AM, finish 8:26:31 AM EDT (2 real `date` calls) =
+15m28s. Committed as `e0b85ba` (rebased onto the user's own concurrent
+"Update dev-panel-settings.json via Save Settings" commit from their live
+testing session, `2d32a1d` -- confirmed via `git show --stat` that it only
+touched the settings JSON before rebasing, per this workspace's own
+concurrent-session preservation rule) and pushed.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
