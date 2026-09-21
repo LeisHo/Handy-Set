@@ -23,7 +23,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
 // this simply clears the stale local save; it does not touch the
 // separate git-tracked save (data/processed/dev-panel-settings.json,
 // reset directly when this was first found).
-const HANDYSET_SETTINGS_SCHEMA_VERSION = '2026-09-21e'
+const HANDYSET_SETTINGS_SCHEMA_VERSION = '2026-09-21f'
 try {
   if (localStorage.getItem('handysetSettingsSchemaVersion') !== HANDYSET_SETTINGS_SCHEMA_VERSION) {
     localStorage.removeItem('devPanelSettings')
@@ -77,6 +77,16 @@ const cfg = {
   reactiveArmLengthEnabled: true,
   armLengthRange: '{"min":0,"max":85}',
   armLengthCurve: '[{"x":0,"y":1},{"x":0.148333740234375,"y":0.6613540649414062},{"x":0.4100001017252604,"y":0.31468760172526045},{"x":0.5316670735677084,"y":0.2680206298828125},{"x":0.748333740234375,"y":0.19468739827473958},{"x":1,"y":0}]',
+  // Responsive Wrist Splay — RESTORED 2026-09-21 after direct instruction
+  // ("Leave Responsive Wrist Splay") following an earlier removal this
+  // same session that was based on a misidentification of a DIFFERENT
+  // group ("Responsive Palm Rotation") the user asked to remove — see
+  // docs/CHANGELOG.txt for the full account. Same porting/adaptation note
+  // as Reactive Arm Length above (tiltMagnitude stands in for HANDY
+  // DANDIES' per-field live distance range).
+  wristSplayResponsiveEnabled: true, wristSplayDefault: 7, wristSplayReactiveEnabled: true,
+  wristSplayRange: '{"min":5,"max":-71}',
+  wristSplayCurve: '[{"x":0,"y":1},{"x":0.31833343505859374,"y":0.6961458841959636},{"x":1,"y":0.042812347412109375}]',
   // Lighting
   keyAzimuth: 117, keyElevation: 56, keyTargetHeight: 71, keyIntensity: 6, keyColor: '#ffffff',
   ambientIntensity: 0, ambientSkyColor: '#ffffff', ambientGroundColor: '#3a2f2a',
@@ -233,14 +243,16 @@ let hand = null // hands[0] — the "primary" hand: pose-editing reference frame
 function computeBaseScale() { return (8 / handLengthRaw) * cfg.handScale }
 
 // ---------------------------------------------------------------------
-// Reactive Arm Length — curve math, ported verbatim from HANDY DANDIES
-// (see cfg's own declaration comment for the single-hand distance-input
-// adaptation). `armLengthRangeParsed`/etc are parsed once (parse*Config(),
-// called from each control's own onChange and once at startup) rather
-// than JSON.parse'd every frame.
+// Reactive Arm Length + Responsive Wrist Splay — curve math, ported
+// verbatim from HANDY DANDIES (see cfg's own declaration comment for the
+// single-hand distance-input adaptation). `armLengthRangeParsed`/etc are
+// parsed once (parse*Config(), called from each control's own onChange
+// and once at startup) rather than JSON.parse'd every frame.
 // ---------------------------------------------------------------------
 let armLengthRangeParsed = { min: 0, max: 85 }
 let armLengthCurveParsed = [{ x: 0, y: 1 }, { x: 1, y: 0 }]
+let wristSplayRangeParsed = { min: 5, max: -71 }
+let wristSplayCurveParsed = [{ x: 0, y: 1 }, { x: 1, y: 0 }]
 const curveWidgetResyncs = []
 
 function catmullRomY(y0, y1, y2, y3, t) {
@@ -287,6 +299,10 @@ function parseArmLengthConfig() {
   try { armLengthRangeParsed = JSON.parse(cfg.armLengthRange) } catch (e) { /* keep last-good value */ }
   try { armLengthCurveParsed = JSON.parse(cfg.armLengthCurve).sort((a, b) => a.x - b.x) } catch (e) { /* keep last-good value */ }
 }
+function parseWristSplayConfig() {
+  try { wristSplayRangeParsed = JSON.parse(cfg.wristSplayRange) } catch (e) { /* keep last-good value */ }
+  try { wristSplayCurveParsed = JSON.parse(cfg.wristSplayCurve).sort((a, b) => a.x - b.x) } catch (e) { /* keep last-good value */ }
+}
 // Returns a 0-1 crop fraction (0 = full arm, 1 = fully cropped at wrist).
 // `distanceT` is `tiltMagnitude` (0-1) — see cfg's own comment.
 function computeArmLengthT(distanceT) {
@@ -296,7 +312,34 @@ function computeArmLengthT(distanceT) {
   const minT = armLengthRangeParsed.min / 100, maxT = armLengthRangeParsed.max / 100
   return minT + (maxT - minT) * curveY
 }
+// Returns the EXTRA wrist-splay rotation (degrees) on top of cfg.wristSplay.
+function computeResponsiveWristSplayDeg(distanceT) {
+  if (!cfg.wristSplayResponsiveEnabled) return 0
+  if (!cfg.wristSplayReactiveEnabled) return cfg.wristSplayDefault
+  const curveY = THREE.MathUtils.clamp(evaluateReactiveCurve(wristSplayCurveParsed, distanceT), 0, 1)
+  const { min, max } = wristSplayRangeParsed
+  return min + (max - min) * curveY
+}
 
+// Combined exclude-quaternion for applyCurlToSkeleton()'s own
+// rotateOnTrueWorldAxis() calls — found live 2026-09-21, same round as
+// the alignQuat-vs-h.currentBaseQuat fix above: fixing computeCurlAxisRefQuat()
+// alone (making the curl AXIS direction itself modelRot-independent) was
+// NOT sufficient. rotateOnTrueWorldAxis() separately reads
+// `bone.getWorldQuaternion()` (the FULL wrapper*clone*bone-chain world
+// orientation) and only ever excluded `wrapperQuat` from it — `h.clone`'s
+// own modelRot rotation was still baked into THAT conversion, so even a
+// correctly modelRot-independent `curlAxis` got converted into a
+// modelRot-DEPENDENT local bone rotation. Both leaks needed fixing
+// together (confirmed live: fixing only the first one left the bug just
+// as visible, if not more so). `wrapperQuat` * `h.clone.quaternion`
+// (matching the SAME composition order the scene graph actually uses —
+// wrapper is clone's own parent) is what every applyCurlToSkeleton() call
+// site now passes instead of `h.wrapper.quaternion` alone.
+const _curlExcludeQuat = new THREE.Quaternion()
+function curlExcludeQuatForHand(h) {
+  return _curlExcludeQuat.copy(h.wrapper.quaternion).multiply(h.clone.quaternion)
+}
 // applyCurlToSkeleton — ported verbatim from HANDY DANDIES.
 const _curlAxisScratch = new THREE.Vector3()
 const _splayAxisScratch = new THREE.Vector3()
@@ -389,8 +432,30 @@ function applyCurlToSkeleton(fingerName, skeleton, baseQuat, wrapperQuat, values
     }
   })
 }
+// `alignQuat` (NOT `h.currentBaseQuat`) is deliberately what's passed as
+// applyCurlToSkeleton()'s own `baseQuat` argument at every call site below
+// — found live 2026-09-21, same round as the Whole-Hand Rotation pivot
+// fix: `h.currentBaseQuat` = `alignQuat * modelRotQuat` (see
+// computeBaseQuatFromValues()), and computeCurlAxisRefQuat() BAKES
+// `baseQuat` directly into the finger curl axis reference frame (unlike
+// `wrapperQuat`, which is only ever EXCLUDED via rotateOnTrueWorldAxis()'s
+// own world-to-local conversion, never baked in). Passing the FULL
+// `h.currentBaseQuat` here meant every finger's curl AXIS silently
+// rotated along with modelRotX/Y/Z — confirmed live: the index fingertip's
+// own direction relative to its base joint, re-expressed in the hand's
+// own local frame (i.e. with h.clone's rotation undone), differed
+// substantially between modelRotY=90 and modelRotY=-45, even though no
+// curl/splay cfg value changed at all. This bug was ALREADY PRESENT
+// before this session (computeBaseQuatFromValues() already folded in
+// modelRotX/Y/Z from the start) — it was invisible only because
+// modelRotX/Y/Z never actually rotated anything visible until the pivot
+// fix above, so there was nothing to visibly compare against. `alignQuat`
+// (the hand's own fixed bind-pose alignment, with NO modelRot folded in)
+// is the correct, modelRot-INVARIANT reference — matching the same
+// intent as excluding wrapperQuat, just via the direct-bake code path
+// instead of the exclude-via-world-quaternion one.
 function applyCurl(fingerName) {
-  hands.forEach((h) => applyCurlToSkeleton(fingerName, h.skinnedMesh.skeleton, h.currentBaseQuat, h.wrapper.quaternion, cfg))
+  hands.forEach((h) => applyCurlToSkeleton(fingerName, h.skinnedMesh.skeleton, alignQuat, curlExcludeQuatForHand(h), cfg))
 }
 
 // Wrist bend/splay/rotation — same rotateOnTrueWorldAxis mechanism as the
@@ -416,13 +481,16 @@ function applyCurl(fingerName) {
 // "shows up differently" describes. Axis-letter assignment (X=bend,
 // Z=splay, Y=rotation/twist) was already correct; only the rotation
 // METHOD was wrong.
-function applyWristPoseToSkeleton(skeleton, values) {
+// `extraSplayDeg` (default 0) is Responsive Wrist Splay's own live
+// contribution, added onto values.wristSplay before the single rotateZ
+// call — ported from HANDY DANDIES' own identical parameter.
+function applyWristPoseToSkeleton(skeleton, values, extraSplayDeg = 0) {
   const bone = skeleton.getBoneByName('rHand')
   if (!bone) return
   const rest = boneRestQuat.rHand
   if (rest) bone.quaternion.copy(rest)
   bone.rotateX(THREE.MathUtils.degToRad(values.wristBend || 0))
-  bone.rotateZ(THREE.MathUtils.degToRad(values.wristSplay || 0))
+  bone.rotateZ(THREE.MathUtils.degToRad((values.wristSplay || 0) + extraSplayDeg))
   bone.rotateY(THREE.MathUtils.degToRad(values.wristRotation || 0))
 }
 
@@ -477,14 +545,36 @@ function applyModelRootTransform(h, poseValues) {
 // Tween — same cfg applied uniformly to all hands (matching HANDY
 // DANDIES' own design: one shared pose, N independent field positions).
 function applyPoseValuesToHand(poseValues) {
+  const extraSplay = computeResponsiveWristSplayDeg(tiltMagnitude)
   hands.forEach((h) => {
     h.currentBaseQuat.copy(computeBaseQuatFromValues(poseValues))
     applyModelRootTransform(h, poseValues)
-    applyWristPoseToSkeleton(h.skinnedMesh.skeleton, poseValues)
-    FINGER_NAMES.forEach((name) => applyCurlToSkeleton(name, h.skinnedMesh.skeleton, h.currentBaseQuat, h.wrapper.quaternion, poseValues))
+    applyWristPoseToSkeleton(h.skinnedMesh.skeleton, poseValues, extraSplay)
+    // alignQuat + curlExcludeQuatForHand(h) — see applyCurl()'s own 2 comments.
+    FINGER_NAMES.forEach((name) => applyCurlToSkeleton(name, h.skinnedMesh.skeleton, alignQuat, curlExcludeQuatForHand(h), poseValues))
   })
   cfg.hideWrist = poseValues.hideWrist || 0
   updateWristCrop()
+}
+// Per-frame refresh for Responsive Wrist Splay's live/reactive mode —
+// ported concept from HANDY DANDIES' own "idle repose" (see
+// docs/CHANGELOG.txt): applyPoseValuesToHand() above only bakes a wrist
+// splay value once, at pose-apply time, so it goes stale the moment
+// tiltMagnitude changes afterward unless reapplied every frame. Finger
+// curl is re-baked alongside the wrist for the same reason HANDY DANDIES
+// documents — every finger's base joint is a descendant of the wrist
+// bone, so its curl axis depends on the wrist's current orientation.
+// Only runs when reactive mode is genuinely live (master AND reactive
+// both on) — a static wristSplayDefault value doesn't need per-frame
+// reapplication, it's already baked in by the call above.
+function applyReactiveWristSplayFrame() {
+  if (!cfg.wristSplayResponsiveEnabled || !cfg.wristSplayReactiveEnabled) return
+  const extraSplay = computeResponsiveWristSplayDeg(tiltMagnitude)
+  hands.forEach((h) => {
+    applyWristPoseToSkeleton(h.skinnedMesh.skeleton, cfg, extraSplay)
+    // alignQuat + curlExcludeQuatForHand(h) — see applyCurl()'s own 2 comments.
+    FINGER_NAMES.forEach((name) => applyCurlToSkeleton(name, h.skinnedMesh.skeleton, alignQuat, curlExcludeQuatForHand(h), cfg))
+  })
 }
 
 // Wrist crop — one clipping plane PER HAND (each hand faces a different
@@ -743,12 +833,13 @@ function handleMouseMoveFallback(e) {
   lastInputSource = 'mouse'
   cursorNDC.set((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1)
   // tiltMagnitude/tiltAngle are ALSO still needed here — Reactive Arm
-  // Length (computeArmLengthT) reads tiltMagnitude directly, not
+  // Length/Responsive Wrist Splay (computeArmLengthT/
+  // computeResponsiveWristSplayDeg) read tiltMagnitude directly, not
   // cursorNDC/tiltTarget. Found live: removing this (leaving only
   // cursorNDC, on the assumption tiltTarget's own new raycast made
   // tiltMagnitude obsolete) left it permanently stuck at whatever it was
   // before mouse input took over (0 on a fresh load), pinning Reactive
-  // Arm Length to a single fixed curve value regardless of real cursor
+  // Arm Length/Wrist Splay to a single fixed curve value regardless of real cursor
   // position and producing an unexpectedly aggressive, unchanging crop.
   const cx = window.innerWidth / 2, cy = window.innerHeight / 2
   const dx = e.clientX - cx, dy = e.clientY - cy
@@ -1306,6 +1397,7 @@ function animate() {
         h.wrapper.quaternion.slerp(desired, cfg.trackingDamping)
       })
     }
+    applyReactiveWristSplayFrame()
   }
   curveWidgetResyncs.forEach((fn) => fn())
   composer.render()
@@ -1840,6 +1932,30 @@ function renderPoseGroup(content) {
   renderPresetPicker(content, 'Saved Poses', SAVED_POSES, DEFAULT_POSE_NAME, applyPosePreset, capturePoseFromCfg, { exportable: true, importable: true, defaultFieldKey: 'defaultPose' })
 }
 
+// Ported from HANDY DANDIES (its own top-level "Responsive Wrist Splay"
+// group — same structure as Reactive Arm Length above, different unit
+// (degrees) and application (adds onto cfg.wristSplay every frame while
+// reactive, via applyReactiveWristSplayFrame() in animate() — see that
+// function's own comment). Single-hand distance-input adaptation: see
+// cfg's own declaration comment. RESTORED 2026-09-21 after direct
+// instruction to leave this group in place.
+function renderResponsiveWristSplayGroup(content) {
+  addRow(content, { id: 'checkboxWristSplayResponsiveEnabled', label: 'Responsive Wrist Splay (Master On/Off)', type: 'checkbox' })
+  document.getElementById('checkboxWristSplayResponsiveEnabled').checked = cfg.wristSplayResponsiveEnabled
+  wireCheckbox('checkboxWristSplayResponsiveEnabled', (v) => { cfg.wristSplayResponsiveEnabled = v; applyPoseValuesToHand(cfg) })
+  addRow(content, { id: 'sliderWristSplayDefault', label: 'Default Wrist Splay (Deg, Reactive Off)', type: 'slider', min: -180, max: 180, step: 1, value: cfg.wristSplayDefault })
+  wireSlider('sliderWristSplayDefault', (v) => { cfg.wristSplayDefault = v; applyPoseValuesToHand(cfg) })
+  addRow(content, { id: 'checkboxWristSplayReactiveEnabled', label: 'Reactive Wrist Splay (By Cursor Distance)', type: 'checkbox' })
+  document.getElementById('checkboxWristSplayReactiveEnabled').checked = cfg.wristSplayReactiveEnabled
+  wireCheckbox('checkboxWristSplayReactiveEnabled', (v) => { cfg.wristSplayReactiveEnabled = v; applyPoseValuesToHand(cfg) })
+  const splayRangeRow = addRow(content, { id: 'textWristSplayRange', label: 'Min / Max Wrist Splay (Deg)', type: 'text', inputType: 'text', value: cfg.wristSplayRange })
+  wireTextInput('textWristSplayRange', (v) => { cfg.wristSplayRange = v; parseWristSplayConfig() })
+  buildReactiveRangeWidget(splayRangeRow, { trackMin: -180, trackMax: 180, isPercent: false, crossClamp: false, minLabel: 'Min (Center)', maxLabel: 'Max (Full Tilt)', unit: '°', onExternalChange: (v) => { cfg.wristSplayRange = v; parseWristSplayConfig() } })
+  const splayCurveRow = addRow(content, { id: 'textWristSplayCurve', label: 'Splay Scaling Curve (Distance -> Splay)', type: 'text', inputType: 'text', value: cfg.wristSplayCurve })
+  wireTextInput('textWristSplayCurve', (v) => { cfg.wristSplayCurve = v; parseWristSplayConfig() })
+  buildReactiveCurveWidget(splayCurveRow, { caption: 'X: Tilt/Cursor Distance From Center (0-1)  ·  Y: Splay Fraction (0=Min End, 1=Max End)', onExternalChange: (v) => { cfg.wristSplayCurve = v; parseWristSplayConfig() } })
+}
+
 function renderCameraGroup(content) {
   addRow(content, { id: 'sliderCameraX', label: 'Camera X Position (x)', type: 'slider', min: -500, max: 500, step: 0.5, value: cfg.cameraX })
   wireSlider('sliderCameraX', (v) => { cfg.cameraX = v; camera.position.x = v })
@@ -2155,6 +2271,7 @@ function renderHandysetDevGroups() {
   wireCheckbox('checkboxHideHands', (v) => { cfg.hideHands = v; relayoutField() })
 
   renderPoseGroup(addGroup('Pose'))
+  renderResponsiveWristSplayGroup(addGroup('Responsive Wrist Splay'))
   renderCameraGroup(addGroup('Camera'))
   renderPhoneTiltGroup(addGroup('Phone Tilt'))
   renderLightingGroup(addGroup('Lighting'))

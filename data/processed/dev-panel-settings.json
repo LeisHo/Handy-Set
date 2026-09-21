@@ -2670,12 +2670,6 @@
     ],
     "mobileTabContent": [
       {
-        "key": "mobile:Responsive Wrist Splay",
-        "items": [],
-        "rowKeys": [],
-        "subgroups": []
-      },
-      {
         "key": "mobile:Dev Panel",
         "items": [
           {
@@ -3613,12 +3607,6 @@
       }
     ],
     "landscapeTabContent": [
-      {
-        "key": "landscape:Responsive Wrist Splay",
-        "items": [],
-        "rowKeys": [],
-        "subgroups": []
-      },
       {
         "key": "landscape:Dev Panel",
         "items": [
