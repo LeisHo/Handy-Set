@@ -381,10 +381,18 @@ function updateWristCrop(hideWristPct) {
   const t = THREE.MathUtils.clamp(hideWristPct / 100, 0, 1)
   const maxReach = handLengthRaw * computeBaseScale() * 0.35
   hands.forEach((h) => {
-    if (!h.clipPlane) {
-      h.clipPlane = new THREE.Plane()
-      h.skinnedMesh.material.clippingPlanes = [h.clipPlane]
-    }
+    if (!h.clipPlane) h.clipPlane = new THREE.Plane()
+    // Was `if (!h.clipPlane) { ...; material.clippingPlanes = [h.clipPlane] }`
+    // — real bug, found live 2026-09-21: the disable branch above clears
+    // `material.clippingPlanes` to a fresh `[]` but never clears
+    // `h.clipPlane` itself, so once crop was ever toggled off and back on,
+    // this guard's `if (!h.clipPlane)` stayed false forever and the plane
+    // was never re-attached to the material — the plane object kept
+    // getting its normal/constant updated internally but had no effect on
+    // rendering at all. Unconditionally reassigning here (cheap, a plain
+    // array set) makes this immune to that history regardless of how many
+    // times crop has been toggled off/on before.
+    h.skinnedMesh.material.clippingPlanes = [h.clipPlane]
     // wristPosRaw is a bind-pose, pre-transform local position —
     // material.clippingPlanes are evaluated in world space, so it needs
     // this hand's own current matrixWorld, not the raw bind-pose frame.
