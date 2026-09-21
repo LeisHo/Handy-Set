@@ -512,11 +512,53 @@ function applyReactiveWristSplayFrame() {
 // real source: it recomputes its own equivalent clip plane inside
 // `skinnedMesh.onBeforeRender = (r) => { updateWristClipPlaneForHand(hand); r.clearDepth() }`
 // for exactly this reason (its own comment there predates this bug).
-// `wristPosRaw`/`wristCropNormalAligned` (used below) are cached scratch
-// state set once at load — cheap to re-read every frame; only the
-// PER-HAND world-space plane derived from them needs to be live.
+// `wristPosRaw`/`wristCropNormalAligned` are still used by computeRollQuat()
+// (Palm Face Rotation's own roll axis) — deliberately a FIXED, bind-pose
+// direction there, unrelated to this function.
+//
+// CORRECTED 2026-09-21 (2nd round, same day) — real bug found live after
+// the user reported "wrist splay is the only thing tracking the cursor,
+// why isn't palm rotation" AND, separately, that heavy wrist splay crops
+// into the top of the hand, worse at some Default Arm Length values, and
+// that the crop disappearing when Crop Wrist is off "is probably the same
+// bug as the palm rotation thing." It was — ONE root cause explained both:
+// the plane's normal was derived from `wristCropNormalAligned`, a FIXED
+// bind-pose forearm->wrist direction that only ever gets rotated by
+// `h.wrapper.quaternion` (Phone Tilt) — it never accounted for the WRIST
+// BONE's own live rotation (wristBend/wristSplay/wristRotation +
+// Responsive Wrist Splay's extraSplayDeg). A bone's own rotation doesn't
+// move ITS OWN world position (confirmed: `rHand`'s world position is
+// unaffected by its own local rotation), so the plane's ANCHOR point was
+// never wrong — but its ORIENTATION stayed pinned to the pre-bend forearm
+// axis while the actual HAND geometry (distal to the wrist, which DOES
+// rotate with wrist bend) swung up to 71 real degrees away from it.
+// Live-verified: at a heavily-splayed cursor position, disabling Crop
+// Wrist revealed the FULL hand (5 fingers, full palm) where, with Crop
+// Wrist on, only a thin uncropped sliver remained — confirming the crop
+// was eating nearly the whole hand at extreme splay, which also explains
+// why Palm Face Rotation looked like it "did nothing": there was barely
+// any asymmetric geometry left on screen to show it rotating. Direct
+// quaternion comparison at that same cursor position, offset 0 vs 180,
+// showed `h.wrapper.quaternion` DID change substantially — the rotation
+// math itself was never broken (matches every earlier round of testing).
+//
+// Fix: derive the plane's normal from the LIVE wrist->fingertip direction
+// (`rHand` -> `rMid3`, both read via `getWorldPosition()` every frame)
+// instead of the static forearm->wrist axis. `rMid3` is a descendant of
+// `rHand` in the skeleton, so its world position DOES move with every
+// wrist-pose axis — this direction bends right along with the hand, so
+// the plane's orientation tracks wherever the hand is actually currently
+// pointing, not just wherever the forearm was in the bind pose.
+const _clipWristPos = new THREE.Vector3()
+const _clipTipPos = new THREE.Vector3()
 function updateWristClipPlaneForHand(h) {
-  if (!wristCropNormalAligned || !cfg.cropWristEnabled) {
+  if (!cfg.cropWristEnabled) {
+    h.skinnedMesh.material.clippingPlanes = []
+    return
+  }
+  const wristBone = h.skinnedMesh.skeleton.getBoneByName('rHand')
+  const tipBone = h.skinnedMesh.skeleton.getBoneByName('rMid3')
+  if (!wristBone || !tipBone) {
     h.skinnedMesh.material.clippingPlanes = []
     return
   }
@@ -537,15 +579,14 @@ function updateWristClipPlaneForHand(h) {
   // back to the plain cfg.hideWrist/100 static value when Reactive is off.
   const t = THREE.MathUtils.clamp(computeArmLengthT(tiltMagnitude), 0, 1)
   const maxReach = handLengthRaw * computeBaseScale() * 0.35
-  // wristPosRaw is a bind-pose, pre-transform local position —
-  // material.clippingPlanes are evaluated in world space, so it needs
-  // this hand's own current matrixWorld, not the raw bind-pose frame.
-  h.clone.updateMatrixWorld(true)
-  const worldWrist = h.clone.localToWorld(wristPosRaw.clone())
+  wristBone.getWorldPosition(_clipWristPos)
+  tipBone.getWorldPosition(_clipTipPos)
   // Points toward the forearm/sleeve side (three.js discards the
-  // POSITIVE side of a clipping plane's normal).
-  const worldNormal = wristCropNormalAligned.clone().applyQuaternion(h.wrapper.quaternion).normalize().negate()
-  const planePoint = worldWrist.clone().addScaledVector(worldNormal, (1 - t) * maxReach)
+  // POSITIVE side of a clipping plane's normal) — negating the LIVE
+  // wrist->fingertip (distal) direction, same convention the old
+  // wrapper-only version used.
+  const worldNormal = _clipTipPos.clone().sub(_clipWristPos).normalize().negate()
+  const planePoint = _clipWristPos.clone().addScaledVector(worldNormal, (1 - t) * maxReach)
   h.clipPlane.setFromNormalAndCoplanarPoint(worldNormal, planePoint)
 }
 // Kept as the explicit multi-hand entry point for UI triggers (slider/
