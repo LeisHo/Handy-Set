@@ -103,6 +103,48 @@ Verified:
   throwing).
 
 --------------------------------------------------------------------------------
+2026-09-21  -  1:02 AM - 1:05 AM EDT
+
+Wired the dev panel's git-tracked Save (CLAUDE.md §12l upgrade), per
+direct follow-up: the user had already deployed to Vercel
+(https://vercel.com/lpeis/handy-set) and set GITHUB_TOKEN/
+DEV_PANEL_SAVE_SECRET, expecting the Save button to write through to
+GitHub -- but the first build only wired plain localStorage (the raw
+TEMPLATE_DEV_PANEL.html engine has no remoteSave concept at all, unlike
+HANDY DANDIES' own divergent devPanel.js copy).
+
+Added:
+- `api/save-settings.js` -- ported near-verbatim from HANDY DANDIES' own
+  (same GitHub Contents API mechanism, same env var names), repo default
+  changed to `LeisHo/Handy-Set`.
+- `main.js`: `wireRemoteSaveButtons()`/`remoteSaveCurrentSettings()`/
+  `loadRemoteSettingsOnStartup()` -- attaches additional click listeners
+  to the existing SYNC buttons (both the `.dev-buttons` one and the
+  header icon one) rather than wrapping/overriding devPanel.js's own
+  `saveDevPanelSettings`, keeping devPanel.js itself untouched beyond its
+  one documented splice point. Polls for devPanel.js's own globals
+  (`captureFullDevPanelState`/`applyFullDevPanelState`) via
+  `waitForDevPanelGlobal()` since main.js necessarily loads BEFORE
+  devPanel.js (see the script-order gotcha from the first build).
+- README.md: added the "Dev panel Save button setup" section (env var
+  names/values, matching HANDY DANDIES' own).
+
+Verified:
+- Clicked the real SYNC button in the browser -- confirmed (via
+  `read_network_requests`) a POST to `/api/save-settings` fires with the
+  captured panel state, failing with `ERR_CONNECTION_RESET` locally (the
+  plain python static server has no serverless-function support -- this
+  is the expected local-dev failure mode, not a real bug) without
+  crashing the page or leaving the panel in a bad state.
+- NOT verified: an actual GitHub commit landing, since that requires the
+  real Vercel deployment with its own configured env vars, which this
+  session has no access to test directly. The client-side wiring and the
+  serverless function's own logic (ported from an already-working sibling
+  project) are the two halves that could still fail independently on the
+  real deployment -- ask the user to click Sync on the live Vercel URL
+  and confirm a new commit appears in the GitHub repo.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

@@ -44,6 +44,15 @@ generic engine capability it doesn't have yet; add project settings via
 - `data/processed/HAND3D/Hand2.glb` — the rigged hand asset, already
   present from before this project's reset (same asset HANDY DANDIES
   uses).
+- `api/save-settings.js` — Vercel serverless function backing the dev
+  panel's git-tracked Save (§12l upgrade), ported from HANDY DANDIES' own.
+  Wired from `main.js`'s own `wireRemoteSaveButtons()`/
+  `loadRemoteSettingsOnStartup()` — deliberately NOT wired inside
+  `devpanel/devPanel.js` itself (kept a verbatim copy); instead attaches
+  its own extra click listeners to the existing SYNC buttons and polls
+  for devPanel.js's globals to become available. Requires `GITHUB_TOKEN`/
+  `DEV_PANEL_SAVE_SECRET` set on this project's own Vercel project — see
+  README.md's own setup section.
 
 ## Known simplifications vs. HANDY DANDIES
 

@@ -954,3 +954,82 @@ function renderHandysetDevGroups() {
   renderDebugExtras()
 }
 window.renderHandysetDevGroups = renderHandysetDevGroups
+
+// =======================================================================
+// Git-tracked dev panel Save (CLAUDE.md §12l upgrade) — writes through to
+// /api/save-settings (a Vercel serverless function, api/save-settings.js)
+// so a Save from any device/browser is visible everywhere, not just
+// localStorage on the one that clicked it. Deliberately does NOT touch
+// devPanel.js (kept a verbatim copy of the template) — this attaches
+// its own additional click listeners to the existing SYNC buttons rather
+// than wrapping/overriding devPanel.js's own saveDevPanelSettings, and
+// polls for devPanel.js's globals (createDevGroupElement etc. load AFTER
+// main.js — see index.html's own script-order comment) before using them.
+// DEV_PANEL_SAVE_SECRET below is the workspace-shared anti-abuse token
+// (CLAUDE.md §12l — same value HANDO/DICKOCLICKO/OKCILCOKCID/HANDY
+// DANDIES all use) — update this AND the Vercel env var together if this
+// project's own Vercel setup used a different value.
+const DEV_PANEL_SAVE_SECRET = 'PkrbMti03M6xm3FEThYXa8gGW_08BOGj'
+const SAVE_SETTINGS_ENDPOINT = '/api/save-settings'
+
+function waitForDevPanelGlobal(name, timeoutMs = 8000) {
+  return new Promise((resolve, reject) => {
+    const start = performance.now()
+    ;(function poll() {
+      if (typeof window[name] === 'function') { resolve(window[name]); return }
+      if (performance.now() - start > timeoutMs) { reject(new Error(name + ' never became available')); return }
+      setTimeout(poll, 50)
+    })()
+  })
+}
+
+function setSyncStatusText(text) {
+  const status = document.getElementById('devSaveSyncStatus')
+  if (status) status.textContent = text
+}
+
+async function remoteSaveCurrentSettings() {
+  const capture = await waitForDevPanelGlobal('captureFullDevPanelState')
+  const snapshot = capture()
+  const resp = await fetch(SAVE_SETTINGS_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Dev-Panel-Secret': DEV_PANEL_SAVE_SECRET },
+    body: JSON.stringify(snapshot)
+  })
+  const data = await resp.json().catch(() => ({ ok: false, error: 'Invalid server response' }))
+  if (!data.ok) throw new Error(data.error || ('HTTP ' + resp.status))
+  return data
+}
+
+function wireRemoteSaveButtons() {
+  const buttons = [
+    document.querySelector('.dev-buttons button[onclick="saveDevPanelSettings()"]'),
+    document.getElementById('devHeaderSyncBtn')
+  ].filter(Boolean)
+  buttons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      remoteSaveCurrentSettings()
+        .then(() => setSyncStatusText('synced to GitHub'))
+        .catch((err) => {
+          console.error('Remote save failed', err)
+          setSyncStatusText('GitHub save failed — ' + err.message)
+        })
+      setTimeout(() => setSyncStatusText(''), 3000)
+    })
+  })
+}
+
+async function loadRemoteSettingsOnStartup() {
+  try {
+    const resp = await fetch(SAVE_SETTINGS_ENDPOINT, { cache: 'no-store' })
+    const data = await resp.json().catch(() => null)
+    if (!data || !data.ok || !data.settings) return
+    const apply = await waitForDevPanelGlobal('applyFullDevPanelState')
+    apply(data.settings)
+  } catch (err) {
+    console.warn('Remote dev panel settings unavailable (expected on a plain static server, e.g. local dev):', err.message)
+  }
+}
+
+waitForDevPanelGlobal('saveDevPanelSettings').then(wireRemoteSaveButtons).catch((err) => console.warn(err.message))
+loadRemoteSettingsOnStartup()

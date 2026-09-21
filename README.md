@@ -39,6 +39,34 @@ HANDYSET/
 ├── scripts/{active,archive}, data/raw/, logs/, results/, tests/  <empty, standard skeleton>
 ```
 
+## Dev panel Save button setup (one-time Vercel setup)
+
+The dev panel's SYNC buttons write through to a git-tracked file
+(`data/processed/dev-panel-settings.json`) via `api/save-settings.js`, a
+Vercel serverless function, in addition to the browser's own localStorage
+— so a Save from any device/browser is visible everywhere. Ported from
+HANDY DANDIES' own identical setup (workspace convention, `CLAUDE.md`
+§12l).
+
+This only works once 2 environment variables are set on this project's
+own Vercel project (Settings → Environment Variables), then redeployed:
+
+1. **`GITHUB_TOKEN`** — a GitHub fine-grained personal access token,
+   scoped to only this repo (`LeisHo/Handy-Set`), with **Contents: Read
+   and write** permission and nothing else.
+2. **`DEV_PANEL_SAVE_SECRET`** — an anti-abuse shared token (not a real
+   secret — it also ships baked into this page's own client-side source).
+   Set it to `PkrbMti03M6xm3FEThYXa8gGW_08BOGj` (the same value every
+   other project in this workspace uses, since it's one workspace-wide
+   shared token) — or change both the Vercel env var and `src/main.js`'s
+   own `DEV_PANEL_SAVE_SECRET` constant together if a different value was
+   already set.
+
+Without both set, Sync requests to `/api/save-settings` return a clear
+`"Server not configured - missing: ..."` error. Optional env vars
+(`GITHUB_REPO`, `GITHUB_BRANCH`, `SETTINGS_FILE_PATH`) override the
+defaults baked into `api/save-settings.js` if ever needed.
+
 ## Known limitations
 
 See `docs/PROJECT_SUMMARY.txt`'s Known Limitations section — several real
