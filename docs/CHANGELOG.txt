@@ -1142,6 +1142,108 @@ from their live testing session (confirmed via `git show --stat` that
 both only touched the settings JSON before rebasing), pushed as `d1128ab`.
 
 --------------------------------------------------------------------------------
+2026-09-21  -  07:24 PM - 07:54 PM EDT
+
+Direct user correction (4 items) after the previous entry's Whole-Hand
+Rotation work: (1) "Responsive Palm Rotation" is a group the user says
+they actually have -- NOT the same thing as "Responsive Wrist Splay",
+which I had wrongly removed believing it was the group being asked
+about; (2) confusion over why both names still appear; (3) wrist
+cropping confirmed good, no action; (4) Whole Hand Rotation X/Y/Z still
+broken -- the 3 sliders were visibly affecting finger splay instead of
+rigidly rotating the whole model.
+
+1. Restored "Responsive Wrist Splay" in full (cfg fields, parse/compute
+   functions, applyWristPoseToSkeleton's extraSplayDeg param,
+   applyReactiveWristSplayFrame + its animate() call site,
+   renderResponsiveWristSplayGroup + its dev-panel call site) from git
+   history (`git show 6f3d8df:src/main.js`, the last commit before it was
+   removed). Bumped HANDYSET_SETTINGS_SCHEMA_VERSION to force-clear stale
+   localStorage. Also cleaned up 2 orphaned empty group shells the
+   removal had left behind in dev-panel-settings.json's Mobile/Landscape
+   sectionOrder.
+
+2. "Responsive Palm Rotation" could not be found anywhere in the
+   git-tracked dev-panel-settings.json -- exhaustive search (raw text,
+   full JSON structure across all 3 tabs' sectionOrder, every
+   devTextOverrides/devTextOverridesManual key) found no trace. Left
+   unresolved; needs either the user to hit Sync from whichever
+   device/browser actually shows this group (so its real state reaches
+   git), or a screenshot/more specific description, since there's no way
+   to inspect another browser's localStorage directly.
+
+3. No action needed.
+
+4. Root-caused and fixed for real this time, after 2 rounds of
+   curl-axis-exclusion changes (alignQuat instead of h.currentBaseQuat as
+   applyCurlToSkeleton's baseQuat; a new curlExcludeQuatForHand(h) helper
+   excluding wrapper*clone from the finger-curl world-axis math) proved,
+   via live quaternion comparison on the deployed build, to STILL not
+   fix the reported symptom. Traced the real cause by walking a finger
+   bone's own `.parent` chain in the live browser: `rIndex1`'s ancestor
+   chain never reached `h.clone` at all -- it terminated at a completely
+   separate, disconnected "Scene" object with no parent. Confirmed via
+   direct uuid comparison that `h.skinnedMesh.skeleton.getBoneByName(...)`
+   and the same-named bone found by walking DOWN from `h.clone` itself
+   were two different objects. Root cause: `rebuildField()` cloned each
+   hand via a plain `modelRoot.clone(true)` (Object3D.clone) -- this
+   clones Bone objects as part of the scene graph, but SkinnedMesh.copy()
+   (three.js's own source) does NOT rebind `skeleton.bones` to those new
+   bone objects, so every bone actually used for skinning/posing
+   (curl, splay, wrist bend -- everything read via
+   `skeleton.getBoneByName()`) was silently still the ORIGINAL,
+   un-cloned template's bones the whole time, living in a hierarchy that
+   was never a descendant of `h.clone` and therefore never affected by
+   rotating it. This explains why 2 rounds of curl-axis-exclusion math
+   could not work -- they assumed a parent-child relationship that never
+   existed.
+
+   Fixed by switching to `SkeletonUtils.clone()` (three.js's own
+   documented fix for exactly this case -- `three/addons/utils/
+   SkeletonUtils.js`, which correctly rebinds a cloned SkinnedMesh's
+   skeleton to its own new bones). First deploy attempt (v=49) broke
+   immediately with a console SyntaxError: the module exports
+   `{ retarget, retargetClip, clone }` as bare named exports, not a
+   `SkeletonUtils` namespace object -- caught live via
+   read_console_messages within a minute of deploy, fixed at v=50
+   (imported `clone` directly, aliased to `cloneSkinnedSkeleton` to
+   avoid shadowing the many local `clone` variables already in this
+   file).
+
+   Live-verified rigorously post-fix (v=50/51, real slider `input`-event
+   dispatch, no `.click()` shortcuts): (a) the finger bone's ancestor
+   chain now genuinely reaches `h.clone`; (b) the SAME finger bone's
+   LOCAL quaternion is byte-identical (max component diff ~1.09e-8,
+   floating-point noise) between modelRotY=90 and modelRotY=-45, while
+   its WORLD quaternion differs substantially (max diff ~1.13) and
+   `h.clone.quaternion` itself correctly differs between the two states
+   -- proving the whole hand now rotates rigidly with its pose fully
+   preserved, rather than the rotation leaking into finger curl/splay.
+   Also confirmed visually via screenshot at modelRotY=0 vs 60: the same
+   posed hand shape, viewed from a different angle, not distorted.
+
+   Also removed the temporary window.__debug exposure
+   (computeCurlAxisRefQuat/curlExcludeQuatForHand/modelRotationPivot)
+   added mid-investigation for this debugging session -- the underlying
+   functions remain in real use by applyCurlToSkeleton's call sites,
+   just no longer exported for console inspection.
+
+Noted, not fixed (pre-existing, unrelated, out of scope): a console
+error ("Cannot read properties of null (reading 'clone')") fires once on
+a fresh page load before `modelRoot` finishes loading -- confirmed
+present at v=47 and v=48 too (i.e. predates every change in this
+entry), and the app self-recovers immediately afterward (every live
+test this session succeeded once window.__debug became ready). Likely
+`rebuildField()` firing once too early via some resize/settings-load
+path before the GLTF fetch completes.
+
+Commits: `23c5d0d` (SkeletonUtils.clone fix + Responsive Wrist Splay
+restoration + dev-panel-settings.json cleanup), `a68b814` (fix the
+SkeletonUtils import name), `4dbbac4` (cache-buster bump), `cd24c24`
+(remove temporary debug instrumentation). All pushed to
+`https://github.com/LeisHo/Handy-Set`; Vercel auto-deployed each.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

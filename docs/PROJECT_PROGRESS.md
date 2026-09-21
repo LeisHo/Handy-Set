@@ -12,15 +12,28 @@ Nothing in progress. Pushed to `https://github.com/LeisHo/Handy-Set`
 
 ## Recently completed
 
-- **Whole-Hand Rotation X/Y/Z (Pose group) never actually rotated the
-  visible hand at all** — `h.clone.quaternion` was set once at hand
-  creation and never touched again; the 3 sliders only affected an
-  internal finger-curl axis reference. Fixed by porting HANDO's real
-  mechanism: rotate `h.clone` directly, pivoted around palm center
-  (midpoint of the wrist bone and middle-finger base), with position
-  recomputed every change so the palm stays fixed regardless of
-  rotation. Live-verified with byte-identical wrist-position readings
-  across very different rotation values.
+- **Whole-Hand Rotation X/Y/Z leaked into finger curl/splay instead of
+  rigidly rotating the model — real root cause found and fixed.** An
+  earlier fix (rotating `h.clone` around a palm-center pivot) turned out
+  to only be half the story: `rebuildField()` cloned each hand via a
+  plain `modelRoot.clone(true)` (`Object3D.clone`), which clones Bone
+  objects as part of the scene graph but does NOT rebind the
+  `SkinnedMesh`'s own `skeleton.bones` to them — a known three.js pitfall.
+  Every bone actually used for posing (curl, splay, wrist bend) was
+  silently still the original, un-cloned template's bones, living in a
+  disconnected hierarchy never affected by rotating `h.clone`. 2 earlier
+  rounds of curl-axis-exclusion math (this session) couldn't work because
+  they assumed a parent-child relationship that never existed. Fixed by
+  switching to `SkeletonUtils.clone()` (three.js's own fix for this
+  case). Live-verified: a finger bone's local quaternion is now
+  byte-identical across very different Whole-Hand-Rotation values (its
+  world quaternion correctly differs), and a screenshot comparison shows
+  the same posed hand shape rotating rigidly.
+- **Restored "Responsive Wrist Splay"** after a direct correction that an
+  earlier removal this session had misidentified it as a different group
+  ("Responsive Palm Rotation") the user actually meant to flag. Fully
+  restored from git history, dev-panel-settings.json's 2 orphaned empty
+  group shells cleaned up.
 - **Wrist crop was using the wrong axis, wrong direction, and a hard
   clamp** — 2 earlier attempts this session both got it wrong in
   different ways. Re-read HANDO's own real `updateWristClipPlane()`
@@ -30,11 +43,6 @@ Nothing in progress. Pushed to `https://github.com/LeisHo/Handy-Set`
   instead of clamping at 1.0). Live-verified: 0% shows the full forearm,
   100% crops it away with the hand fully intact, 150%+ correctly pushes
   the crop into the hand.
-- **Removed the "Responsive Wrist Splay" group entirely**, per direct
-  request after the cursor-tracking sensitivity fix didn't fully satisfy
-  — the user is planning to rebuild this feature from scratch in a future
-  session rather than have it silently kept. Reactive Arm Length (a
-  separate, still-working feature) was left in place.
 - Made cursor tracking proportionate to normal mouse movement instead of
   requiring extreme cursor positions, ported from Handy Dandies' real
   raycast-based targeting. This also resolved "hand goes invisible at
@@ -46,9 +54,11 @@ Nothing in progress. Pushed to `https://github.com/LeisHo/Handy-Set`
 
 ## What's next
 
-1. Rebuild a responsive/reactive wrist-splay-style feature from scratch
-   with the user, once they're ready — the old port was removed, not
-   fixed in place.
+1. Find "Responsive Palm Rotation" — the user says this group exists in
+   their own app, but an exhaustive search of the git-tracked
+   dev-panel-settings.json found no trace of it anywhere. Likely needs
+   the user to hit Sync from whichever device/browser shows it (so its
+   real state reaches git), or a screenshot/more specific description.
 2. Verify Phone Tilt gyroscope rotation specifically on the user's actual
    Pixel 9a — still unverified, no physical device available here.
 3. Decide on a visible default color scheme (current all-white default
@@ -61,4 +71,5 @@ Nothing in progress. Pushed to `https://github.com/LeisHo/Handy-Set`
 
 ## Open questions / blockers
 
-None currently blocking.
+- **"Responsive Palm Rotation"** — see What's next #1. Not blocking other
+  work, but unresolved.

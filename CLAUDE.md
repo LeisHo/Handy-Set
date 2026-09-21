@@ -260,6 +260,39 @@ wiring, and are still open:
   immediately after every `.clone()` call. Any future material clone in
   this file that relies on a custom `onBeforeCompile` needs the same
   explicit reassignment — it is never implicit.
+- **`Object3D.clone(true)` on a hierarchy containing a `SkinnedMesh` does
+  NOT rebind that mesh's `skeleton.bones` to the newly-cloned bone
+  objects — a second, more severe instance of the same "generic
+  three.js `.clone()` silently drops something" family as the
+  `Material.prototype.copy()` entry above.** Root-caused 2026-09-21 for
+  the "Whole Hand Rotation X/Y/Z" bug (sliders visibly affected finger
+  curl/splay instead of rigidly rotating the model) — 2 earlier rounds
+  of curl-axis-exclusion fixes this session couldn't work because they
+  assumed `skeleton.getBoneByName(...)` returned a descendant of
+  `h.clone`; it didn't. `rebuildField()` cloned each hand via
+  `modelRoot.clone(true)`, which DOES clone the Bone objects as part of
+  the scene graph (they're ordinary `Object3D` descendants), but
+  `SkinnedMesh.copy()` never rebinds the mesh's own `.skeleton.bones`
+  array to point at them — it's left referencing the ORIGINAL,
+  un-cloned template's bones. Confirmed live via direct uuid comparison
+  (`skeleton.getBoneByName('rIndex1').uuid` differed from the
+  same-named bone found by walking DOWN from `h.clone` itself) and by
+  walking a bone's own `.parent` chain up to its root, which never
+  reached `h.clone` at all. Fixed by switching to `SkeletonUtils.clone()`
+  (`three/addons/utils/SkeletonUtils.js`) — three.js's own documented
+  fix for exactly this case. **Gotcha on the fix itself:** that module
+  exports `{ retarget, retargetClip, clone }` as bare named exports, NOT
+  a `SkeletonUtils` namespace object — `import { SkeletonUtils } from
+  '...'` throws `SyntaxError: does not provide an export named
+  'SkeletonUtils'` at the very first deploy attempt (caught live via
+  `read_console_messages` within a minute). Import `clone` directly
+  (this file aliases it to `cloneSkinnedSkeleton` to avoid shadowing the
+  many local `clone` variables already in use). **Any other project in
+  this family (HANDY DANDIES, HANDO) that clones a hand via a plain
+  `Object3D.clone(true)` on a `SkinnedMesh`-containing hierarchy likely
+  has this exact same latent bug** — worth checking if a similar
+  whole-model-rotation or multi-instance feature there ever seemed to
+  "not really rotate the skeleton."
 - **Isolated `javascript_tool` eval can't see the page's own classic-
   script-declared globals (`ensureDevPanelBuilt is not defined`, etc. —
   same documented HANDY DANDIES gotcha) but CAN drive real DOM event
