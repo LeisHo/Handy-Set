@@ -23,7 +23,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
 // this simply clears the stale local save; it does not touch the
 // separate git-tracked save (data/processed/dev-panel-settings.json,
 // reset directly when this was first found).
-const HANDYSET_SETTINGS_SCHEMA_VERSION = '2026-09-21b'
+const HANDYSET_SETTINGS_SCHEMA_VERSION = '2026-09-21c'
 try {
   if (localStorage.getItem('handysetSettingsSchemaVersion') !== HANDYSET_SETTINGS_SCHEMA_VERSION) {
     localStorage.removeItem('devPanelSettings')
@@ -671,6 +671,40 @@ new GLTFLoader().load(MODEL_URL, async (gltf) => {
 // recompute distance from the standard "fit a sphere in this FOV" formula
 // (D = R / sin(FOV/2), +40% margin) so every preset frames this hand well
 // regardless of the scene scale it was originally captured in.
+// Syncs one control's own DOM display (slider position + its readout
+// span, a color swatch, or a checkbox) from a live value — REQUIRED after
+// any preset "Use"/default-load, or the panel keeps showing whatever was
+// there before even though cfg and the actual rendered hand/scene both
+// updated correctly underneath it. Missing this was a real, reproduced
+// bug this round: clicking "Use" on a saved pose correctly changed the
+// hand and cfg.thumbCurl/wristSplay/etc, but every Pose slider kept
+// showing its PRE-click value and position — indistinguishable from "the
+// saved pose didn't apply" even though it fully had.
+function syncControlDom(id, value) {
+  const el = document.getElementById(id)
+  if (!el) return
+  if (el.type === 'checkbox') { el.checked = !!value; return }
+  el.value = value
+  if (el.type === 'range') {
+    const valEl = document.getElementById(id.replace(/^slider/, 'value'))
+    if (valEl) valEl.textContent = value
+  }
+}
+// Explicit (domId, cfgKey) pairs, matching exactly what each render*Group()
+// function actually built — not derived programmatically, since this
+// project's own id convention isn't 100% uniform (most controls are
+// 'slider'+exactCfgKey, but a couple — sliderHideWrist, sliderPoseScale —
+// use a hand-typed literal id with different casing than their cfg key)
+// and a wrong guess here would silently sync the wrong element rather
+// than erroring. Verified against renderPoseGroup()'s actual addRow()
+// calls line-by-line before finalizing this list.
+const POSE_ID_CASE_EXCEPTIONS = { hideWrist: 'sliderHideWrist', poseScale: 'sliderPoseScale' }
+const POSE_SYNC_PAIRS = POSE_PRESET_KEYS.map((k) => [POSE_ID_CASE_EXCEPTIONS[k] || ('slider' + k), k])
+const CAMERA_SYNC_PAIRS = [['sliderCameraX', 'cameraX'], ['sliderCameraY', 'cameraY'], ['sliderCameraZ', 'cameraZ'], ['sliderCameraFov', 'cameraFov']]
+const LIGHTING_SYNC_PAIRS = [['sliderKeyAzimuth', 'keyAzimuth'], ['sliderKeyElevation', 'keyElevation'], ['sliderKeyTargetHeight', 'keyTargetHeight'], ['sliderKeyIntensity', 'keyIntensity'], ['colorKeyColor', 'keyColor'], ['sliderAmbientIntensity', 'ambientIntensity'], ['colorAmbientSkyColor', 'ambientSkyColor'], ['colorAmbientGroundColor', 'ambientGroundColor']]
+const TOON_SYNC_PAIRS = [['sliderToonSteps', 'toonSteps'], ['sliderToonStepThreshold', 'toonStepThreshold'], ['sliderToonShadowFloor', 'toonShadowFloor'], ['sliderToonLightCeiling', 'toonLightCeiling'], ['colorToonBaseTint', 'toonBaseTint'], ['sliderTextureInfluence', 'textureInfluence'], ['colorToonTint', 'toonTint'], ['sliderRimIntensity', 'rimIntensity'], ['sliderRimPower', 'rimPower'], ['colorRimColor', 'rimColor']]
+function syncPairsFromCfg(pairs) { pairs.forEach(([id, key]) => syncControlDom(id, cfg[key])) }
+
 function applyCameraPreset(item) {
   const center = getHandCenterWorld()
   const rawOffset = new THREE.Vector3(item.x - item.tx, item.y - item.ty, item.z - item.tz)
@@ -684,6 +718,7 @@ function applyCameraPreset(item) {
   camera.updateProjectionMatrix()
   controls.target.copy(center)
   controls.update()
+  syncPairsFromCfg(CAMERA_SYNC_PAIRS)
 }
 function applyLightingPreset(item) {
   Object.assign(cfg, item)
@@ -693,6 +728,7 @@ function applyLightingPreset(item) {
   keyLight.intensity = cfg.keyIntensity
   keyLight.color.set(cfg.keyColor)
   updateKeyLightPosition()
+  syncPairsFromCfg(LIGHTING_SYNC_PAIRS)
 }
 // Ported verbatim from HANDY DANDIES' own TOON_PRESET_KEYS/
 // captureToonPreset()/useToonPreset() (itself ported field-for-field from
@@ -714,10 +750,12 @@ function applyToonPreset(item) {
   setToonUniform('rimPower', cfg.rimPower)
   setToonUniform('rimColor', new THREE.Color(cfg.rimColor))
   rebuildGradientMap()
+  syncPairsFromCfg(TOON_SYNC_PAIRS)
 }
 function applyPosePreset(item) {
   Object.assign(cfg, item)
   applyPoseValuesToHand(cfg)
+  syncPairsFromCfg(POSE_SYNC_PAIRS)
 }
 function applyDefaultSelections() {
   const pose = SAVED_POSES.find((p) => p.name === DEFAULT_POSE_NAME) || SAVED_POSES[0]
@@ -1306,22 +1344,11 @@ function renderToonGroup(content) {
   addRow(content, { id: 'colorRimColor', label: 'Rim Light Color', type: 'color', value: cfg.rimColor })
   wireColor('colorRimColor', (v) => { cfg.rimColor = v; setToonUniform('rimColor', new THREE.Color(v)) })
 
-  const outlineSub = addSubgroup(content, 'Outline')
-  addRow(outlineSub, { id: 'checkboxOutlineEnabled', label: 'Outline Enabled', type: 'checkbox' })
-  document.getElementById('checkboxOutlineEnabled').checked = cfg.outlineEnabled
-  wireCheckbox('checkboxOutlineEnabled', (v) => { cfg.outlineEnabled = v; outlinePass.enabled = v })
-  addRow(outlineSub, { id: 'colorOutlineColor', label: 'Outline Color', type: 'color', value: cfg.outlineColor })
-  wireColor('colorOutlineColor', (v) => { cfg.outlineColor = v; outlinePass.edgeColor.set(v) })
-  // These 3 map to OutlinePass (edgeThickness/edgeStrength/edgeGlow) --
-  // Handy Dandies' OWN OutlinePass-branch sliders are Pass Edge
-  // Thickness/Strength/Glow (its separate Hull-shader technique, not
-  // built here, has its own "Hull Outline Thickness" label instead).
-  addRow(outlineSub, { id: 'sliderOutlineThickness', label: 'Pass Edge Thickness (Px)', type: 'slider', min: 0.1, max: 10, step: 0.1, value: cfg.outlineThickness })
-  wireSlider('sliderOutlineThickness', (v) => { cfg.outlineThickness = v; outlinePass.edgeThickness = v })
-  addRow(outlineSub, { id: 'sliderOutlineStrength', label: 'Pass Edge Strength (x)', type: 'slider', min: 0, max: 15, step: 0.5, value: cfg.outlineStrength })
-  wireSlider('sliderOutlineStrength', (v) => { cfg.outlineStrength = v; outlinePass.edgeStrength = v })
-  addRow(outlineSub, { id: 'sliderOutlineGlow', label: 'Pass Edge Glow (x)', type: 'slider', min: 0, max: 5, step: 0.1, value: cfg.outlineGlow })
-  wireSlider('sliderOutlineGlow', (v) => { cfg.outlineGlow = v; outlinePass.edgeGlow = v })
+  // Outline subgroup removed per direct request ("Remove Outline settings
+  // group. I dont need that.") — outlinePass itself stays permanently
+  // disabled (cfg.outlineEnabled's own literal default, never toggled by
+  // anything now) rather than removing the composer pass entirely, so
+  // removing this is a pure UI/config change, not a rendering-pipeline one.
 
   renderPresetPicker(content, 'Saved Toon Shading', SAVED_TOON, null, applyToonPreset, captureToonFromCfg, { exportable: true, importable: true, defaultFieldKey: 'defaultToon' })
 }
