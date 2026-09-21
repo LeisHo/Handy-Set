@@ -1,5 +1,106 @@
 {
-  "controls": {},
+  "controls": {
+    "selectTweenAddPose": "Big Open Palm",
+    "sliderTweenSpeedMs": 2000,
+    "sliderFieldRows": 1,
+    "sliderFieldCols": 1,
+    "sliderRowSpacing": 9.5,
+    "sliderColumnSpacing": 14,
+    "sliderHandScale": 1.55,
+    "sliderAlternateRowOffset": -5.5,
+    "sliderProgressiveRowOffset": 0,
+    "checkboxUseProgressiveOffset": false,
+    "checkboxHideHands": false,
+    "slidermodelRotX": 0,
+    "slidermodelRotY": 0,
+    "slidermodelRotZ": 0,
+    "sliderthumbCurl": 75,
+    "sliderthumbSplay": 42,
+    "sliderthumbSplay2": 13,
+    "slidercurlBiasThumb": 32,
+    "sliderbaseOnlyCurlThumb": -23,
+    "slidermidOnlyCurlThumb": -8,
+    "slidertipOnlyCurlThumb": 20,
+    "slidertipTwistThumb": 46,
+    "sliderwristRotation": 0,
+    "sliderwristBend": 0,
+    "sliderwristSplay": 0,
+    "checkboxCropWristEnabled": true,
+    "sliderHideWrist": 78,
+    "slidercurlIndex": 90,
+    "slidersplayIndex": 18,
+    "slidersplayIndex2": 0,
+    "slidercurlBiasIndex": -8,
+    "sliderbaseOnlyCurlIndex": 6,
+    "slidermidOnlyCurlIndex": 0,
+    "slidertipOnlyCurlIndex": -1,
+    "slidertipTwistIndex": 0,
+    "slidercurlMiddle": 92,
+    "slidersplayMiddle": -15,
+    "slidersplayMiddle2": 0,
+    "slidercurlBiasMiddle": 0,
+    "sliderbaseOnlyCurlMiddle": -4,
+    "slidermidOnlyCurlMiddle": 0,
+    "slidertipOnlyCurlMiddle": -1,
+    "slidertipTwistMiddle": 0,
+    "slidercurlRing": 98,
+    "slidersplayRing": 40,
+    "slidersplayRing2": 0,
+    "slidercurlBiasRing": 0,
+    "sliderbaseOnlyCurlRing": -15,
+    "slidermidOnlyCurlRing": 0,
+    "slidertipOnlyCurlRing": 6,
+    "slidertipTwistRing": 0,
+    "slidercurlPinky": 88,
+    "slidersplayPinky": -90,
+    "slidersplayPinky2": 25,
+    "slidercurlBiasPinky": 0,
+    "sliderbaseOnlyCurlPinky": 0,
+    "slidermidOnlyCurlPinky": 0,
+    "slidertipOnlyCurlPinky": 15,
+    "slidertipTwistPinky": 0,
+    "sliderposeOffsetX": 0,
+    "sliderposeOffsetY": 0,
+    "sliderposeOffsetZ": 0,
+    "sliderPoseScale": 1,
+    "sliderCameraX": 3.5,
+    "sliderCameraY": 31.5,
+    "sliderCameraZ": 60.5,
+    "sliderCameraFov": 32,
+    "sliderCameraZoom": 60,
+    "checkboxLockCameraPan": false,
+    "checkboxLockCameraZoom": false,
+    "checkboxCameraMaxExtentsEnabled": false,
+    "checkboxTrackingEnabled": true,
+    "sliderTrackingDamping": 1,
+    "sliderTargetDepthFactor": 0.6,
+    "checkboxShowTargetMarker": false,
+    "checkboxPalmFacesCursor": true,
+    "sliderPalmFaceRotationOffset": 0,
+    "sliderKeyAzimuth": 117,
+    "sliderKeyElevation": 56,
+    "sliderKeyTargetHeight": 71,
+    "sliderKeyIntensity": 6,
+    "colorKeyColor": "#ffffff",
+    "sliderAmbientIntensity": 0,
+    "colorAmbientSkyColor": "#ffffff",
+    "colorAmbientGroundColor": "#3a2f2a",
+    "sliderToonSteps": 2,
+    "sliderToonStepThreshold": 2.7,
+    "sliderToonShadowFloor": 7,
+    "sliderToonLightCeiling": 100,
+    "colorToonBaseTint": "#ffffff",
+    "checkboxOutlineEnabled": false,
+    "colorOutlineColor": "#000000",
+    "sliderOutlineThickness": 2,
+    "sliderOutlineStrength": 5,
+    "sliderOutlineGlow": 0,
+    "colorBgColor": "#ffffff",
+    "checkboxShowGridHelper": false,
+    "checkboxShowWireframe": false,
+    "checkboxSensorStream": false,
+    "sliderSensorInterval": 200
+  },
   "layout": {
     "left": 20,
     "top": 20,
@@ -1158,6 +1259,10 @@
         "key": "desktop:Debug",
         "items": [
           {
+            "type": "row",
+            "key": "__row0"
+          },
+          {
             "type": "group",
             "section": {
               "key": "desktop:Mouse Log",
@@ -1219,6 +1324,7 @@
           }
         ],
         "rowKeys": [
+          "__row0",
           "checkboxShowGridHelper",
           "checkboxShowWireframe"
         ],
@@ -1287,6 +1393,15 @@
             "key": "__row2"
           },
           {
+            "type": "group",
+            "section": {
+              "key": "desktop:Saved Tween Sequences",
+              "items": [],
+              "rowKeys": [],
+              "subgroups": []
+            }
+          },
+          {
             "type": "row",
             "key": "selectTweenAddPose"
           },
@@ -1302,17 +1417,64 @@
           "selectTweenAddPose",
           "sliderTweenSpeedMs"
         ],
-        "subgroups": []
+        "subgroups": [
+          {
+            "key": "desktop:Saved Tween Sequences",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          }
+        ]
       },
       {
         "key": "desktop:Field Layout",
         "items": [
           {
             "type": "row",
+            "key": "sliderFieldRows"
+          },
+          {
+            "type": "row",
+            "key": "sliderFieldCols"
+          },
+          {
+            "type": "row",
+            "key": "sliderRowSpacing"
+          },
+          {
+            "type": "row",
+            "key": "sliderColumnSpacing"
+          },
+          {
+            "type": "row",
+            "key": "sliderAlternateRowOffset"
+          },
+          {
+            "type": "row",
+            "key": "sliderProgressiveRowOffset"
+          },
+          {
+            "type": "row",
+            "key": "checkboxUseProgressiveOffset"
+          },
+          {
+            "type": "row",
+            "key": "checkboxHideHands"
+          },
+          {
+            "type": "row",
             "key": "sliderHandScale"
           }
         ],
         "rowKeys": [
+          "sliderFieldRows",
+          "sliderFieldCols",
+          "sliderRowSpacing",
+          "sliderColumnSpacing",
+          "sliderAlternateRowOffset",
+          "sliderProgressiveRowOffset",
+          "checkboxUseProgressiveOffset",
+          "checkboxHideHands",
           "sliderHandScale"
         ],
         "subgroups": []
@@ -1320,6 +1482,33 @@
       {
         "key": "desktop:Pose",
         "items": [
+          {
+            "type": "group",
+            "section": {
+              "key": "desktop:ROTATION",
+              "items": [],
+              "rowKeys": [],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "group",
+            "section": {
+              "key": "desktop:THUMB",
+              "items": [],
+              "rowKeys": [],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "group",
+            "section": {
+              "key": "desktop:Pose Offset",
+              "items": [],
+              "rowKeys": [],
+              "subgroups": []
+            }
+          },
           {
             "type": "group",
             "section": {
@@ -1393,6 +1582,10 @@
               "items": [
                 {
                   "type": "row",
+                  "key": "checkboxCropWristEnabled"
+                },
+                {
+                  "type": "row",
                   "key": "sliderwristBend"
                 },
                 {
@@ -1409,6 +1602,7 @@
                 }
               ],
               "rowKeys": [
+                "checkboxCropWristEnabled",
                 "sliderwristBend",
                 "sliderwristSplay",
                 "sliderwristRotation",
@@ -1641,15 +1835,8 @@
             "type": "group",
             "section": {
               "key": "desktop:Saved Poses",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "selectSavedPoses"
-                }
-              ],
-              "rowKeys": [
-                "selectSavedPoses"
-              ],
+              "items": [],
+              "rowKeys": [],
               "subgroups": []
             }
           }
@@ -1661,6 +1848,24 @@
           "sliderPoseScale"
         ],
         "subgroups": [
+          {
+            "key": "desktop:ROTATION",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
+          {
+            "key": "desktop:THUMB",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
+          {
+            "key": "desktop:Pose Offset",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
           {
             "key": "desktop:Whole-Hand Rotation & Thumb",
             "items": [
@@ -1729,6 +1934,10 @@
             "items": [
               {
                 "type": "row",
+                "key": "checkboxCropWristEnabled"
+              },
+              {
+                "type": "row",
                 "key": "sliderwristBend"
               },
               {
@@ -1745,6 +1954,7 @@
               }
             ],
             "rowKeys": [
+              "checkboxCropWristEnabled",
               "sliderwristBend",
               "sliderwristSplay",
               "sliderwristRotation",
@@ -1946,15 +2156,8 @@
           },
           {
             "key": "desktop:Saved Poses",
-            "items": [
-              {
-                "type": "row",
-                "key": "selectSavedPoses"
-              }
-            ],
-            "rowKeys": [
-              "selectSavedPoses"
-            ],
+            "items": [],
+            "rowKeys": [],
             "subgroups": []
           }
         ]
@@ -1962,6 +2165,22 @@
       {
         "key": "desktop:Camera",
         "items": [
+          {
+            "type": "row",
+            "key": "sliderCameraZoom"
+          },
+          {
+            "type": "row",
+            "key": "checkboxLockCameraPan"
+          },
+          {
+            "type": "row",
+            "key": "checkboxLockCameraZoom"
+          },
+          {
+            "type": "row",
+            "key": "checkboxCameraMaxExtentsEnabled"
+          },
           {
             "type": "row",
             "key": "sliderCameraX"
@@ -1982,20 +2201,17 @@
             "type": "group",
             "section": {
               "key": "desktop:Saved Cameras",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "selectSavedCameras"
-                }
-              ],
-              "rowKeys": [
-                "selectSavedCameras"
-              ],
+              "items": [],
+              "rowKeys": [],
               "subgroups": []
             }
           }
         ],
         "rowKeys": [
+          "sliderCameraZoom",
+          "checkboxLockCameraPan",
+          "checkboxLockCameraZoom",
+          "checkboxCameraMaxExtentsEnabled",
           "sliderCameraX",
           "sliderCameraY",
           "sliderCameraZ",
@@ -2004,15 +2220,8 @@
         "subgroups": [
           {
             "key": "desktop:Saved Cameras",
-            "items": [
-              {
-                "type": "row",
-                "key": "selectSavedCameras"
-              }
-            ],
-            "rowKeys": [
-              "selectSavedCameras"
-            ],
+            "items": [],
+            "rowKeys": [],
             "subgroups": []
           }
         ]
@@ -2181,15 +2390,8 @@
             "type": "group",
             "section": {
               "key": "desktop:Saved Lighting",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "selectSavedLighting"
-                }
-              ],
-              "rowKeys": [
-                "selectSavedLighting"
-              ],
+              "items": [],
+              "rowKeys": [],
               "subgroups": []
             }
           }
@@ -2207,15 +2409,8 @@
         "subgroups": [
           {
             "key": "desktop:Saved Lighting",
-            "items": [
-              {
-                "type": "row",
-                "key": "selectSavedLighting"
-              }
-            ],
-            "rowKeys": [
-              "selectSavedLighting"
-            ],
+            "items": [],
+            "rowKeys": [],
             "subgroups": []
           }
         ]
@@ -2904,19 +3099,81 @@
       },
       {
         "key": "mobile:Tween",
-        "items": [],
-        "rowKeys": [],
-        "subgroups": []
+        "items": [
+          {
+            "type": "group",
+            "section": {
+              "key": "mobile:Saved Tween Sequences",
+              "items": [],
+              "rowKeys": [],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "row",
+            "key": "selectMobileTweenAddPose"
+          },
+          {
+            "type": "row",
+            "key": "sliderMobileTweenSpeedMs"
+          }
+        ],
+        "rowKeys": [
+          "selectMobileTweenAddPose",
+          "sliderMobileTweenSpeedMs"
+        ],
+        "subgroups": [
+          {
+            "key": "mobile:Saved Tween Sequences",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          }
+        ]
       },
       {
         "key": "mobile:Field Layout",
-        "items": [],
-        "rowKeys": [],
+        "items": [
+          {
+            "type": "row",
+            "key": "sliderMobileHandScale"
+          }
+        ],
+        "rowKeys": [
+          "sliderMobileHandScale"
+        ],
         "subgroups": []
       },
       {
         "key": "mobile:Pose",
         "items": [
+          {
+            "type": "group",
+            "section": {
+              "key": "mobile:ROTATION",
+              "items": [],
+              "rowKeys": [],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "group",
+            "section": {
+              "key": "mobile:THUMB",
+              "items": [],
+              "rowKeys": [],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "group",
+            "section": {
+              "key": "mobile:Pose Offset",
+              "items": [],
+              "rowKeys": [],
+              "subgroups": []
+            }
+          },
           {
             "type": "group",
             "section": {
@@ -2983,6 +3240,24 @@
         ],
         "rowKeys": [],
         "subgroups": [
+          {
+            "key": "mobile:ROTATION",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
+          {
+            "key": "mobile:THUMB",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
+          {
+            "key": "mobile:Pose Offset",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
           {
             "key": "mobile:Whole-Hand Rotation & Thumb",
             "items": [],
@@ -3723,19 +3998,81 @@
       },
       {
         "key": "landscape:Tween",
-        "items": [],
-        "rowKeys": [],
-        "subgroups": []
+        "items": [
+          {
+            "type": "group",
+            "section": {
+              "key": "landscape:Saved Tween Sequences",
+              "items": [],
+              "rowKeys": [],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "row",
+            "key": "selectLandscapeTweenAddPose"
+          },
+          {
+            "type": "row",
+            "key": "sliderLandscapeTweenSpeedMs"
+          }
+        ],
+        "rowKeys": [
+          "selectLandscapeTweenAddPose",
+          "sliderLandscapeTweenSpeedMs"
+        ],
+        "subgroups": [
+          {
+            "key": "landscape:Saved Tween Sequences",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          }
+        ]
       },
       {
         "key": "landscape:Field Layout",
-        "items": [],
-        "rowKeys": [],
+        "items": [
+          {
+            "type": "row",
+            "key": "sliderLandscapeHandScale"
+          }
+        ],
+        "rowKeys": [
+          "sliderLandscapeHandScale"
+        ],
         "subgroups": []
       },
       {
         "key": "landscape:Pose",
         "items": [
+          {
+            "type": "group",
+            "section": {
+              "key": "landscape:ROTATION",
+              "items": [],
+              "rowKeys": [],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "group",
+            "section": {
+              "key": "landscape:THUMB",
+              "items": [],
+              "rowKeys": [],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "group",
+            "section": {
+              "key": "landscape:Pose Offset",
+              "items": [],
+              "rowKeys": [],
+              "subgroups": []
+            }
+          },
           {
             "type": "group",
             "section": {
@@ -3802,6 +4139,24 @@
         ],
         "rowKeys": [],
         "subgroups": [
+          {
+            "key": "landscape:ROTATION",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
+          {
+            "key": "landscape:THUMB",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
+          {
+            "key": "landscape:Pose Offset",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
           {
             "key": "landscape:Whole-Hand Rotation & Thumb",
             "items": [],
@@ -3991,21 +4346,25 @@
     "desktop:Mouse Log": true,
     "desktop:Sensors": true,
     "desktop:Tween": true,
+    "desktop:Saved Tween Sequences": false,
     "desktop:Field Layout": true,
-    "desktop:Pose": true,
+    "desktop:Pose": false,
+    "desktop:ROTATION": true,
+    "desktop:THUMB": true,
+    "desktop:Pose Offset": true,
     "desktop:Whole-Hand Rotation & Thumb": true,
     "desktop:Wrist": true,
     "desktop:Index": true,
     "desktop:Middle": true,
     "desktop:Ring": true,
     "desktop:Pinky": true,
-    "desktop:Saved Poses": true,
-    "desktop:Camera": true,
-    "desktop:Saved Cameras": true,
-    "desktop:Phone Tilt": true,
-    "desktop:Tracking": true,
-    "desktop:Target": true,
-    "desktop:Palm Facing": true,
+    "desktop:Saved Poses": false,
+    "desktop:Camera": false,
+    "desktop:Saved Cameras": false,
+    "desktop:Phone Tilt": false,
+    "desktop:Tracking": false,
+    "desktop:Target": false,
+    "desktop:Palm Facing": false,
     "desktop:Lighting": true,
     "desktop:Saved Lighting": true,
     "desktop:Toon Shading": true,
@@ -4023,8 +4382,12 @@
     "mobile:Debug": false,
     "mobile:Sensors": false,
     "mobile:Tween": false,
+    "mobile:Saved Tween Sequences": false,
     "mobile:Field Layout": false,
     "mobile:Pose": false,
+    "mobile:ROTATION": false,
+    "mobile:THUMB": false,
+    "mobile:Pose Offset": false,
     "mobile:Whole-Hand Rotation & Thumb": false,
     "mobile:Wrist": false,
     "mobile:Index": false,
@@ -4055,8 +4418,12 @@
     "landscape:Debug": false,
     "landscape:Sensors": false,
     "landscape:Tween": false,
+    "landscape:Saved Tween Sequences": false,
     "landscape:Field Layout": false,
     "landscape:Pose": false,
+    "landscape:ROTATION": false,
+    "landscape:THUMB": false,
+    "landscape:Pose Offset": false,
     "landscape:Whole-Hand Rotation & Thumb": false,
     "landscape:Wrist": false,
     "landscape:Index": false,
@@ -4170,7 +4537,21 @@
     "landscape:Setting Title": null,
     "landscape:TABS": null,
     "landscape:BUTTONS": null,
-    "landscape:TEXT": null
+    "landscape:TEXT": null,
+    "mobile:Saved Tween Sequences": null,
+    "selectMobileTweenAddPose": null,
+    "sliderMobileTweenSpeedMs": null,
+    "sliderMobileHandScale": null,
+    "mobile:ROTATION": null,
+    "mobile:THUMB": null,
+    "mobile:Pose Offset": null,
+    "landscape:Saved Tween Sequences": null,
+    "selectLandscapeTweenAddPose": null,
+    "sliderLandscapeTweenSpeedMs": null,
+    "sliderLandscapeHandScale": null,
+    "landscape:ROTATION": null,
+    "landscape:THUMB": null,
+    "landscape:Pose Offset": null
   },
   "devTextOverridesManual": [],
   "lockedGroups": [],
