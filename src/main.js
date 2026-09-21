@@ -23,7 +23,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
 // this simply clears the stale local save; it does not touch the
 // separate git-tracked save (data/processed/dev-panel-settings.json,
 // reset directly when this was first found).
-const HANDYSET_SETTINGS_SCHEMA_VERSION = '2026-09-21a'
+const HANDYSET_SETTINGS_SCHEMA_VERSION = '2026-09-21b'
 try {
   if (localStorage.getItem('handysetSettingsSchemaVersion') !== HANDYSET_SETTINGS_SCHEMA_VERSION) {
     localStorage.removeItem('devPanelSettings')
@@ -64,7 +64,7 @@ const cfg = {
   // Background
   bgColor: '#ffffff',
   // Tween
-  tweenPoses: [], tweenSpeedMs: 2000,
+  tweenPoses: [], tweenT: 0, tweenFrameCount: 10, exportFramePrefix: 'tween',
   // Debug
   showGridHelper: false, showWireframe: false,
   sensorStreamEnabled: false, sensorIntervalMs: 200
@@ -730,32 +730,93 @@ function applyDefaultSelections() {
 
 
 // =======================================================================
-// Tween playback (ordered saved-pose list, applies directly to the hand)
+// Tween (ordered saved-pose list, manual 0-1 scrub — matches Hando's own
+// UI exactly: no auto-play/Loop/Oscillate mechanism exists there, just a
+// manual "Tween (0=First, 1=Last)" slider plus a one-shot PNG-sequence
+// export. Replaces this project's own earlier auto-play "Run Tween"
+// button, which Hando has no equivalent of.
 // =======================================================================
 function lerpPoseValues(a, b, t) {
   const out = {}
   POSE_PRESET_KEYS.forEach((k) => { out[k] = THREE.MathUtils.lerp(a[k] ?? 0, b[k] ?? 0, t) })
   return out
 }
-let tweenPlay = null
-function playTween() {
-  const poses = cfg.tweenPoses.map((name) => SAVED_POSES.find((p) => p.name === name)).filter(Boolean)
-  if (!poses.length) return
-  tweenPlay = { poses, startMs: performance.now(), speedMs: Math.max(cfg.tweenSpeedMs, 1) }
+// A Hold entry — ported from Hando's own isHoldEntry()/resolveTweenSegments()
+// concept: `{ type: 'hold', percent }` in the ordered tweenPoses array,
+// distinguishable from a plain pose-name string. `percent` is relative to
+// ONE normal pose-to-pose transition's own weight (not an absolute
+// duration — there's no time axis here, tweenT is a manual 0-1 scrub).
+function isHoldEntry(v) { return !!(v && typeof v === 'object' && v.type === 'hold') }
+// Builds the ordered list of weighted segments between cfg.tweenPoses'
+// real pose entries, holding at a Hold entry's own weight rather than
+// interpolating through it.
+function resolveTweenTimeline(entries) {
+  const segments = []
+  let cursorName = null
+  entries.forEach((e) => {
+    if (isHoldEntry(e)) {
+      segments.push({ kind: 'hold', weight: Math.max(e.percent, 0) / 100, poseName: cursorName })
+    } else if (typeof e === 'string' && e) {
+      if (cursorName !== null) segments.push({ kind: 'transition', weight: 1, poseA: cursorName, poseB: e })
+      cursorName = e
+    }
+  })
+  if (!segments.length) return cursorName ? { segments: [{ kind: 'hold', weight: 1, poseName: cursorName }] } : null
+  return { segments }
 }
-function updateTween() {
-  if (!tweenPlay) return
-  const segMs = tweenPlay.speedMs
-  const totalMs = segMs * Math.max(tweenPlay.poses.length - 1, 1)
-  const elapsed = performance.now() - tweenPlay.startMs
-  const t = THREE.MathUtils.clamp(elapsed / totalMs, 0, 1)
-  const segCount = tweenPlay.poses.length - 1
-  const segT = t * segCount
-  const i0 = Math.min(Math.floor(segT), segCount - 1 < 0 ? 0 : segCount - 1)
-  const localT = segCount > 0 ? segT - i0 : 0
-  const a = tweenPlay.poses[i0], b = tweenPlay.poses[Math.min(i0 + 1, tweenPlay.poses.length - 1)]
-  applyPoseValuesToHand(lerpPoseValues(a, b, localT))
-  if (t >= 1) tweenPlay = null
+function applyTweenAtT(t) {
+  const timeline = resolveTweenTimeline(cfg.tweenPoses)
+  if (!timeline) return
+  const totalWeight = timeline.segments.reduce((s, seg) => s + seg.weight, 0) || 1
+  let remaining = THREE.MathUtils.clamp(t, 0, 1) * totalWeight
+  for (let i = 0; i < timeline.segments.length; i++) {
+    const seg = timeline.segments[i]
+    const isLast = i === timeline.segments.length - 1
+    if (remaining <= seg.weight || isLast) {
+      if (seg.kind === 'hold') {
+        const pose = SAVED_POSES.find((p) => p.name === seg.poseName)
+        if (pose) applyPoseValuesToHand(pose)
+      } else {
+        const a = SAVED_POSES.find((p) => p.name === seg.poseA)
+        const b = SAVED_POSES.find((p) => p.name === seg.poseB)
+        if (a && b) applyPoseValuesToHand(lerpPoseValues(a, b, seg.weight > 0 ? THREE.MathUtils.clamp(remaining / seg.weight, 0, 1) : 1))
+      }
+      return
+    }
+    remaining -= seg.weight
+  }
+}
+// One-shot PNG-sequence export — samples cfg.tweenFrameCount frames evenly
+// across the tween's 0-1 range, renders and downloads each, then restores
+// tweenT to its pre-export value. Ported concept from Hando's own
+// exportTweenSequence() (render-to-canvas + toDataURL + <a download>, the
+// standard browser-native approach — Hando's exact implementation wasn't
+// available to extract verbatim, this is a faithful from-scratch rebuild
+// of the same behavior).
+async function exportTweenSequence(btn) {
+  const orig = btn.textContent
+  const count = Math.max(1, Math.round(cfg.tweenFrameCount))
+  const prefix = cfg.exportFramePrefix || 'tween'
+  const priorT = cfg.tweenT
+  for (let i = 0; i < count; i++) {
+    const t = count > 1 ? i / (count - 1) : 0
+    cfg.tweenT = t
+    applyTweenAtT(t)
+    composer.render()
+    await new Promise((resolve) => requestAnimationFrame(resolve))
+    const dataUrl = renderer.domElement.toDataURL('image/png')
+    const a = document.createElement('a')
+    a.href = dataUrl
+    a.download = `${prefix}_${String(i).padStart(3, '0')}.png`
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    btn.textContent = `Exporting ${i + 1}/${count}...`
+    await new Promise((resolve) => setTimeout(resolve, 80))
+  }
+  cfg.tweenT = priorT
+  applyTweenAtT(priorT)
+  btn.textContent = orig
 }
 
 // =======================================================================
@@ -803,7 +864,6 @@ function animate() {
         h.wrapper.quaternion.slerp(desired, cfg.trackingDamping)
       })
     }
-    updateTween()
   }
   composer.render()
 }
@@ -1266,35 +1326,128 @@ function renderToonGroup(content) {
   renderPresetPicker(content, 'Saved Toon Shading', SAVED_TOON, null, applyToonPreset, captureToonFromCfg, { exportable: true, importable: true, defaultFieldKey: 'defaultToon' })
 }
 
-function renderTweenGroup(content) {
-  addRow(content, { id: 'selectTweenAddPose', label: 'Add Pose To Sequence', type: 'select', options: SAVED_POSES.map((p) => ({ value: p.name, text: p.name })) })
-  const addBtnRow = document.createElement('div'); addBtnRow.className = 'dev-row'
-  const addBtn = document.createElement('button'); addBtn.textContent = '+ Add'
-  addBtnRow.appendChild(addBtn); content.appendChild(addBtnRow)
-  const seqDisplay = document.createElement('div')
-  seqDisplay.className = 'dev-value'
-  seqDisplay.style.cssText = 'display:block; white-space:normal; padding:4px 0;'
-  content.appendChild(seqDisplay)
-  function refreshSeqDisplay() { seqDisplay.textContent = cfg.tweenPoses.length ? cfg.tweenPoses.join(' → ') : '(empty)' }
+// Ordered multi-select widget — ported concept from Hando's own
+// buildMultiSelectRow()/renderMultiSelectRows() (devPanel.js there): a
+// reorderable vertical list of per-row pose dropdowns (or Hold entries),
+// with "+ Add"/"+ Hold" above and a "Remove" button per row. Re-implemented
+// from scratch against this project's own real devPanel.js API (Hando's
+// own buildGroupedDropdown()/setupReorder()/commit() infra isn't part of
+// the raw template this project is built on) using native HTML5 drag-and-
+// drop for reordering rather than Hando's own pointer-capture-based
+// engine drag system — a deliberate, disclosed simplification of the
+// REORDER MECHANISM only; the actual UI/interaction shape (dropdown-per-
+// row, Hold entries, +Add defaulting to "whatever comes after the
+// previous row's pick", +Hold defaulting to the last Hold's own percent)
+// matches Hando's exactly.
+function buildMultiSelectWidget(content, opts) {
+  const container = document.createElement('div')
+  container.className = 'dp-multi-select-row-container'
+  const addBtnRow = document.createElement('div')
+  addBtnRow.className = 'dp-multi-select-add-row'
+  const addBtn = document.createElement('button'); addBtn.type = 'button'; addBtn.textContent = '+ Add'
+  const holdBtn = document.createElement('button'); holdBtn.type = 'button'; holdBtn.textContent = '+ Hold'
+  addBtnRow.append(addBtn, holdBtn)
+  container.appendChild(addBtnRow)
+  const listEl = document.createElement('div')
+  listEl.className = 'dp-multi-select-list'
+  container.appendChild(listEl)
+  content.appendChild(container)
+
+  function render() {
+    listEl.innerHTML = ''
+    opts.values.forEach((val, i) => {
+      const row = document.createElement('div')
+      row.className = 'dp-multi-select-row'
+      row.draggable = true
+      const handle = document.createElement('span')
+      handle.className = 'dp-multi-select-row-handle'
+      handle.textContent = '⠿'
+      row.appendChild(handle)
+      const removeBtn = document.createElement('button')
+      removeBtn.type = 'button'; removeBtn.textContent = 'Remove'
+      removeBtn.addEventListener('click', () => { opts.values.splice(i, 1); opts.onChange(opts.values); render() })
+      if (isHoldEntry(val)) {
+        row.classList.add('dp-multi-select-hold-row')
+        const label = document.createElement('span')
+        label.className = 'dp-multi-select-hold-label'
+        label.textContent = 'Hold'
+        const slider = document.createElement('input')
+        slider.type = 'range'; slider.min = 0; slider.max = 100; slider.step = 1; slider.value = val.percent
+        const numInput = document.createElement('input')
+        numInput.type = 'text'; numInput.value = val.percent
+        const apply = (v) => {
+          v = parseFloat(v)
+          if (isNaN(v)) return
+          v = Math.max(0, v)
+          slider.value = Math.min(v, 100)
+          numInput.value = v
+          opts.values[i] = { type: 'hold', percent: v }
+          opts.onChange(opts.values)
+        }
+        slider.addEventListener('input', () => apply(slider.value))
+        numInput.addEventListener('change', () => apply(numInput.value))
+        row.append(label, slider, numInput, removeBtn)
+      } else {
+        const select = document.createElement('select')
+        opts.options().forEach((o) => { const el = document.createElement('option'); el.value = o.value; el.textContent = o.text; select.appendChild(el) })
+        select.value = val
+        select.addEventListener('change', () => { opts.values[i] = select.value; opts.onChange(opts.values) })
+        row.append(select, removeBtn)
+      }
+      row.addEventListener('dragstart', (e) => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(i)); row.classList.add('dragging') })
+      row.addEventListener('dragend', () => row.classList.remove('dragging'))
+      row.addEventListener('dragover', (e) => e.preventDefault())
+      row.addEventListener('drop', (e) => {
+        e.preventDefault()
+        const fromIdx = parseInt(e.dataTransfer.getData('text/plain'), 10)
+        if (isNaN(fromIdx) || fromIdx === i) return
+        const [moved] = opts.values.splice(fromIdx, 1)
+        opts.values.splice(i, 0, moved)
+        opts.onChange(opts.values)
+        render()
+      })
+      listEl.appendChild(row)
+    })
+  }
   addBtn.addEventListener('click', () => {
-    const sel = document.getElementById('selectTweenAddPose')
-    if (sel && sel.value) { cfg.tweenPoses.push(sel.value); refreshSeqDisplay() }
+    const names = opts.options().map((o) => o.value)
+    const prevValue = opts.values[opts.values.length - 1]
+    const prevIndex = names.indexOf(prevValue)
+    const next = prevIndex >= 0 ? names[Math.min(prevIndex + 1, names.length - 1)] : names[0]
+    opts.values.push(next || '')
+    opts.onChange(opts.values)
+    render()
   })
-  const clearBtnRow = document.createElement('div'); clearBtnRow.className = 'dev-row'
-  const clearBtn = document.createElement('button'); clearBtn.textContent = 'Clear Sequence'
-  clearBtnRow.appendChild(clearBtn); content.appendChild(clearBtnRow)
-  clearBtn.addEventListener('click', () => { cfg.tweenPoses = []; refreshSeqDisplay() })
-  addRow(content, { id: 'sliderTweenSpeedMs', label: 'Tween Speed (Ms)', type: 'slider', min: 100, max: 10000, step: 100, value: cfg.tweenSpeedMs })
-  wireSlider('sliderTweenSpeedMs', (v) => { cfg.tweenSpeedMs = v })
-  const runBtnRow = document.createElement('div'); runBtnRow.className = 'dev-row'
-  const runBtn = document.createElement('button'); runBtn.textContent = 'Run Tween'
-  runBtnRow.appendChild(runBtn); content.appendChild(runBtnRow)
-  runBtn.addEventListener('click', () => playTween())
-  refreshSeqDisplay()
+  holdBtn.addEventListener('click', () => {
+    const lastHold = opts.values.slice().reverse().find(isHoldEntry)
+    opts.values.push({ type: 'hold', percent: lastHold ? lastHold.percent : 25 })
+    opts.onChange(opts.values)
+    render()
+  })
+  render()
+}
+
+function renderTweenGroup(content) {
+  buildMultiSelectWidget(content, {
+    values: cfg.tweenPoses,
+    options: () => SAVED_POSES.map((p) => ({ value: p.name, text: p.name })),
+    onChange: () => { applyTweenAtT(cfg.tweenT) }
+  })
+  addRow(content, { id: 'sliderTweenT', label: 'Tween (0=First, 1=Last)', type: 'slider', min: 0, max: 1, step: 0.001, value: cfg.tweenT })
+  wireSlider('sliderTweenT', (v) => { cfg.tweenT = v; applyTweenAtT(v) })
+  addRow(content, { id: 'sliderTweenFrameCount', label: 'Export Frame Count', type: 'slider', min: 1, max: 30, step: 1, value: cfg.tweenFrameCount })
+  wireSlider('sliderTweenFrameCount', (v) => { cfg.tweenFrameCount = v })
+  addRow(content, { id: 'textExportFramePrefix', label: 'Export Filename Prefix', type: 'text', inputType: 'text', value: cfg.exportFramePrefix })
+  document.getElementById('textExportFramePrefix').addEventListener('change', (e) => { cfg.exportFramePrefix = e.target.value })
 
   renderPresetPicker(content, 'Saved Tween Sequences', SAVED_TWEEN_SEQUENCES, null,
-    (item) => { cfg.tweenPoses = (item.tweenPoses || []).slice(); refreshSeqDisplay() },
+    (item) => { cfg.tweenPoses = (item.tweenPoses || []).slice(); applyTweenAtT(cfg.tweenT) },
     () => ({ tweenPoses: cfg.tweenPoses.slice() }))
+
+  const exportBtnRow = document.createElement('div'); exportBtnRow.className = 'dev-row'
+  const exportBtn = document.createElement('button'); exportBtn.type = 'button'; exportBtn.textContent = 'Export Tween PNG Sequence'
+  exportBtnRow.appendChild(exportBtn); content.appendChild(exportBtnRow)
+  exportBtn.addEventListener('click', () => exportTweenSequence(exportBtn))
 }
 
 function renderDebugExtras() {
