@@ -1361,7 +1361,8 @@ window.__debug = {
   get wristPosRaw() { return wristPosRaw }, get forearmPosRaw() { return forearmPosRaw },
   get wristCropNormalAligned() { return wristCropNormalAligned }, get alignQuat() { return alignQuat },
   get handLengthRaw() { return handLengthRaw }, get handCenterLocal() { return handCenterLocal },
-  getHandCenterWorld, updateWristCrop, computeBaseScale
+  getHandCenterWorld, updateWristCrop, computeBaseScale,
+  computeCurlAxisRefQuat, curlExcludeQuatForHand, get modelRotationPivot() { return modelRotationPivot }
 }
 
 // window.innerWidth/innerHeight can read 0 at script-parse time in this
