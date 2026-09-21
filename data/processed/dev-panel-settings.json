@@ -87,7 +87,7 @@
     "colorAmbientGroundColor": "#3a2f2a",
     "sliderToonSteps": 2,
     "sliderToonStepThreshold": 2.7,
-    "sliderToonShadowFloor": 7,
+    "sliderToonShadowFloor": 0,
     "sliderToonLightCeiling": 100,
     "colorToonBaseTint": "#ffffff",
     "sliderTextureInfluence": 0,
@@ -3185,25 +3185,8 @@
             "type": "group",
             "section": {
               "key": "mobile:ROTATION",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "sliderMobilemodelRotX"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderMobilemodelRotY"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderMobilemodelRotZ"
-                }
-              ],
-              "rowKeys": [
-                "sliderMobilemodelRotX",
-                "sliderMobilemodelRotY",
-                "sliderMobilemodelRotZ"
-              ],
+              "items": [],
+              "rowKeys": [],
               "subgroups": []
             }
           },
@@ -3211,50 +3194,8 @@
             "type": "group",
             "section": {
               "key": "mobile:THUMB",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "sliderMobilethumbCurl"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderMobilethumbSplay"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderMobilethumbSplay2"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderMobilecurlBiasThumb"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderMobilebaseOnlyCurlThumb"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderMobilemidOnlyCurlThumb"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderMobiletipOnlyCurlThumb"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderMobiletipTwistThumb"
-                }
-              ],
-              "rowKeys": [
-                "sliderMobilethumbCurl",
-                "sliderMobilethumbSplay",
-                "sliderMobilethumbSplay2",
-                "sliderMobilecurlBiasThumb",
-                "sliderMobilebaseOnlyCurlThumb",
-                "sliderMobilemidOnlyCurlThumb",
-                "sliderMobiletipOnlyCurlThumb",
-                "sliderMobiletipTwistThumb"
-              ],
+              "items": [],
+              "rowKeys": [],
               "subgroups": []
             }
           },
@@ -3262,35 +3203,8 @@
             "type": "group",
             "section": {
               "key": "mobile:Wrist",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "sliderMobilewristRotation"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderMobilewristBend"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderMobilewristSplay"
-                },
-                {
-                  "type": "row",
-                  "key": "checkboxMobileCropWristEnabled"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderMobileHideWrist"
-                }
-              ],
-              "rowKeys": [
-                "sliderMobilewristRotation",
-                "sliderMobilewristBend",
-                "sliderMobilewristSplay",
-                "checkboxMobileCropWristEnabled",
-                "sliderMobileHideWrist"
-              ],
+              "items": [],
+              "rowKeys": [],
               "subgroups": []
             }
           },
@@ -3298,50 +3212,8 @@
             "type": "group",
             "section": {
               "key": "mobile:Index",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "sliderMobilecurlIndex"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderMobilesplayIndex"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderMobilesplayIndex2"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderMobilecurlBiasIndex"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderMobilebaseOnlyCurlIndex"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderMobilemidOnlyCurlIndex"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderMobiletipOnlyCurlIndex"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderMobiletipTwistIndex"
-                }
-              ],
-              "rowKeys": [
-                "sliderMobilecurlIndex",
-                "sliderMobilesplayIndex",
-                "sliderMobilesplayIndex2",
-                "sliderMobilecurlBiasIndex",
-                "sliderMobilebaseOnlyCurlIndex",
-                "sliderMobilemidOnlyCurlIndex",
-                "sliderMobiletipOnlyCurlIndex",
-                "sliderMobiletipTwistIndex"
-              ],
+              "items": [],
+              "rowKeys": [],
               "subgroups": []
             }
           },
@@ -3349,50 +3221,8 @@
             "type": "group",
             "section": {
               "key": "mobile:Middle",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "sliderMobilecurlMiddle"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderMobilesplayMiddle"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderMobilesplayMiddle2"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderMobilecurlBiasMiddle"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderMobilebaseOnlyCurlMiddle"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderMobilemidOnlyCurlMiddle"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderMobiletipOnlyCurlMiddle"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderMobiletipTwistMiddle"
-                }
-              ],
-              "rowKeys": [
-                "sliderMobilecurlMiddle",
-                "sliderMobilesplayMiddle",
-                "sliderMobilesplayMiddle2",
-                "sliderMobilecurlBiasMiddle",
-                "sliderMobilebaseOnlyCurlMiddle",
-                "sliderMobilemidOnlyCurlMiddle",
-                "sliderMobiletipOnlyCurlMiddle",
-                "sliderMobiletipTwistMiddle"
-              ],
+              "items": [],
+              "rowKeys": [],
               "subgroups": []
             }
           },
@@ -3400,50 +3230,8 @@
             "type": "group",
             "section": {
               "key": "mobile:Ring",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "sliderMobilecurlRing"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderMobilesplayRing"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderMobilesplayRing2"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderMobilecurlBiasRing"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderMobilebaseOnlyCurlRing"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderMobilemidOnlyCurlRing"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderMobiletipOnlyCurlRing"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderMobiletipTwistRing"
-                }
-              ],
-              "rowKeys": [
-                "sliderMobilecurlRing",
-                "sliderMobilesplayRing",
-                "sliderMobilesplayRing2",
-                "sliderMobilecurlBiasRing",
-                "sliderMobilebaseOnlyCurlRing",
-                "sliderMobilemidOnlyCurlRing",
-                "sliderMobiletipOnlyCurlRing",
-                "sliderMobiletipTwistRing"
-              ],
+              "items": [],
+              "rowKeys": [],
               "subgroups": []
             }
           },
@@ -3451,50 +3239,8 @@
             "type": "group",
             "section": {
               "key": "mobile:Pinky",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "sliderMobilecurlPinky"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderMobilesplayPinky"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderMobilesplayPinky2"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderMobilecurlBiasPinky"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderMobilebaseOnlyCurlPinky"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderMobilemidOnlyCurlPinky"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderMobiletipOnlyCurlPinky"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderMobiletipTwistPinky"
-                }
-              ],
-              "rowKeys": [
-                "sliderMobilecurlPinky",
-                "sliderMobilesplayPinky",
-                "sliderMobilesplayPinky2",
-                "sliderMobilecurlBiasPinky",
-                "sliderMobilebaseOnlyCurlPinky",
-                "sliderMobilemidOnlyCurlPinky",
-                "sliderMobiletipOnlyCurlPinky",
-                "sliderMobiletipTwistPinky"
-              ],
+              "items": [],
+              "rowKeys": [],
               "subgroups": []
             }
           },
@@ -3502,30 +3248,8 @@
             "type": "group",
             "section": {
               "key": "mobile:Pose Offset",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "sliderMobileposeOffsetX"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderMobileposeOffsetY"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderMobileposeOffsetZ"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderMobilePoseScale"
-                }
-              ],
-              "rowKeys": [
-                "sliderMobileposeOffsetX",
-                "sliderMobileposeOffsetY",
-                "sliderMobileposeOffsetZ",
-                "sliderMobilePoseScale"
-              ],
+              "items": [],
+              "rowKeys": [],
               "subgroups": []
             }
           },
@@ -3543,326 +3267,50 @@
         "subgroups": [
           {
             "key": "mobile:ROTATION",
-            "items": [
-              {
-                "type": "row",
-                "key": "sliderMobilemodelRotX"
-              },
-              {
-                "type": "row",
-                "key": "sliderMobilemodelRotY"
-              },
-              {
-                "type": "row",
-                "key": "sliderMobilemodelRotZ"
-              }
-            ],
-            "rowKeys": [
-              "sliderMobilemodelRotX",
-              "sliderMobilemodelRotY",
-              "sliderMobilemodelRotZ"
-            ],
+            "items": [],
+            "rowKeys": [],
             "subgroups": []
           },
           {
             "key": "mobile:THUMB",
-            "items": [
-              {
-                "type": "row",
-                "key": "sliderMobilethumbCurl"
-              },
-              {
-                "type": "row",
-                "key": "sliderMobilethumbSplay"
-              },
-              {
-                "type": "row",
-                "key": "sliderMobilethumbSplay2"
-              },
-              {
-                "type": "row",
-                "key": "sliderMobilecurlBiasThumb"
-              },
-              {
-                "type": "row",
-                "key": "sliderMobilebaseOnlyCurlThumb"
-              },
-              {
-                "type": "row",
-                "key": "sliderMobilemidOnlyCurlThumb"
-              },
-              {
-                "type": "row",
-                "key": "sliderMobiletipOnlyCurlThumb"
-              },
-              {
-                "type": "row",
-                "key": "sliderMobiletipTwistThumb"
-              }
-            ],
-            "rowKeys": [
-              "sliderMobilethumbCurl",
-              "sliderMobilethumbSplay",
-              "sliderMobilethumbSplay2",
-              "sliderMobilecurlBiasThumb",
-              "sliderMobilebaseOnlyCurlThumb",
-              "sliderMobilemidOnlyCurlThumb",
-              "sliderMobiletipOnlyCurlThumb",
-              "sliderMobiletipTwistThumb"
-            ],
+            "items": [],
+            "rowKeys": [],
             "subgroups": []
           },
           {
             "key": "mobile:Wrist",
-            "items": [
-              {
-                "type": "row",
-                "key": "sliderMobilewristRotation"
-              },
-              {
-                "type": "row",
-                "key": "sliderMobilewristBend"
-              },
-              {
-                "type": "row",
-                "key": "sliderMobilewristSplay"
-              },
-              {
-                "type": "row",
-                "key": "checkboxMobileCropWristEnabled"
-              },
-              {
-                "type": "row",
-                "key": "sliderMobileHideWrist"
-              }
-            ],
-            "rowKeys": [
-              "sliderMobilewristRotation",
-              "sliderMobilewristBend",
-              "sliderMobilewristSplay",
-              "checkboxMobileCropWristEnabled",
-              "sliderMobileHideWrist"
-            ],
+            "items": [],
+            "rowKeys": [],
             "subgroups": []
           },
           {
             "key": "mobile:Index",
-            "items": [
-              {
-                "type": "row",
-                "key": "sliderMobilecurlIndex"
-              },
-              {
-                "type": "row",
-                "key": "sliderMobilesplayIndex"
-              },
-              {
-                "type": "row",
-                "key": "sliderMobilesplayIndex2"
-              },
-              {
-                "type": "row",
-                "key": "sliderMobilecurlBiasIndex"
-              },
-              {
-                "type": "row",
-                "key": "sliderMobilebaseOnlyCurlIndex"
-              },
-              {
-                "type": "row",
-                "key": "sliderMobilemidOnlyCurlIndex"
-              },
-              {
-                "type": "row",
-                "key": "sliderMobiletipOnlyCurlIndex"
-              },
-              {
-                "type": "row",
-                "key": "sliderMobiletipTwistIndex"
-              }
-            ],
-            "rowKeys": [
-              "sliderMobilecurlIndex",
-              "sliderMobilesplayIndex",
-              "sliderMobilesplayIndex2",
-              "sliderMobilecurlBiasIndex",
-              "sliderMobilebaseOnlyCurlIndex",
-              "sliderMobilemidOnlyCurlIndex",
-              "sliderMobiletipOnlyCurlIndex",
-              "sliderMobiletipTwistIndex"
-            ],
+            "items": [],
+            "rowKeys": [],
             "subgroups": []
           },
           {
             "key": "mobile:Middle",
-            "items": [
-              {
-                "type": "row",
-                "key": "sliderMobilecurlMiddle"
-              },
-              {
-                "type": "row",
-                "key": "sliderMobilesplayMiddle"
-              },
-              {
-                "type": "row",
-                "key": "sliderMobilesplayMiddle2"
-              },
-              {
-                "type": "row",
-                "key": "sliderMobilecurlBiasMiddle"
-              },
-              {
-                "type": "row",
-                "key": "sliderMobilebaseOnlyCurlMiddle"
-              },
-              {
-                "type": "row",
-                "key": "sliderMobilemidOnlyCurlMiddle"
-              },
-              {
-                "type": "row",
-                "key": "sliderMobiletipOnlyCurlMiddle"
-              },
-              {
-                "type": "row",
-                "key": "sliderMobiletipTwistMiddle"
-              }
-            ],
-            "rowKeys": [
-              "sliderMobilecurlMiddle",
-              "sliderMobilesplayMiddle",
-              "sliderMobilesplayMiddle2",
-              "sliderMobilecurlBiasMiddle",
-              "sliderMobilebaseOnlyCurlMiddle",
-              "sliderMobilemidOnlyCurlMiddle",
-              "sliderMobiletipOnlyCurlMiddle",
-              "sliderMobiletipTwistMiddle"
-            ],
+            "items": [],
+            "rowKeys": [],
             "subgroups": []
           },
           {
             "key": "mobile:Ring",
-            "items": [
-              {
-                "type": "row",
-                "key": "sliderMobilecurlRing"
-              },
-              {
-                "type": "row",
-                "key": "sliderMobilesplayRing"
-              },
-              {
-                "type": "row",
-                "key": "sliderMobilesplayRing2"
-              },
-              {
-                "type": "row",
-                "key": "sliderMobilecurlBiasRing"
-              },
-              {
-                "type": "row",
-                "key": "sliderMobilebaseOnlyCurlRing"
-              },
-              {
-                "type": "row",
-                "key": "sliderMobilemidOnlyCurlRing"
-              },
-              {
-                "type": "row",
-                "key": "sliderMobiletipOnlyCurlRing"
-              },
-              {
-                "type": "row",
-                "key": "sliderMobiletipTwistRing"
-              }
-            ],
-            "rowKeys": [
-              "sliderMobilecurlRing",
-              "sliderMobilesplayRing",
-              "sliderMobilesplayRing2",
-              "sliderMobilecurlBiasRing",
-              "sliderMobilebaseOnlyCurlRing",
-              "sliderMobilemidOnlyCurlRing",
-              "sliderMobiletipOnlyCurlRing",
-              "sliderMobiletipTwistRing"
-            ],
+            "items": [],
+            "rowKeys": [],
             "subgroups": []
           },
           {
             "key": "mobile:Pinky",
-            "items": [
-              {
-                "type": "row",
-                "key": "sliderMobilecurlPinky"
-              },
-              {
-                "type": "row",
-                "key": "sliderMobilesplayPinky"
-              },
-              {
-                "type": "row",
-                "key": "sliderMobilesplayPinky2"
-              },
-              {
-                "type": "row",
-                "key": "sliderMobilecurlBiasPinky"
-              },
-              {
-                "type": "row",
-                "key": "sliderMobilebaseOnlyCurlPinky"
-              },
-              {
-                "type": "row",
-                "key": "sliderMobilemidOnlyCurlPinky"
-              },
-              {
-                "type": "row",
-                "key": "sliderMobiletipOnlyCurlPinky"
-              },
-              {
-                "type": "row",
-                "key": "sliderMobiletipTwistPinky"
-              }
-            ],
-            "rowKeys": [
-              "sliderMobilecurlPinky",
-              "sliderMobilesplayPinky",
-              "sliderMobilesplayPinky2",
-              "sliderMobilecurlBiasPinky",
-              "sliderMobilebaseOnlyCurlPinky",
-              "sliderMobilemidOnlyCurlPinky",
-              "sliderMobiletipOnlyCurlPinky",
-              "sliderMobiletipTwistPinky"
-            ],
+            "items": [],
+            "rowKeys": [],
             "subgroups": []
           },
           {
             "key": "mobile:Pose Offset",
-            "items": [
-              {
-                "type": "row",
-                "key": "sliderMobileposeOffsetX"
-              },
-              {
-                "type": "row",
-                "key": "sliderMobileposeOffsetY"
-              },
-              {
-                "type": "row",
-                "key": "sliderMobileposeOffsetZ"
-              },
-              {
-                "type": "row",
-                "key": "sliderMobilePoseScale"
-              }
-            ],
-            "rowKeys": [
-              "sliderMobileposeOffsetX",
-              "sliderMobileposeOffsetY",
-              "sliderMobileposeOffsetZ",
-              "sliderMobilePoseScale"
-            ],
+            "items": [],
+            "rowKeys": [],
             "subgroups": []
           },
           {
@@ -4618,25 +4066,8 @@
             "type": "group",
             "section": {
               "key": "landscape:ROTATION",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "sliderLandscapemodelRotX"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderLandscapemodelRotY"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderLandscapemodelRotZ"
-                }
-              ],
-              "rowKeys": [
-                "sliderLandscapemodelRotX",
-                "sliderLandscapemodelRotY",
-                "sliderLandscapemodelRotZ"
-              ],
+              "items": [],
+              "rowKeys": [],
               "subgroups": []
             }
           },
@@ -4644,50 +4075,8 @@
             "type": "group",
             "section": {
               "key": "landscape:THUMB",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "sliderLandscapethumbCurl"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderLandscapethumbSplay"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderLandscapethumbSplay2"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderLandscapecurlBiasThumb"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderLandscapebaseOnlyCurlThumb"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderLandscapemidOnlyCurlThumb"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderLandscapetipOnlyCurlThumb"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderLandscapetipTwistThumb"
-                }
-              ],
-              "rowKeys": [
-                "sliderLandscapethumbCurl",
-                "sliderLandscapethumbSplay",
-                "sliderLandscapethumbSplay2",
-                "sliderLandscapecurlBiasThumb",
-                "sliderLandscapebaseOnlyCurlThumb",
-                "sliderLandscapemidOnlyCurlThumb",
-                "sliderLandscapetipOnlyCurlThumb",
-                "sliderLandscapetipTwistThumb"
-              ],
+              "items": [],
+              "rowKeys": [],
               "subgroups": []
             }
           },
@@ -4695,35 +4084,8 @@
             "type": "group",
             "section": {
               "key": "landscape:Wrist",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "sliderLandscapewristRotation"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderLandscapewristBend"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderLandscapewristSplay"
-                },
-                {
-                  "type": "row",
-                  "key": "checkboxLandscapeCropWristEnabled"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderLandscapeHideWrist"
-                }
-              ],
-              "rowKeys": [
-                "sliderLandscapewristRotation",
-                "sliderLandscapewristBend",
-                "sliderLandscapewristSplay",
-                "checkboxLandscapeCropWristEnabled",
-                "sliderLandscapeHideWrist"
-              ],
+              "items": [],
+              "rowKeys": [],
               "subgroups": []
             }
           },
@@ -4731,50 +4093,8 @@
             "type": "group",
             "section": {
               "key": "landscape:Index",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "sliderLandscapecurlIndex"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderLandscapesplayIndex"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderLandscapesplayIndex2"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderLandscapecurlBiasIndex"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderLandscapebaseOnlyCurlIndex"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderLandscapemidOnlyCurlIndex"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderLandscapetipOnlyCurlIndex"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderLandscapetipTwistIndex"
-                }
-              ],
-              "rowKeys": [
-                "sliderLandscapecurlIndex",
-                "sliderLandscapesplayIndex",
-                "sliderLandscapesplayIndex2",
-                "sliderLandscapecurlBiasIndex",
-                "sliderLandscapebaseOnlyCurlIndex",
-                "sliderLandscapemidOnlyCurlIndex",
-                "sliderLandscapetipOnlyCurlIndex",
-                "sliderLandscapetipTwistIndex"
-              ],
+              "items": [],
+              "rowKeys": [],
               "subgroups": []
             }
           },
@@ -4782,50 +4102,8 @@
             "type": "group",
             "section": {
               "key": "landscape:Middle",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "sliderLandscapecurlMiddle"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderLandscapesplayMiddle"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderLandscapesplayMiddle2"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderLandscapecurlBiasMiddle"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderLandscapebaseOnlyCurlMiddle"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderLandscapemidOnlyCurlMiddle"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderLandscapetipOnlyCurlMiddle"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderLandscapetipTwistMiddle"
-                }
-              ],
-              "rowKeys": [
-                "sliderLandscapecurlMiddle",
-                "sliderLandscapesplayMiddle",
-                "sliderLandscapesplayMiddle2",
-                "sliderLandscapecurlBiasMiddle",
-                "sliderLandscapebaseOnlyCurlMiddle",
-                "sliderLandscapemidOnlyCurlMiddle",
-                "sliderLandscapetipOnlyCurlMiddle",
-                "sliderLandscapetipTwistMiddle"
-              ],
+              "items": [],
+              "rowKeys": [],
               "subgroups": []
             }
           },
@@ -4833,50 +4111,8 @@
             "type": "group",
             "section": {
               "key": "landscape:Ring",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "sliderLandscapecurlRing"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderLandscapesplayRing"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderLandscapesplayRing2"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderLandscapecurlBiasRing"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderLandscapebaseOnlyCurlRing"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderLandscapemidOnlyCurlRing"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderLandscapetipOnlyCurlRing"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderLandscapetipTwistRing"
-                }
-              ],
-              "rowKeys": [
-                "sliderLandscapecurlRing",
-                "sliderLandscapesplayRing",
-                "sliderLandscapesplayRing2",
-                "sliderLandscapecurlBiasRing",
-                "sliderLandscapebaseOnlyCurlRing",
-                "sliderLandscapemidOnlyCurlRing",
-                "sliderLandscapetipOnlyCurlRing",
-                "sliderLandscapetipTwistRing"
-              ],
+              "items": [],
+              "rowKeys": [],
               "subgroups": []
             }
           },
@@ -4884,50 +4120,8 @@
             "type": "group",
             "section": {
               "key": "landscape:Pinky",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "sliderLandscapecurlPinky"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderLandscapesplayPinky"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderLandscapesplayPinky2"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderLandscapecurlBiasPinky"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderLandscapebaseOnlyCurlPinky"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderLandscapemidOnlyCurlPinky"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderLandscapetipOnlyCurlPinky"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderLandscapetipTwistPinky"
-                }
-              ],
-              "rowKeys": [
-                "sliderLandscapecurlPinky",
-                "sliderLandscapesplayPinky",
-                "sliderLandscapesplayPinky2",
-                "sliderLandscapecurlBiasPinky",
-                "sliderLandscapebaseOnlyCurlPinky",
-                "sliderLandscapemidOnlyCurlPinky",
-                "sliderLandscapetipOnlyCurlPinky",
-                "sliderLandscapetipTwistPinky"
-              ],
+              "items": [],
+              "rowKeys": [],
               "subgroups": []
             }
           },
@@ -4935,30 +4129,8 @@
             "type": "group",
             "section": {
               "key": "landscape:Pose Offset",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "sliderLandscapeposeOffsetX"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderLandscapeposeOffsetY"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderLandscapeposeOffsetZ"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderLandscapePoseScale"
-                }
-              ],
-              "rowKeys": [
-                "sliderLandscapeposeOffsetX",
-                "sliderLandscapeposeOffsetY",
-                "sliderLandscapeposeOffsetZ",
-                "sliderLandscapePoseScale"
-              ],
+              "items": [],
+              "rowKeys": [],
               "subgroups": []
             }
           },
@@ -4976,326 +4148,50 @@
         "subgroups": [
           {
             "key": "landscape:ROTATION",
-            "items": [
-              {
-                "type": "row",
-                "key": "sliderLandscapemodelRotX"
-              },
-              {
-                "type": "row",
-                "key": "sliderLandscapemodelRotY"
-              },
-              {
-                "type": "row",
-                "key": "sliderLandscapemodelRotZ"
-              }
-            ],
-            "rowKeys": [
-              "sliderLandscapemodelRotX",
-              "sliderLandscapemodelRotY",
-              "sliderLandscapemodelRotZ"
-            ],
+            "items": [],
+            "rowKeys": [],
             "subgroups": []
           },
           {
             "key": "landscape:THUMB",
-            "items": [
-              {
-                "type": "row",
-                "key": "sliderLandscapethumbCurl"
-              },
-              {
-                "type": "row",
-                "key": "sliderLandscapethumbSplay"
-              },
-              {
-                "type": "row",
-                "key": "sliderLandscapethumbSplay2"
-              },
-              {
-                "type": "row",
-                "key": "sliderLandscapecurlBiasThumb"
-              },
-              {
-                "type": "row",
-                "key": "sliderLandscapebaseOnlyCurlThumb"
-              },
-              {
-                "type": "row",
-                "key": "sliderLandscapemidOnlyCurlThumb"
-              },
-              {
-                "type": "row",
-                "key": "sliderLandscapetipOnlyCurlThumb"
-              },
-              {
-                "type": "row",
-                "key": "sliderLandscapetipTwistThumb"
-              }
-            ],
-            "rowKeys": [
-              "sliderLandscapethumbCurl",
-              "sliderLandscapethumbSplay",
-              "sliderLandscapethumbSplay2",
-              "sliderLandscapecurlBiasThumb",
-              "sliderLandscapebaseOnlyCurlThumb",
-              "sliderLandscapemidOnlyCurlThumb",
-              "sliderLandscapetipOnlyCurlThumb",
-              "sliderLandscapetipTwistThumb"
-            ],
+            "items": [],
+            "rowKeys": [],
             "subgroups": []
           },
           {
             "key": "landscape:Wrist",
-            "items": [
-              {
-                "type": "row",
-                "key": "sliderLandscapewristRotation"
-              },
-              {
-                "type": "row",
-                "key": "sliderLandscapewristBend"
-              },
-              {
-                "type": "row",
-                "key": "sliderLandscapewristSplay"
-              },
-              {
-                "type": "row",
-                "key": "checkboxLandscapeCropWristEnabled"
-              },
-              {
-                "type": "row",
-                "key": "sliderLandscapeHideWrist"
-              }
-            ],
-            "rowKeys": [
-              "sliderLandscapewristRotation",
-              "sliderLandscapewristBend",
-              "sliderLandscapewristSplay",
-              "checkboxLandscapeCropWristEnabled",
-              "sliderLandscapeHideWrist"
-            ],
+            "items": [],
+            "rowKeys": [],
             "subgroups": []
           },
           {
             "key": "landscape:Index",
-            "items": [
-              {
-                "type": "row",
-                "key": "sliderLandscapecurlIndex"
-              },
-              {
-                "type": "row",
-                "key": "sliderLandscapesplayIndex"
-              },
-              {
-                "type": "row",
-                "key": "sliderLandscapesplayIndex2"
-              },
-              {
-                "type": "row",
-                "key": "sliderLandscapecurlBiasIndex"
-              },
-              {
-                "type": "row",
-                "key": "sliderLandscapebaseOnlyCurlIndex"
-              },
-              {
-                "type": "row",
-                "key": "sliderLandscapemidOnlyCurlIndex"
-              },
-              {
-                "type": "row",
-                "key": "sliderLandscapetipOnlyCurlIndex"
-              },
-              {
-                "type": "row",
-                "key": "sliderLandscapetipTwistIndex"
-              }
-            ],
-            "rowKeys": [
-              "sliderLandscapecurlIndex",
-              "sliderLandscapesplayIndex",
-              "sliderLandscapesplayIndex2",
-              "sliderLandscapecurlBiasIndex",
-              "sliderLandscapebaseOnlyCurlIndex",
-              "sliderLandscapemidOnlyCurlIndex",
-              "sliderLandscapetipOnlyCurlIndex",
-              "sliderLandscapetipTwistIndex"
-            ],
+            "items": [],
+            "rowKeys": [],
             "subgroups": []
           },
           {
             "key": "landscape:Middle",
-            "items": [
-              {
-                "type": "row",
-                "key": "sliderLandscapecurlMiddle"
-              },
-              {
-                "type": "row",
-                "key": "sliderLandscapesplayMiddle"
-              },
-              {
-                "type": "row",
-                "key": "sliderLandscapesplayMiddle2"
-              },
-              {
-                "type": "row",
-                "key": "sliderLandscapecurlBiasMiddle"
-              },
-              {
-                "type": "row",
-                "key": "sliderLandscapebaseOnlyCurlMiddle"
-              },
-              {
-                "type": "row",
-                "key": "sliderLandscapemidOnlyCurlMiddle"
-              },
-              {
-                "type": "row",
-                "key": "sliderLandscapetipOnlyCurlMiddle"
-              },
-              {
-                "type": "row",
-                "key": "sliderLandscapetipTwistMiddle"
-              }
-            ],
-            "rowKeys": [
-              "sliderLandscapecurlMiddle",
-              "sliderLandscapesplayMiddle",
-              "sliderLandscapesplayMiddle2",
-              "sliderLandscapecurlBiasMiddle",
-              "sliderLandscapebaseOnlyCurlMiddle",
-              "sliderLandscapemidOnlyCurlMiddle",
-              "sliderLandscapetipOnlyCurlMiddle",
-              "sliderLandscapetipTwistMiddle"
-            ],
+            "items": [],
+            "rowKeys": [],
             "subgroups": []
           },
           {
             "key": "landscape:Ring",
-            "items": [
-              {
-                "type": "row",
-                "key": "sliderLandscapecurlRing"
-              },
-              {
-                "type": "row",
-                "key": "sliderLandscapesplayRing"
-              },
-              {
-                "type": "row",
-                "key": "sliderLandscapesplayRing2"
-              },
-              {
-                "type": "row",
-                "key": "sliderLandscapecurlBiasRing"
-              },
-              {
-                "type": "row",
-                "key": "sliderLandscapebaseOnlyCurlRing"
-              },
-              {
-                "type": "row",
-                "key": "sliderLandscapemidOnlyCurlRing"
-              },
-              {
-                "type": "row",
-                "key": "sliderLandscapetipOnlyCurlRing"
-              },
-              {
-                "type": "row",
-                "key": "sliderLandscapetipTwistRing"
-              }
-            ],
-            "rowKeys": [
-              "sliderLandscapecurlRing",
-              "sliderLandscapesplayRing",
-              "sliderLandscapesplayRing2",
-              "sliderLandscapecurlBiasRing",
-              "sliderLandscapebaseOnlyCurlRing",
-              "sliderLandscapemidOnlyCurlRing",
-              "sliderLandscapetipOnlyCurlRing",
-              "sliderLandscapetipTwistRing"
-            ],
+            "items": [],
+            "rowKeys": [],
             "subgroups": []
           },
           {
             "key": "landscape:Pinky",
-            "items": [
-              {
-                "type": "row",
-                "key": "sliderLandscapecurlPinky"
-              },
-              {
-                "type": "row",
-                "key": "sliderLandscapesplayPinky"
-              },
-              {
-                "type": "row",
-                "key": "sliderLandscapesplayPinky2"
-              },
-              {
-                "type": "row",
-                "key": "sliderLandscapecurlBiasPinky"
-              },
-              {
-                "type": "row",
-                "key": "sliderLandscapebaseOnlyCurlPinky"
-              },
-              {
-                "type": "row",
-                "key": "sliderLandscapemidOnlyCurlPinky"
-              },
-              {
-                "type": "row",
-                "key": "sliderLandscapetipOnlyCurlPinky"
-              },
-              {
-                "type": "row",
-                "key": "sliderLandscapetipTwistPinky"
-              }
-            ],
-            "rowKeys": [
-              "sliderLandscapecurlPinky",
-              "sliderLandscapesplayPinky",
-              "sliderLandscapesplayPinky2",
-              "sliderLandscapecurlBiasPinky",
-              "sliderLandscapebaseOnlyCurlPinky",
-              "sliderLandscapemidOnlyCurlPinky",
-              "sliderLandscapetipOnlyCurlPinky",
-              "sliderLandscapetipTwistPinky"
-            ],
+            "items": [],
+            "rowKeys": [],
             "subgroups": []
           },
           {
             "key": "landscape:Pose Offset",
-            "items": [
-              {
-                "type": "row",
-                "key": "sliderLandscapeposeOffsetX"
-              },
-              {
-                "type": "row",
-                "key": "sliderLandscapeposeOffsetY"
-              },
-              {
-                "type": "row",
-                "key": "sliderLandscapeposeOffsetZ"
-              },
-              {
-                "type": "row",
-                "key": "sliderLandscapePoseScale"
-              }
-            ],
-            "rowKeys": [
-              "sliderLandscapeposeOffsetX",
-              "sliderLandscapeposeOffsetY",
-              "sliderLandscapeposeOffsetZ",
-              "sliderLandscapePoseScale"
-            ],
+            "items": [],
+            "rowKeys": [],
             "subgroups": []
           },
           {
@@ -5486,7 +4382,7 @@
     "desktop:Palm Facing": false,
     "desktop:Lighting": true,
     "desktop:Saved Lighting": false,
-    "desktop:Toon Shading": false,
+    "desktop:Toon Shading": true,
     "desktop:Outline": true,
     "desktop:Saved Toon Shading": false,
     "desktop:Background": false,
@@ -5782,58 +4678,58 @@
     "sliderTweenT": false,
     "sliderTweenFrameCount": false,
     "textExportFramePrefix": false,
-    "slidermodelRotX": true,
-    "slidermodelRotY": true,
-    "slidermodelRotZ": true,
-    "sliderthumbCurl": true,
-    "sliderthumbSplay": true,
-    "sliderthumbSplay2": true,
-    "slidercurlBiasThumb": true,
-    "sliderbaseOnlyCurlThumb": true,
-    "slidermidOnlyCurlThumb": true,
-    "slidertipOnlyCurlThumb": true,
-    "slidertipTwistThumb": true,
-    "sliderwristRotation": true,
-    "sliderwristBend": true,
-    "sliderwristSplay": true,
-    "checkboxCropWristEnabled": true,
-    "sliderHideWrist": true,
-    "slidercurlIndex": true,
-    "slidersplayIndex": true,
-    "slidersplayIndex2": true,
-    "slidercurlBiasIndex": true,
-    "sliderbaseOnlyCurlIndex": true,
-    "slidermidOnlyCurlIndex": true,
-    "slidertipOnlyCurlIndex": true,
-    "slidertipTwistIndex": true,
-    "slidercurlMiddle": true,
-    "slidersplayMiddle": true,
-    "slidersplayMiddle2": true,
-    "slidercurlBiasMiddle": true,
-    "sliderbaseOnlyCurlMiddle": true,
-    "slidermidOnlyCurlMiddle": true,
-    "slidertipOnlyCurlMiddle": true,
-    "slidertipTwistMiddle": true,
-    "slidercurlRing": true,
-    "slidersplayRing": true,
-    "slidersplayRing2": true,
-    "slidercurlBiasRing": true,
-    "sliderbaseOnlyCurlRing": true,
-    "slidermidOnlyCurlRing": true,
-    "slidertipOnlyCurlRing": true,
-    "slidertipTwistRing": true,
-    "slidercurlPinky": true,
-    "slidersplayPinky": true,
-    "slidersplayPinky2": true,
-    "slidercurlBiasPinky": true,
-    "sliderbaseOnlyCurlPinky": true,
-    "slidermidOnlyCurlPinky": true,
-    "slidertipOnlyCurlPinky": true,
-    "slidertipTwistPinky": true,
-    "sliderposeOffsetX": true,
-    "sliderposeOffsetY": true,
-    "sliderposeOffsetZ": true,
-    "sliderPoseScale": true
+    "slidermodelRotX": false,
+    "slidermodelRotY": false,
+    "slidermodelRotZ": false,
+    "sliderthumbCurl": false,
+    "sliderthumbSplay": false,
+    "sliderthumbSplay2": false,
+    "slidercurlBiasThumb": false,
+    "sliderbaseOnlyCurlThumb": false,
+    "slidermidOnlyCurlThumb": false,
+    "slidertipOnlyCurlThumb": false,
+    "slidertipTwistThumb": false,
+    "sliderwristRotation": false,
+    "sliderwristBend": false,
+    "sliderwristSplay": false,
+    "checkboxCropWristEnabled": false,
+    "sliderHideWrist": false,
+    "slidercurlIndex": false,
+    "slidersplayIndex": false,
+    "slidersplayIndex2": false,
+    "slidercurlBiasIndex": false,
+    "sliderbaseOnlyCurlIndex": false,
+    "slidermidOnlyCurlIndex": false,
+    "slidertipOnlyCurlIndex": false,
+    "slidertipTwistIndex": false,
+    "slidercurlMiddle": false,
+    "slidersplayMiddle": false,
+    "slidersplayMiddle2": false,
+    "slidercurlBiasMiddle": false,
+    "sliderbaseOnlyCurlMiddle": false,
+    "slidermidOnlyCurlMiddle": false,
+    "slidertipOnlyCurlMiddle": false,
+    "slidertipTwistMiddle": false,
+    "slidercurlRing": false,
+    "slidersplayRing": false,
+    "slidersplayRing2": false,
+    "slidercurlBiasRing": false,
+    "sliderbaseOnlyCurlRing": false,
+    "slidermidOnlyCurlRing": false,
+    "slidertipOnlyCurlRing": false,
+    "slidertipTwistRing": false,
+    "slidercurlPinky": false,
+    "slidersplayPinky": false,
+    "slidersplayPinky2": false,
+    "slidercurlBiasPinky": false,
+    "sliderbaseOnlyCurlPinky": false,
+    "slidermidOnlyCurlPinky": false,
+    "slidertipOnlyCurlPinky": false,
+    "slidertipTwistPinky": false,
+    "sliderposeOffsetX": false,
+    "sliderposeOffsetY": false,
+    "sliderposeOffsetZ": false,
+    "sliderPoseScale": false
   },
   "devIndependence": {
     "mobile": {},
