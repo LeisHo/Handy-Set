@@ -1276,7 +1276,7 @@
         "items": [
           {
             "type": "row",
-            "key": "selectTweenAddPose"
+            "key": "__row0"
           },
           {
             "type": "row",
@@ -1288,19 +1288,19 @@
           },
           {
             "type": "row",
-            "key": "sliderTweenSpeedMs"
+            "key": "selectTweenAddPose"
           },
           {
             "type": "row",
-            "key": "__row4"
+            "key": "sliderTweenSpeedMs"
           }
         ],
         "rowKeys": [
-          "selectTweenAddPose",
+          "__row0",
           "__row1",
           "__row2",
-          "sliderTweenSpeedMs",
-          "__row4"
+          "selectTweenAddPose",
+          "sliderTweenSpeedMs"
         ],
         "subgroups": []
       },
@@ -4011,7 +4011,7 @@
     "desktop:Toon Shading": true,
     "desktop:Outline": true,
     "desktop:Background": true,
-    "mobile:Dev Panel": false,
+    "mobile:Dev Panel": true,
     "mobile:MECHANICS": false,
     "mobile:PANEL UI": false,
     "mobile:TEXT": false,
@@ -4043,7 +4043,7 @@
     "mobile:Toon Shading": false,
     "mobile:Outline": false,
     "mobile:Background": false,
-    "landscape:Dev Panel": false,
+    "landscape:Dev Panel": true,
     "landscape:MECHANICS": false,
     "landscape:PANEL UI": false,
     "landscape:TEXT": false,
