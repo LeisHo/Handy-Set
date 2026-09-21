@@ -63,11 +63,11 @@
     "sliderposeOffsetY": 0,
     "sliderposeOffsetZ": 0,
     "sliderPoseScale": 1,
-    "sliderCameraX": 0.5,
-    "sliderCameraY": 131.5,
-    "sliderCameraZ": -22.5,
-    "sliderCameraFov": 32,
-    "sliderCameraZoom": 60,
+    "sliderCameraX": 3.5,
+    "sliderCameraY": 31.5,
+    "sliderCameraZ": 60.5,
+    "sliderCameraFov": 15,
+    "sliderCameraZoom": 62,
     "checkboxLockCameraPan": false,
     "checkboxLockCameraZoom": false,
     "checkboxCameraMaxExtentsEnabled": false,
@@ -77,9 +77,9 @@
     "checkboxShowTargetMarker": false,
     "checkboxPalmFacesCursor": true,
     "sliderPalmFaceRotationOffset": 0,
-    "sliderKeyAzimuth": 360,
-    "sliderKeyElevation": -3,
-    "sliderKeyTargetHeight": -18,
+    "sliderKeyAzimuth": 117,
+    "sliderKeyElevation": 56,
+    "sliderKeyTargetHeight": 71,
     "sliderKeyIntensity": 6,
     "colorKeyColor": "#ffffff",
     "sliderAmbientIntensity": 0,
@@ -87,8 +87,8 @@
     "colorAmbientGroundColor": "#3a2f2a",
     "sliderToonSteps": 2,
     "sliderToonStepThreshold": 2.6,
-    "sliderToonShadowFloor": 12,
-    "sliderToonLightCeiling": 81,
+    "sliderToonShadowFloor": 13,
+    "sliderToonLightCeiling": 41,
     "colorToonBaseTint": "#ffffff",
     "sliderTextureInfluence": 0,
     "colorToonTint": "#ffffff",
@@ -105,7 +105,7 @@
     "left": 20,
     "top": 20,
     "width": 350,
-    "height": 652
+    "height": 341
   },
   "devPanelStyle": {
     "titleFontSize": 17,
@@ -1382,10 +1382,6 @@
         "items": [
           {
             "type": "row",
-            "key": "__row0"
-          },
-          {
-            "type": "row",
             "key": "sliderTweenT"
           },
           {
@@ -1407,7 +1403,6 @@
           }
         ],
         "rowKeys": [
-          "__row0",
           "sliderTweenT",
           "sliderTweenFrameCount",
           "textExportFramePrefix"
@@ -4404,17 +4399,17 @@
     "desktop:Tween": true,
     "desktop:Saved Tween Sequences": false,
     "desktop:Field Layout": true,
-    "desktop:Pose": true,
+    "desktop:Pose": false,
     "desktop:ROTATION": true,
     "desktop:THUMB": true,
-    "desktop:Wrist": true,
+    "desktop:Wrist": false,
     "desktop:Index": true,
     "desktop:Middle": true,
     "desktop:Ring": true,
     "desktop:Pinky": true,
     "desktop:Pose Offset": true,
-    "desktop:Saved Poses": true,
-    "desktop:Camera": false,
+    "desktop:Saved Poses": false,
+    "desktop:Camera": true,
     "desktop:Saved Cameras": false,
     "desktop:Phone Tilt": true,
     "desktop:Tracking": false,
