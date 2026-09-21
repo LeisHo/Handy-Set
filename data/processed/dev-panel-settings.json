@@ -4800,5 +4800,15 @@
     "tx": -6.897279812044404,
     "ty": -9.152776676638732,
     "tz": 4.015421939396008
+  },
+  "defaultLighting": {
+    "keyAzimuth": 117,
+    "keyElevation": 56,
+    "keyTargetHeight": 71,
+    "keyIntensity": 6,
+    "keyColor": "#ffffff",
+    "ambientIntensity": 0,
+    "ambientSkyColor": "#ffffff",
+    "ambientGroundColor": "#3a2f2a"
   }
 }
