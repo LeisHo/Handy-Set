@@ -221,6 +221,47 @@ function computeBaseScale() { return (8 / handLengthRaw) * cfg.handScale }
 const _curlAxisScratch = new THREE.Vector3()
 const _splayAxisScratch = new THREE.Vector3()
 const _splay2AxisScratch = new THREE.Vector3()
+// Wrist-aware curl/splay axis reference — ported verbatim from HANDY
+// DANDIES' own real applyCurlToSkeleton() (its docs/CHANGELOG.txt,
+// 2026-09-14/15 entries document the full multi-round debugging saga
+// this exact formula survived) after a direct report that Saved Poses
+// with a nonzero wristBend/wristSplay still render wrong even after the
+// wrist-rotation-method fix. Root cause: the curl/splay axis used only
+// `baseQuat` (the whole-hand's PRE-wrist orientation) as its reference —
+// but every finger's base joint is a descendant of the wrist bone
+// (`rHand`), so anatomically the curl/splay axis needs to rotate WITH
+// the wrist too (closing a fist still closes toward your own palm no
+// matter how your wrist is bent). Using a wrist-independent axis means
+// curl/splay increasingly "misses" the real rotated palm the further the
+// wrist moves from wherever a pose's values were tuned by eye — exactly
+// "some poses work [wristBend=wristSplay=0], some are still messed up
+// [nonzero]".
+//
+// The naive fix (conjugate by the wrist bone's FULL world quat) was
+// tried and rejected by HANDY DANDIES' own history: it passes every
+// relative-to-wrist invariance test (self-consistent) but collapses to
+// IDENTITY at delta=identity (wristBend=wristSplay=0 exactly), silently
+// DISCARDING baseQuat and breaking the poses that were supposedly fine.
+// The correct fix conjugates only the wrist's LOCAL delta-from-rest by
+// its own rest quaternion, composed onto baseQuat:
+// `baseQuat * wristRest * delta * wristRest^-1`, delta =
+// `wristRest^-1 * wristBone.quaternion` — this correctly reduces to
+// exactly `baseQuat` when delta=I (matching the no-wrist-bone fallback
+// below) while still rotating the axis to track real wrist bend/splay
+// otherwise. Requires applyWristPoseToSkeleton() to have already run
+// this call (Handyset's own applyPoseValuesToHand() already orders wrist
+// before fingers, matching HANDY DANDIES' own documented ordering
+// requirement).
+const _curlWristDeltaScratch = new THREE.Quaternion()
+const _curlWristRestInvScratch = new THREE.Quaternion()
+const _curlAxisRefQuat = new THREE.Quaternion()
+function computeCurlAxisRefQuat(skeleton, baseQuat) {
+  const wristBoneForAxis = skeleton.getBoneByName('rHand')
+  const wristRestForAxis = boneRestQuat.rHand
+  if (!wristBoneForAxis || !wristRestForAxis) return baseQuat
+  const delta = _curlWristDeltaScratch.copy(wristRestForAxis).invert().multiply(wristBoneForAxis.quaternion)
+  return _curlAxisRefQuat.copy(baseQuat).multiply(wristRestForAxis).multiply(delta).multiply(_curlWristRestInvScratch.copy(wristRestForAxis).invert())
+}
 function applyCurlToSkeleton(fingerName, skeleton, baseQuat, wrapperQuat, values) {
   const joints = FINGER_JOINTS[fingerName]
   const maxDegs = FINGER_MAX_DEG[fingerName]
@@ -233,7 +274,7 @@ function applyCurlToSkeleton(fingerName, skeleton, baseQuat, wrapperQuat, values
   const midOnly = values[FINGER_MID_ONLY_CURL_KEY[fingerName]] || 0
   const tipOnly = values[FINGER_TIP_ONLY_CURL_KEY[fingerName]] || 0
   const tipTwist = values[FINGER_TIP_TWIST_KEY[fingerName]] || 0
-  const axisRefQuat = baseQuat
+  const axisRefQuat = computeCurlAxisRefQuat(skeleton, baseQuat)
   const curlAxis = _curlAxisScratch.copy(FINGER_CURL_AXIS[fingerName]).applyQuaternion(axisRefQuat)
   const splayAxis = _splayAxisScratch.copy(FINGER_SPLAY_AXIS[fingerName]).applyQuaternion(axisRefQuat)
   const splay2Axis = _splay2AxisScratch.copy(FINGER_SPLAY2_AXIS[fingerName]).applyQuaternion(axisRefQuat)
