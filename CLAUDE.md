@@ -322,14 +322,71 @@ wiring, and are still open:
   genuinely sequential (each subsequent rotation spins around the axis as
   already reoriented by the previous one). The two only agree at
   near-zero angles — for any real combined bend+splay+rotation pose they
-  diverge. Every OTHER wrist-adjacent axis choice in this file
-  (model-rotation via `alignQuat * Euler(modelRotX/Y/Z)`, finger curl/
-  splay via `rotateOnTrueWorldAxis` with a `wrapperQuat` exclude) was
-  cross-checked against Handy Dandies' real source and found to already
-  match — this was the one genuine divergence. Pose Offset X/Y/Z
-  (`h.clone.position.set(...)`) is a KNOWN remaining gap, not yet
-  ported: Handy Dandies resolves its own pose offset against the
-  camera's own right/up/toward-camera basis (`applyPoseOffsetToPosition()`),
-  not plain world-space axes like this project's own version — currently
-  harmless only because every seeded saved pose has `poseOffsetX/Y/Z: 0`,
-  so port this before any pose actually uses a nonzero offset.
+  diverge. **Corrected 2026-09-21:** this entry originally claimed finger
+  curl/splay's own `rotateOnTrueWorldAxis` mechanism was "cross-checked
+  against Handy Dandies' real source and found to already match" — that
+  was wrong. The rotation MECHANISM matched, but the curl/splay axis
+  *reference frame* did not — see the next gotcha entry below for the
+  real, separate bug this missed (found only after the user reported
+  poses were "still an issue... not as bad" after this wrist-rotation fix
+  alone). Model-rotation (`alignQuat * Euler(modelRotX/Y/Z)`) is still
+  confirmed correct. Pose Offset X/Y/Z (`h.clone.position.set(...)`) is a
+  KNOWN remaining gap, not yet ported: Handy Dandies resolves its own
+  pose offset against the camera's own right/up/toward-camera basis
+  (`applyPoseOffsetToPosition()`), not plain world-space axes like this
+  project's own version — currently harmless only because every seeded
+  saved pose has `poseOffsetX/Y/Z: 0`, so port this before any pose
+  actually uses a nonzero offset.
+- **`applyCurlToSkeleton()`'s curl/splay axis reference must track the
+  wrist bone's own current bend/splay, not just the pre-wrist `baseQuat`
+  (fixed 2026-09-21)** — the real, separate bug behind "some poses work,
+  some others are still messed up" after the wrist-rotation-method fix
+  above. Every finger's base joint is a structural descendant of the
+  wrist bone (`rHand`), so anatomically curl/splay direction must rotate
+  WITH the wrist (closing a fist still closes toward your own palm no
+  matter how your wrist is bent) — but the axis reference was just
+  `baseQuat` (whole-hand orientation BEFORE the wrist), so curl/splay
+  increasingly "missed" the real rotated palm the further wristBend/
+  wristSplay moved from wherever a pose was tuned by eye. Found by
+  reading HANDY DANDIES' own `docs/CHANGELOG.txt` per direct instruction,
+  not re-derived — its 2026-09-14/15 entries document a multi-round saga
+  ending in the correct formula:
+  `computeCurlAxisRefQuat()` (main.js) conjugates the wrist's LOCAL
+  delta-from-rest by its own rest quaternion, composed onto `baseQuat`:
+  `baseQuat * wristRest * delta * wristRest^-1`, `delta = wristRest^-1 *
+  wristBone.quaternion`. **Do NOT "simplify" this to conjugating by the
+  wrist bone's full WORLD quaternion instead** — Handy Dandies tried that
+  first and it passes every relative-to-wrist self-consistency test
+  (looks correct) while silently collapsing to IDENTITY — discarding
+  `baseQuat` entirely — at `wristBend=wristSplay=0` exactly, breaking
+  every pose that has zero wrist rotation (which is most of them). Any
+  test of this formula MUST include the delta=identity case explicitly,
+  not just a range of nonzero wrist values, or a systematically-biased-
+  but-self-consistent regression can look green while still being wrong
+  — the exact trap Handy Dandies' own history fell into twice. Requires
+  `applyWristPoseToSkeleton()` to have already run for the current frame
+  (sets the wrist bone's live `.quaternion`) — Handyset's own
+  `applyPoseValuesToHand()` already orders wrist before fingers, matching
+  Handy Dandies' own documented ordering requirement.
+- **Cursor Tracking's rotation mechanism was confirmed working via direct
+  state inspection on the real live Vercel deployment** (2026-09-21,
+  `https://handy-set.vercel.app` with no `?dev=1`): `hands[0].wrapper.quaternion`
+  changed from `[0,1,0,0]` to `[-0.11,0.84,-0.19,-0.49]` after a real
+  mouse hover, proving mousemove -> tiltTarget -> rotation genuinely
+  works end to end. If a future report says tracking "does nothing,"
+  check this mechanism directly (`window.__debug.hands[0].wrapper.quaternion`
+  before/after a mouse move) before assuming the wiring is broken — it
+  may instead be the next gotcha below.
+- **The live default color scheme (`toonBaseTint`, `bgColor`, `keyColor`
+  all `#ffffff`, `ambientIntensity: 0`) makes the hand nearly invisible
+  against the page background** — confirmed via a screenshot of the real
+  deployed site (no dev panel): only faint edge/shading lines are
+  visible, no clear filled shape. This is a PRE-EXISTING default (these
+  are the literal hardcoded `cfg` values, unrelated to any fix made this
+  session), not a regression — but it's a real, live usability problem:
+  a user can't tell whether Phone Tilt/Cursor Tracking is rotating the
+  hand if they can barely see it at all, which is a very plausible
+  explanation for "nothing happens" reports even when the underlying
+  mechanism (see the gotcha above) is confirmed working correctly. Not
+  yet fixed — needs a deliberate color-scheme decision, not a unilateral
+  change.

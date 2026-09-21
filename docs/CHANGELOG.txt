@@ -646,6 +646,70 @@ time mid-session -- pulled via `git stash`/fast-forward/`stash pop`
 again before this round's own commit, same as last round.
 
 --------------------------------------------------------------------------------
+2026-09-21  -  5:37 AM - 5:42 AM EDT (5m03s per two `date` calls)
+
+Fixed the real, separate bug behind "the pose issue is still an issue...
+not as bad, but some poses are still messed up" -- direct follow-up after
+last round's wrist-rotation-METHOD fix (rotateOnTrueWorldAxis ->
+bone.rotateX/Y/Z) only partially fixed pose rendering.
+
+Per direct instruction ("check how handy dandy project fixed it... check
+their change logs... I believe finger curl and splay direction is local
+to the wrong thing or anchored to the rotation of another object"),
+searched HANDY DANDIES' own `docs/CHANGELOG.txt` for this exact bug class
+instead of re-deriving from scratch, and found it: a multi-round 2026-09-
+14/15 saga titled "THE ACTUAL, FINAL, REAL root cause of the entire
+thumb/finger-pose saga" / "Found and fixed the ACTUAL wrist-splay/curl
+bug." Cross-referenced against Handyset's own current `applyCurlToSkeleton()`
+and confirmed the identical bug still present: the curl/splay axis
+reference was just `baseQuat` (the whole-hand's orientation BEFORE the
+wrist), completely ignoring the wrist bone's own current bend/splay --
+despite every finger's base joint being a structural descendant of the
+wrist bone (`rHand`). Anatomically, curl direction must rotate WITH the
+wrist (closing a fist still closes toward your own palm no matter how
+your wrist is bent) -- a wrist-independent axis increasingly "misses" the
+real rotated palm the further wristBend/wristSplay moves from wherever a
+pose's curl values were tuned by eye. This exactly explains "some poses
+work [wristBend=wristSplay=0, e.g. Fist], some others are still messed up
+[nonzero, e.g. Big Open Palm (S)]."
+
+Ported HANDY DANDIES' own real, TWICE-corrected formula verbatim (not the
+first, rejected attempt): `computeCurlAxisRefQuat()` conjugates the
+wrist's LOCAL delta-from-rest by its own rest quaternion, composed onto
+baseQuat -- `baseQuat * wristRest * delta * wristRest^-1`, `delta =
+wristRest^-1 * wristBone.quaternion`. Explicitly NOT the naive "conjugate
+by the wrist's full WORLD quaternion" version, which Handy Dandies' own
+history shows passes every relative-to-wrist self-consistency test while
+silently collapsing to IDENTITY (discarding baseQuat) at
+wristBend=wristSplay=0 exactly -- a systematically-biased-but-self-
+consistent formula that looks correct in every test except the one that
+actually matters.
+
+Verified both required cases live: "Fist" (wristBend=wristSplay=0)
+renders PIXEL-IDENTICAL to before this fix (screenshot comparison),
+confirming the new formula correctly reduces to baseQuat at delta=identity
+with zero regression; "Big Open Palm (S)" (wristSplay=-55) now renders
+visibly differently and still as a plausible, non-degenerate open hand,
+confirming the fix has real effect on the previously-broken nonzero case.
+
+Also investigated, mid-round, a separate direct report ("phone tilt
+doesn't work... cursor tracking doesn't work on desktop either... maybe
+double check your wiring"): tested directly against the REAL live Vercel
+deployment (no `?dev=1`, matching an actual visitor) via
+`window.__debug.hands[0].wrapper.quaternion` before/after a real mouse
+hover -- confirmed it changes substantially ([0,1,0,0] ->
+[-0.11,0.84,-0.19,-0.49]), proving the tracking mechanism itself is
+genuinely working end to end, not a wiring bug. Found a likely
+explanation instead: the live default color scheme (toonBaseTint,
+bgColor, keyColor all #ffffff, ambientIntensity 0) makes the hand nearly
+invisible against the page background (confirmed via screenshot -- only
+faint edge lines visible, no clear filled shape) -- a pre-existing
+default, not a regression from any fix this session, but a plausible
+reason a real rotation could be invisible to the user. Not fixed this
+round (a deliberate color-scheme choice, not unilaterally changed) --
+documented in CLAUDE.md as a known, real usability issue.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
