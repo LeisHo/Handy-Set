@@ -106,6 +106,19 @@ wiring, and are still open:
 
 ## Gotchas
 
+- **`registerDevControlArray()` is REQUIRED, not optional, for the "Show in
+  Mobile/Landscape" checkbox to actually do anything.** Every control this
+  project builds via `addRow()` is collected into `HANDYSET_CONTROLS` and
+  registered once at the end of `renderHandysetDevGroups()`. Without this
+  call, `ensureDynamicTargetRow()` (devPanel.js)'s own
+  `findRegisteredControlById()` lookup always fails, so it silently bails
+  out (`if (!desktopCtrl) return existingId || null`) and never creates
+  the actual Mobile/Landscape row — regardless of what the checkbox itself
+  says. This was missing entirely on the first pass: every checkbox
+  toggled and cascaded correctly (its own state is independent of the
+  registry), which is exactly what made the bug easy to miss without
+  actually checking whether the mirrored row showed up.
+
 - **`addRow()` (main.js) must set `ctrl.tab = 'desktop'` on every control**,
   or `buildUniformControlRow()` (devPanel.js) silently attaches the wrong
   per-row device checkbox ("Independent from Desktop" instead of "Show in
