@@ -5854,5 +5854,15 @@
     "rimIntensity": 0,
     "rimPower": 0.5,
     "rimColor": "#ffffff"
+  },
+  "defaultLighting": {
+    "keyAzimuth": 71,
+    "keyElevation": 7,
+    "keyTargetHeight": 100,
+    "keyIntensity": 6,
+    "keyColor": "#ffffff",
+    "ambientIntensity": 0,
+    "ambientSkyColor": "#ffffff",
+    "ambientGroundColor": "#3a2f2a"
   }
 }
