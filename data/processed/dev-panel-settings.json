@@ -95,11 +95,6 @@
     "sliderRimIntensity": 0,
     "sliderRimPower": 0.5,
     "colorRimColor": "#ffffff",
-    "checkboxOutlineEnabled": false,
-    "colorOutlineColor": "#000000",
-    "sliderOutlineThickness": 2,
-    "sliderOutlineStrength": 5,
-    "sliderOutlineGlow": 0,
     "colorBgColor": "#ffffff",
     "checkboxShowGridHelper": false,
     "checkboxShowWireframe": false,
@@ -2473,42 +2468,6 @@
           {
             "type": "group",
             "section": {
-              "key": "desktop:Outline",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "checkboxOutlineEnabled"
-                },
-                {
-                  "type": "row",
-                  "key": "colorOutlineColor"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderOutlineThickness"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderOutlineStrength"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderOutlineGlow"
-                }
-              ],
-              "rowKeys": [
-                "checkboxOutlineEnabled",
-                "colorOutlineColor",
-                "sliderOutlineThickness",
-                "sliderOutlineStrength",
-                "sliderOutlineGlow"
-              ],
-              "subgroups": []
-            }
-          },
-          {
-            "type": "group",
-            "section": {
               "key": "desktop:Saved Toon Shading",
               "items": [],
               "rowKeys": [],
@@ -2529,39 +2488,6 @@
           "colorRimColor"
         ],
         "subgroups": [
-          {
-            "key": "desktop:Outline",
-            "items": [
-              {
-                "type": "row",
-                "key": "checkboxOutlineEnabled"
-              },
-              {
-                "type": "row",
-                "key": "colorOutlineColor"
-              },
-              {
-                "type": "row",
-                "key": "sliderOutlineThickness"
-              },
-              {
-                "type": "row",
-                "key": "sliderOutlineStrength"
-              },
-              {
-                "type": "row",
-                "key": "sliderOutlineGlow"
-              }
-            ],
-            "rowKeys": [
-              "checkboxOutlineEnabled",
-              "colorOutlineColor",
-              "sliderOutlineThickness",
-              "sliderOutlineStrength",
-              "sliderOutlineGlow"
-            ],
-            "subgroups": []
-          },
           {
             "key": "desktop:Saved Toon Shading",
             "items": [],
@@ -3426,15 +3352,6 @@
           {
             "type": "group",
             "section": {
-              "key": "mobile:Outline",
-              "items": [],
-              "rowKeys": [],
-              "subgroups": []
-            }
-          },
-          {
-            "type": "group",
-            "section": {
               "key": "mobile:Saved Toon Shading",
               "items": [],
               "rowKeys": [],
@@ -3444,12 +3361,6 @@
         ],
         "rowKeys": [],
         "subgroups": [
-          {
-            "key": "mobile:Outline",
-            "items": [],
-            "rowKeys": [],
-            "subgroups": []
-          },
           {
             "key": "mobile:Saved Toon Shading",
             "items": [],
@@ -4307,15 +4218,6 @@
           {
             "type": "group",
             "section": {
-              "key": "landscape:Outline",
-              "items": [],
-              "rowKeys": [],
-              "subgroups": []
-            }
-          },
-          {
-            "type": "group",
-            "section": {
               "key": "landscape:Saved Toon Shading",
               "items": [],
               "rowKeys": [],
@@ -4325,12 +4227,6 @@
         ],
         "rowKeys": [],
         "subgroups": [
-          {
-            "key": "landscape:Outline",
-            "items": [],
-            "rowKeys": [],
-            "subgroups": []
-          },
           {
             "key": "landscape:Saved Toon Shading",
             "items": [],
@@ -4383,7 +4279,6 @@
     "desktop:Lighting": true,
     "desktop:Saved Lighting": false,
     "desktop:Toon Shading": true,
-    "desktop:Outline": true,
     "desktop:Saved Toon Shading": false,
     "desktop:Background": false,
     "mobile:Dev Panel": true,
@@ -4419,7 +4314,6 @@
     "mobile:Lighting": false,
     "mobile:Saved Lighting": false,
     "mobile:Toon Shading": false,
-    "mobile:Outline": false,
     "mobile:Saved Toon Shading": false,
     "mobile:Background": false,
     "landscape:Dev Panel": false,
@@ -4455,7 +4349,6 @@
     "landscape:Lighting": false,
     "landscape:Saved Lighting": false,
     "landscape:Toon Shading": false,
-    "landscape:Outline": false,
     "landscape:Saved Toon Shading": false,
     "landscape:Background": false
   },
@@ -4507,7 +4400,6 @@
     "mobile:Phone Tilt": null,
     "mobile:Saved Lighting": null,
     "mobile:Lighting": null,
-    "mobile:Outline": null,
     "mobile:Saved Toon Shading": null,
     "mobile:Toon Shading": null,
     "mobile:Background": null,
@@ -4558,7 +4450,6 @@
     "landscape:Phone Tilt": null,
     "landscape:Saved Lighting": null,
     "landscape:Lighting": null,
-    "landscape:Outline": null,
     "landscape:Saved Toon Shading": null,
     "landscape:Toon Shading": null,
     "landscape:Background": null,
