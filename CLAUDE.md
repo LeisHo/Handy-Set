@@ -56,44 +56,53 @@ generic engine capability it doesn't have yet; add project settings via
 
 ## Known simplifications vs. HANDY DANDIES
 
-These were deliberate scope cuts, made under real time pressure to ship a
-working build — see `docs/PROJECT_PROGRESS.md` for the fuller account and
-what's worth porting properly later:
+**Corrected 2026-09-21** — the original version of this section documented
+several SILENT scope cuts (a plain select+3-buttons instead of the real
+list-picker, generic group/setting names instead of HANDY DANDIES' actual
+current ones) that should have been surfaced and asked about instead of
+disclosed after the fact — see the parent workspace `CLAUDE.md` §0a's new
+"Full fidelity or ask" subsection, added the same day this was caught. The
+list-picker (Save/Overwrite/Use/Rename/Delete/+Group, Export/Import on
+Saved Poses, a real scrollable list) and exact group/setting names/
+groupings (cross-checked against `HANDY DANDIES/data/processed/dev-panel-
+settings.json`'s actual saved `order`/`textOverrides` — NOT just the base
+DEV_GROUPS code, which the LIVE panel had already been reorganized away
+from) are now ported properly. The full Field Layout group (rows/cols/
+spacing/offsets/hide) is also now ported, defaulted to 1x1 (a single
+centered hand) per direct instruction, ready for more hands later.
 
-- **Wrist crop ("Hide Wrist %")** is a single clipping plane positioned by
-  a fixed multiple of the hand's own measured length, NOT HANDY DANDIES'
-  own "Reactive Arm Length" curve system (never ported — out of scope).
-  The exact crop-plane reach (`maxReach` in `updateWristCrop()`) was tuned
-  by eye against one pose/camera combination and may need further
-  adjustment for other poses.
-- **Wrist bend/splay/rotation math** reuses the same `rotateOnTrueWorldAxis`
-  mechanism as the finger system (ported verbatim) but the axis choices
-  were reconstructed by this session (HANDY DANDIES' own
-  `applyWristPoseToSkeleton` body wasn't available to extract) — worth a
-  visual sanity check against a HANDY DANDIES build.
-- **Toon shading** re-derives a standard step-gradient (`makeGradientTexture()`)
-  rather than porting HANDY DANDIES' own rim-light shader injection
-  (`onBeforeCompile` GLSL patch) — the Toon Shading group has no Rim
-  Intensity/Power/Color or Texture Influence controls as a result.
-- **Camera preset retargeting**: HANDY DANDIES' saved cameras were
-  captured against its own much larger multi-hand field (default field
-  radius ~138 world units vs. this project's single-hand ~15-20) —
-  `applyCameraPreset()` preserves each preset's viewing DIRECTION but
-  recomputes distance from a "fit the hand in this FOV" formula rather
-  than the raw captured distance, which otherwise put the camera wildly
-  too far away. The default framing (FRONTOS/Fist/FLABOVE together) still
-  looks under-lit/tightly-framed as shipped — tune via the Camera/Pose/
-  Lighting sliders, which are all confirmed working.
-- **Saved-preset UI** (Pose/Camera/Lighting "Saved X" subgroups) is a
-  `select` + Use/Save-As-New/Delete button row, not a full drag-reorder
-  list-picker widget — the raw `TEMPLATE_DEV_PANEL.html` engine has no
-  generic list-picker control type (confirmed by direct inspection; that
-  feature is specific to HANDY DANDIES'/Hando's own divergent devPanel.js
-  copies), and building one from scratch was out of scope here.
-- **Shoulder/elbow/forearm pose fields** present in the imported pose JSON
-  (`shoulderRaise`, `elbowBend`, etc.) are not wired to any bone — every
+Genuine remaining gaps — these need real new subsystems, not just
+wiring, and are still open:
+
+- **Reactive Arm Length** (Reactive On/Off, Min/Max Crop %, a distance→crop
+  curve editor, `armLengthRange`/`armLengthCurve`) — `updateWristCrop()`
+  still only does the simplified fixed-multiple-of-hand-length version.
+- **Responsive Wrist Splay** (Master On/Off, stagger, default, reactive
+  on/off, Min/Max range, a distance→splay curve editor) — not built at
+  all yet.
+- **Toon rim-lighting** (Texture Influence, Toon Texture Tint, Rim
+  Intensity/Power/Color) — needs HANDY DANDIES' actual `onBeforeCompile`
+  GLSL patch (`createToonMaterial()`, that project's main.js), not
+  reconstructed from scratch. `makeGradientTexture()`'s plain step-gradient
+  stays as the base, this adds on top of it.
+- **Outline: Use OutlinePass toggle + Hull-shader alternative** (Hull
+  Outline Thickness) — this project only ever built the OutlinePass
+  technique; HANDY DANDIES lets you switch between 2.
+- **Camera Max Extents** only clamps zoom distance (`controls.maxDistance`)
+  — HANDY DANDIES' own `enforceCameraPanExtent()` also clamps the PAN
+  target to a bounding sphere every frame; not ported.
+- **Wrist bend/splay/rotation axis choices** in `applyWristPoseToSkeleton()`
+  were reconstructed (matching the finger system's own
+  `rotateOnTrueWorldAxis` mechanism) rather than copied from HANDY
+  DANDIES' real function body — still worth a visual sanity check.
+- **Shoulder/elbow/forearm pose fields** (`shoulderRaise`, `elbowBend`,
+  etc.) in the imported pose JSON are not wired to any bone — every
   provided pose has them at 0, and the wrist crop hides that region
   regardless.
+- **Multi-hand camera framing**: `getHandCenterWorld()`/camera presets
+  target the PRIMARY hand (`hands[0]`) only — reasonable for the current
+  1x1 default, but once more hands are added the camera won't automatically
+  frame the whole field; needs its own follow-up.
 
 ## Gotchas
 

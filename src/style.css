@@ -1,3 +1,34 @@
+/* Saved-preset list-picker widget (Pose/Camera/Lighting Save/Overwrite/
+   Use/Rename/Delete/+Group/Export/Import) — ported to match Handy
+   Dandies' own scrollable list, reusing this file's own dev-panel color
+   tokens rather than hardcoding new colors. */
+.dp-list-picker-row-container { margin-bottom: 6px; }
+.dp-list-picker {
+  max-height: 160px;
+  overflow-y: auto;
+  border: 1px solid var(--dev-accent-color, #0ff);
+  border-radius: 4px;
+  margin-bottom: 6px;
+  background: rgba(255, 255, 255, 0.03);
+}
+.dp-list-picker-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  cursor: pointer;
+  font-size: calc(var(--dev-setting-title-font-size-px, 12) * 1px);
+}
+.dp-list-picker-item:hover { background: rgba(0, 255, 255, 0.08); }
+.dp-list-picker-item-selected { background: rgba(0, 255, 255, 0.2) !important; }
+.dp-list-picker-item-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dp-list-picker-group-header {
+  font-weight: bold;
+  padding: 3px 8px;
+  font-size: calc(var(--dev-setting-title-font-size-px, 12) * 0.85px);
+  opacity: 0.75;
+}
+
 /* Page-level styles */
 html, body {
   margin: 0;

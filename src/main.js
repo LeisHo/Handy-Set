@@ -15,12 +15,17 @@ const motionBtn = document.getElementById('motionPermissionBtn')
 // directly by control event listeners further down.
 // ---------------------------------------------------------------------
 const cfg = {
-  // Field Layout
-  handScale: 1.55,
+  // Field Layout — defaults to a single centered hand (1 row x 1 col);
+  // per direct request, the full multi-hand field controls are ported
+  // even though only 1x1 is used today, so more hands can be added later.
+  fieldRows: 1, fieldCols: 1, rowSpacing: 9.5, columnSpacing: 14, handScale: 1.55,
+  alternateRowOffset: -5.5, progressiveRowOffset: 0, useProgressiveOffset: false, hideHands: false,
   // Pose (finger/wrist/whole-hand — filled from POSE_KEY_DEFAULTS below)
   // Camera
   cameraX: 3.598517809628556, cameraY: 31.35475415298584, cameraZ: 60.28634317626074,
   cameraFov: 32, targetX: 3.5985178096286012, targetY: 31.35475415298582, targetZ: -314.71365682373926,
+  cameraZoom: 60, lockCameraPan: false, lockCameraZoom: false, cameraMaxExtentsEnabled: false,
+  cropWristEnabled: true,
   // Phone Tilt (renamed from Cursor Tracking)
   trackingEnabled: false, trackingDamping: 1, targetDepthFactor: 0.6,
   showTargetMarker: false, palmFacesCursor: false, palmFaceRotationOffset: 0,
@@ -66,6 +71,7 @@ const SAVED_LIGHTING = [
   {"name":"2 Tone - Flabbehind","keyAzimuth":114,"keyElevation":76,"keyTargetHeight":-100,"keyIntensity":6,"keyColor":"#ffffff","ambientIntensity":0,"ambientSkyColor":"#ffffff","ambientGroundColor":"#3a2f2a"},
   {"name":"behind thumb drag","keyAzimuth":60,"keyElevation":38,"keyTargetHeight":106,"keyIntensity":6,"keyColor":"#ffffff","ambientIntensity":0,"ambientSkyColor":"#ffffff","ambientGroundColor":"#3a2f2a"}
 ]
+const SAVED_TWEEN_SEQUENCES = []
 const DEFAULT_POSE_NAME = 'Fist'
 const DEFAULT_CAMERA_NAME = 'FRONTOS'
 const DEFAULT_LIGHTING_NAME = 'FLABOVE'
@@ -162,7 +168,8 @@ const sceneState = { fieldRadius: 10 }
 let toonMaterial = null
 let outlineMaterial = null
 let modelRoot = null
-let hand = null // { wrapper, clone, skinnedMesh, outlineMesh, currentBaseQuat }
+let hands = [] // [{ wrapper, clone, skinnedMesh, outlineMesh, currentBaseQuat, clipPlane, row, col }, ...]
+let hand = null // hands[0] — the "primary" hand: pose-editing reference frame, camera targeting, wireframe/tint toggles
 
 function computeBaseScale() { return (8 / handLengthRaw) * cfg.handScale }
 
@@ -218,8 +225,7 @@ function applyCurlToSkeleton(fingerName, skeleton, baseQuat, wrapperQuat, values
   })
 }
 function applyCurl(fingerName) {
-  if (!hand) return
-  applyCurlToSkeleton(fingerName, hand.skinnedMesh.skeleton, hand.currentBaseQuat, hand.wrapper.quaternion, cfg)
+  hands.forEach((h) => applyCurlToSkeleton(fingerName, h.skinnedMesh.skeleton, h.currentBaseQuat, h.wrapper.quaternion, cfg))
 }
 
 // Wrist bend/splay/rotation — same rotateOnTrueWorldAxis mechanism as the
@@ -245,58 +251,50 @@ function computeBaseQuatFromValues(values) {
   ))
 }
 
-// Single entry point: apply a full pose-values object to the one visible
-// hand. Used directly by Pose-group sliders, saved-pose "Use", and Tween.
+// Single entry point: apply a full pose-values object to every hand in
+// the field. Used directly by Pose-group sliders, saved-pose "Use", and
+// Tween — same cfg applied uniformly to all hands (matching HANDY
+// DANDIES' own design: one shared pose, N independent field positions).
 function applyPoseValuesToHand(poseValues) {
-  if (!hand) return
-  hand.currentBaseQuat.copy(computeBaseQuatFromValues(poseValues))
-  applyWristPoseToSkeleton(hand.skinnedMesh.skeleton, poseValues)
-  FINGER_NAMES.forEach((name) => applyCurlToSkeleton(name, hand.skinnedMesh.skeleton, hand.currentBaseQuat, hand.wrapper.quaternion, poseValues))
-  hand.clone.position.set(poseValues.poseOffsetX || 0, poseValues.poseOffsetY || 0, poseValues.poseOffsetZ || 0)
-  hand.clone.scale.setScalar(computeBaseScale() * (poseValues.poseScale ?? 1))
+  hands.forEach((h) => {
+    h.currentBaseQuat.copy(computeBaseQuatFromValues(poseValues))
+    applyWristPoseToSkeleton(h.skinnedMesh.skeleton, poseValues)
+    FINGER_NAMES.forEach((name) => applyCurlToSkeleton(name, h.skinnedMesh.skeleton, h.currentBaseQuat, h.wrapper.quaternion, poseValues))
+    h.clone.position.set(poseValues.poseOffsetX || 0, poseValues.poseOffsetY || 0, poseValues.poseOffsetZ || 0)
+    h.clone.scale.setScalar(computeBaseScale() * (poseValues.poseScale ?? 1))
+  })
   updateWristCrop(poseValues.hideWrist || 0)
 }
 
-// Wrist crop — single clipping plane along the measured wrist->forearm
-// normal, lerped from "no crop" (hideWrist=0) to "cropped at the wrist"
-// (hideWrist=100). Simplified from HANDY DANDIES' own reactive-arm-length
-// system (not ported — not part of this project's requested scope).
-let wristClipPlane = null
+// Wrist crop — one clipping plane PER HAND (each hand faces a different
+// direction once Phone Tilt rotates it, so each needs its own plane/
+// normal), along the measured wrist->forearm normal, lerped from "no
+// crop" (hideWrist=0) to "cropped at the wrist" (hideWrist=100).
+// Simplified from HANDY DANDIES' own reactive-arm-length system (not
+// ported — not part of this project's requested scope).
 function updateWristCrop(hideWristPct) {
-  if (!hand || !wristCropNormalAligned) return
-  if (!wristClipPlane) {
-    wristClipPlane = new THREE.Plane()
-    hand.skinnedMesh.material.clippingPlanes = [wristClipPlane]
-    if (hand.outlineMesh) hand.outlineMesh.material.clippingPlanes = [wristClipPlane]
+  if (!wristCropNormalAligned || !cfg.cropWristEnabled) {
+    hands.forEach((h) => { h.skinnedMesh.material.clippingPlanes = [] })
+    return
   }
   const t = THREE.MathUtils.clamp(hideWristPct / 100, 0, 1)
-  // wristPosRaw is a bind-pose, pre-transform local position (measured
-  // directly off the loaded GLB) — material.clippingPlanes are evaluated
-  // in world space, so it needs the clone's actual current matrixWorld,
-  // not the raw bind-pose frame (a bug on the first pass here: the plane
-  // was defined in the un-transformed bind-pose frame while the mesh
-  // itself renders fully transformed).
-  //
-  // The visible sleeve/forearm mesh turned out to extend WAY past the
-  // 'rForearmBend' bone's own position (confirmed via a wide diagnostic
-  // screenshot during initial live verification — a long dark sleeve with
-  // only a small fist-colored patch at the wrist end) — lerping between
-  // the wrist and forearm-BONE positions barely moved the plane relative
-  // to that much longer visible mesh. Using a generous fixed multiple of
-  // handLengthRaw as the "fully uncropped" reach instead, measured from
-  // the wrist along the forearm direction: t=0 -> plane far out past the
-  // visible sleeve (nothing cropped); t=1 -> plane at the wrist itself
-  // (crops the whole sleeve, only the hand past the wrist remains).
-  hand.clone.updateMatrixWorld(true)
-  const worldWrist = hand.clone.localToWorld(wristPosRaw.clone())
-  // Points toward the forearm/sleeve side (three.js discards the POSITIVE
-  // side of a clipping plane's normal) — was inverted on an earlier pass,
-  // caught via explicit distanceToPoint() checks at the wrist vs. the
-  // hand's own visible center, which should never land on the same side.
-  const worldNormal = wristCropNormalAligned.clone().applyQuaternion(hand.wrapper.quaternion).normalize().negate()
   const maxReach = handLengthRaw * computeBaseScale() * 0.35
-  const planePoint = worldWrist.clone().addScaledVector(worldNormal, (1 - t) * maxReach)
-  wristClipPlane.setFromNormalAndCoplanarPoint(worldNormal, planePoint)
+  hands.forEach((h) => {
+    if (!h.clipPlane) {
+      h.clipPlane = new THREE.Plane()
+      h.skinnedMesh.material.clippingPlanes = [h.clipPlane]
+    }
+    // wristPosRaw is a bind-pose, pre-transform local position —
+    // material.clippingPlanes are evaluated in world space, so it needs
+    // this hand's own current matrixWorld, not the raw bind-pose frame.
+    h.clone.updateMatrixWorld(true)
+    const worldWrist = h.clone.localToWorld(wristPosRaw.clone())
+    // Points toward the forearm/sleeve side (three.js discards the
+    // POSITIVE side of a clipping plane's normal).
+    const worldNormal = wristCropNormalAligned.clone().applyQuaternion(h.wrapper.quaternion).normalize().negate()
+    const planePoint = worldWrist.clone().addScaledVector(worldNormal, (1 - t) * maxReach)
+    h.clipPlane.setFromNormalAndCoplanarPoint(worldNormal, planePoint)
+  })
 }
 
 // =======================================================================
@@ -368,9 +366,8 @@ function makeGradientTexture() {
   return tex
 }
 function rebuildGradientMap() {
-  if (!hand) return
-  hand.skinnedMesh.material.gradientMap = makeGradientTexture()
-  hand.skinnedMesh.material.needsUpdate = true
+  const tex = makeGradientTexture()
+  hands.forEach((h) => { h.skinnedMesh.material.gradientMap = tex; h.skinnedMesh.material.needsUpdate = true })
 }
 
 // =======================================================================
@@ -444,26 +441,58 @@ function updateTiltTarget() {
 }
 
 // =======================================================================
-// Field build (single hand, always centered at origin)
+// Field build — a rows x cols grid of hands (defaults to 1x1, a single
+// centered hand). Grid math (alternate-row brick stagger vs. progressive-
+// row stagger) is a best-effort reconstruction of HANDY DANDIES' own
+// relayoutField() — its exact source wasn't available to extract, only a
+// paraphrased description ("alternate-row brick stagger vs. progressive-
+// row stagger") — worth a visual sanity check against a real HANDY
+// DANDIES build once fieldRows/fieldCols are actually raised above 1.
 // =======================================================================
 function rebuildField() {
-  if (hand) hand.wrapper.parent && hand.wrapper.parent.remove(hand.wrapper)
-  const wrapper = new THREE.Group()
-  const clone = modelRoot.clone(true)
-  clone.quaternion.copy(alignQuat)
-  clone.scale.setScalar(computeBaseScale())
-  wrapper.add(clone)
-  scene.add(wrapper)
+  hands.forEach((h) => { if (h.wrapper.parent) h.wrapper.parent.remove(h.wrapper) })
+  hands = []
+  const rows = Math.max(1, Math.round(cfg.fieldRows))
+  const cols = Math.max(1, Math.round(cfg.fieldCols))
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const wrapper = new THREE.Group()
+      const clone = modelRoot.clone(true)
+      clone.quaternion.copy(alignQuat)
+      clone.scale.setScalar(computeBaseScale())
+      wrapper.add(clone)
+      scene.add(wrapper)
 
-  const skinnedMesh = findSkinnedMesh(clone)
-  skinnedMesh.material = toonMaterial.clone()
-  skinnedMesh.material.color.set(cfg.toonBaseTint)
-  skinnedMesh.material.gradientMap = makeGradientTexture()
+      const skinnedMesh = findSkinnedMesh(clone)
+      skinnedMesh.material = toonMaterial.clone()
+      skinnedMesh.material.color.set(cfg.toonBaseTint)
+      skinnedMesh.material.gradientMap = makeGradientTexture()
 
-  hand = { wrapper, clone, skinnedMesh, outlineMesh: null, currentBaseQuat: alignQuat.clone() }
-  outlinePass.selectedObjects = [clone]
+      hands.push({ wrapper, clone, skinnedMesh, outlineMesh: null, currentBaseQuat: alignQuat.clone(), clipPlane: null, row: r, col: c })
+    }
+  }
+  hand = hands[0]
+  relayoutField()
+  outlinePass.selectedObjects = hands.map((h) => h.clone)
   sceneState.fieldRadius = Math.max(handBoundsRadiusLocal * computeBaseScale(), 5)
   updateKeyLightPosition()
+}
+// Repositions existing hands without rebuilding them — called whenever
+// spacing/offset/visibility settings change, so a pure layout tweak
+// doesn't re-clone every hand's geometry/material.
+function relayoutField() {
+  const rows = Math.max(1, Math.round(cfg.fieldRows))
+  const cols = Math.max(1, Math.round(cfg.fieldCols))
+  const w = (cols - 1) * cfg.columnSpacing
+  const hgt = (rows - 1) * cfg.rowSpacing
+  hands.forEach((h) => {
+    const rowOffsetX = cfg.useProgressiveOffset ? h.row * cfg.progressiveRowOffset : (h.row % 2 === 1 ? cfg.alternateRowOffset : 0)
+    const x = h.col * cfg.columnSpacing - w / 2 + rowOffsetX
+    const y = hgt / 2 - h.row * cfg.rowSpacing
+    h.wrapper.position.set(x, y, 0)
+    h.wrapper.visible = !cfg.hideHands
+    h.clone.scale.setScalar(computeBaseScale() * (cfg.poseScale ?? 1))
+  })
 }
 function findSkinnedMesh(root) {
   let found = null
@@ -615,7 +644,7 @@ function updateTween() {
 // =======================================================================
 window.__debug = {
   camera, controls, cfg, scene, THREE,
-  get hand() { return hand }, get sceneState() { return sceneState },
+  get hand() { return hand }, get hands() { return hands }, get sceneState() { return sceneState },
   get wristPosRaw() { return wristPosRaw }, get forearmPosRaw() { return forearmPosRaw },
   get wristCropNormalAligned() { return wristCropNormalAligned }, get alignQuat() { return alignQuat },
   get handLengthRaw() { return handLengthRaw }, get handCenterLocal() { return handCenterLocal },
@@ -636,21 +665,27 @@ function applyRendererSize(w, h) {
 }
 window.addEventListener('resize', () => applyRendererSize(window.innerWidth, window.innerHeight))
 
+let isPaused = false
+
 function animate() {
   requestAnimationFrame(animate)
   if (renderer.getSize(new THREE.Vector2()).width !== window.innerWidth || renderer.getSize(new THREE.Vector2()).height !== window.innerHeight) {
     applyRendererSize(window.innerWidth, window.innerHeight)
   }
   controls.update()
-  if (cfg.trackingEnabled && hand) {
-    updateTiltTarget()
-    const m = new THREE.Matrix4().lookAt(hand.wrapper.position, tiltTarget, UP)
-    const desired = new THREE.Quaternion().setFromRotationMatrix(m)
-    const baseDeg = cfg.palmFacesCursor ? computeRadialRollDeg(hand.wrapper.position, tiltTarget) : 0
-    desired.multiply(computeRollQuat(baseDeg))
-    hand.wrapper.quaternion.slerp(desired, cfg.trackingDamping)
+  if (!isPaused) {
+    if (cfg.trackingEnabled && hands.length) {
+      updateTiltTarget()
+      hands.forEach((h) => {
+        const m = new THREE.Matrix4().lookAt(h.wrapper.position, tiltTarget, UP)
+        const desired = new THREE.Quaternion().setFromRotationMatrix(m)
+        const baseDeg = cfg.palmFacesCursor ? computeRadialRollDeg(h.wrapper.position, tiltTarget) : 0
+        desired.multiply(computeRollQuat(baseDeg))
+        h.wrapper.quaternion.slerp(desired, cfg.trackingDamping)
+      })
+    }
+    updateTween()
   }
-  updateTween()
   composer.render()
 }
 
@@ -701,6 +736,19 @@ function addSubgroup(parentContent, name) {
   parentContent.appendChild(el)
   return el.querySelector(':scope > .dev-section-content')
 }
+// Every control built via addRow() is collected here and registered with
+// the engine (registerDevControlArray(), at the end of
+// renderHandysetDevGroups() below) — REQUIRED, not optional: the "Show in
+// Mobile/Landscape" checkbox's own row-creation logic
+// (ensureDynamicTargetRow() in devPanel.js) looks the control up via
+// findRegisteredControlById(), which only ever finds anything registered
+// this way. Missed entirely on the first pass — every control appeared to
+// work (toggled, cascaded correctly) because the CHECKBOX's own state is
+// independent of the registry, but the actual mirrored Mobile/Landscape
+// row was silently never created, since ensureDynamicTargetRow() bails
+// out immediately (`if (!desktopCtrl) return existingId || null`) for an
+// unregistered id, regardless of what the checkbox says.
+const HANDYSET_CONTROLS = []
 function addRow(content, ctrl) {
   // buildUniformControlRow() (devPanel.js) checks `ctrl.tab === 'desktop'`
   // to decide which per-row device checkbox to attach (visibility on
@@ -713,6 +761,7 @@ function addRow(content, ctrl) {
   if (!ctrl.tab) ctrl.tab = 'desktop'
   const row = (ctrl.type === 'text' || ctrl.type === 'number') ? buildTextInputRow(ctrl) : buildUniformControlRow(ctrl)
   content.appendChild(row)
+  if (ctrl.type !== 'text' && ctrl.type !== 'number') HANDYSET_CONTROLS.push(ctrl)
   return row
 }
 function wireSlider(id, onInput) {
@@ -728,12 +777,19 @@ function wireSlider(id, onInput) {
 function wireCheckbox(id, onChange) { const el = document.getElementById(id); if (el) el.addEventListener('change', (e) => onChange(e.target.checked)) }
 function wireColor(id, onChange) { const el = document.getElementById(id); if (el) el.addEventListener('input', (e) => onChange(e.target.value)) }
 
+// Labels match HANDY DANDIES' own DEV_GROUPS exactly (grepped from its
+// main.js, not reconstructed) — including the thumb's own 2 irregular
+// labels ("Thumb Tip Splay" / "Thumb 2nd Segment Curl" instead of the
+// "2nd Segment Splay" / "Mid-Only Curl" pattern every other finger uses).
 function addFingerSliders(content, finger) {
+  const F = finger.charAt(0).toUpperCase() + finger.slice(1)
+  const splay2Label = finger === 'thumb' ? `${F} Tip Splay (%)` : `${F} 2nd Segment Splay (%)`
+  const midOnlyLabel = finger === 'thumb' ? `${F} 2nd Segment Curl (%)` : `${F} Mid-Only Curl (%)`
   const defs = [
-    [FINGER_CURL_KEY[finger], 'Curl', -200, 200], [FINGER_SPLAY_KEY[finger], 'Splay', -200, 200],
-    [FINGER_SPLAY2_KEY[finger], 'Splay 2', -200, 200], [FINGER_CURL_BIAS_KEY[finger], 'Curl Bias', -100, 100],
-    [FINGER_BASE_ONLY_CURL_KEY[finger], 'Base-Only Curl', -200, 200], [FINGER_MID_ONLY_CURL_KEY[finger], 'Mid-Only Curl', -200, 200],
-    [FINGER_TIP_ONLY_CURL_KEY[finger], 'Tip-Only Curl', -200, 200], [FINGER_TIP_TWIST_KEY[finger], 'Tip Twist', -100, 100]
+    [FINGER_CURL_KEY[finger], `${F} Curl (%)`, -200, 200], [FINGER_SPLAY_KEY[finger], `${F} Splay (%)`, -200, 200],
+    [FINGER_SPLAY2_KEY[finger], splay2Label, -200, 200], [FINGER_CURL_BIAS_KEY[finger], `${F} Curl Bias (Base <-> Tip) (%)`, -100, 100],
+    [FINGER_BASE_ONLY_CURL_KEY[finger], `${F} Base-Only Curl (%)`, -200, 200], [FINGER_MID_ONLY_CURL_KEY[finger], midOnlyLabel, -200, 200],
+    [FINGER_TIP_ONLY_CURL_KEY[finger], `${F} Tip-Only Curl (%)`, -200, 200], [FINGER_TIP_TWIST_KEY[finger], `${F} Tip Twist (%)`, -100, 100]
   ]
   defs.forEach(([key, label, mn, mx]) => {
     const id = 'slider' + key
@@ -746,82 +802,245 @@ function capturePoseFromCfg() { const o = {}; POSE_PRESET_KEYS.forEach((k) => { 
 function captureCameraFromLive() { return { x: camera.position.x, y: camera.position.y, z: camera.position.z, fov: camera.fov, tx: controls.target.x, ty: controls.target.y, tz: controls.target.z } }
 function captureLightingFromLive() { const o = {}; LIGHTING_PRESET_KEYS.forEach((k) => { o[k] = cfg[k] }); return o }
 
-function renderPresetPicker(content, title, items, defaultName, applyFn, captureFn) {
-  const sub = addSubgroup(content, title)
-  const selectId = 'select' + title.replace(/\s+/g, '')
-  addRow(sub, { id: selectId, label: 'Preset', type: 'select', options: items.map((i) => ({ value: i.name, text: i.name })) })
-  const selectEl = document.getElementById(selectId)
-  selectEl.value = defaultName
+// Full list-picker widget, ported to match HANDY DANDIES' own
+// buildListPickerRow()/renderListPickerRows() (src/devpanel/devPanel.js
+// there) as closely as practical in the time available: Save/Overwrite/
+// Use/Rename/Delete/+Group buttons, optional Export Selected/Import
+// (checkbox-per-item clipboard JSON, only on Saved Poses — matching HANDY
+// DANDIES, where only its own savedPoses control has these 2 buttons),
+// a scrollable item list with group headers. `items` is mutated IN
+// PLACE (push/splice, never reassigned) so other code already holding a
+// reference to the same array (e.g. Tween's own SAVED_POSES read) sees
+// live updates without needing its own refresh call.
+function buildListPicker(content, opts) {
+  const container = document.createElement('div')
+  container.className = 'dp-list-picker-row-container'
+  const listEl = document.createElement('div')
+  listEl.className = 'dp-list-picker'
+  container.appendChild(listEl)
+
+  function mkBtn(text) { const b = document.createElement('button'); b.type = 'button'; b.textContent = text; return b }
   const btnRow = document.createElement('div')
   btnRow.className = 'dev-buttons'
-  const useBtn = document.createElement('button'); useBtn.textContent = 'USE'
-  const saveBtn = document.createElement('button'); saveBtn.textContent = 'SAVE AS NEW'
-  const deleteBtn = document.createElement('button'); deleteBtn.textContent = 'DELETE'
-  btnRow.append(useBtn, saveBtn, deleteBtn)
-  sub.appendChild(btnRow)
-  useBtn.addEventListener('click', () => { const item = items.find((i) => i.name === selectEl.value); if (item) applyFn(item) })
+  const saveBtn = mkBtn('Save'), overwriteBtn = mkBtn('Overwrite'), useBtn = mkBtn('Use'), renameBtn = mkBtn('Rename'), deleteBtn = mkBtn('Delete'), groupBtn = mkBtn('+ Group')
+  btnRow.append(saveBtn, overwriteBtn, useBtn, renameBtn, deleteBtn, groupBtn)
+  container.appendChild(btnRow)
+  let exportBtn = null, importBtn = null
+  if (opts.exportable || opts.importable) {
+    const btnRow2 = document.createElement('div')
+    btnRow2.className = 'dev-buttons'
+    if (opts.exportable) { exportBtn = mkBtn('Export Selected'); btnRow2.appendChild(exportBtn) }
+    if (opts.importable) { importBtn = mkBtn('Import'); btnRow2.appendChild(importBtn) }
+    container.appendChild(btnRow2)
+  }
+  content.appendChild(container)
+
+  const items = opts.items
+  const state = { selected: items.find((i) => i.name === opts.defaultName) || null, exportChecked: new Set() }
+
+  function renderItem(it, parentEl) {
+    const row = document.createElement('div')
+    row.className = 'dp-list-picker-item'
+    if (state.selected === it) row.classList.add('dp-list-picker-item-selected')
+    if (opts.exportable) {
+      const cb = document.createElement('input')
+      cb.type = 'checkbox'
+      cb.checked = state.exportChecked.has(it)
+      cb.addEventListener('click', (e) => { e.stopPropagation(); if (cb.checked) state.exportChecked.add(it); else state.exportChecked.delete(it) })
+      row.appendChild(cb)
+    }
+    const label = document.createElement('span')
+    label.className = 'dp-list-picker-item-label'
+    label.textContent = it.name
+    row.appendChild(label)
+    row.addEventListener('click', () => { state.selected = it; render() })
+    parentEl.appendChild(row)
+  }
+  function render() {
+    listEl.innerHTML = ''
+    const groups = {}
+    const ungrouped = []
+    items.forEach((it) => { if (it.group) { (groups[it.group] = groups[it.group] || []).push(it) } else ungrouped.push(it) })
+    ungrouped.forEach((it) => renderItem(it, listEl))
+    Object.keys(groups).forEach((gname) => {
+      const header = document.createElement('div')
+      header.className = 'dp-list-picker-group-header'
+      header.textContent = '▾ ' + gname
+      listEl.appendChild(header)
+      groups[gname].forEach((it) => renderItem(it, listEl))
+    })
+  }
+  render()
+
   saveBtn.addEventListener('click', () => {
-    const name = prompt('Name this preset:')
+    const label = opts.itemLabel || 'Item'
+    const name = prompt(label + ' name:', label + ' ' + (items.length + 1))
     if (!name) return
-    const captured = captureFn(); captured.name = name
-    items.push(captured)
-    const opt = document.createElement('option'); opt.value = name; opt.textContent = name
-    selectEl.appendChild(opt); selectEl.value = name
+    const data = opts.captureCurrent ? opts.captureCurrent() : {}
+    const existing = items.find((it) => it.name === name)
+    if (existing) {
+      if (!confirm(`"${name}" already exists. Overwrite it?`)) return
+      Object.assign(existing, data, { name })
+    } else {
+      items.push(Object.assign({ name }, data))
+    }
+    render()
+  })
+  overwriteBtn.addEventListener('click', () => {
+    if (!state.selected) return
+    const data = opts.captureCurrent ? opts.captureCurrent() : {}
+    Object.assign(state.selected, data, { name: state.selected.name })
+    render()
+  })
+  useBtn.addEventListener('click', () => { if (state.selected && opts.onUse) opts.onUse(state.selected) })
+  renameBtn.addEventListener('click', () => {
+    if (!state.selected) return
+    const name = prompt('Rename to:', state.selected.name)
+    if (!name || name === state.selected.name) return
+    state.selected.name = name
+    render()
   })
   deleteBtn.addEventListener('click', () => {
-    if (items.length <= 1) return
-    const idx = items.findIndex((i) => i.name === selectEl.value)
-    if (idx < 0) return
-    items.splice(idx, 1)
-    selectEl.remove(selectEl.selectedIndex)
-    selectEl.value = items[0].name
+    if (!state.selected) return
+    const idx = items.indexOf(state.selected)
+    if (idx >= 0) items.splice(idx, 1)
+    state.selected = null
+    render()
   })
+  groupBtn.addEventListener('click', () => {
+    if (!state.selected) { alert('Select an item first, then + Group.'); return }
+    const gname = prompt('Group name:')
+    if (!gname) return
+    state.selected.group = gname
+    render()
+  })
+  if (exportBtn) exportBtn.addEventListener('click', () => {
+    const chosen = items.filter((it) => state.exportChecked.has(it))
+    if (!chosen.length) { alert('Check at least one item to export.'); return }
+    navigator.clipboard.writeText(JSON.stringify(chosen, null, 2)).then(() => alert('Copied ' + chosen.length + ' item(s) to clipboard.'))
+  })
+  if (importBtn) importBtn.addEventListener('click', async () => {
+    try {
+      const text = await navigator.clipboard.readText()
+      const parsed = JSON.parse(text)
+      const arr = Array.isArray(parsed) ? parsed : [parsed]
+      arr.forEach((item) => {
+        const existing = items.find((it) => it.name === item.name)
+        if (existing) Object.assign(existing, item)
+        else items.push(item)
+      })
+      render()
+    } catch (e) { alert('Import failed: ' + e.message) }
+  })
+  return state
+}
+function renderPresetPicker(content, title, items, defaultName, applyFn, captureFn, opts) {
+  const sub = addSubgroup(content, title)
+  buildListPicker(sub, Object.assign({ items, defaultName, itemLabel: title.replace(/^Saved /, '').replace(/s$/, ''), captureCurrent: captureFn, onUse: applyFn }, opts || {}))
 }
 
 function renderPoseGroup(content) {
-  const subWhole = addSubgroup(content, 'Whole-Hand Rotation & Thumb')
-  ;[['modelRotX', -180, 180], ['modelRotY', -180, 180], ['modelRotZ', -180, 180]].forEach(([k, mn, mx]) => {
-    addRow(subWhole, { id: 'slider' + k, label: k, type: 'slider', min: mn, max: mx, step: 1, value: cfg[k] })
+  // ROTATION / THUMB split, and a dedicated Pose Offset subgroup: this
+  // matches your OWN LIVE Handy Dandies panel's actual current layout
+  // (grepped from data/processed/dev-panel-settings.json's `order` +
+  // `textOverrides`), not the base code's original "Whole-Hand Rotation &
+  // Thumb" bundle — you split ROTATION out from THUMB there yourself via
+  // drag-and-drop, and that saved state is the real source of truth.
+  const subRotation = addSubgroup(content, 'ROTATION')
+  ;[['modelRotX', -180, 180, 'Whole-Hand Rotation X (Deg)'], ['modelRotY', -180, 180, 'Whole-Hand Rotation Y (Deg)'], ['modelRotZ', -180, 180, 'Whole-Hand Rotation Z (Deg)']].forEach(([k, mn, mx, label]) => {
+    addRow(subRotation, { id: 'slider' + k, label, type: 'slider', min: mn, max: mx, step: 1, value: cfg[k] })
     wireSlider('slider' + k, (v) => { cfg[k] = v; applyPoseValuesToHand(cfg) })
   })
-  addFingerSliders(subWhole, 'thumb')
+
+  const subThumb = addSubgroup(content, 'THUMB')
+  addFingerSliders(subThumb, 'thumb')
 
   const subWrist = addSubgroup(content, 'Wrist')
-  ;[['wristBend', -90, 90], ['wristSplay', -30, 30], ['wristRotation', -180, 180]].forEach(([k, mn, mx]) => {
-    addRow(subWrist, { id: 'slider' + k, label: k, type: 'slider', min: mn, max: mx, step: 1, value: cfg[k] })
+  ;[['wristRotation', -360, 360, 'Wrist Rotation (Deg)'], ['wristBend', -90, 90, 'Wrist Bend (Deg)'], ['wristSplay', -30, 30, 'Wrist Splay (Deg)']].forEach(([k, mn, mx, label]) => {
+    addRow(subWrist, { id: 'slider' + k, label, type: 'slider', min: mn, max: mx, step: 1, value: cfg[k] })
     wireSlider('slider' + k, (v) => { cfg[k] = v; applyPoseValuesToHand(cfg) })
   })
+  // "Default Arm Length (Crop %, Reactive Off)" in Handy Dandies -- that
+  // exact label describes ITS OWN reactive-arm-length system (not ported
+  // here, per this project's documented simplification), so kept as this
+  // project's own accurate description instead of copying a label that
+  // would misdescribe what the slider actually does here.
+  addRow(subWrist, { id: 'checkboxCropWristEnabled', label: 'Crop Wrist (Master On/Off)', type: 'checkbox' })
+  document.getElementById('checkboxCropWristEnabled').checked = cfg.cropWristEnabled
+  wireCheckbox('checkboxCropWristEnabled', (v) => { cfg.cropWristEnabled = v; updateWristCrop(v ? cfg.hideWrist : 0) })
   addRow(subWrist, { id: 'sliderHideWrist', label: 'Hide Wrist (%)', type: 'slider', min: 0, max: 100, step: 1, value: cfg.hideWrist })
-  wireSlider('sliderHideWrist', (v) => { cfg.hideWrist = v; updateWristCrop(v) })
+  wireSlider('sliderHideWrist', (v) => { cfg.hideWrist = v; if (cfg.cropWristEnabled) updateWristCrop(v) })
 
   ;['index', 'middle', 'ring', 'pinky'].forEach((f) => {
     const sub = addSubgroup(content, f.charAt(0).toUpperCase() + f.slice(1))
     addFingerSliders(sub, f)
   })
 
-  ;[['poseOffsetX', -20, 20], ['poseOffsetY', -20, 20], ['poseOffsetZ', -20, 20]].forEach(([k, mn, mx]) => {
-    addRow(content, { id: 'slider' + k, label: k, type: 'slider', min: mn, max: mx, step: 0.1, value: cfg[k] })
+  const subOffset = addSubgroup(content, 'Pose Offset')
+  ;[['poseOffsetX', -20, 20, 'Pose Offset X (World Units)'], ['poseOffsetY', -20, 20, 'Pose Offset Y (World Units)'], ['poseOffsetZ', -20, 20, 'Pose Offset Z (World Units)']].forEach(([k, mn, mx, label]) => {
+    addRow(subOffset, { id: 'slider' + k, label, type: 'slider', min: mn, max: mx, step: 0.1, value: cfg[k] })
     wireSlider('slider' + k, (v) => { cfg[k] = v; applyPoseValuesToHand(cfg) })
   })
-  addRow(content, { id: 'sliderPoseScale', label: 'Pose Scale (x)', type: 'slider', min: 0.1, max: 3, step: 0.05, value: cfg.poseScale })
+  addRow(subOffset, { id: 'sliderPoseScale', label: 'Pose Scale (x)', type: 'slider', min: 0.1, max: 3, step: 0.05, value: cfg.poseScale })
   wireSlider('sliderPoseScale', (v) => { cfg.poseScale = v; applyPoseValuesToHand(cfg) })
 
-  renderPresetPicker(content, 'Saved Poses', SAVED_POSES, DEFAULT_POSE_NAME, applyPosePreset, capturePoseFromCfg)
+  renderPresetPicker(content, 'Saved Poses', SAVED_POSES, DEFAULT_POSE_NAME, applyPosePreset, capturePoseFromCfg, { exportable: true, importable: true })
 }
 
 function renderCameraGroup(content) {
-  addRow(content, { id: 'sliderCameraX', label: 'Camera X', type: 'slider', min: -500, max: 500, step: 0.5, value: cfg.cameraX })
+  addRow(content, { id: 'sliderCameraX', label: 'Camera X Position (x)', type: 'slider', min: -500, max: 500, step: 0.5, value: cfg.cameraX })
   wireSlider('sliderCameraX', (v) => { cfg.cameraX = v; camera.position.x = v })
-  addRow(content, { id: 'sliderCameraY', label: 'Camera Y', type: 'slider', min: -500, max: 500, step: 0.5, value: cfg.cameraY })
+  addRow(content, { id: 'sliderCameraY', label: 'Camera Y Position (x)', type: 'slider', min: -500, max: 500, step: 0.5, value: cfg.cameraY })
   wireSlider('sliderCameraY', (v) => { cfg.cameraY = v; camera.position.y = v })
-  addRow(content, { id: 'sliderCameraZ', label: 'Camera Z', type: 'slider', min: -500, max: 500, step: 0.5, value: cfg.cameraZ })
+  addRow(content, { id: 'sliderCameraZ', label: 'Camera Z Position (x)', type: 'slider', min: -500, max: 500, step: 0.5, value: cfg.cameraZ })
   wireSlider('sliderCameraZ', (v) => { cfg.cameraZ = v; camera.position.z = v })
   addRow(content, { id: 'sliderCameraFov', label: 'Field Of View (Deg)', type: 'slider', min: 15, max: 90, step: 1, value: cfg.cameraFov })
   wireSlider('sliderCameraFov', (v) => { cfg.cameraFov = v; camera.fov = v; camera.updateProjectionMatrix() })
+  addRow(content, { id: 'sliderCameraZoom', label: 'Zoom (Distance To Pan Target) (x)', type: 'slider', min: 1, max: 500, step: 0.5, value: cfg.cameraZoom })
+  wireSlider('sliderCameraZoom', (v) => { cfg.cameraZoom = v; setCameraDistance(v) })
+  addRow(content, { id: 'checkboxLockCameraPan', label: 'Lock Camera Pan', type: 'checkbox' })
+  document.getElementById('checkboxLockCameraPan').checked = cfg.lockCameraPan
+  wireCheckbox('checkboxLockCameraPan', (v) => { cfg.lockCameraPan = v; applyCameraLockState() })
+  addRow(content, { id: 'checkboxLockCameraZoom', label: 'Lock Camera Zoom', type: 'checkbox' })
+  document.getElementById('checkboxLockCameraZoom').checked = cfg.lockCameraZoom
+  wireCheckbox('checkboxLockCameraZoom', (v) => { cfg.lockCameraZoom = v; applyCameraLockState() })
+  addRow(content, { id: 'checkboxCameraMaxExtentsEnabled', label: 'Set Default Camera As Max Extents', type: 'checkbox' })
+  document.getElementById('checkboxCameraMaxExtentsEnabled').checked = cfg.cameraMaxExtentsEnabled
+  wireCheckbox('checkboxCameraMaxExtentsEnabled', (v) => { cfg.cameraMaxExtentsEnabled = v; updateCameraMaxExtentsBound() })
   renderPresetPicker(content, 'Saved Cameras', SAVED_CAMERAS, DEFAULT_CAMERA_NAME, applyCameraPreset, captureCameraFromLive)
+}
+// Moves the camera along the existing camera->target line to a new
+// distance, preserving viewing direction (ported concept from Handy
+// Dandies' own setCameraDistance()).
+function setCameraDistance(distance) {
+  const dir = camera.position.clone().sub(controls.target)
+  const len = dir.length()
+  if (len < 1e-6) return
+  dir.multiplyScalar(distance / len)
+  camera.position.copy(controls.target).add(dir)
+  controls.update()
+}
+function applyCameraLockState() {
+  controls.enablePan = !cfg.lockCameraPan
+  controls.enableZoom = !cfg.lockCameraZoom
+}
+// Simplified vs. Handy Dandies' own version: clamps zoom distance only
+// (controls.maxDistance), not the full pan-target clamped-to-boundary-
+// sphere behavior (enforceCameraPanExtent()) — that additionally requires
+// per-frame animate()-loop enforcement Handy Dandies has and this project
+// doesn't yet. Flagged rather than silently presented as a full port.
+function updateCameraMaxExtentsBound() {
+  controls.maxDistance = cfg.cameraMaxExtentsEnabled ? cfg.cameraZoom : Infinity
 }
 
 function renderPhoneTiltGroup(content) {
+  // "Phone Tilt" is this project's own deliberate rename of Handy
+  // Dandies' "Cursor Tracking" group (explicit instruction when this
+  // project was first spec'd out) -- but the SETTINGS inside keep Handy
+  // Dandies' exact labels ("Cursor Target Depth", "Palm Faces Cursor",
+  // etc.) even though "cursor" is a slight misnomer for a phone-tilt
+  // mechanic, since you asked for exact setting names. Flag if you'd
+  // rather these say "Tilt" instead of "Cursor" throughout.
   const subTracking = addSubgroup(content, 'Tracking')
   addRow(subTracking, { id: 'checkboxTrackingEnabled', label: 'Tracking Enabled', type: 'checkbox' })
   document.getElementById('checkboxTrackingEnabled').checked = cfg.trackingEnabled
@@ -830,14 +1049,14 @@ function renderPhoneTiltGroup(content) {
   wireSlider('sliderTrackingDamping', (v) => { cfg.trackingDamping = v })
 
   const subTarget = addSubgroup(content, 'Target')
-  addRow(subTarget, { id: 'sliderTargetDepthFactor', label: 'Tilt Target Depth (x Field Radius)', type: 'slider', min: -2, max: 2, step: 0.05, value: cfg.targetDepthFactor })
+  addRow(subTarget, { id: 'sliderTargetDepthFactor', label: 'Cursor Target Depth (x Field Radius)', type: 'slider', min: -2, max: 2, step: 0.05, value: cfg.targetDepthFactor })
   wireSlider('sliderTargetDepthFactor', (v) => { cfg.targetDepthFactor = v })
   addRow(subTarget, { id: 'checkboxShowTargetMarker', label: 'Show Target Marker', type: 'checkbox' })
   document.getElementById('checkboxShowTargetMarker').checked = cfg.showTargetMarker
   wireCheckbox('checkboxShowTargetMarker', (v) => { cfg.showTargetMarker = v })
 
   const subPalm = addSubgroup(content, 'Palm Facing')
-  addRow(subPalm, { id: 'checkboxPalmFacesCursor', label: 'Palm Faces Tilt Direction', type: 'checkbox' })
+  addRow(subPalm, { id: 'checkboxPalmFacesCursor', label: 'Palm Faces Cursor', type: 'checkbox' })
   document.getElementById('checkboxPalmFacesCursor').checked = cfg.palmFacesCursor
   wireCheckbox('checkboxPalmFacesCursor', (v) => { cfg.palmFacesCursor = v })
   addRow(subPalm, { id: 'sliderPalmFaceRotationOffset', label: 'Palm Face Rotation (Deg)', type: 'slider', min: -180, max: 180, step: 1, value: cfg.palmFaceRotationOffset })
@@ -845,17 +1064,17 @@ function renderPhoneTiltGroup(content) {
 }
 
 function renderLightingGroup(content) {
-  addRow(content, { id: 'sliderKeyAzimuth', label: 'Key Azimuth (Deg)', type: 'slider', min: 0, max: 360, step: 1, value: cfg.keyAzimuth })
+  addRow(content, { id: 'sliderKeyAzimuth', label: 'Key Light Azimuth (Deg)', type: 'slider', min: 0, max: 360, step: 1, value: cfg.keyAzimuth })
   wireSlider('sliderKeyAzimuth', (v) => { cfg.keyAzimuth = v; updateKeyLightPosition() })
-  addRow(content, { id: 'sliderKeyElevation', label: 'Key Elevation (Deg)', type: 'slider', min: -89, max: 89, step: 1, value: cfg.keyElevation })
+  addRow(content, { id: 'sliderKeyElevation', label: 'Key Light Elevation (Deg)', type: 'slider', min: -89, max: 89, step: 1, value: cfg.keyElevation })
   wireSlider('sliderKeyElevation', (v) => { cfg.keyElevation = v; updateKeyLightPosition() })
   addRow(content, { id: 'sliderKeyTargetHeight', label: 'Key Light Aim Height (%)', type: 'slider', min: -100, max: 100, step: 1, value: cfg.keyTargetHeight })
   wireSlider('sliderKeyTargetHeight', (v) => { cfg.keyTargetHeight = v; updateKeyLightPosition() })
-  addRow(content, { id: 'sliderKeyIntensity', label: 'Key Intensity', type: 'slider', min: 0, max: 6, step: 0.1, value: cfg.keyIntensity })
+  addRow(content, { id: 'sliderKeyIntensity', label: 'Key Light Intensity (x)', type: 'slider', min: 0, max: 6, step: 0.1, value: cfg.keyIntensity })
   wireSlider('sliderKeyIntensity', (v) => { cfg.keyIntensity = v; keyLight.intensity = v })
-  addRow(content, { id: 'colorKeyColor', label: 'Key Color', type: 'color', value: cfg.keyColor })
+  addRow(content, { id: 'colorKeyColor', label: 'Key Light Color', type: 'color', value: cfg.keyColor })
   wireColor('colorKeyColor', (v) => { cfg.keyColor = v; keyLight.color.set(v) })
-  addRow(content, { id: 'sliderAmbientIntensity', label: 'Ambient Intensity', type: 'slider', min: 0, max: 3, step: 0.05, value: cfg.ambientIntensity })
+  addRow(content, { id: 'sliderAmbientIntensity', label: 'Ambient Intensity (x)', type: 'slider', min: 0, max: 3, step: 0.05, value: cfg.ambientIntensity })
   wireSlider('sliderAmbientIntensity', (v) => { cfg.ambientIntensity = v; hemiLight.intensity = v })
   addRow(content, { id: 'colorAmbientSkyColor', label: 'Ambient Sky Color', type: 'color', value: cfg.ambientSkyColor })
   wireColor('colorAmbientSkyColor', (v) => { cfg.ambientSkyColor = v; hemiLight.color.set(v) })
@@ -865,16 +1084,16 @@ function renderLightingGroup(content) {
 }
 
 function renderToonGroup(content) {
-  addRow(content, { id: 'sliderToonSteps', label: 'Toon Steps', type: 'slider', min: 2, max: 6, step: 1, value: cfg.toonSteps })
+  addRow(content, { id: 'sliderToonSteps', label: 'Toon Steps (Count)', type: 'slider', min: 2, max: 6, step: 1, value: cfg.toonSteps })
   wireSlider('sliderToonSteps', (v) => { cfg.toonSteps = v; rebuildGradientMap() })
-  addRow(content, { id: 'sliderToonStepThreshold', label: 'Toon Step Threshold', type: 'slider', min: 0.2, max: 5, step: 0.05, value: cfg.toonStepThreshold })
+  addRow(content, { id: 'sliderToonStepThreshold', label: 'Toon Step Threshold (Bias)', type: 'slider', min: 0.2, max: 5, step: 0.05, value: cfg.toonStepThreshold })
   wireSlider('sliderToonStepThreshold', (v) => { cfg.toonStepThreshold = v; rebuildGradientMap() })
   addRow(content, { id: 'sliderToonShadowFloor', label: 'Toon Shadow Floor (%)', type: 'slider', min: 0, max: 90, step: 1, value: cfg.toonShadowFloor })
   wireSlider('sliderToonShadowFloor', (v) => { cfg.toonShadowFloor = v; rebuildGradientMap() })
   addRow(content, { id: 'sliderToonLightCeiling', label: 'Toon Light Ceiling (%)', type: 'slider', min: 10, max: 100, step: 1, value: cfg.toonLightCeiling })
   wireSlider('sliderToonLightCeiling', (v) => { cfg.toonLightCeiling = v; rebuildGradientMap() })
   addRow(content, { id: 'colorToonBaseTint', label: 'Toon Base Tint', type: 'color', value: cfg.toonBaseTint })
-  wireColor('colorToonBaseTint', (v) => { cfg.toonBaseTint = v; if (hand) hand.skinnedMesh.material.color.set(v) })
+  wireColor('colorToonBaseTint', (v) => { cfg.toonBaseTint = v; hands.forEach((h) => h.skinnedMesh.material.color.set(v)) })
 
   const outlineSub = addSubgroup(content, 'Outline')
   addRow(outlineSub, { id: 'checkboxOutlineEnabled', label: 'Outline Enabled', type: 'checkbox' })
@@ -882,11 +1101,15 @@ function renderToonGroup(content) {
   wireCheckbox('checkboxOutlineEnabled', (v) => { cfg.outlineEnabled = v; outlinePass.enabled = v })
   addRow(outlineSub, { id: 'colorOutlineColor', label: 'Outline Color', type: 'color', value: cfg.outlineColor })
   wireColor('colorOutlineColor', (v) => { cfg.outlineColor = v; outlinePass.edgeColor.set(v) })
-  addRow(outlineSub, { id: 'sliderOutlineThickness', label: 'Outline Thickness', type: 'slider', min: 0.1, max: 10, step: 0.1, value: cfg.outlineThickness })
+  // These 3 map to OutlinePass (edgeThickness/edgeStrength/edgeGlow) --
+  // Handy Dandies' OWN OutlinePass-branch sliders are Pass Edge
+  // Thickness/Strength/Glow (its separate Hull-shader technique, not
+  // built here, has its own "Hull Outline Thickness" label instead).
+  addRow(outlineSub, { id: 'sliderOutlineThickness', label: 'Pass Edge Thickness (Px)', type: 'slider', min: 0.1, max: 10, step: 0.1, value: cfg.outlineThickness })
   wireSlider('sliderOutlineThickness', (v) => { cfg.outlineThickness = v; outlinePass.edgeThickness = v })
-  addRow(outlineSub, { id: 'sliderOutlineStrength', label: 'Outline Strength', type: 'slider', min: 0, max: 15, step: 0.5, value: cfg.outlineStrength })
+  addRow(outlineSub, { id: 'sliderOutlineStrength', label: 'Pass Edge Strength (x)', type: 'slider', min: 0, max: 15, step: 0.5, value: cfg.outlineStrength })
   wireSlider('sliderOutlineStrength', (v) => { cfg.outlineStrength = v; outlinePass.edgeStrength = v })
-  addRow(outlineSub, { id: 'sliderOutlineGlow', label: 'Outline Glow', type: 'slider', min: 0, max: 5, step: 0.1, value: cfg.outlineGlow })
+  addRow(outlineSub, { id: 'sliderOutlineGlow', label: 'Pass Edge Glow (x)', type: 'slider', min: 0, max: 5, step: 0.1, value: cfg.outlineGlow })
   wireSlider('sliderOutlineGlow', (v) => { cfg.outlineGlow = v; outlinePass.edgeGlow = v })
 }
 
@@ -915,6 +1138,10 @@ function renderTweenGroup(content) {
   runBtnRow.appendChild(runBtn); content.appendChild(runBtnRow)
   runBtn.addEventListener('click', () => playTween())
   refreshSeqDisplay()
+
+  renderPresetPicker(content, 'Saved Tween Sequences', SAVED_TWEEN_SEQUENCES, null,
+    (item) => { cfg.tweenPoses = (item.tweenPoses || []).slice(); refreshSeqDisplay() },
+    () => ({ tweenPoses: cfg.tweenPoses.slice() }))
 }
 
 function renderDebugExtras() {
@@ -925,7 +1152,11 @@ function renderDebugExtras() {
   document.getElementById('checkboxShowGridHelper').checked = cfg.showGridHelper
   wireCheckbox('checkboxShowGridHelper', (v) => { cfg.showGridHelper = v; gridHelper.visible = v })
   addRow(debugContent, { id: 'checkboxShowWireframe', label: 'Show Wireframe', type: 'checkbox' })
-  wireCheckbox('checkboxShowWireframe', (v) => { cfg.showWireframe = v; if (hand) hand.skinnedMesh.material.wireframe = v })
+  wireCheckbox('checkboxShowWireframe', (v) => { cfg.showWireframe = v; hands.forEach((h) => { h.skinnedMesh.material.wireframe = v }) })
+  const pauseRow = document.createElement('div'); pauseRow.className = 'dev-row'
+  const pauseBtn = document.createElement('button'); pauseBtn.textContent = 'PAUSE'
+  pauseRow.appendChild(pauseBtn); debugContent.appendChild(pauseRow)
+  pauseBtn.addEventListener('click', () => { isPaused = !isPaused; pauseBtn.textContent = isPaused ? 'RESUME' : 'PAUSE' })
 
   const sensorSub = addSubgroup(debugContent, 'Sensors')
   if (!isTouchDevice) {
@@ -947,8 +1178,26 @@ function renderHandysetDevGroups() {
   renderTweenGroup(addGroup('Tween'))
 
   const fieldContent = addGroup('Field Layout')
+  addRow(fieldContent, { id: 'sliderFieldRows', label: 'Rows (Count)', type: 'slider', min: 1, max: 40, step: 1, value: cfg.fieldRows })
+  wireSlider('sliderFieldRows', (v) => { cfg.fieldRows = v; rebuildField() })
+  addRow(fieldContent, { id: 'sliderFieldCols', label: 'Columns (Count)', type: 'slider', min: 1, max: 40, step: 1, value: cfg.fieldCols })
+  wireSlider('sliderFieldCols', (v) => { cfg.fieldCols = v; rebuildField() })
+  addRow(fieldContent, { id: 'sliderRowSpacing', label: 'Row Spacing (World Units)', type: 'slider', min: 2, max: 40, step: 0.5, value: cfg.rowSpacing })
+  wireSlider('sliderRowSpacing', (v) => { cfg.rowSpacing = v; relayoutField() })
+  addRow(fieldContent, { id: 'sliderColumnSpacing', label: 'Column Spacing (World Units)', type: 'slider', min: 2, max: 40, step: 0.5, value: cfg.columnSpacing })
+  wireSlider('sliderColumnSpacing', (v) => { cfg.columnSpacing = v; relayoutField() })
   addRow(fieldContent, { id: 'sliderHandScale', label: 'Hand Scale (x)', type: 'slider', min: 0.1, max: 3, step: 0.05, value: cfg.handScale })
-  wireSlider('sliderHandScale', (v) => { cfg.handScale = v; applyPoseValuesToHand(cfg) })
+  wireSlider('sliderHandScale', (v) => { cfg.handScale = v; relayoutField(); applyPoseValuesToHand(cfg) })
+  addRow(fieldContent, { id: 'sliderAlternateRowOffset', label: 'Alternate Row Offset (World Units)', type: 'slider', min: -20, max: 20, step: 0.5, value: cfg.alternateRowOffset })
+  wireSlider('sliderAlternateRowOffset', (v) => { cfg.alternateRowOffset = v; relayoutField() })
+  addRow(fieldContent, { id: 'sliderProgressiveRowOffset', label: 'Progressive Row Offset (World Units / Row)', type: 'slider', min: -20, max: 20, step: 0.5, value: cfg.progressiveRowOffset })
+  wireSlider('sliderProgressiveRowOffset', (v) => { cfg.progressiveRowOffset = v; relayoutField() })
+  addRow(fieldContent, { id: 'checkboxUseProgressiveOffset', label: 'Use Progressive Offset (Off = Alternate)', type: 'checkbox' })
+  document.getElementById('checkboxUseProgressiveOffset').checked = cfg.useProgressiveOffset
+  wireCheckbox('checkboxUseProgressiveOffset', (v) => { cfg.useProgressiveOffset = v; relayoutField() })
+  addRow(fieldContent, { id: 'checkboxHideHands', label: 'Hide Hands', type: 'checkbox' })
+  document.getElementById('checkboxHideHands').checked = cfg.hideHands
+  wireCheckbox('checkboxHideHands', (v) => { cfg.hideHands = v; relayoutField() })
 
   renderPoseGroup(addGroup('Pose'))
   renderCameraGroup(addGroup('Camera'))
@@ -961,6 +1210,13 @@ function renderHandysetDevGroups() {
   wireColor('colorBgColor', (v) => { cfg.bgColor = v; scene.background.set(v) })
 
   renderDebugExtras()
+
+  // REQUIRED — see HANDYSET_CONTROLS' own declaration comment above
+  // addRow(): without this, every control's "Show in Mobile/Landscape"
+  // checkbox toggles and cascades correctly but the Mobile/Landscape row
+  // itself is never actually created.
+  /* eslint-disable-next-line no-undef */
+  registerDevControlArray('HANDYSET_CONTROLS', HANDYSET_CONTROLS)
 }
 window.renderHandysetDevGroups = renderHandysetDevGroups
 
