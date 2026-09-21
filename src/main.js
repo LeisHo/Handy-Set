@@ -23,7 +23,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
 // this simply clears the stale local save; it does not touch the
 // separate git-tracked save (data/processed/dev-panel-settings.json,
 // reset directly when this was first found).
-const HANDYSET_SETTINGS_SCHEMA_VERSION = '2026-09-21c'
+const HANDYSET_SETTINGS_SCHEMA_VERSION = '2026-09-21d'
 try {
   if (localStorage.getItem('handysetSettingsSchemaVersion') !== HANDYSET_SETTINGS_SCHEMA_VERSION) {
     localStorage.removeItem('devPanelSettings')

@@ -7,18 +7,23 @@ append-only history.
 
 ## Currently working on
 
-Porting 2 explicitly-requested, still-missing features from Handy
-Dandies: "Responsive Wrist Splay" (master on/off, stagger, default,
-reactive-by-cursor-distance, min/max range + curve) and "Reactive Arm
-Length" (the distance-reactive version of wrist cropping — currently a
-plain fixed-percentage slider here). A background research pass is
-extracting the real Handy Dandies source for both before porting, per
-this workspace's "read real source, never reconstruct" rule. Pushed to
-`https://github.com/LeisHo/Handy-Set` (deployed via the Vercel project at
-`https://vercel.com/lpeis/handy-set`).
+Nothing in progress. Pushed to `https://github.com/LeisHo/Handy-Set`
+(deployed via the Vercel project at `https://vercel.com/lpeis/handy-set`).
 
 ## Recently completed
 
+- Ported Reactive Arm Length and Responsive Wrist Splay from Handy
+  Dandies (both explicitly, repeatedly requested) — real curve-editor
+  widgets and reactive math ported verbatim, genericized into 2 shared
+  widget builders. `tiltMagnitude` (already computed for Phone Tilt)
+  stands in for Handy Dandies' own per-field live-distance-across-hands
+  normalization, since that concept doesn't apply to this project's
+  single-hand case — a disclosed adaptation, not a scope cut; every
+  actual control is a full port. Live-verified on localhost: both
+  widgets render/drag correctly, the master toggles genuinely gate the
+  behavior (direct clip-plane-constant comparison), and cursor movement
+  produces real, measured live changes to both the wrist bone's
+  quaternion and the wrist-crop clip plane.
 - Dev-panel DOM sync after preset "Use", Outline removal, the Toon
   Shading `onBeforeCompile` root cause, ghost/misaligned group
   checkboxes, Set-as-Default being wiped by the main Sync click, Phone
@@ -53,20 +58,22 @@ this workspace's "read real source, never reconstruct" rule. Pushed to
 
 ## What's next
 
-1. Finish porting Responsive Wrist Splay + Reactive Arm Length from Handy
-   Dandies (in progress — see "Currently working on" above).
-2. Confirm with the user whether they were testing Palm Face Rotation on
+1. Confirm with the user whether they were testing Palm Face Rotation on
    `localhost` or the deployed Vercel URL — localhost's flaky script
    delivery is the leading remaining explanation for their experience.
-3. Verify Phone Tilt gyroscope rotation specifically on the user's actual
+2. Verify Phone Tilt gyroscope rotation specifically on the user's actual
    Pixel 9a — still unverified, no physical device available here.
-4. Decide on a visible default color scheme (current all-white default
+3. Decide on a visible default color scheme (current all-white default
    makes the hand nearly invisible against the page background).
-5. Port Pose Offset X/Y/Z to Handy Dandies' camera-relative resolution
+4. Port Pose Offset X/Y/Z to Handy Dandies' camera-relative resolution
    before any saved pose is given a nonzero offset value.
-6. Tune default Camera/Lighting/Toon values to taste, now that Camera
+5. Tune default Camera/Lighting/Toon values to taste, now that Camera
    restore, the color/rim controls, and Set-as-Default persistence all
    actually work.
+6. If Field Layout ever grows past 1x1, revisit whether `tiltMagnitude`
+   is still the right distance signal for Reactive Arm Length/Responsive
+   Wrist Splay — it's currently shared identically across every hand,
+   not per-hand (see CLAUDE.md's matching gotcha).
 
 ## Open questions / blockers
 

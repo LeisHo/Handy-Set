@@ -74,12 +74,18 @@ centered hand) per direct instruction, ready for more hands later.
 Genuine remaining gaps — these need real new subsystems, not just
 wiring, and are still open:
 
-- **Reactive Arm Length** (Reactive On/Off, Min/Max Crop %, a distance→crop
-  curve editor, `armLengthRange`/`armLengthCurve`) — `updateWristCrop()`
-  still only does the simplified fixed-multiple-of-hand-length version.
-- **Responsive Wrist Splay** (Master On/Off, stagger, default, reactive
-  on/off, Min/Max range, a distance→splay curve editor) — not built at
-  all yet.
+- ~~Reactive Arm Length~~ / ~~Responsive Wrist Splay~~ — **fixed
+  2026-09-21**, ported verbatim from HANDY DANDIES' real curve-editor
+  widgets (Catmull-Rom spline + optional bezier handles, SVG draggable-
+  point editor, dual-handle range bar) and reactive math, genericized into
+  2 shared widget builders. One deliberate, disclosed adaptation: HANDY
+  DANDIES normalizes "distance" against the live min/max distance across
+  a whole FIELD of hands each frame — a concept that doesn't exist for
+  this project's single-hand case — so `tiltMagnitude` (already computed
+  every frame for Phone Tilt) stands in as the distance input instead.
+  Every control (reactive on/off, default value, min/max range, curve
+  editor) is otherwise a full port. See `docs/CHANGELOG.txt`'s matching
+  entry for live-verification details.
 - ~~Toon rim-lighting~~ — **fixed 2026-09-21**, ported verbatim from HANDY
   DANDIES' real `createToonMaterial()` onBeforeCompile GLSL patch (not
   reconstructed). See `docs/CHANGELOG.txt`'s matching entry.
@@ -122,6 +128,32 @@ wiring, and are still open:
   implementation wasn't available to extract).
 
 ## Gotchas
+
+- **Reactive Arm Length / Responsive Wrist Splay's "distance" input is
+  `tiltMagnitude` (0-1, the same normalized cursor/tilt-from-center value
+  Phone Tilt already computes every frame), not HANDY DANDIES' own
+  per-field live min/max distance across a whole array of hands** — that
+  concept doesn't exist for a single hand. If this project's Field Layout
+  ever grows past 1x1 in a way that matters for this feature, revisit
+  whether `tiltMagnitude` is still the right per-hand distance signal (it
+  currently is NOT per-hand — every hand in a future multi-hand field
+  would share the exact same value) before assuming it scales. Both
+  features' curve math (`evaluateReactiveCurve`/`catmullRomY`/
+  `cubicBezier1D`/`bezierSegmentY`), 2 widget builders
+  (`buildReactiveRangeWidget`/`buildReactiveCurveWidget`, genericized —
+  HANDY DANDIES has 4 near-duplicate functions, one pair per feature)
+  and their shared per-frame `curveWidgetResyncs` poll array (detects a
+  devPanel.js Reset/restore that writes straight to `input.value` without
+  firing an 'input' event, via a plain last-seen-value string compare)
+  are a verbatim/genericized port — see `docs/CHANGELOG.txt`'s 2026-09-21
+  entry for the full account. Responsive Wrist Splay's own live
+  reapplication (`applyReactiveWristSplayFrame()`, called from
+  `animate()`) re-bakes BOTH the wrist bone AND all 5 finger curls every
+  frame while reactive — necessary because finger curl axes
+  (`computeCurlAxisRefQuat()`) depend on the wrist's current orientation,
+  same reasoning as HANDY DANDIES' own documented "idle repose" pattern.
+  This project's single/small hand count made HANDY DANDIES' own
+  stagger-across-hands performance optimization unnecessary — not ported.
 
 - **Any dev-panel group/row structural change (rename, split, merge, id
   change) needs `HANDYSET_SETTINGS_SCHEMA_VERSION` (top of `main.js`)

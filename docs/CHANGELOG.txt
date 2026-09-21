@@ -831,6 +831,85 @@ being wrong (a stale crop plane during rotation is still a real, if
 different, bug) -- pushed to origin/main.
 
 --------------------------------------------------------------------------------
+2026-09-21  -  7:28 AM - 7:37 AM EDT (8m12s per two `date` calls)
+
+Ported Reactive Arm Length and Responsive Wrist Splay from HANDY DANDIES
+-- both explicitly, repeatedly requested ("where is my fucking responsive
+wrist splay group?" / "and the responsive wrist cropping") and previously
+documented as genuine, not-yet-built gaps needing real new subsystems.
+
+A background research agent first extracted the complete real HANDY
+DANDIES source verbatim (curve math, both custom widget builders, every
+dev-panel control, every per-frame call site) rather than reconstructing
+from a summary, per this workspace's own porting discipline.
+
+**Curve math + widgets** -- `evaluateReactiveCurve()`/`catmullRomY()`/
+`cubicBezier1D()`/`bezierSegmentY()` (a Catmull-Rom spline with optional
+per-point bezier-handle overrides) ported verbatim. The 2 custom UI
+widgets (an SVG draggable-point curve editor; a dual-handle range bar,
+neither a devPanel.js built-in control type) are genericized into ONE
+pair of parametrized builders (`buildReactiveRangeWidget`/
+`buildReactiveCurveWidget`) rather than HANDY DANDIES' own 4 near-
+duplicate functions -- same behavior, less code. Both features share a
+`curveWidgetResyncs` per-frame poll array (a devPanel.js Reset/restore
+writes straight to a control's `input.value` without firing an 'input'
+event, so each widget's own display AND this project's `cfg`/parsed-curve
+cache need a plain last-seen-value comparison to detect and resync from
+that kind of external change).
+
+**One deliberate, disclosed adaptation, not a silent scope cut**: HANDY
+DANDIES normalizes "distance" against the live min/max distance across a
+whole FIELD of hands, recomputed every frame -- a concept that doesn't
+exist for this project's single-hand (or small field) case. Reused
+`tiltMagnitude` instead (already computed every frame for Phone Tilt --
+0-1 normalized cursor/tilt distance from screen/device center), the
+natural equivalent for this project's own tracking abstraction. Every
+actual control -- reactive on/off, a static default value, min/max range,
+the curve editor itself -- is otherwise a full, faithful port.
+
+**Reactive Arm Length**: `computeArmLengthT(tiltMagnitude)` replaces the
+old plain `cfg.hideWrist / 100` inside `updateWristClipPlaneForHand()`
+(falls back to that exact static value when Reactive is off) -- so the
+existing per-frame `onBeforeRender` recompute (this session's own earlier
+fix) now also picks up live reactive changes for free, no extra wiring
+needed.
+
+**Responsive Wrist Splay**: `applyWristPoseToSkeleton()` gained an
+`extraSplayDeg` parameter (ported from HANDY DANDIES' own identical
+signature), added onto `values.wristSplay` before the single `rotateZ`
+call. `applyPoseValuesToHand()` now always passes
+`computeResponsiveWristSplayDeg(tiltMagnitude)` as that extra value (so a
+one-shot pose apply already reflects the current tilt). A new
+`applyReactiveWristSplayFrame()`, called every frame from `animate()`
+while both the master and Reactive toggles are on, re-bakes the wrist
+bone AND re-curls all 5 fingers each frame -- ported reasoning from HANDY
+DANDIES: every finger's base joint is a descendant of the wrist bone, so
+curl axes go stale the instant the wrist keeps moving after a one-shot
+apply. HANDY DANDIES' own stagger-across-hands performance optimization
+(needed at its own hundreds-of-hands scale) was not ported -- unnecessary
+at this project's single/small hand count.
+
+**Live-verified on localhost** (Vercel wasn't re-tested this round --
+localhost's flaky script delivery, documented earlier this session, did
+not reproduce on this reload): both new dev-panel groups render correctly
+(Responsive Wrist Splay as its own top-level group; Reactive Arm Length
+nested in Pose > Wrist, alongside the pre-existing Hide Wrist/Crop Wrist
+controls) -- range and curve widgets draw and drag correctly, screenshot-
+confirmed. Toggling "Reactive Arm Length" off and moving the cursor left
+the wrist-crop clip plane's `constant` completely unchanged
+(`17.94278...` before and after, byte-identical) -- confirmed the master
+gate genuinely works, not just that the checkbox visually toggles. With
+Reactive back on, moving the cursor between 2 screen positions produced a
+real, substantial change in both the wrist bone's own live quaternion
+(Responsive Wrist Splay) and the clip plane's `constant`
+(`18.246... -> 14.557...`, Reactive Arm Length) -- direct proof both
+mechanisms are live and reactive, not just present in the UI.
+
+`HANDYSET_SETTINGS_SCHEMA_VERSION` bumped (`2026-09-21c` -> `2026-09-21d`)
+for the new "Responsive Wrist Splay" group and the new rows inside Pose >
+Wrist, per this project's own documented convention.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
