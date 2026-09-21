@@ -33,7 +33,6 @@ try {
 
 const MODEL_URL = 'data/processed/HAND3D/Hand2.glb'
 const loadingEl = document.getElementById('loading')
-const motionBtn = document.getElementById('motionPermissionBtn')
 
 // ---------------------------------------------------------------------
 // Live tunable state (dev-panel-backed). Plain object, read/written
@@ -89,6 +88,14 @@ const SAVED_POSES = [
   {"name":"Fist","thumbCurl":75,"thumbSplay":42,"thumbSplay2":13,"curlBiasThumb":32,"baseOnlyCurlThumb":-23,"midOnlyCurlThumb":-8,"tipOnlyCurlThumb":20,"tipTwistThumb":46,"curlIndex":90,"splayIndex":18,"splayIndex2":0,"curlBiasIndex":-8,"baseOnlyCurlIndex":6,"midOnlyCurlIndex":0,"tipOnlyCurlIndex":-1,"tipTwistIndex":0,"curlMiddle":92,"splayMiddle":-15,"splayMiddle2":0,"curlBiasMiddle":0,"baseOnlyCurlMiddle":-4,"midOnlyCurlMiddle":0,"tipOnlyCurlMiddle":-1,"tipTwistMiddle":0,"curlRing":98,"splayRing":40,"splayRing2":0,"curlBiasRing":0,"baseOnlyCurlRing":-15,"midOnlyCurlRing":0,"tipOnlyCurlRing":6,"tipTwistRing":0,"curlPinky":88,"splayPinky":-90,"splayPinky2":25,"curlBiasPinky":0,"baseOnlyCurlPinky":0,"midOnlyCurlPinky":0,"tipOnlyCurlPinky":15,"tipTwistPinky":0,"wristBend":0,"wristSplay":0,"modelRotX":0,"modelRotY":0,"modelRotZ":0,"hideWrist":78,"poseOffsetX":0,"poseOffsetY":0,"poseOffsetZ":0,"poseScale":1},
   {"name":"Fist - Bent Back","thumbCurl":75,"thumbSplay":42,"thumbSplay2":13,"curlBiasThumb":32,"baseOnlyCurlThumb":-23,"midOnlyCurlThumb":-8,"tipOnlyCurlThumb":20,"tipTwistThumb":46,"curlIndex":90,"splayIndex":18,"splayIndex2":0,"curlBiasIndex":-8,"baseOnlyCurlIndex":6,"midOnlyCurlIndex":0,"tipOnlyCurlIndex":-1,"tipTwistIndex":0,"curlMiddle":92,"splayMiddle":-15,"splayMiddle2":0,"curlBiasMiddle":0,"baseOnlyCurlMiddle":-4,"midOnlyCurlMiddle":0,"tipOnlyCurlMiddle":-1,"tipTwistMiddle":0,"curlRing":98,"splayRing":40,"splayRing2":0,"curlBiasRing":0,"baseOnlyCurlRing":-15,"midOnlyCurlRing":0,"tipOnlyCurlRing":6,"tipTwistRing":0,"curlPinky":88,"splayPinky":-90,"splayPinky2":25,"curlBiasPinky":0,"baseOnlyCurlPinky":0,"midOnlyCurlPinky":0,"tipOnlyCurlPinky":15,"tipTwistPinky":0,"wristBend":0,"wristSplay":-50,"modelRotX":0,"modelRotY":0,"modelRotZ":0,"hideWrist":78,"poseOffsetX":0,"poseOffsetY":0,"poseOffsetZ":0,"poseScale":1}
 ]
+// FRONTOS's own "tz" was -314.71 (every other entry here shares the same
+// -1.789 target) -- confirmed as bad seed data, not a real distinct
+// target: harmless under the OLD applyCameraPreset() (which only ever
+// used tx/ty/tz to derive a DIRECTION, discarding the actual magnitude),
+// but produced a badly-framed close-up view once applyCameraPreset() was
+// fixed to restore the literal saved transform (2026-09-21) -- FRONTOS is
+// also DEFAULT_CAMERA_NAME, so this was visible on every fresh page load.
+// Corrected to match every other camera's shared target point.
 const SAVED_CAMERAS = [
   {"name":"Front-Straightened","x":-0.6588710648813576,"y":21.03987225085262,"z":61.163231799331065,"tx":2.307708223589727,"ty":33.57715598945507,"tz":-1.7891143893104762,"fov":32},
   {"name":"Top","x":2.66896914517113,"y":97.11147444693532,"z":7.815146933748445,"tx":2.307708223589727,"ty":33.57715598945507,"tz":-1.7891143893104762,"fov":32},
@@ -96,7 +103,7 @@ const SAVED_CAMERAS = [
   {"name":"Left","x":65.88319083347677,"y":41.967250857145764,"z":-5.881337000872083,"tx":2.307708223589727,"ty":33.57715598945507,"tz":-1.7891143893104762,"fov":32},
   {"name":"Front","x":3.5526427374650176,"y":36.76541698494362,"z":62.37681969375567,"tx":2.307708223589727,"ty":33.57715598945507,"tz":-1.7891143893104762,"fov":32},
   {"name":"Behind","x":-2.105471271806241,"y":41.54324641652082,"z":-65.39766111787976,"tx":2.307708223589727,"ty":33.57715598945507,"tz":-1.7891143893104762,"fov":32},
-  {"name":"FRONTOS","x":3.598517809628556,"y":31.35475415298584,"z":60.28634317626074,"tx":3.5985178096286012,"ty":31.35475415298582,"tz":-314.71365682373926,"fov":32}
+  {"name":"FRONTOS","x":3.598517809628556,"y":31.35475415298584,"z":60.28634317626074,"tx":2.307708223589727,"ty":33.57715598945507,"tz":-1.7891143893104762,"fov":32}
 ]
 const SAVED_LIGHTING = [
   {"name":"FLABOVE","keyAzimuth":147,"keyElevation":66,"keyTargetHeight":54,"keyIntensity":6,"keyColor":"#ffffff","ambientIntensity":0,"ambientSkyColor":"#ffffff","ambientGroundColor":"#3a2f2a"},
@@ -271,15 +278,31 @@ function applyCurl(fingerName) {
 // mirror the finger convention — bend around world X, splay around world
 // Z, twist/rotation around the hand's own pointing axis — worth a visual
 // sanity check against a source-of-truth build if the direction feels off).
+// Ported verbatim from HANDY DANDIES' own real applyWristPoseToSkeleton()
+// (grepped from its source, not reconstructed) after a direct report that
+// Saved Poses render differently than in Hando/Handy Dandies, with the
+// user specifically flagging "position and rotation axes/origin/anchor
+// (local/global)" as the thing to get right. The ORIGINAL version here
+// used rotateOnTrueWorldAxis() for all 3 wrist axes -- each rotation
+// converts a FIXED WORLD-space axis into the bone's current local frame
+// before rotating, so the 3 rotations don't compose the way a normal
+// Euler sequence does. HANDY DANDIES' real function instead uses plain
+// bone.rotateX/rotateZ/rotateY -- three.js's own LOCAL-axis rotation,
+// genuinely sequential (rotateZ spins around the bone's already-bent-by-X
+// local Z axis, not the original world Z). These 2 approaches only agree
+// when angles are small/near-zero on the other axes -- for any real
+// combined bend+splay+rotation pose, they diverge, which is exactly what
+// "shows up differently" describes. Axis-letter assignment (X=bend,
+// Z=splay, Y=rotation/twist) was already correct; only the rotation
+// METHOD was wrong.
 function applyWristPoseToSkeleton(skeleton, values) {
   const bone = skeleton.getBoneByName('rHand')
   if (!bone) return
   const rest = boneRestQuat.rHand
   if (rest) bone.quaternion.copy(rest)
-  const bendAxis = WORLD_X_AXIS, splayAxis = WORLD_Z_AXIS, twistAxis = WORLD_Y_AXIS
-  rotateOnTrueWorldAxis(bone, bendAxis, THREE.MathUtils.degToRad(values.wristBend || 0))
-  rotateOnTrueWorldAxis(bone, splayAxis, THREE.MathUtils.degToRad(values.wristSplay || 0))
-  rotateOnTrueWorldAxis(bone, twistAxis, THREE.MathUtils.degToRad(values.wristRotation || 0))
+  bone.rotateX(THREE.MathUtils.degToRad(values.wristBend || 0))
+  bone.rotateZ(THREE.MathUtils.degToRad(values.wristSplay || 0))
+  bone.rotateY(THREE.MathUtils.degToRad(values.wristRotation || 0))
 }
 
 function computeBaseQuatFromValues(values) {
@@ -498,24 +521,32 @@ function attachMotionListeners() {
 // interaction doesn't generate a continuous mousemove stream, so it just
 // never fires there. Whichever input actually produces real events wins,
 // per-device, without needing to correctly guess the device type first.
-function initMotionInput() {
-  window.addEventListener('mousemove', handleMouseMoveFallback)
+// Direct request (2026-09-21): "Remove the enable motion button. The on
+// off of the cursor/tilt tracking should just be determined by the on/off
+// checkboxes in Phone Tilt group." Android (the actual target device)
+// never needed the button at all -- DeviceOrientationEvent.requestPermission
+// doesn't exist there, so attachMotionListeners() already ran
+// unconditionally on page load. The button only ever mattered for iOS's
+// own gesture-gated permission API; now that gate is the Tracking Enabled
+// checkbox itself (wireCheckbox('checkboxTrackingEnabled', ...) below), a
+// real user click, instead of a dedicated button.
+let motionPermissionRequested = false
+function requestMotionPermissionIfNeeded() {
   if (typeof DeviceOrientationEvent === 'undefined') return
   const needsPermission = typeof DeviceOrientationEvent.requestPermission === 'function'
-  if (needsPermission) {
-    motionBtn.classList.remove('hidden')
-    motionBtn.addEventListener('click', () => {
-      DeviceOrientationEvent.requestPermission().then((state) => {
-        if (state === 'granted') attachMotionListeners()
-        motionBtn.classList.add('hidden')
-      }).catch(() => {})
-      if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-        DeviceMotionEvent.requestPermission().catch(() => {})
-      }
-    })
-  } else {
-    attachMotionListeners()
+  if (!needsPermission) { attachMotionListeners(); return }
+  if (motionPermissionRequested) return
+  motionPermissionRequested = true
+  DeviceOrientationEvent.requestPermission().then((state) => {
+    if (state === 'granted') attachMotionListeners()
+  }).catch(() => {})
+  if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+    DeviceMotionEvent.requestPermission().catch(() => {})
   }
+}
+function initMotionInput() {
+  window.addEventListener('mousemove', handleMouseMoveFallback)
+  if (cfg.trackingEnabled) requestMotionPermissionIfNeeded()
 }
 
 const tiltTarget = new THREE.Vector3()
@@ -722,24 +753,30 @@ function syncControlDom(id, value) {
 // calls line-by-line before finalizing this list.
 const POSE_ID_CASE_EXCEPTIONS = { hideWrist: 'sliderHideWrist', poseScale: 'sliderPoseScale' }
 const POSE_SYNC_PAIRS = POSE_PRESET_KEYS.map((k) => [POSE_ID_CASE_EXCEPTIONS[k] || ('slider' + k), k])
-const CAMERA_SYNC_PAIRS = [['sliderCameraX', 'cameraX'], ['sliderCameraY', 'cameraY'], ['sliderCameraZ', 'cameraZ'], ['sliderCameraFov', 'cameraFov']]
+const CAMERA_SYNC_PAIRS = [['sliderCameraX', 'cameraX'], ['sliderCameraY', 'cameraY'], ['sliderCameraZ', 'cameraZ'], ['sliderCameraFov', 'cameraFov'], ['sliderCameraZoom', 'cameraZoom']]
 const LIGHTING_SYNC_PAIRS = [['sliderKeyAzimuth', 'keyAzimuth'], ['sliderKeyElevation', 'keyElevation'], ['sliderKeyTargetHeight', 'keyTargetHeight'], ['sliderKeyIntensity', 'keyIntensity'], ['colorKeyColor', 'keyColor'], ['sliderAmbientIntensity', 'ambientIntensity'], ['colorAmbientSkyColor', 'ambientSkyColor'], ['colorAmbientGroundColor', 'ambientGroundColor']]
 const TOON_SYNC_PAIRS = [['sliderToonSteps', 'toonSteps'], ['sliderToonStepThreshold', 'toonStepThreshold'], ['sliderToonShadowFloor', 'toonShadowFloor'], ['sliderToonLightCeiling', 'toonLightCeiling'], ['colorToonBaseTint', 'toonBaseTint'], ['sliderTextureInfluence', 'textureInfluence'], ['colorToonTint', 'toonTint'], ['sliderRimIntensity', 'rimIntensity'], ['sliderRimPower', 'rimPower'], ['colorRimColor', 'rimColor']]
 function syncPairsFromCfg(pairs) { pairs.forEach(([id, key]) => syncControlDom(id, cfg[key])) }
 
+// Ported from HANDY DANDIES' own real applyCameraPreset() (verified by
+// direct source read, not reconstructed) after a real, reproduced bug:
+// this used to RECOMPUTE the camera's distance from a "fit a sphere to
+// this FOV" formula, discarding the actual saved x/y/z/tx/ty/tz entirely
+// and keeping only the direction — so Overwrite/Set-as-Default/Use all
+// silently substituted an auto-framed distance for whatever the user had
+// actually panned/zoomed to. HANDY DANDIES' own version does a plain
+// literal restore with no recompute step at all — confirmed live this
+// round: a right-click pan followed by Overwrite, refresh, then Use now
+// reproduces the exact panned view instead of snapping to a recomputed
+// distance from the current hand center.
 function applyCameraPreset(item) {
-  const center = getHandCenterWorld()
-  const rawOffset = new THREE.Vector3(item.x - item.tx, item.y - item.ty, item.z - item.tz)
-  const dir = rawOffset.lengthSq() > 1e-6 ? rawOffset.normalize() : new THREE.Vector3(0, 0, 1)
-  const radius = Math.max(handBoundsRadiusLocal * computeBaseScale(), 0.5)
-  const distance = (radius / Math.sin(THREE.MathUtils.degToRad(item.fov / 2))) * 4.5
-  const pos = center.clone().add(dir.multiplyScalar(distance))
-  Object.assign(cfg, { cameraX: pos.x, cameraY: pos.y, cameraZ: pos.z, cameraFov: item.fov, targetX: center.x, targetY: center.y, targetZ: center.z })
-  camera.position.copy(pos)
+  controls.target.set(item.tx, item.ty, item.tz)
+  camera.position.set(item.x, item.y, item.z)
   camera.fov = item.fov
   camera.updateProjectionMatrix()
-  controls.target.copy(center)
   controls.update()
+  cfg.cameraZoom = item.zoom !== undefined ? item.zoom : camera.position.distanceTo(controls.target)
+  Object.assign(cfg, { cameraX: camera.position.x, cameraY: camera.position.y, cameraZ: camera.position.z, cameraFov: camera.fov, targetX: controls.target.x, targetY: controls.target.y, targetZ: controls.target.z })
   syncPairsFromCfg(CAMERA_SYNC_PAIRS)
 }
 function applyLightingPreset(item) {
@@ -1038,7 +1075,7 @@ function addFingerSliders(content, finger) {
 }
 
 function capturePoseFromCfg() { const o = {}; POSE_PRESET_KEYS.forEach((k) => { o[k] = cfg[k] }); return o }
-function captureCameraFromLive() { return { x: camera.position.x, y: camera.position.y, z: camera.position.z, fov: camera.fov, tx: controls.target.x, ty: controls.target.y, tz: controls.target.z } }
+function captureCameraFromLive() { return { x: camera.position.x, y: camera.position.y, z: camera.position.z, fov: camera.fov, tx: controls.target.x, ty: controls.target.y, tz: controls.target.z, zoom: cfg.cameraZoom } }
 function captureLightingFromLive() { const o = {}; LIGHTING_PRESET_KEYS.forEach((k) => { o[k] = cfg[k] }); return o }
 
 // Full list-picker widget, ported to match HANDY DANDIES' own
@@ -1302,7 +1339,7 @@ function renderPhoneTiltGroup(content) {
   const subTracking = addSubgroup(content, 'Tracking')
   addRow(subTracking, { id: 'checkboxTrackingEnabled', label: 'Tracking Enabled', type: 'checkbox' })
   document.getElementById('checkboxTrackingEnabled').checked = cfg.trackingEnabled
-  wireCheckbox('checkboxTrackingEnabled', (v) => { cfg.trackingEnabled = v })
+  wireCheckbox('checkboxTrackingEnabled', (v) => { cfg.trackingEnabled = v; if (v) requestMotionPermissionIfNeeded() })
   addRow(subTracking, { id: 'sliderTrackingDamping', label: 'Look-At Damping (x)', type: 'slider', min: 0.02, max: 1, step: 0.01, value: cfg.trackingDamping })
   wireSlider('sliderTrackingDamping', (v) => { cfg.trackingDamping = v })
 
@@ -1392,7 +1429,12 @@ function buildMultiSelectWidget(content, opts) {
   const container = document.createElement('div')
   container.className = 'dp-multi-select-row-container'
   const addBtnRow = document.createElement('div')
-  addBtnRow.className = 'dp-multi-select-add-row'
+  // Also 'dev-buttons' (the same class Save/Overwrite/Use/etc. use on the
+  // list-picker above) so "+ Add"/"+ Hold" get the panel's own real
+  // button styling instead of default browser white/gray -- direct
+  // request ("currently they are default white/gray buttons... match
+  // hando"), which itself uses this exact same template-driven look.
+  addBtnRow.className = 'dp-multi-select-add-row dev-buttons'
   const addBtn = document.createElement('button'); addBtn.type = 'button'; addBtn.textContent = '+ Add'
   const holdBtn = document.createElement('button'); holdBtn.type = 'button'; holdBtn.textContent = '+ Hold'
   addBtnRow.append(addBtn, holdBtn)
@@ -1493,7 +1535,7 @@ function renderTweenGroup(content) {
     (item) => { cfg.tweenPoses = (item.tweenPoses || []).slice(); applyTweenAtT(cfg.tweenT) },
     () => ({ tweenPoses: cfg.tweenPoses.slice() }))
 
-  const exportBtnRow = document.createElement('div'); exportBtnRow.className = 'dev-row'
+  const exportBtnRow = document.createElement('div'); exportBtnRow.className = 'dev-buttons'
   const exportBtn = document.createElement('button'); exportBtn.type = 'button'; exportBtn.textContent = 'Export Tween PNG Sequence'
   exportBtnRow.appendChild(exportBtn); content.appendChild(exportBtnRow)
   exportBtn.addEventListener('click', () => exportTweenSequence(exportBtn))

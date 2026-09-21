@@ -13,7 +13,7 @@
         if (isDevAllowed) document.documentElement.classList.add('dev-mode');
     })();
 </script>
-<link rel="stylesheet" href="src/style.css?v=4">
+<link rel="stylesheet" href="src/style.css?v=5">
 <script type="importmap">
 {
   "imports": {
@@ -27,7 +27,6 @@
 
     <canvas id="c"></canvas>
     <div id="loading">Loading hand…</div>
-    <button id="motionPermissionBtn" class="hidden">Enable Motion</button>
 
     <button class="dev-toggle-btn" id="devToggleBtn" onclick="ensureDevPanelBuilt(); devPanel.classList.toggle('hidden')">DEV</button>
 
@@ -133,7 +132,7 @@
          groups, none of this project's own). devPanel.js's top-level
          functions/consts still land in the shared global scope either way,
          reachable from main.js at call time regardless of definition order. -->
-    <script type="module" src="src/main.js?v=28"></script>
+    <script type="module" src="src/main.js?v=30"></script>
     <script src="src/devpanel/devPanel.js?v=4" defer></script>
 </body>
 </html>
