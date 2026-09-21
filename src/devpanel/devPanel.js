@@ -1618,9 +1618,38 @@
             const checked = cb.checked;
             const content = sectionEl.querySelector(':scope > .dev-section-content');
             if (!content) return;
-            content.querySelectorAll(':scope > .dev-row [id]').forEach(idEl => {
+            // Per-group retention (added on direct request: "when I click
+            // the setting groups checkbox, unclicking it should also
+            // unclick all the nested settings and groups, though their
+            // checked settings should be retained such that when I check
+            // the top layer settings group checkbox again, it applies the
+            // previous settings") — keyed by this group's own stable
+            // section key (survives rename) + cascade kind, so Desktop's
+            // "Show in Mobile/Landscape" retention and a Mobile/Landscape
+            // group's own "Independent from Desktop" retention never
+            // collide even on the same-named group. Captured the instant
+            // BEFORE a blanket uncheck (each row's own real state at that
+            // moment), consulted the instant a blanket re-check happens —
+            // a plain runtime Map, not persisted (same "no state of its
+            // own, purely a live DOM convenience" status as the cascade
+            // checkbox itself, per this section's own top comment).
+            const titleEl = sectionEl.querySelector(':scope > .dev-section-title');
+            const retentionKey = kind + '|' + getSectionKey(titleEl);
+            const rowEls = Array.from(content.querySelectorAll(':scope > .dev-row [id]'));
+            if (!checked) {
+                const rowStates = {};
+                rowEls.forEach(idEl => {
+                    const rowCb = idEl.closest('.dev-row').querySelector(kind === 'visibility' ? '.dev-visibility-checkbox' : '.dev-independence-checkbox');
+                    if (rowCb) rowStates[idEl.id] = rowCb.checked;
+                });
+                devGroupCascadeRetention[retentionKey] = rowStates;
+            }
+            const retained = checked ? devGroupCascadeRetention[retentionKey] : null;
+            rowEls.forEach(idEl => {
                 const rowCb = idEl.closest('.dev-row').querySelector(kind === 'visibility' ? '.dev-visibility-checkbox' : '.dev-independence-checkbox');
-                if (rowCb && rowCb.checked !== checked) { rowCb.checked = checked; rowCb.dispatchEvent(new Event('change')); }
+                if (!rowCb) return;
+                const target = (retained && retained[idEl.id] !== undefined) ? retained[idEl.id] : checked;
+                if (rowCb.checked !== target) { rowCb.checked = target; rowCb.dispatchEvent(new Event('change')); }
             });
             content.querySelectorAll(':scope > .dev-section').forEach(subSec => {
                 const subCb = subSec.querySelector(':scope > .dev-section-title > .dev-group-cascade-checkbox[data-cascade-kind="' + kind + '"]');
@@ -1632,6 +1661,11 @@
                 // Found live on CLICKO: unchecking a large group left a
                 // nested mixed-state subgroup - and everything under it -
                 // fully checked, never actually cascaded into at all.
+                // Dispatching 'change' on a subgroup's own checkbox here
+                // re-enters THIS SAME handler at the subgroup's own level,
+                // so its own retention (keyed by ITS OWN section key)
+                // applies recursively for free - no extra plumbing needed
+                // for nested retention to work correctly.
                 if (subCb && (subCb.indeterminate || subCb.checked !== checked)) {
                     subCb.checked = checked;
                     subCb.indeterminate = false;
@@ -1666,6 +1700,10 @@
     // that never starts can neither reorder in place nor be dropped into a
     // different group. Also refuses delete (findDevDeleteProtectionReason()).
     let lockedGroups = new Set();
+    // { [cascadeKind + '|' + sectionKey]: { [rowId]: boolean } } — see
+    // buildGroupCascadeCheckbox()'s own change handler above for the full
+    // account. Runtime-only, never persisted.
+    let devGroupCascadeRetention = {};
     // Builds and appends one group's own lock-toggle icon - a SIBLING of
     // .dev-section-title (same rename-survival reasoning as the drag
     // handle/undock button). Shared by createDevGroupElement() (a freshly-

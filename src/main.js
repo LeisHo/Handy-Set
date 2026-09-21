@@ -6,6 +6,31 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
 import { OutlinePass } from 'three/addons/postprocessing/OutlinePass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
 
+// Dev panel schema-version guard — runs synchronously, before devPanel.js
+// (main.js loads first, see index.html's own script-order comment) ever
+// reads its own localStorage. Bump HANDYSET_SETTINGS_SCHEMA_VERSION any
+// time the dev-panel group/row STRUCTURE changes (a group renamed/split/
+// merged, a control id changed) — a stale saved layout from before the
+// change otherwise gets restored on top of the fresh code output, and
+// since applySectionOrder() APPENDS an unmatched old group rather than
+// replacing it, the result is literal duplicate groups/rows sitting next
+// to the correct ones, some referencing ids that no longer correspond to
+// any real control (unclickable, since nothing is wired to them). Found
+// live this round: this exact symptom, caused by exactly this exact
+// mechanism, after this session's own Pose-group restructure (Rotation/
+// Thumb split, Pose Offset subgroup) — this guard exists specifically so
+// it can't recur silently on the next structural change either. Bumping
+// this simply clears the stale local save; it does not touch the
+// separate git-tracked save (data/processed/dev-panel-settings.json,
+// reset directly when this was first found).
+const HANDYSET_SETTINGS_SCHEMA_VERSION = '2026-09-21a'
+try {
+  if (localStorage.getItem('handysetSettingsSchemaVersion') !== HANDYSET_SETTINGS_SCHEMA_VERSION) {
+    localStorage.removeItem('devPanelSettings')
+    localStorage.setItem('handysetSettingsSchemaVersion', HANDYSET_SETTINGS_SCHEMA_VERSION)
+  }
+} catch (e) { /* localStorage unavailable (private mode, etc.) -- nothing to guard */ }
+
 const MODEL_URL = 'data/processed/HAND3D/Hand2.glb'
 const loadingEl = document.getElementById('loading')
 const motionBtn = document.getElementById('motionPermissionBtn')
@@ -34,6 +59,7 @@ const cfg = {
   ambientIntensity: 0, ambientSkyColor: '#ffffff', ambientGroundColor: '#3a2f2a',
   // Toon Shading
   toonSteps: 2, toonStepThreshold: 2.7, toonShadowFloor: 7, toonLightCeiling: 100, toonBaseTint: '#ffffff',
+  textureInfluence: 0, toonTint: '#ffffff', rimIntensity: 0, rimPower: 0.5, rimColor: '#ffffff',
   outlineEnabled: false, outlineColor: '#000000', outlineThickness: 2, outlineStrength: 5, outlineGlow: 0,
   // Background
   bgColor: '#ffffff',
@@ -72,6 +98,7 @@ const SAVED_LIGHTING = [
   {"name":"behind thumb drag","keyAzimuth":60,"keyElevation":38,"keyTargetHeight":106,"keyIntensity":6,"keyColor":"#ffffff","ambientIntensity":0,"ambientSkyColor":"#ffffff","ambientGroundColor":"#3a2f2a"}
 ]
 const SAVED_TWEEN_SEQUENCES = []
+const SAVED_TOON = []
 const DEFAULT_POSE_NAME = 'Fist'
 const DEFAULT_CAMERA_NAME = 'FRONTOS'
 const DEFAULT_LIGHTING_NAME = 'FLABOVE'
@@ -350,24 +377,71 @@ scene.add(gridHelper)
 // Toon material + gradient map (simplified from HANDY DANDIES' own version
 // — this project re-derives a standard step-gradient rather than porting
 // its exact rim-light shader injection, which wasn't available to extract).
-function makeGradientTexture() {
-  const size = 64
-  const data = new Uint8Array(size)
-  const floor = cfg.toonShadowFloor / 100, ceil = cfg.toonLightCeiling / 100
+// Ported verbatim from HANDY DANDIES' own makeGradientTexture() (RGBA,
+// steps/shadowFloor/lightCeiling/threshold as explicit params, lerp-based
+// — replaces this project's own earlier re-derived version, which used a
+// different Red-channel/step-floor formula that only approximated the
+// same visual intent).
+function makeGradientTexture(steps, shadowFloor, lightCeiling, threshold) {
+  const size = Math.max(2, Math.round(steps))
+  const data = new Uint8Array(size * 4)
   for (let i = 0; i < size; i++) {
-    let t = Math.pow(i / (size - 1), cfg.toonStepThreshold)
-    const stepped = Math.floor(t * cfg.toonSteps) / Math.max(cfg.toonSteps - 1, 1)
-    data[i] = Math.round(THREE.MathUtils.clamp(floor + stepped * (ceil - floor), 0, 1) * 255)
+    const t = size <= 1 ? 1 : i / (size - 1)
+    const biased = Math.pow(t, threshold)
+    const v = Math.round(THREE.MathUtils.clamp(THREE.MathUtils.lerp(shadowFloor, lightCeiling, biased), 0, 100) / 100 * 255)
+    data[i * 4] = v; data[i * 4 + 1] = v; data[i * 4 + 2] = v; data[i * 4 + 3] = 255
   }
-  const tex = new THREE.DataTexture(data, size, 1, THREE.RedFormat)
-  tex.needsUpdate = true
+  const tex = new THREE.DataTexture(data, size, 1, THREE.RGBAFormat)
   tex.magFilter = THREE.NearestFilter
   tex.minFilter = THREE.NearestFilter
+  tex.needsUpdate = true
   return tex
 }
 function rebuildGradientMap() {
-  const tex = makeGradientTexture()
+  const tex = makeGradientTexture(cfg.toonSteps, cfg.toonShadowFloor, cfg.toonLightCeiling, cfg.toonStepThreshold)
   hands.forEach((h) => { h.skinnedMesh.material.gradientMap = tex; h.skinnedMesh.material.needsUpdate = true })
+}
+// Ported verbatim from HANDY DANDIES' own toonShaderUniformsList/
+// setToonUniform() — every hand's own cloned toon material pushes its
+// live shader.uniforms object here (from createToonMaterial()'s own
+// onBeforeCompile, below) the first time it actually compiles, so a
+// rim/texture-tint slider can reach every hand's own uniform set even
+// though `material.clone()` does NOT re-run onBeforeCompile (clones
+// share the compiled program but need their OWN uniforms entry pushed
+// separately — handled in rebuildField() below).
+const toonShaderUniformsList = []
+function setToonUniform(name, value) {
+  toonShaderUniformsList.forEach((u) => { if (u[name]) u[name].value = value })
+}
+// Ported verbatim from HANDY DANDIES' own createToonMaterial() — the
+// rim-light + texture/duotone-tint GLSL injection this project's first
+// build deliberately skipped (documented "known simplification" at the
+// time, since the extraction pass that built this project didn't have
+// the actual shader source to port faithfully). Re-extracted directly
+// from HANDY DANDIES' own main.js this round, not reconstructed.
+function createToonMaterial(map) {
+  const material = new THREE.MeshToonMaterial({
+    map,
+    color: new THREE.Color(cfg.toonBaseTint),
+    gradientMap: makeGradientTexture(cfg.toonSteps, cfg.toonShadowFloor, cfg.toonLightCeiling, cfg.toonStepThreshold),
+    clippingPlanes: []
+  })
+  material.onBeforeCompile = (shader) => {
+    shader.uniforms.rimColor = { value: new THREE.Color(cfg.rimColor) }
+    shader.uniforms.rimIntensity = { value: cfg.rimIntensity }
+    shader.uniforms.rimPower = { value: cfg.rimPower }
+    shader.uniforms.textureInfluence = { value: cfg.textureInfluence / 100 }
+    shader.uniforms.toonTint = { value: new THREE.Color(cfg.toonTint) }
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', `varying vec3 vRimNormal;\nvarying vec3 vRimViewDir;\n#include <common>`)
+      .replace('#include <project_vertex>', `#include <project_vertex>\nvRimNormal = normalize( normalMatrix * objectNormal );\nvRimViewDir = normalize( -mvPosition.xyz );`)
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', `varying vec3 vRimNormal;\nvarying vec3 vRimViewDir;\nuniform vec3 rimColor;\nuniform float rimIntensity;\nuniform float rimPower;\nuniform float textureInfluence;\nuniform vec3 toonTint;\n#include <common>`)
+      .replace('#include <map_fragment>', `#include <map_fragment>\nfloat toonLuma = dot( diffuseColor.rgb, vec3( 0.299, 0.587, 0.114 ) );\nvec3 toonDuotone = mix( vec3( 0.0 ), toonTint, toonLuma );\ndiffuseColor.rgb = mix( toonTint, toonDuotone, textureInfluence );`)
+      .replace('#include <dithering_fragment>', `#include <dithering_fragment>\nfloat rimFactor = pow( 1.0 - max( dot( normalize( vRimNormal ), normalize( vRimViewDir ) ), 0.0 ), rimPower );\ngl_FragColor.rgb += rimColor * rimFactor * rimIntensity;`)
+    toonShaderUniformsList.push(shader.uniforms)
+  }
+  return material
 }
 
 // =======================================================================
@@ -403,25 +477,34 @@ function attachMotionListeners() {
   window.addEventListener('deviceorientation', handleDeviceOrientation)
   if (typeof DeviceMotionEvent !== 'undefined') window.addEventListener('devicemotion', handleDeviceMotion)
 }
+// Both inputs are always attached, unconditionally — not gated behind an
+// isTouchDevice guess. `isTouchDevice` (a 'ontouchstart' in window /
+// maxTouchPoints check) is an unreliable proxy for "is this a phone": a
+// touch-capable desktop/laptop would wrongly route into the
+// gyroscope-only branch and get NO input at all (no deviceorientation
+// events ever fire on a non-phone, even one with a touchscreen), which is
+// exactly the bug a direct report caught ("on desktop it does nothing").
+// mousemove is harmless to leave attached on a real phone too — touch
+// interaction doesn't generate a continuous mousemove stream, so it just
+// never fires there. Whichever input actually produces real events wins,
+// per-device, without needing to correctly guess the device type first.
 function initMotionInput() {
-  if (isTouchDevice && typeof DeviceOrientationEvent !== 'undefined') {
-    const needsPermission = typeof DeviceOrientationEvent.requestPermission === 'function'
-    if (needsPermission) {
-      motionBtn.classList.remove('hidden')
-      motionBtn.addEventListener('click', () => {
-        DeviceOrientationEvent.requestPermission().then((state) => {
-          if (state === 'granted') attachMotionListeners()
-          motionBtn.classList.add('hidden')
-        }).catch(() => {})
-        if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-          DeviceMotionEvent.requestPermission().catch(() => {})
-        }
-      })
-    } else {
-      attachMotionListeners()
-    }
+  window.addEventListener('mousemove', handleMouseMoveFallback)
+  if (typeof DeviceOrientationEvent === 'undefined') return
+  const needsPermission = typeof DeviceOrientationEvent.requestPermission === 'function'
+  if (needsPermission) {
+    motionBtn.classList.remove('hidden')
+    motionBtn.addEventListener('click', () => {
+      DeviceOrientationEvent.requestPermission().then((state) => {
+        if (state === 'granted') attachMotionListeners()
+        motionBtn.classList.add('hidden')
+      }).catch(() => {})
+      if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+        DeviceMotionEvent.requestPermission().catch(() => {})
+      }
+    })
   } else {
-    window.addEventListener('mousemove', handleMouseMoveFallback)
+    attachMotionListeners()
   }
 }
 
@@ -464,9 +547,11 @@ function rebuildField() {
       scene.add(wrapper)
 
       const skinnedMesh = findSkinnedMesh(clone)
+      // .clone() copies onBeforeCompile too — three.js still calls it on
+      // the clone the first time IT actually compiles (each material
+      // instance gets its own compile/uniforms), so this correctly gets
+      // its own rim-light uniforms pushed into toonShaderUniformsList.
       skinnedMesh.material = toonMaterial.clone()
-      skinnedMesh.material.color.set(cfg.toonBaseTint)
-      skinnedMesh.material.gradientMap = makeGradientTexture()
 
       hands.push({ wrapper, clone, skinnedMesh, outlineMesh: null, currentBaseQuat: alignQuat.clone(), clipPlane: null, row: r, col: c })
     }
@@ -520,7 +605,7 @@ function getHandCenterWorld() {
 // =======================================================================
 // Model load
 // =======================================================================
-new GLTFLoader().load(MODEL_URL, (gltf) => {
+new GLTFLoader().load(MODEL_URL, async (gltf) => {
   const root = gltf.scene
   const skinned = findSkinnedMesh(root)
   if (!skinned) { loadingEl.textContent = 'No skinned mesh found in model.'; return }
@@ -551,11 +636,24 @@ new GLTFLoader().load(MODEL_URL, (gltf) => {
 
   skinned.skeleton.bones.forEach((bone) => { boneRestQuat[bone.name] = bone.quaternion.clone() })
 
-  toonMaterial = new THREE.MeshToonMaterial({ map: skinned.material.map || null, color: cfg.toonBaseTint })
+  toonMaterial = createToonMaterial(skinned.material.map || null)
   modelRoot = root
 
   rebuildField()
   applyDefaultSelections()
+  // "Set as Default" overrides -- applied AFTER the hardcoded literal
+  // defaults above, matching Hando's own boot order (its own
+  // loadDefaultXIfSaved() calls run after the runtime objects they write
+  // into exist, and intentionally override whatever the normal restore
+  // already set). A fresh project with nothing ever set-as-default is a
+  // silent no-op (loadFieldDefaultIfSaved only applies when the fetched
+  // settings actually contain that field).
+  await Promise.all([
+    loadFieldDefaultIfSaved('defaultPose', applyPosePreset),
+    loadFieldDefaultIfSaved('defaultCamera', applyCameraPreset),
+    loadFieldDefaultIfSaved('defaultLighting', applyLightingPreset),
+    loadFieldDefaultIfSaved('defaultToon', applyToonPreset)
+  ])
   loadingEl.classList.add('hidden')
   initMotionInput()
   animate()
@@ -595,6 +693,27 @@ function applyLightingPreset(item) {
   keyLight.intensity = cfg.keyIntensity
   keyLight.color.set(cfg.keyColor)
   updateKeyLightPosition()
+}
+// Ported verbatim from HANDY DANDIES' own TOON_PRESET_KEYS/
+// captureToonPreset()/useToonPreset() (itself ported field-for-field from
+// Hando). Toon Shading has no single shared "apply" function the way
+// Pose/Camera/Lighting do — each control's own onChange calls one of
+// rebuildGradientMap()/setToonUniform()/a direct material.color.set(), so
+// applyToonPreset() re-runs those same effects itself after writing cfg.
+const TOON_PRESET_KEYS = [
+  'toonSteps', 'toonStepThreshold', 'toonShadowFloor', 'toonLightCeiling',
+  'toonBaseTint', 'textureInfluence', 'toonTint', 'rimIntensity', 'rimPower', 'rimColor'
+]
+function captureToonFromCfg() { const o = {}; TOON_PRESET_KEYS.forEach((k) => { o[k] = cfg[k] }); return o }
+function applyToonPreset(item) {
+  TOON_PRESET_KEYS.forEach((key) => { if (item[key] !== undefined) cfg[key] = item[key] })
+  hands.forEach((h) => h.skinnedMesh.material.color.set(cfg.toonBaseTint))
+  setToonUniform('textureInfluence', cfg.textureInfluence / 100)
+  setToonUniform('toonTint', new THREE.Color(cfg.toonTint))
+  setToonUniform('rimIntensity', cfg.rimIntensity)
+  setToonUniform('rimPower', cfg.rimPower)
+  setToonUniform('rimColor', new THREE.Color(cfg.rimColor))
+  rebuildGradientMap()
 }
 function applyPosePreset(item) {
   Object.assign(cfg, item)
@@ -937,6 +1056,25 @@ function buildListPicker(content, opts) {
 function renderPresetPicker(content, title, items, defaultName, applyFn, captureFn, opts) {
   const sub = addSubgroup(content, title)
   buildListPicker(sub, Object.assign({ items, defaultName, itemLabel: title.replace(/^Saved /, '').replace(/s$/, ''), captureCurrent: captureFn, onUse: applyFn }, opts || {}))
+  // "Set as Default" — a sibling control AFTER the list-picker, not part
+  // of it (matches Hando exactly: it's a separate `type: 'button'` DEV_GROUPS
+  // entry, never one of buildListPickerRow's own buttons). Captures LIVE
+  // current state (the same captureFn the list-picker's own Save button
+  // uses), not whatever's merely selected in the list — "save what's
+  // tuned right now as the default," per Hando's saveToonAsDefault() etc.
+  // Omitted when opts.defaultFieldKey isn't passed (Tween Sequences has
+  // no default mechanism in Hando either — confirmed by direct source
+  // inspection, not assumed).
+  if (opts && opts.defaultFieldKey) {
+    const btnRow = document.createElement('div')
+    btnRow.className = 'dev-buttons'
+    const defaultBtn = document.createElement('button')
+    defaultBtn.type = 'button'
+    defaultBtn.textContent = 'Set as Default'
+    btnRow.appendChild(defaultBtn)
+    sub.appendChild(btnRow)
+    defaultBtn.addEventListener('click', () => saveFieldAsDefault(opts.defaultFieldKey, captureFn, defaultBtn))
+  }
 }
 
 function renderPoseGroup(content) {
@@ -984,7 +1122,7 @@ function renderPoseGroup(content) {
   addRow(subOffset, { id: 'sliderPoseScale', label: 'Pose Scale (x)', type: 'slider', min: 0.1, max: 3, step: 0.05, value: cfg.poseScale })
   wireSlider('sliderPoseScale', (v) => { cfg.poseScale = v; applyPoseValuesToHand(cfg) })
 
-  renderPresetPicker(content, 'Saved Poses', SAVED_POSES, DEFAULT_POSE_NAME, applyPosePreset, capturePoseFromCfg, { exportable: true, importable: true })
+  renderPresetPicker(content, 'Saved Poses', SAVED_POSES, DEFAULT_POSE_NAME, applyPosePreset, capturePoseFromCfg, { exportable: true, importable: true, defaultFieldKey: 'defaultPose' })
 }
 
 function renderCameraGroup(content) {
@@ -1007,7 +1145,7 @@ function renderCameraGroup(content) {
   addRow(content, { id: 'checkboxCameraMaxExtentsEnabled', label: 'Set Default Camera As Max Extents', type: 'checkbox' })
   document.getElementById('checkboxCameraMaxExtentsEnabled').checked = cfg.cameraMaxExtentsEnabled
   wireCheckbox('checkboxCameraMaxExtentsEnabled', (v) => { cfg.cameraMaxExtentsEnabled = v; updateCameraMaxExtentsBound() })
-  renderPresetPicker(content, 'Saved Cameras', SAVED_CAMERAS, DEFAULT_CAMERA_NAME, applyCameraPreset, captureCameraFromLive)
+  renderPresetPicker(content, 'Saved Cameras', SAVED_CAMERAS, DEFAULT_CAMERA_NAME, applyCameraPreset, captureCameraFromLive, { defaultFieldKey: 'defaultCamera' })
 }
 // Moves the camera along the existing camera->target line to a new
 // distance, preserving viewing direction (ported concept from Handy
@@ -1080,7 +1218,7 @@ function renderLightingGroup(content) {
   wireColor('colorAmbientSkyColor', (v) => { cfg.ambientSkyColor = v; hemiLight.color.set(v) })
   addRow(content, { id: 'colorAmbientGroundColor', label: 'Ambient Ground Color', type: 'color', value: cfg.ambientGroundColor })
   wireColor('colorAmbientGroundColor', (v) => { cfg.ambientGroundColor = v; hemiLight.groundColor.set(v) })
-  renderPresetPicker(content, 'Saved Lighting', SAVED_LIGHTING, DEFAULT_LIGHTING_NAME, applyLightingPreset, captureLightingFromLive)
+  renderPresetPicker(content, 'Saved Lighting', SAVED_LIGHTING, DEFAULT_LIGHTING_NAME, applyLightingPreset, captureLightingFromLive, { defaultFieldKey: 'defaultLighting' })
 }
 
 function renderToonGroup(content) {
@@ -1094,6 +1232,19 @@ function renderToonGroup(content) {
   wireSlider('sliderToonLightCeiling', (v) => { cfg.toonLightCeiling = v; rebuildGradientMap() })
   addRow(content, { id: 'colorToonBaseTint', label: 'Toon Base Tint', type: 'color', value: cfg.toonBaseTint })
   wireColor('colorToonBaseTint', (v) => { cfg.toonBaseTint = v; hands.forEach((h) => h.skinnedMesh.material.color.set(v)) })
+  // Rim-light + texture/duotone-tint controls — ported from HANDY DANDIES'
+  // own createToonMaterial() shader injection (added this round; the
+  // first build's Toon Shading group didn't have these at all).
+  addRow(content, { id: 'sliderTextureInfluence', label: 'Texture Influence (%)', type: 'slider', min: 0, max: 100, step: 1, value: cfg.textureInfluence })
+  wireSlider('sliderTextureInfluence', (v) => { cfg.textureInfluence = v; setToonUniform('textureInfluence', v / 100) })
+  addRow(content, { id: 'colorToonTint', label: 'Toon Texture Tint', type: 'color', value: cfg.toonTint })
+  wireColor('colorToonTint', (v) => { cfg.toonTint = v; setToonUniform('toonTint', new THREE.Color(v)) })
+  addRow(content, { id: 'sliderRimIntensity', label: 'Rim Light Intensity (x)', type: 'slider', min: 0, max: 3, step: 0.05, value: cfg.rimIntensity })
+  wireSlider('sliderRimIntensity', (v) => { cfg.rimIntensity = v; setToonUniform('rimIntensity', v) })
+  addRow(content, { id: 'sliderRimPower', label: 'Rim Light Power (x)', type: 'slider', min: 0.5, max: 8, step: 0.1, value: cfg.rimPower })
+  wireSlider('sliderRimPower', (v) => { cfg.rimPower = v; setToonUniform('rimPower', v) })
+  addRow(content, { id: 'colorRimColor', label: 'Rim Light Color', type: 'color', value: cfg.rimColor })
+  wireColor('colorRimColor', (v) => { cfg.rimColor = v; setToonUniform('rimColor', new THREE.Color(v)) })
 
   const outlineSub = addSubgroup(content, 'Outline')
   addRow(outlineSub, { id: 'checkboxOutlineEnabled', label: 'Outline Enabled', type: 'checkbox' })
@@ -1111,6 +1262,8 @@ function renderToonGroup(content) {
   wireSlider('sliderOutlineStrength', (v) => { cfg.outlineStrength = v; outlinePass.edgeStrength = v })
   addRow(outlineSub, { id: 'sliderOutlineGlow', label: 'Pass Edge Glow (x)', type: 'slider', min: 0, max: 5, step: 0.1, value: cfg.outlineGlow })
   wireSlider('sliderOutlineGlow', (v) => { cfg.outlineGlow = v; outlinePass.edgeGlow = v })
+
+  renderPresetPicker(content, 'Saved Toon Shading', SAVED_TOON, null, applyToonPreset, captureToonFromCfg, { exportable: true, importable: true, defaultFieldKey: 'defaultToon' })
 }
 
 function renderTweenGroup(content) {
@@ -1282,6 +1435,46 @@ function wireRemoteSaveButtons() {
       setTimeout(() => setSyncStatusText(''), 3000)
     })
   })
+}
+
+// Generic "Set as Default" mechanism — GET-merge-POST a dedicated top-
+// level field (defaultPose/defaultCamera/defaultLighting/defaultToon)
+// through the same git-tracked settings endpoint the panel's own Sync
+// already uses. Ported from Hando's own saveAsDefaultForModel()/
+// loadDefaultForModelIfSaved() (main.js), simplified: Hando keys its
+// default per MODEL_LIST entry (multi-model project); Handyset has
+// exactly one hand/model, so there's nothing to key by — one flat field
+// per settings category is the direct equivalent. GET-merge-POST (not a
+// blind overwrite) so this never clobbers unrelated fields already saved
+// by a normal panel Sync.
+async function saveFieldAsDefault(fieldKey, captureFn, btn) {
+  const orig = btn.textContent
+  const flash = (msg) => { btn.textContent = msg; setTimeout(() => { btn.textContent = orig }, 2000) }
+  try {
+    const getResp = await fetch(SAVE_SETTINGS_ENDPOINT, { cache: 'no-store' })
+    const getBody = await getResp.json().catch(() => ({}))
+    const base = (getResp.ok && getBody.ok === true && getBody.settings && typeof getBody.settings === 'object') ? getBody.settings : {}
+    const merged = Object.assign({}, base, { [fieldKey]: captureFn() })
+    const postResp = await fetch(SAVE_SETTINGS_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Dev-Panel-Secret': DEV_PANEL_SAVE_SECRET },
+      body: JSON.stringify(merged)
+    })
+    const postBody = await postResp.json().catch(() => ({}))
+    if (postResp.ok && postBody.ok === true) { flash('Saved!'); return }
+    flash('Save failed: ' + (postBody.error || ('HTTP ' + postResp.status)))
+  } catch (err) {
+    flash('Save failed: offline/unreachable')
+  }
+}
+async function loadFieldDefaultIfSaved(fieldKey, useFn) {
+  try {
+    const resp = await fetch(SAVE_SETTINGS_ENDPOINT, { cache: 'no-store' })
+    const body = await resp.json().catch(() => ({}))
+    if (resp.ok && body.ok === true && body.settings && body.settings[fieldKey]) {
+      useFn(body.settings[fieldKey])
+    }
+  } catch (err) { /* offline/unreachable/not-yet-deployed -- keep whatever's already applied */ }
 }
 
 async function loadRemoteSettingsOnStartup() {
