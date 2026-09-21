@@ -4802,9 +4802,9 @@
     "tz": -1.1836830571910426
   },
   "defaultLighting": {
-    "keyAzimuth": 117,
-    "keyElevation": 56,
-    "keyTargetHeight": 71,
+    "keyAzimuth": 439,
+    "keyElevation": -3,
+    "keyTargetHeight": -18,
     "keyIntensity": 6,
     "keyColor": "#ffffff",
     "ambientIntensity": 0,
