@@ -364,7 +364,8 @@ function applyPoseValuesToHand(poseValues) {
     h.clone.position.set(poseValues.poseOffsetX || 0, poseValues.poseOffsetY || 0, poseValues.poseOffsetZ || 0)
     h.clone.scale.setScalar(computeBaseScale() * (poseValues.poseScale ?? 1))
   })
-  updateWristCrop(poseValues.hideWrist || 0)
+  cfg.hideWrist = poseValues.hideWrist || 0
+  updateWristCrop()
 }
 
 // Wrist crop — one clipping plane PER HAND (each hand faces a different
@@ -373,37 +374,62 @@ function applyPoseValuesToHand(poseValues) {
 // crop" (hideWrist=0) to "cropped at the wrist" (hideWrist=100).
 // Simplified from HANDY DANDIES' own reactive-arm-length system (not
 // ported — not part of this project's requested scope).
-function updateWristCrop(hideWristPct) {
+//
+// RECOMPUTED EVERY FRAME via skinnedMesh.onBeforeRender (wired in
+// rebuildField()), not just on slider/checkbox/pose-apply triggers —
+// real root cause, found 2026-09-21 after the user firmly (and
+// correctly) disputed "Palm Face Rotation does nothing"/"the hand
+// doesn't move at all": this used to only recompute the plane's world
+// normal on specific UI events, using whatever `h.wrapper.quaternion`
+// was AT THAT MOMENT. Phone Tilt and Palm Face Rotation continuously
+// change `h.wrapper.quaternion` every frame in animate(), so the STALE
+// plane increasingly misaligned with the model's actual current
+// orientation as it rotated — clipping away exactly the geometry that
+// would have shown the rotation, making genuinely-working rotation look
+// like it was doing nothing. Confirmed by reading HANDY DANDIES' own
+// real source: it recomputes its own equivalent clip plane inside
+// `skinnedMesh.onBeforeRender = (r) => { updateWristClipPlaneForHand(hand); r.clearDepth() }`
+// for exactly this reason (its own comment there predates this bug).
+// `wristPosRaw`/`wristCropNormalAligned` (used below) are cached scratch
+// state set once at load — cheap to re-read every frame; only the
+// PER-HAND world-space plane derived from them needs to be live.
+function updateWristClipPlaneForHand(h) {
   if (!wristCropNormalAligned || !cfg.cropWristEnabled) {
-    hands.forEach((h) => { h.skinnedMesh.material.clippingPlanes = [] })
+    h.skinnedMesh.material.clippingPlanes = []
     return
   }
-  const t = THREE.MathUtils.clamp(hideWristPct / 100, 0, 1)
+  if (!h.clipPlane) h.clipPlane = new THREE.Plane()
+  // Was `if (!h.clipPlane) { ...; material.clippingPlanes = [h.clipPlane] }`
+  // — real bug, found live 2026-09-21: the disable branch above clears
+  // `material.clippingPlanes` to a fresh `[]` but never clears
+  // `h.clipPlane` itself, so once crop was ever toggled off and back on,
+  // this guard's `if (!h.clipPlane)` stayed false forever and the plane
+  // was never re-attached to the material — the plane object kept
+  // getting its normal/constant updated internally but had no effect on
+  // rendering at all. Unconditionally reassigning here (cheap, a plain
+  // array set, and now happening every frame anyway) makes this immune
+  // to that history regardless of how many times crop has been toggled
+  // off/on before.
+  h.skinnedMesh.material.clippingPlanes = [h.clipPlane]
+  const t = THREE.MathUtils.clamp(cfg.hideWrist / 100, 0, 1)
   const maxReach = handLengthRaw * computeBaseScale() * 0.35
-  hands.forEach((h) => {
-    if (!h.clipPlane) h.clipPlane = new THREE.Plane()
-    // Was `if (!h.clipPlane) { ...; material.clippingPlanes = [h.clipPlane] }`
-    // — real bug, found live 2026-09-21: the disable branch above clears
-    // `material.clippingPlanes` to a fresh `[]` but never clears
-    // `h.clipPlane` itself, so once crop was ever toggled off and back on,
-    // this guard's `if (!h.clipPlane)` stayed false forever and the plane
-    // was never re-attached to the material — the plane object kept
-    // getting its normal/constant updated internally but had no effect on
-    // rendering at all. Unconditionally reassigning here (cheap, a plain
-    // array set) makes this immune to that history regardless of how many
-    // times crop has been toggled off/on before.
-    h.skinnedMesh.material.clippingPlanes = [h.clipPlane]
-    // wristPosRaw is a bind-pose, pre-transform local position —
-    // material.clippingPlanes are evaluated in world space, so it needs
-    // this hand's own current matrixWorld, not the raw bind-pose frame.
-    h.clone.updateMatrixWorld(true)
-    const worldWrist = h.clone.localToWorld(wristPosRaw.clone())
-    // Points toward the forearm/sleeve side (three.js discards the
-    // POSITIVE side of a clipping plane's normal).
-    const worldNormal = wristCropNormalAligned.clone().applyQuaternion(h.wrapper.quaternion).normalize().negate()
-    const planePoint = worldWrist.clone().addScaledVector(worldNormal, (1 - t) * maxReach)
-    h.clipPlane.setFromNormalAndCoplanarPoint(worldNormal, planePoint)
-  })
+  // wristPosRaw is a bind-pose, pre-transform local position —
+  // material.clippingPlanes are evaluated in world space, so it needs
+  // this hand's own current matrixWorld, not the raw bind-pose frame.
+  h.clone.updateMatrixWorld(true)
+  const worldWrist = h.clone.localToWorld(wristPosRaw.clone())
+  // Points toward the forearm/sleeve side (three.js discards the
+  // POSITIVE side of a clipping plane's normal).
+  const worldNormal = wristCropNormalAligned.clone().applyQuaternion(h.wrapper.quaternion).normalize().negate()
+  const planePoint = worldWrist.clone().addScaledVector(worldNormal, (1 - t) * maxReach)
+  h.clipPlane.setFromNormalAndCoplanarPoint(worldNormal, planePoint)
+}
+// Kept as the explicit multi-hand entry point for UI triggers (slider/
+// checkbox/pose-apply) — still useful for an immediate update the same
+// frame a setting changes, even though onBeforeRender (above) now also
+// keeps every hand's plane correct every frame regardless.
+function updateWristCrop() {
+  hands.forEach((h) => updateWristClipPlaneForHand(h))
 }
 
 // =======================================================================
@@ -655,7 +681,12 @@ function rebuildField() {
       skinnedMesh.material = toonMaterial.clone()
       skinnedMesh.material.onBeforeCompile = toonMaterial.onBeforeCompile
 
-      hands.push({ wrapper, clone, skinnedMesh, outlineMesh: null, currentBaseQuat: alignQuat.clone(), clipPlane: null, row: r, col: c })
+      const handEntry = { wrapper, clone, skinnedMesh, outlineMesh: null, currentBaseQuat: alignQuat.clone(), clipPlane: null, row: r, col: c }
+      // Ported from HANDY DANDIES' own real onBeforeRender wiring — see
+      // updateWristClipPlaneForHand()'s own declaration comment for why
+      // this needs to run every frame, not just on UI triggers.
+      skinnedMesh.onBeforeRender = () => updateWristClipPlaneForHand(handEntry)
+      hands.push(handEntry)
     }
   }
   hand = hands[0]
@@ -1311,9 +1342,9 @@ function renderPoseGroup(content) {
   // would misdescribe what the slider actually does here.
   addRow(subWrist, { id: 'checkboxCropWristEnabled', label: 'Crop Wrist (Master On/Off)', type: 'checkbox' })
   document.getElementById('checkboxCropWristEnabled').checked = cfg.cropWristEnabled
-  wireCheckbox('checkboxCropWristEnabled', (v) => { cfg.cropWristEnabled = v; updateWristCrop(v ? cfg.hideWrist : 0) })
+  wireCheckbox('checkboxCropWristEnabled', (v) => { cfg.cropWristEnabled = v; updateWristCrop() })
   addRow(subWrist, { id: 'sliderHideWrist', label: 'Hide Wrist (%)', type: 'slider', min: 0, max: 100, step: 1, value: cfg.hideWrist })
-  wireSlider('sliderHideWrist', (v) => { cfg.hideWrist = v; if (cfg.cropWristEnabled) updateWristCrop(v) })
+  wireSlider('sliderHideWrist', (v) => { cfg.hideWrist = v; updateWristCrop() })
 
   ;['index', 'middle', 'ring', 'pinky'].forEach((f) => {
     const sub = addSubgroup(content, f.charAt(0).toUpperCase() + f.slice(1))
