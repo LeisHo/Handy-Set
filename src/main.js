@@ -547,11 +547,23 @@ function rebuildField() {
       scene.add(wrapper)
 
       const skinnedMesh = findSkinnedMesh(clone)
-      // .clone() copies onBeforeCompile too — three.js still calls it on
-      // the clone the first time IT actually compiles (each material
-      // instance gets its own compile/uniforms), so this correctly gets
-      // its own rim-light uniforms pushed into toonShaderUniformsList.
+      // Material.prototype.copy() (three.js src/materials/Material.js)
+      // does NOT copy onBeforeCompile — confirmed by reading three.js's
+      // own source after a real, reproduced bug: every color/rim-light
+      // control in Toon Shading (toonTint, rimIntensity/rimColor/rimPower,
+      // textureInfluence) had ZERO visual effect, live-verified via a
+      // pure-red colorToonTint and a bright-green rimColor at
+      // rimIntensity=3 producing no change at all, while material.color
+      // (toonBaseTint, a normal MeshToonMaterial property that IS copied)
+      // worked instantly. .clone() silently fell back to the inherited
+      // no-op onBeforeCompile() stub on every hand's own material
+      // instance, so the whole onBeforeCompile shader injection (diffuse
+      // tint override + rim light) never ran on any rendered hand — only
+      // ever on the one shared `toonMaterial` template object itself,
+      // which nothing actually renders with. Re-attaching the function
+      // explicitly after clone() is required every time.
       skinnedMesh.material = toonMaterial.clone()
+      skinnedMesh.material.onBeforeCompile = toonMaterial.onBeforeCompile
 
       hands.push({ wrapper, clone, skinnedMesh, outlineMesh: null, currentBaseQuat: alignQuat.clone(), clipPlane: null, row: r, col: c })
     }
