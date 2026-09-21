@@ -390,3 +390,49 @@ wiring, and are still open:
   mechanism (see the gotcha above) is confirmed working correctly. Not
   yet fixed — needs a deliberate color-scheme decision, not a unilateral
   change.
+- **`updateWristCrop()`'s clip plane silently stopped affecting rendering
+  forever, the first time Crop Wrist was ever toggled off and back on
+  (fixed 2026-09-21)** — the disable branch clears
+  `material.clippingPlanes` to a fresh `[]` but never clears `h.clipPlane`
+  itself, so the `if (!h.clipPlane)` creation guard stayed permanently
+  false afterward and the plane was never re-added to
+  `material.clippingPlanes` — confirmed live: `clippingPlanes[0].constant`
+  genuinely kept changing on every Hide Wrist slider input (the JS-side
+  math was never broken), but `material.clippingPlanes` itself stayed the
+  stale empty array, so none of it ever reached the renderer. Fixed by
+  unconditionally reassigning `material.clippingPlanes = [h.clipPlane]`
+  every call. **Separately, even with this fixed, Hide Wrist's own visual
+  range can still look subtle** — `maxReach` (the crop's own total travel
+  distance) reduces to `2.8 * cfg.handScale` world units algebraically
+  (handLengthRaw cancels out of `handLengthRaw * computeBaseScale() *
+  0.35`), which may be small relative to the visible framing for some
+  camera/pose combinations. If Hide Wrist still looks like it does little
+  after this fix, check `maxReach`'s actual magnitude against the
+  visible scene scale before assuming another wiring bug.
+- **Palm Face Rotation's roll axis (`wristCropNormalAligned`) is nearly
+  aligned with the DEFAULT saved cameras' own view direction** — live-
+  verified extensively (direct quaternion/clip-plane comparisons on both
+  local preview and the real Vercel deployment) that the underlying
+  rotation genuinely updates every time, ruling out stale settings, a
+  dead render loop, backface culling, and camera-framing artifacts one at
+  a time. The remaining, real explanation: rolling around an axis nearly
+  parallel to the camera's own view direction barely changes the visible
+  silhouette (like watching a screw spin along its own axis) for small-
+  to-moderate offset values, and swings the fingers entirely outside the
+  narrow 32° FOV for large ones (confirmed live: widening FOV to 90°
+  brought a "vanished" hand at offset=179° back into view, visibly
+  rotated). This is a real usability problem — the effect is genuinely
+  hard to see from the current default cameras — not a wiring bug. If a
+  future report says this slider "does nothing," verify with a direct
+  `wrapper.quaternion` before/after comparison (not just a screenshot)
+  before concluding the mechanism itself is broken.
+- **Debugging tip: `THREE.*.prototype` monkey-patching (e.g. patching
+  `Quaternion.prototype.slerp`, `Matrix4.prototype.lookAt`,
+  `WebGLRenderer.prototype.render` from `javascript_tool` eval) produced
+  inconsistent/unreliable call counts this session** — patched methods
+  sometimes reported zero calls even when the underlying behavior (proven
+  via direct before/after state reads) showed the exact opposite. Don't
+  trust a "zero calls" result from this technique as proof a code path
+  isn't running; prefer direct state comparison (read a value, trigger
+  the action, read the value again) over call-counting instrumentation
+  in this environment.

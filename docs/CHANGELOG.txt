@@ -710,6 +710,67 @@ round (a deliberate color-scheme choice, not unilaterally changed) --
 documented in CLAUDE.md as a known, real usability issue.
 
 --------------------------------------------------------------------------------
+2026-09-21  -  6:10 AM - 6:31 AM EDT (20m22s per two `date` calls)
+
+Deep live-debugging round on 2 directly-reported issues (Hide Wrist not
+applying to the live model; Palm Face Rotation "messing with poses"/
+"does nothing"), plus an extended real-time investigation into "cursor
+and tilt tracking is being overridden by some other setting" that the
+user pushed back on repeatedly as I gathered evidence.
+
+**Hide Wrist fixed for real.** `updateWristCrop()`'s clip-plane creation
+was gated `if (!h.clipPlane) { h.clipPlane = new Plane(); material.
+clippingPlanes = [h.clipPlane] }` -- but the DISABLE branch (crop toggled
+off) clears `material.clippingPlanes` to a fresh `[]` without ever
+clearing `h.clipPlane` itself, so once crop was ever toggled off and back
+on, that guard stayed permanently false and the plane was never
+re-attached to the material again. Confirmed live via direct inspection:
+`clippingPlanes[0].constant` genuinely changed on every Hide Wrist slider
+input the whole time (the math was never broken) -- but rendering had
+stopped reflecting it. Fixed by unconditionally reassigning
+`material.clippingPlanes = [h.clipPlane]` every call. Separately noted
+(not a bug, a scale observation): `maxReach` algebraically reduces to
+`2.8 * cfg.handScale` world units (handLengthRaw cancels out of its own
+formula) -- worth checking against actual scene scale if the slider's
+visible range still looks subtle after this fix.
+
+**Palm Face Rotation: extensively verified the underlying mechanism is
+NOT broken, after the user firmly and repeatedly disputed that
+conclusion.** Took the pushback seriously rather than re-asserting my
+first read -- ran a long sequence of independent, increasingly rigorous
+checks on both the local preview and the REAL live Vercel deployment
+(https://handy-set.vercel.app, no `?dev=1`): direct before/after
+`wrapper.quaternion` comparisons (confirmed real, substantial change from
+a clean 0deg->180deg sweep), ruled out stale git-tracked settings
+(checked `checkboxTrackingEnabled`/`sliderPalmFaceRotationOffset`/
+`checkboxPalmFacesCursor` directly against the live remote JSON), ruled
+out a dead render loop (a standalone requestAnimationFrame counter probe
+ticked normally), ruled out backface culling (forcing `material.side =
+THREE.DoubleSide` changed nothing), and finally found the real
+explanation: widening the camera's FOV from 32deg to 90deg brought a
+hand that had "vanished" at offset=179deg back into view, visibly
+rotated. The roll axis (`wristCropNormalAligned`) is nearly aligned with
+the default cameras' own view direction, so small-to-moderate offsets
+barely change the visible silhouette (like a screw spinning along its
+own axis) and large ones swing the fingers entirely outside the narrow
+FOV. Real usability problem, not a wiring bug -- documented in CLAUDE.md,
+including the specific ruled-out hypotheses so this doesn't need
+re-investigating from scratch.
+
+**Methodology note:** `THREE.*.prototype` monkey-patching (slerp,
+lookAt, WebGLRenderer.render) gave unreliable/contradictory call counts
+in this environment -- reported zero calls on code paths independently
+proven (via direct state reads) to be running. Abandoned that technique
+mid-investigation in favor of direct before/after state comparison, which
+is what actually resolved this. Documented as a standing methodology
+note so a future session doesn't lose time on the same dead end.
+
+Also confirmed via direct source fetch that the live Vercel deployment
+was genuinely running the latest pushed main.js (byte-identical
+`animate()` body) -- ruled out a stale-deployment explanation early,
+before the longer investigation above.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
