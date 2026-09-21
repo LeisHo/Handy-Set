@@ -63,6 +63,26 @@ const cfg = {
   // runs at all).
   trackingEnabled: true, trackingDamping: 1, targetDepthFactor: 0.6,
   showTargetMarker: false, palmFacesCursor: false, palmFaceRotationOffset: 0,
+  // Reactive Arm Length — ported from HANDY DANDIES (see docs/CHANGELOG.txt
+  // for the porting account). HANDY DANDIES normalizes "distance" against
+  // the live min/max distance across a whole FIELD of hands each frame —
+  // a concept that doesn't exist for this project's single-hand (or small
+  // field) case. Adapted to reuse `tiltMagnitude` (already computed every
+  // frame by handleMouseMoveFallback/handleDeviceOrientation — how far
+  // the cursor/tilt currently is from center, 0-1 normalized) as the
+  // "distance" input to the curve instead — the natural equivalent for
+  // this project's own tracking abstraction. Curve math, widget UI, and
+  // every control (reactive on/off, min/max range, curve editor) are
+  // otherwise a verbatim port.
+  reactiveArmLengthEnabled: true,
+  armLengthRange: '{"min":0,"max":85}',
+  armLengthCurve: '[{"x":0,"y":1},{"x":0.148333740234375,"y":0.6613540649414062},{"x":0.4100001017252604,"y":0.31468760172526045},{"x":0.5316670735677084,"y":0.2680206298828125},{"x":0.748333740234375,"y":0.19468739827473958},{"x":1,"y":0}]',
+  // Responsive Wrist Splay — same porting/adaptation note as Reactive Arm
+  // Length above (tiltMagnitude stands in for HANDY DANDIES' per-field
+  // live distance range).
+  wristSplayResponsiveEnabled: true, wristSplayDefault: 7, wristSplayReactiveEnabled: true,
+  wristSplayRange: '{"min":5,"max":-71}',
+  wristSplayCurve: '[{"x":0,"y":1},{"x":0.31833343505859374,"y":0.6961458841959636},{"x":1,"y":0.042812347412109375}]',
   // Lighting
   keyAzimuth: 117, keyElevation: 56, keyTargetHeight: 71, keyIntensity: 6, keyColor: '#ffffff',
   ambientIntensity: 0, ambientSkyColor: '#ffffff', ambientGroundColor: '#3a2f2a',
@@ -217,6 +237,85 @@ let hand = null // hands[0] — the "primary" hand: pose-editing reference frame
 
 function computeBaseScale() { return (8 / handLengthRaw) * cfg.handScale }
 
+// ---------------------------------------------------------------------
+// Reactive Arm Length + Responsive Wrist Splay — curve math, ported
+// verbatim from HANDY DANDIES (see cfg's own declaration comment for the
+// single-hand distance-input adaptation). `armLengthRangeParsed`/etc are
+// parsed once (parse*Config(), called from each control's own onChange
+// and once at startup) rather than JSON.parse'd every frame.
+// ---------------------------------------------------------------------
+let armLengthRangeParsed = { min: 0, max: 85 }
+let armLengthCurveParsed = [{ x: 0, y: 1 }, { x: 1, y: 0 }]
+let wristSplayRangeParsed = { min: 5, max: -71 }
+let wristSplayCurveParsed = [{ x: 0, y: 1 }, { x: 1, y: 0 }]
+const curveWidgetResyncs = []
+
+function catmullRomY(y0, y1, y2, y3, t) {
+  const t2 = t * t, t3 = t2 * t
+  return 0.5 * ((2 * y1) + (-y0 + y2) * t + (2 * y0 - 5 * y1 + 4 * y2 - y3) * t2 + (-y0 + 3 * y1 - 3 * y2 + y3) * t3)
+}
+function cubicBezier1D(p0, p1, p2, p3, t) {
+  const u = 1 - t
+  return u * u * u * p0 + 3 * u * u * t * p1 + 3 * u * t * t * p2 + t * t * t * p3
+}
+function bezierSegmentY(P0, C1, C2, P3, x) {
+  let lo = 0, hi = 1
+  for (let iter = 0; iter < 24; iter++) {
+    const mid = (lo + hi) / 2
+    const xm = cubicBezier1D(P0.x, C1.x, C2.x, P3.x, mid)
+    if (xm < x) lo = mid; else hi = mid
+  }
+  const t = (lo + hi) / 2
+  return cubicBezier1D(P0.y, C1.y, C2.y, P3.y, t)
+}
+function evaluateReactiveCurve(points, x) {
+  if (!points || points.length === 0) return 1
+  if (points.length === 1) return points[0].y
+  const sorted = points
+  if (x <= sorted[0].x) return sorted[0].y
+  if (x >= sorted[sorted.length - 1].x) return sorted[sorted.length - 1].y
+  for (let i = 0; i < sorted.length - 1; i++) {
+    const p1 = sorted[i], p2 = sorted[i + 1]
+    if (x >= p1.x && x <= p2.x) {
+      if (p1.h1 || p2.h2) {
+        const C1 = p1.h1 ? { x: p1.x + p1.h1.x, y: p1.y + p1.h1.y } : p1
+        const C2 = p2.h2 ? { x: p2.x + p2.h2.x, y: p2.y + p2.h2.y } : p2
+        return bezierSegmentY(p1, C1, C2, p2, x)
+      }
+      const p0 = sorted[i - 1] || p1
+      const p3 = sorted[i + 2] || p2
+      const segT = p2.x === p1.x ? 0 : (x - p1.x) / (p2.x - p1.x)
+      return catmullRomY(p0.y, p1.y, p2.y, p3.y, segT)
+    }
+  }
+  return sorted[sorted.length - 1].y
+}
+function parseArmLengthConfig() {
+  try { armLengthRangeParsed = JSON.parse(cfg.armLengthRange) } catch (e) { /* keep last-good value */ }
+  try { armLengthCurveParsed = JSON.parse(cfg.armLengthCurve).sort((a, b) => a.x - b.x) } catch (e) { /* keep last-good value */ }
+}
+function parseWristSplayConfig() {
+  try { wristSplayRangeParsed = JSON.parse(cfg.wristSplayRange) } catch (e) { /* keep last-good value */ }
+  try { wristSplayCurveParsed = JSON.parse(cfg.wristSplayCurve).sort((a, b) => a.x - b.x) } catch (e) { /* keep last-good value */ }
+}
+// Returns a 0-1 crop fraction (0 = full arm, 1 = fully cropped at wrist).
+// `distanceT` is `tiltMagnitude` (0-1) — see cfg's own comment.
+function computeArmLengthT(distanceT) {
+  if (!cfg.cropWristEnabled) return 0
+  if (!cfg.reactiveArmLengthEnabled) return cfg.hideWrist / 100
+  const curveY = THREE.MathUtils.clamp(evaluateReactiveCurve(armLengthCurveParsed, distanceT), 0, 1)
+  const minT = armLengthRangeParsed.min / 100, maxT = armLengthRangeParsed.max / 100
+  return minT + (maxT - minT) * curveY
+}
+// Returns the EXTRA wrist-splay rotation (degrees) on top of cfg.wristSplay.
+function computeResponsiveWristSplayDeg(distanceT) {
+  if (!cfg.wristSplayResponsiveEnabled) return 0
+  if (!cfg.wristSplayReactiveEnabled) return cfg.wristSplayDefault
+  const curveY = THREE.MathUtils.clamp(evaluateReactiveCurve(wristSplayCurveParsed, distanceT), 0, 1)
+  const { min, max } = wristSplayRangeParsed
+  return min + (max - min) * curveY
+}
+
 // applyCurlToSkeleton — ported verbatim from HANDY DANDIES.
 const _curlAxisScratch = new THREE.Vector3()
 const _splayAxisScratch = new THREE.Vector3()
@@ -336,13 +435,16 @@ function applyCurl(fingerName) {
 // "shows up differently" describes. Axis-letter assignment (X=bend,
 // Z=splay, Y=rotation/twist) was already correct; only the rotation
 // METHOD was wrong.
-function applyWristPoseToSkeleton(skeleton, values) {
+// `extraSplayDeg` (default 0) is Responsive Wrist Splay's own live
+// contribution, added onto values.wristSplay before the single rotateZ
+// call — ported from HANDY DANDIES' own identical parameter.
+function applyWristPoseToSkeleton(skeleton, values, extraSplayDeg = 0) {
   const bone = skeleton.getBoneByName('rHand')
   if (!bone) return
   const rest = boneRestQuat.rHand
   if (rest) bone.quaternion.copy(rest)
   bone.rotateX(THREE.MathUtils.degToRad(values.wristBend || 0))
-  bone.rotateZ(THREE.MathUtils.degToRad(values.wristSplay || 0))
+  bone.rotateZ(THREE.MathUtils.degToRad((values.wristSplay || 0) + extraSplayDeg))
   bone.rotateY(THREE.MathUtils.degToRad(values.wristRotation || 0))
 }
 
@@ -357,15 +459,35 @@ function computeBaseQuatFromValues(values) {
 // Tween — same cfg applied uniformly to all hands (matching HANDY
 // DANDIES' own design: one shared pose, N independent field positions).
 function applyPoseValuesToHand(poseValues) {
+  const extraSplay = computeResponsiveWristSplayDeg(tiltMagnitude)
   hands.forEach((h) => {
     h.currentBaseQuat.copy(computeBaseQuatFromValues(poseValues))
-    applyWristPoseToSkeleton(h.skinnedMesh.skeleton, poseValues)
+    applyWristPoseToSkeleton(h.skinnedMesh.skeleton, poseValues, extraSplay)
     FINGER_NAMES.forEach((name) => applyCurlToSkeleton(name, h.skinnedMesh.skeleton, h.currentBaseQuat, h.wrapper.quaternion, poseValues))
     h.clone.position.set(poseValues.poseOffsetX || 0, poseValues.poseOffsetY || 0, poseValues.poseOffsetZ || 0)
     h.clone.scale.setScalar(computeBaseScale() * (poseValues.poseScale ?? 1))
   })
   cfg.hideWrist = poseValues.hideWrist || 0
   updateWristCrop()
+}
+// Per-frame refresh for Responsive Wrist Splay's live/reactive mode —
+// ported concept from HANDY DANDIES' own "idle repose" (see
+// docs/CHANGELOG.txt): applyPoseValuesToHand() above only bakes a wrist
+// splay value once, at pose-apply time, so it goes stale the moment
+// tiltMagnitude changes afterward unless reapplied every frame. Finger
+// curl is re-baked alongside the wrist for the same reason HANDY DANDIES
+// documents — every finger's base joint is a descendant of the wrist
+// bone, so its curl axis depends on the wrist's current orientation.
+// Only runs when reactive mode is genuinely live (master AND reactive
+// both on) — a static wristSplayDefault value doesn't need per-frame
+// reapplication, it's already baked in by the call above.
+function applyReactiveWristSplayFrame() {
+  if (!cfg.wristSplayResponsiveEnabled || !cfg.wristSplayReactiveEnabled) return
+  const extraSplay = computeResponsiveWristSplayDeg(tiltMagnitude)
+  hands.forEach((h) => {
+    applyWristPoseToSkeleton(h.skinnedMesh.skeleton, cfg, extraSplay)
+    FINGER_NAMES.forEach((name) => applyCurlToSkeleton(name, h.skinnedMesh.skeleton, h.currentBaseQuat, h.wrapper.quaternion, cfg))
+  })
 }
 
 // Wrist crop — one clipping plane PER HAND (each hand faces a different
@@ -411,7 +533,9 @@ function updateWristClipPlaneForHand(h) {
   // to that history regardless of how many times crop has been toggled
   // off/on before.
   h.skinnedMesh.material.clippingPlanes = [h.clipPlane]
-  const t = THREE.MathUtils.clamp(cfg.hideWrist / 100, 0, 1)
+  // Reactive Arm Length — see computeArmLengthT()'s own comment; falls
+  // back to the plain cfg.hideWrist/100 static value when Reactive is off.
+  const t = THREE.MathUtils.clamp(computeArmLengthT(tiltMagnitude), 0, 1)
   const maxReach = handLengthRaw * computeBaseScale() * 0.35
   // wristPosRaw is a bind-pose, pre-transform local position —
   // material.clippingPlanes are evaluated in world space, so it needs
@@ -1041,7 +1165,9 @@ function animate() {
         h.wrapper.quaternion.slerp(desired, cfg.trackingDamping)
       })
     }
+    applyReactiveWristSplayFrame()
   }
+  curveWidgetResyncs.forEach((fn) => fn())
   composer.render()
 }
 
@@ -1132,6 +1258,207 @@ function wireSlider(id, onInput) {
 }
 function wireCheckbox(id, onChange) { const el = document.getElementById(id); if (el) el.addEventListener('change', (e) => onChange(e.target.checked)) }
 function wireColor(id, onChange) { const el = document.getElementById(id); if (el) el.addEventListener('input', (e) => onChange(e.target.value)) }
+function wireTextInput(id, onChange) { const el = document.getElementById(id); if (el) el.addEventListener('input', (e) => onChange(e.target.value)) }
+
+// =======================================================================
+// Reactive Arm Length / Responsive Wrist Splay — custom curve-editor and
+// dual-handle range widgets, ported from HANDY DANDIES (its own generic
+// engine has no equivalent control type, so these are hand-built DOM/SVG
+// on top of a plain devPanel.js 'text' control, same convention as this
+// project's other custom widgets). Genericized into 2 parametrized
+// builders (HANDY DANDIES has 4 near-duplicate functions; behavior here
+// is identical, just DRY'd) rather than duplicated per feature.
+// =======================================================================
+function elLocal(tag, styles, attrs) {
+  const node = document.createElement(tag)
+  if (styles) Object.assign(node.style, styles)
+  if (attrs) Object.entries(attrs).forEach(([k, v]) => { if (k === 'text') node.textContent = v; else node.setAttribute(k, v) })
+  return node
+}
+function commitTextControl(input, value) {
+  input.value = value
+  input.dispatchEvent(new Event('input', { bubbles: true }))
+}
+// Dual-handle range bar. opts: {trackMin, trackMax, isPercent, crossClamp, minLabel, maxLabel}
+function buildReactiveRangeWidget(row, opts) {
+  const input = row.querySelector('.dev-text-input')
+  if (!input) return
+  input.style.display = 'none'
+  row.style.flexDirection = 'column'
+  row.style.alignItems = 'stretch'
+  const toPct = opts.isPercent ? (v) => v : (v) => THREE.MathUtils.clamp((v - opts.trackMin) / (opts.trackMax - opts.trackMin) * 100, 0, 100)
+  const fromPct = opts.isPercent ? (p) => Math.round(p) : (p) => Math.round(opts.trackMin + (p / 100) * (opts.trackMax - opts.trackMin))
+
+  const wrap = elLocal('div', { flex: '1', padding: '6px 4px 2px' })
+  const track = elLocal('div', { position: 'relative', height: '18px', margin: '0 9px', background: 'rgba(255,255,255,0.12)', borderRadius: '9px' })
+  const fill = elLocal('div', { position: 'absolute', top: '0', bottom: '0', background: 'var(--dev-accent-color, #7d8cff)', opacity: '0.5', borderRadius: '9px' })
+  const zeroTick = !opts.isPercent ? elLocal('div', { position: 'absolute', top: '-2px', bottom: '-2px', width: '1px', background: 'rgba(255,255,255,0.35)' }) : null
+  const minHandle = elLocal('div', { position: 'absolute', top: '-3px', width: '18px', height: '24px', marginLeft: '-9px', background: 'var(--dev-accent-color, #7d8cff)', borderRadius: '4px', cursor: 'ew-resize', touchAction: 'none' })
+  const maxHandle = elLocal('div', { position: 'absolute', top: '-3px', width: '18px', height: '24px', marginLeft: '-9px', background: 'var(--dev-accent-color, #7d8cff)', borderRadius: '4px', cursor: 'ew-resize', touchAction: 'none' })
+  const readout = elLocal('div', { fontSize: '11px', textAlign: 'center', marginTop: '4px', opacity: '0.85' })
+  track.appendChild(fill); if (zeroTick) track.appendChild(zeroTick)
+  track.appendChild(minHandle); track.appendChild(maxHandle)
+  wrap.appendChild(track); wrap.appendChild(readout)
+  row.appendChild(wrap)
+
+  let current = { min: opts.trackMin, max: opts.trackMax }
+  try { current = JSON.parse(input.value) } catch (e) { /* keep default */ }
+  let lastSeenValue = input.value
+
+  function redraw() {
+    const minPct = toPct(current.min), maxPct = toPct(current.max)
+    const leftPct = Math.min(minPct, maxPct), rightPct = Math.max(minPct, maxPct)
+    fill.style.left = leftPct + '%'
+    fill.style.right = (100 - rightPct) + '%'
+    if (zeroTick) zeroTick.style.left = toPct(0) + '%'
+    minHandle.style.left = minPct + '%'
+    maxHandle.style.left = maxPct + '%'
+    readout.textContent = `${opts.minLabel}: ${current.min}${opts.unit}  ${opts.maxLabel}: ${current.max}${opts.unit}`
+  }
+  redraw()
+  curveWidgetResyncs.push(() => {
+    if (input.value === lastSeenValue) return
+    lastSeenValue = input.value
+    try { current = JSON.parse(input.value); redraw(); if (opts.onExternalChange) opts.onExternalChange(input.value) } catch (e) { /* leave displayed state as-is */ }
+  })
+
+  function startDrag(handleKey, otherKey) {
+    return (downEv) => {
+      downEv.preventDefault()
+      function onMove(moveEv) {
+        const rect = track.getBoundingClientRect()
+        if (rect.width <= 0) return // hidden/mid-collapse-transition -- avoid committing a NaN-derived value
+        let pct = THREE.MathUtils.clamp((moveEv.clientX - rect.left) / rect.width, 0, 1) * 100
+        let v = fromPct(pct)
+        if (opts.crossClamp) v = handleKey === 'min' ? Math.min(v, current[otherKey]) : Math.max(v, current[otherKey])
+        current[handleKey] = v
+        redraw()
+      }
+      function onUp() {
+        window.removeEventListener('pointermove', onMove)
+        window.removeEventListener('pointerup', onUp)
+        commitTextControl(input, JSON.stringify(current))
+      }
+      window.addEventListener('pointermove', onMove)
+      window.addEventListener('pointerup', onUp)
+    }
+  }
+  minHandle.addEventListener('pointerdown', startDrag('min', 'max'))
+  maxHandle.addEventListener('pointerdown', startDrag('max', 'min'))
+}
+// Draggable-point curve editor (SVG), 0-1 x 0-1 domain, Catmull-Rom
+// spline (evaluateReactiveCurve) with optional per-point bezier handles.
+// opts: {caption}
+function buildReactiveCurveWidget(row, opts) {
+  const input = row.querySelector('.dev-text-input')
+  if (!input) return
+  input.style.display = 'none'
+  row.style.flexDirection = 'column'
+  row.style.alignItems = 'stretch'
+
+  const W = 240, H = 120
+  const svgNS = 'http://www.w3.org/2000/svg'
+  const svg = document.createElementNS(svgNS, 'svg')
+  svg.setAttribute('width', W); svg.setAttribute('height', H)
+  Object.assign(svg.style, { background: 'rgba(255,255,255,0.06)', borderRadius: '4px', marginTop: '6px', touchAction: 'none', cursor: 'crosshair' })
+  const axisX = document.createElementNS(svgNS, 'line')
+  axisX.setAttribute('x1', 0); axisX.setAttribute('y1', H - 1); axisX.setAttribute('x2', W); axisX.setAttribute('y2', H - 1)
+  axisX.setAttribute('stroke', 'rgba(255,255,255,0.25)')
+  const axisY = document.createElementNS(svgNS, 'line')
+  axisY.setAttribute('x1', 1); axisY.setAttribute('y1', 0); axisY.setAttribute('x2', 1); axisY.setAttribute('y2', H)
+  axisY.setAttribute('stroke', 'rgba(255,255,255,0.25)')
+  const curvePath = document.createElementNS(svgNS, 'path')
+  curvePath.setAttribute('fill', 'none'); curvePath.setAttribute('stroke', 'var(--dev-accent-color, #7d8cff)'); curvePath.setAttribute('stroke-width', '2')
+  svg.appendChild(axisX); svg.appendChild(axisY); svg.appendChild(curvePath)
+  const caption = elLocal('div', { fontSize: '10px', opacity: '0.7', marginTop: '3px', textAlign: 'center' }, { text: opts.caption })
+  row.appendChild(svg)
+  row.appendChild(caption)
+
+  let points = [{ x: 0, y: 1 }, { x: 1, y: 0 }]
+  try {
+    const parsed = JSON.parse(input.value)
+    if (Array.isArray(parsed) && parsed.length >= 2) points = parsed.sort((a, b) => a.x - b.x)
+  } catch (e) { /* keep default */ }
+
+  const toPx = (p) => ({ x: p.x * W, y: (1 - p.y) * H })
+  const fromPx = (px, py) => ({ x: THREE.MathUtils.clamp(px / W, 0, 1), y: THREE.MathUtils.clamp(1 - py / H, 0, 1) })
+  let circles = []
+
+  function commitPoints() {
+    points.sort((a, b) => a.x - b.x)
+    commitTextControl(input, JSON.stringify(points))
+  }
+  const CURVE_SAMPLES = 48
+  function redraw() {
+    let d = ''
+    for (let i = 0; i <= CURVE_SAMPLES; i++) {
+      const x = i / CURVE_SAMPLES
+      const y = THREE.MathUtils.clamp(evaluateReactiveCurve(points, x), 0, 1)
+      const px = toPx({ x, y })
+      d += (i === 0 ? 'M' : 'L') + px.x.toFixed(2) + ',' + px.y.toFixed(2) + ' '
+    }
+    curvePath.setAttribute('d', d.trim())
+    circles.forEach((c) => svg.removeChild(c))
+    circles = points.map((p, i) => {
+      const px = toPx(p)
+      const c = document.createElementNS(svgNS, 'circle')
+      c.setAttribute('cx', px.x); c.setAttribute('cy', px.y); c.setAttribute('r', 5)
+      c.setAttribute('fill', 'var(--dev-accent-color, #7d8cff)')
+      Object.assign(c.style, { cursor: 'grab' })
+      let dragged = false
+      c.addEventListener('pointerdown', (downEv) => {
+        downEv.stopPropagation()
+        dragged = false
+        const isEndpoint = i === 0 || i === points.length - 1
+        function onMove(moveEv) {
+          const rect = svg.getBoundingClientRect()
+          if (rect.width <= 0 || rect.height <= 0) return
+          dragged = true
+          const np = fromPx(moveEv.clientX - rect.left, moveEv.clientY - rect.top)
+          if (isEndpoint) { p.y = np.y } else { p.x = np.x; p.y = np.y }
+          redraw()
+        }
+        function onUp() {
+          window.removeEventListener('pointermove', onMove)
+          window.removeEventListener('pointerup', onUp)
+          if (dragged) commitPoints()
+        }
+        window.addEventListener('pointermove', onMove)
+        window.addEventListener('pointerup', onUp)
+      })
+      function deletePointIfRemovable() {
+        if (points.length > 2 && i !== 0 && i !== points.length - 1) {
+          points.splice(points.indexOf(p), 1)
+          redraw()
+          commitPoints()
+        }
+      }
+      c.addEventListener('dblclick', (dblEv) => { dblEv.stopPropagation(); deletePointIfRemovable() })
+      c.addEventListener('contextmenu', (ctxEv) => { ctxEv.preventDefault(); ctxEv.stopPropagation(); deletePointIfRemovable() })
+      svg.appendChild(c)
+      return c
+    })
+  }
+  svg.addEventListener('click', (clickEv) => {
+    if (clickEv.target.tagName === 'circle') return
+    const rect = svg.getBoundingClientRect()
+    const np = fromPx(clickEv.clientX - rect.left, clickEv.clientY - rect.top)
+    if (np.x <= 0 || np.x >= 1) return
+    points.push(np)
+    redraw()
+    commitPoints()
+  })
+  redraw()
+  let lastSeenValue = input.value
+  curveWidgetResyncs.push(() => {
+    if (input.value === lastSeenValue) return
+    lastSeenValue = input.value
+    try {
+      const parsed = JSON.parse(input.value)
+      if (Array.isArray(parsed) && parsed.length >= 2) { points = parsed.sort((a, b) => a.x - b.x); redraw(); if (opts.onExternalChange) opts.onExternalChange(input.value) }
+    } catch (e) { /* leave displayed state as-is */ }
+  })
+}
 
 // Labels match HANDY DANDIES' own DEV_GROUPS exactly (grepped from its
 // main.js, not reconstructed) — including the thumb's own 2 irregular
@@ -1335,16 +1662,25 @@ function renderPoseGroup(content) {
     addRow(subWrist, { id: 'slider' + k, label, type: 'slider', min: mn, max: mx, step: 1, value: cfg[k] })
     wireSlider('slider' + k, (v) => { cfg[k] = v; applyPoseValuesToHand(cfg) })
   })
-  // "Default Arm Length (Crop %, Reactive Off)" in Handy Dandies -- that
-  // exact label describes ITS OWN reactive-arm-length system (not ported
-  // here, per this project's documented simplification), so kept as this
-  // project's own accurate description instead of copying a label that
-  // would misdescribe what the slider actually does here.
+  // Reactive Arm Length -- ported from HANDY DANDIES (see cfg's own
+  // declaration comment for the single-hand distance-input adaptation:
+  // tiltMagnitude stands in for HANDY DANDIES' per-field live distance
+  // range). "Default Arm Length" is the label HANDY DANDIES itself uses
+  // for the non-reactive fallback slider.
   addRow(subWrist, { id: 'checkboxCropWristEnabled', label: 'Crop Wrist (Master On/Off)', type: 'checkbox' })
   document.getElementById('checkboxCropWristEnabled').checked = cfg.cropWristEnabled
   wireCheckbox('checkboxCropWristEnabled', (v) => { cfg.cropWristEnabled = v; updateWristCrop() })
-  addRow(subWrist, { id: 'sliderHideWrist', label: 'Hide Wrist (%)', type: 'slider', min: 0, max: 100, step: 1, value: cfg.hideWrist })
+  addRow(subWrist, { id: 'sliderHideWrist', label: 'Default Arm Length (Crop %, Reactive Off)', type: 'slider', min: 0, max: 100, step: 1, value: cfg.hideWrist })
   wireSlider('sliderHideWrist', (v) => { cfg.hideWrist = v; updateWristCrop() })
+  addRow(subWrist, { id: 'checkboxReactiveArmLengthEnabled', label: 'Reactive Arm Length (By Cursor Distance)', type: 'checkbox' })
+  document.getElementById('checkboxReactiveArmLengthEnabled').checked = cfg.reactiveArmLengthEnabled
+  wireCheckbox('checkboxReactiveArmLengthEnabled', (v) => { cfg.reactiveArmLengthEnabled = v; updateWristCrop() })
+  const armRangeRow = addRow(subWrist, { id: 'textArmLengthRange', label: 'Min / Max Arm Length (Crop %)', type: 'text', inputType: 'text', value: cfg.armLengthRange })
+  wireTextInput('textArmLengthRange', (v) => { cfg.armLengthRange = v; parseArmLengthConfig() })
+  buildReactiveRangeWidget(armRangeRow, { trackMin: 0, trackMax: 100, isPercent: true, crossClamp: false, minLabel: 'Min', maxLabel: 'Max', unit: '%', onExternalChange: (v) => { cfg.armLengthRange = v; parseArmLengthConfig() } })
+  const armCurveRow = addRow(subWrist, { id: 'textArmLengthCurve', label: 'Length Scaling Curve (Distance -> Crop)', type: 'text', inputType: 'text', value: cfg.armLengthCurve })
+  wireTextInput('textArmLengthCurve', (v) => { cfg.armLengthCurve = v; parseArmLengthConfig() })
+  buildReactiveCurveWidget(armCurveRow, { caption: 'X: Tilt/Cursor Distance From Center (0-1)  ·  Y: Crop (0=None, 1=Full)', onExternalChange: (v) => { cfg.armLengthCurve = v; parseArmLengthConfig() } })
 
   ;['index', 'middle', 'ring', 'pinky'].forEach((f) => {
     const sub = addSubgroup(content, f.charAt(0).toUpperCase() + f.slice(1))
@@ -1360,6 +1696,29 @@ function renderPoseGroup(content) {
   wireSlider('sliderPoseScale', (v) => { cfg.poseScale = v; applyPoseValuesToHand(cfg) })
 
   renderPresetPicker(content, 'Saved Poses', SAVED_POSES, DEFAULT_POSE_NAME, applyPosePreset, capturePoseFromCfg, { exportable: true, importable: true, defaultFieldKey: 'defaultPose' })
+}
+
+// Ported from HANDY DANDIES (its own top-level "Responsive Wrist Splay"
+// group — same structure as Reactive Arm Length above, different unit
+// (degrees) and application (adds onto cfg.wristSplay every frame while
+// reactive, via applyReactiveWristSplayFrame() in animate() — see that
+// function's own comment). Single-hand distance-input adaptation: see
+// cfg's own declaration comment.
+function renderResponsiveWristSplayGroup(content) {
+  addRow(content, { id: 'checkboxWristSplayResponsiveEnabled', label: 'Responsive Wrist Splay (Master On/Off)', type: 'checkbox' })
+  document.getElementById('checkboxWristSplayResponsiveEnabled').checked = cfg.wristSplayResponsiveEnabled
+  wireCheckbox('checkboxWristSplayResponsiveEnabled', (v) => { cfg.wristSplayResponsiveEnabled = v; applyPoseValuesToHand(cfg) })
+  addRow(content, { id: 'sliderWristSplayDefault', label: 'Default Wrist Splay (Deg, Reactive Off)', type: 'slider', min: -180, max: 180, step: 1, value: cfg.wristSplayDefault })
+  wireSlider('sliderWristSplayDefault', (v) => { cfg.wristSplayDefault = v; applyPoseValuesToHand(cfg) })
+  addRow(content, { id: 'checkboxWristSplayReactiveEnabled', label: 'Reactive Wrist Splay (By Cursor Distance)', type: 'checkbox' })
+  document.getElementById('checkboxWristSplayReactiveEnabled').checked = cfg.wristSplayReactiveEnabled
+  wireCheckbox('checkboxWristSplayReactiveEnabled', (v) => { cfg.wristSplayReactiveEnabled = v; applyPoseValuesToHand(cfg) })
+  const splayRangeRow = addRow(content, { id: 'textWristSplayRange', label: 'Min / Max Wrist Splay (Deg)', type: 'text', inputType: 'text', value: cfg.wristSplayRange })
+  wireTextInput('textWristSplayRange', (v) => { cfg.wristSplayRange = v; parseWristSplayConfig() })
+  buildReactiveRangeWidget(splayRangeRow, { trackMin: -180, trackMax: 180, isPercent: false, crossClamp: false, minLabel: 'Min (Center)', maxLabel: 'Max (Full Tilt)', unit: '°', onExternalChange: (v) => { cfg.wristSplayRange = v; parseWristSplayConfig() } })
+  const splayCurveRow = addRow(content, { id: 'textWristSplayCurve', label: 'Splay Scaling Curve (Distance -> Splay)', type: 'text', inputType: 'text', value: cfg.wristSplayCurve })
+  wireTextInput('textWristSplayCurve', (v) => { cfg.wristSplayCurve = v; parseWristSplayConfig() })
+  buildReactiveCurveWidget(splayCurveRow, { caption: 'X: Tilt/Cursor Distance From Center (0-1)  ·  Y: Splay Fraction (0=Min End, 1=Max End)', onExternalChange: (v) => { cfg.wristSplayCurve = v; parseWristSplayConfig() } })
 }
 
 function renderCameraGroup(content) {
@@ -1677,6 +2036,7 @@ function renderHandysetDevGroups() {
   wireCheckbox('checkboxHideHands', (v) => { cfg.hideHands = v; relayoutField() })
 
   renderPoseGroup(addGroup('Pose'))
+  renderResponsiveWristSplayGroup(addGroup('Responsive Wrist Splay'))
   renderCameraGroup(addGroup('Camera'))
   renderPhoneTiltGroup(addGroup('Phone Tilt'))
   renderLightingGroup(addGroup('Lighting'))
