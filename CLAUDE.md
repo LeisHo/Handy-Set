@@ -631,3 +631,30 @@ wiring, and are still open:
   isn't running; prefer direct state comparison (read a value, trigger
   the action, read the value again) over call-counting instrumentation
   in this environment.
+- **The git-tracked remote Sync settings (§12l upgrade) silently failed
+  to apply at all on a plain production visit (no `?dev=1`, not
+  localhost) — root-caused and fixed 2026-09-23.** `main.js`'s own
+  `loadRemoteSettingsOnStartup()` calls devPanel.js's
+  `applyFullDevPanelState()`, which applies every saved value via
+  `document.getElementById(id)` + a real `input`/`change` event dispatch
+  (`applyControlValues()`'s own `if (!el) return` makes a missing
+  element a silent no-op). devPanel.js's `initDevPanelEngine()` only
+  builds that DOM eagerly when `isDevAllowed` — the panel's *visibility*
+  gate, by `TEMPLATE_DEV_PANEL.html`'s own design (`if (isDevAllowed)
+  ensureDevPanelBuilt();`). On a plain production visit that DOM never
+  existed, so the ENTIRE remote-settings apply was a no-op on every
+  control — confirmed live via `window.__debug.cfg`: `bgColor`/
+  `wristSplayResponsiveEnabled`/etc. read the raw hardcoded literal
+  defaults in production while correctly reflecting the git-tracked
+  Sync'd values under `?dev=1`. Fixed in `main.js` only (kept
+  `devPanel.js` a verbatim template copy, per this project's own
+  convention): call `window.ensureDevPanelBuilt()` unconditionally right
+  before `applyFullDevPanelState()` in `loadRemoteSettingsOnStartup()` —
+  safe because it's already idempotent (`devPanelBuilt` guard) and the
+  panel's own visibility stays a separate, untouched pure-CSS gate.
+  **Any other project using both the §12l git-tracked-settings upgrade
+  AND the template's own dev-mode-gated eager-build pattern (e.g. HANDY
+  DANDIES, whose `api/save-settings.js` this project's own was ported
+  from) likely has this exact same latent bug** — worth checking whether
+  its production deployment's actual rendered defaults match its
+  git-tracked Sync'd settings, not just what shows under `?dev=1`.

@@ -12,6 +12,25 @@ Nothing in progress. Pushed to `https://github.com/LeisHo/Handy-Set`
 
 ## Recently completed
 
+- **Production (no `?dev=1`) and the dev-mode URL showed different
+  startup state — root-caused and fixed.** The git-tracked Sync settings
+  apply mechanism (`applyFullDevPanelState()`) writes each value by
+  finding its dev-panel DOM element and dispatching a real input event —
+  a missing element is a silent no-op. The dev panel's DOM was only ever
+  built eagerly in dev mode (`if (isDevAllowed) ensureDevPanelBuilt()`,
+  the panel's own *visibility* gate), so on a plain production visit that
+  DOM never existed and the whole remote-settings apply silently did
+  nothing — every ordinary visitor saw the raw hardcoded literal
+  defaults, not the tuned/saved ones. Fixed by calling the already-
+  idempotent `ensureDevPanelBuilt()` unconditionally before applying,
+  in `main.js` only (`devPanel.js` stayed the verbatim template copy).
+  The panel's visibility itself is untouched — still a separate, pure-CSS
+  gate, so ordinary visitors never see a DEV button or panel. Live-
+  verified byte-identical `cfg` state between a fresh `?dev=1` load and a
+  fresh plain load. As a side effect, this also resolved the "hand nearly
+  invisible on production" concern below (#3) — production now correctly
+  picks up the git-tracked gray background instead of the all-white
+  hardcoded default.
 - **Whole-Hand Rotation X/Y/Z leaked into finger curl/splay instead of
   rigidly rotating the model — real root cause found and fixed.** An
   earlier fix (rotating `h.clone` around a palm-center pivot) turned out
@@ -61,8 +80,12 @@ Nothing in progress. Pushed to `https://github.com/LeisHo/Handy-Set`
    real state reaches git), or a screenshot/more specific description.
 2. Verify Phone Tilt gyroscope rotation specifically on the user's actual
    Pixel 9a — still unverified, no physical device available here.
-3. Decide on a visible default color scheme (current all-white default
-   makes the hand nearly invisible against the page background).
+3. ~~Decide on a visible default color scheme~~ — now moot for production:
+   the startup-sync fix above means production correctly picks up the
+   git-tracked gray background (`#bfbfbf`) instead of the all-white
+   hardcoded default. Revisit only if the *hardcoded* literal defaults
+   in `main.js` (the fallback when no git settings are reachable, e.g.
+   `file://` or an offline API) still need their own deliberate tuning.
 4. Port Pose Offset X/Y/Z to Handy Dandies' camera-relative resolution
    before any saved pose is given a nonzero offset value.
 5. Tune default Camera/Lighting/Toon values to taste, now that Camera

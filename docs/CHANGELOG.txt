@@ -1244,6 +1244,56 @@ SkeletonUtils import name), `4dbbac4` (cache-buster bump), `cd24c24`
 `https://github.com/LeisHo/Handy-Set`; Vercel auto-deployed each.
 
 --------------------------------------------------------------------------------
+2026-09-23  -  11:41 PM - 11:46 PM EDT
+
+Direct report: "https://handy-set.vercel.app/?dev=1 and
+https://handy-set.vercel.app/ have different states on startup. make
+sure they are in sync."
+
+Compared live `window.__debug.cfg` between the two URLs and found 2 real
+differing fields: `bgColor` (`#bfbfbf` under `?dev=1` vs the raw
+hardcoded `#ffffff` default in production) and
+`wristSplayResponsiveEnabled` (`false` under `?dev=1` vs the raw
+hardcoded `true` default in production). Confirmed via `localStorage`
+inspection this wasn't a stale-local-save issue (only the schema-version
+key was present in either tab) — the divergence was structural.
+
+Root cause: `loadRemoteSettingsOnStartup()` (main.js) fetches the
+git-tracked Sync settings and calls devPanel.js's own
+`applyFullDevPanelState()`, which writes each saved value via
+`document.getElementById(id)` + a real `input`/`change` event dispatch —
+`applyControlValues()`'s own `if (!el) return` makes a missing DOM
+element a silent no-op. devPanel.js's `initDevPanelEngine()` only builds
+that DOM eagerly when `isDevAllowed` (`if (isDevAllowed)
+ensureDevPanelBuilt();`) — the panel's VISIBILITY gate, by
+TEMPLATE_DEV_PANEL.html's own design. On a plain production visit (no
+`?dev=1`, not localhost) that DOM never existed at all, so the entire
+remote-settings apply silently did nothing on every control — every
+ordinary visitor saw the raw hardcoded literal defaults in main.js, not
+the tuned values actually saved via Sync/Set-as-Default. Confirmed via
+direct `.parent`-chain-style DOM checks: `slidermodelRotY` and every
+other dynamic control were absent from the DOM in the non-dev tab
+(`sliderExists: false`), only the 2 built-in static Dev Panel/Debug
+`.dev-section` shells from index.html's own raw markup were present.
+
+Fixed in `loadRemoteSettingsOnStartup()` (main.js only — devPanel.js
+kept as the verbatim template copy, per this project's own convention):
+call `window.ensureDevPanelBuilt()` unconditionally right before
+`applyFullDevPanelState()` runs. Safe because `ensureDevPanelBuilt()` is
+already idempotent (`if (devPanelBuilt) return;`) and the panel's own
+*visibility* is a separate, pure-CSS `.dev-mode` gate this change never
+touches — a normal visitor still never sees a DEV button or panel, they
+just now get the DOM built silently in the background so the remote
+settings have something real to write into. Live-verified: after the
+fix, `cfg.bgColor`/`wristSplayResponsiveEnabled`/every other field
+checked read byte-identical between a fresh `?dev=1` load and a fresh
+plain load, and a screenshot of the plain URL confirmed the panel/DEV
+button both stay invisible as before.
+
+Commit: `c3e2728`, pushed to `https://github.com/LeisHo/Handy-Set`;
+Vercel auto-deployed.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
