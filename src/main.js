@@ -2440,6 +2440,25 @@ async function loadRemoteSettingsOnStartup() {
     const data = await resp.json().catch(() => null)
     if (!data || !data.ok || !data.settings) return
     const apply = await waitForDevPanelGlobal('applyFullDevPanelState')
+    // Root-caused 2026-09-23 (?dev=1 vs no-dev startup state diverging):
+    // applyFullDevPanelState() -> applyControlValues() writes each saved
+    // value by `document.getElementById(id)` and dispatching a real
+    // 'input'/'change' event -- a control with no DOM element is a silent
+    // no-op (devPanel.js's own applyControlValues: `if (!el) return`).
+    // devPanel.js's own initDevPanelEngine() only builds that DOM eagerly
+    // when `isDevAllowed` (the panel's VISIBILITY gate, per
+    // TEMPLATE_DEV_PANEL.html's own design), so on a plain production
+    // visit (no ?dev=1, not localhost) the panel DOM never existed at
+    // all and this whole remote-settings apply silently did nothing --
+    // confirmed live: cfg.bgColor/wristSplayResponsiveEnabled/etc. read
+    // the raw hardcoded literal defaults in production while correctly
+    // reflecting the git-tracked Sync'd values under ?dev=1. Calling
+    // ensureDevPanelBuilt() here (idempotent -- it no-ops if already
+    // built, per its own `devPanelBuilt` guard) builds the DOM the apply
+    // needs regardless of dev-mode, while the panel itself stays hidden
+    // for a normal visitor exactly as before (visibility is a separate,
+    // pure-CSS `.dev-mode` gate untouched by this).
+    if (typeof window.ensureDevPanelBuilt === 'function') window.ensureDevPanelBuilt()
     apply(data.settings)
   } catch (err) {
     console.warn('Remote dev panel settings unavailable (expected on a plain static server, e.g. local dev):', err.message)
