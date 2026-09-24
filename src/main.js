@@ -6,6 +6,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
 import { OutlinePass } from 'three/addons/postprocessing/OutlinePass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
 import { clone as cloneSkinnedSkeleton } from 'three/addons/utils/SkeletonUtils.js'
+import { detectDeviceInfo } from './deviceInfo.js'
 
 // Dev panel schema-version guard — runs synchronously, before devPanel.js
 // (main.js loads first, see index.html's own script-order comment) ever
@@ -24,7 +25,7 @@ import { clone as cloneSkinnedSkeleton } from 'three/addons/utils/SkeletonUtils.
 // this simply clears the stale local save; it does not touch the
 // separate git-tracked save (data/processed/dev-panel-settings.json,
 // reset directly when this was first found).
-const HANDYSET_SETTINGS_SCHEMA_VERSION = '2026-09-21f'
+const HANDYSET_SETTINGS_SCHEMA_VERSION = '2026-09-24a'
 try {
   if (localStorage.getItem('handysetSettingsSchemaVersion') !== HANDYSET_SETTINGS_SCHEMA_VERSION) {
     localStorage.removeItem('devPanelSettings')
@@ -101,7 +102,8 @@ const cfg = {
   tweenPoses: [], tweenT: 0, tweenFrameCount: 10, exportFramePrefix: 'tween',
   // Debug
   showGridHelper: false, showWireframe: false,
-  sensorStreamEnabled: false, sensorIntervalMs: 200
+  sensorStreamEnabled: false, sensorIntervalMs: 200,
+  deviceInfoEnabled: false
 }
 
 // ---------------------------------------------------------------------
@@ -2237,6 +2239,90 @@ function renderTweenGroup(content) {
   exportBtn.addEventListener('click', () => exportTweenSequence(exportBtn))
 }
 
+// =======================================================================
+// Device Information (Debug -> Settings) — client-side-only diagnostic
+// display of whatever the browser's own User-Agent Client Hints (or,
+// absent that, the traditional User-Agent string) actually expose about
+// the visiting device. Never sent to a server, never persisted beyond the
+// normal dev-panel settings blob, no fingerprinting. See
+// src/deviceInfo.js for the detection logic itself.
+// =======================================================================
+let latestDeviceInfo = null
+let deviceInfoDisplayEl = null
+let deviceInfoRawEl = null
+function kvRow(label, value) {
+  const row = document.createElement('div')
+  row.style.cssText = 'display:flex; justify-content:space-between; gap:10px; padding:1px 0;'
+  const l = document.createElement('span'); l.textContent = label; l.style.opacity = '0.7'
+  const v = document.createElement('span'); v.textContent = value == null || value === '' ? '—' : String(value); v.style.textAlign = 'right'
+  row.appendChild(l); row.appendChild(v)
+  return row
+}
+function renderDeviceInfoDisplay(info) {
+  if (!deviceInfoDisplayEl) return
+  deviceInfoDisplayEl.innerHTML = ''
+  const confidenceLabel = { confirmed: 'Confirmed', inferred: 'Inferred', unavailable: 'Unavailable' }[info.modelConfidence] || info.modelConfidence
+  deviceInfoDisplayEl.appendChild(kvRow('Device Type', info.deviceType))
+  deviceInfoDisplayEl.appendChild(kvRow('Brand', info.brand))
+  deviceInfoDisplayEl.appendChild(kvRow('Model', info.model || 'Not exposed by browser'))
+  deviceInfoDisplayEl.appendChild(kvRow('Platform', info.platform))
+  deviceInfoDisplayEl.appendChild(kvRow('OS Version', info.platformVersion))
+  deviceInfoDisplayEl.appendChild(kvRow('Browser', info.browser))
+  deviceInfoDisplayEl.appendChild(kvRow('Browser Version', info.browserVersion))
+  deviceInfoDisplayEl.appendChild(kvRow('Mobile', info.mobile === null ? null : (info.mobile ? 'Yes' : 'No')))
+  deviceInfoDisplayEl.appendChild(kvRow('Model Source', info.modelSource))
+  deviceInfoDisplayEl.appendChild(kvRow('Confidence', confidenceLabel))
+  deviceInfoDisplayEl.appendChild(kvRow('UA Client Hints Supported', info.userAgentDataSupported ? 'Yes' : 'No'))
+  if (deviceInfoRawEl) deviceInfoRawEl.textContent = JSON.stringify(info.raw, null, 2)
+}
+async function refreshDeviceInfo() {
+  try {
+    latestDeviceInfo = await detectDeviceInfo()
+  } catch (err) {
+    // detectDeviceInfo() itself never throws by design, but this display
+    // must never break the app even if that guarantee is ever violated.
+    latestDeviceInfo = { deviceType: 'unknown', brand: null, model: null, platform: null, platformVersion: null, browser: null, browserVersion: null, mobile: null, modelSource: 'unavailable', modelConfidence: 'unavailable', userAgentDataSupported: !!navigator.userAgentData, raw: { error: String((err && err.message) || err) } }
+  }
+  renderDeviceInfoDisplay(latestDeviceInfo)
+}
+function renderDeviceInfoSettings(debugContent) {
+  const settingsSub = addSubgroup(debugContent, 'Settings')
+  addRow(settingsSub, { id: 'checkboxDeviceInfoEnabled', label: 'Device Information', type: 'checkbox' })
+  document.getElementById('checkboxDeviceInfoEnabled').checked = cfg.deviceInfoEnabled
+
+  const panel = document.createElement('div')
+  panel.style.cssText = 'font-size:11px; margin-top:4px; padding:6px 8px; background:rgba(255,255,255,0.06); border:1px solid var(--dev-accent-color, #0ff); border-radius:4px;'
+  panel.style.display = cfg.deviceInfoEnabled ? '' : 'none'
+  deviceInfoDisplayEl = document.createElement('div')
+  panel.appendChild(deviceInfoDisplayEl)
+
+  const refreshRow = document.createElement('div'); refreshRow.className = 'dev-buttons'; refreshRow.style.marginTop = '6px'
+  const refreshBtn = document.createElement('button'); refreshBtn.type = 'button'; refreshBtn.textContent = 'Refresh'
+  refreshRow.appendChild(refreshBtn)
+  panel.appendChild(refreshRow)
+  refreshBtn.addEventListener('click', () => refreshDeviceInfo())
+
+  const rawDetails = document.createElement('details')
+  rawDetails.style.marginTop = '6px'
+  const rawSummary = document.createElement('summary')
+  rawSummary.textContent = 'Raw diagnostic data'
+  rawSummary.style.cssText = 'cursor:pointer; opacity:0.75; font-size:10px;'
+  deviceInfoRawEl = document.createElement('pre')
+  deviceInfoRawEl.style.cssText = 'font: 10px/1.4 ui-monospace, Consolas, monospace; white-space:pre-wrap; word-break:break-all; margin:4px 0 0; opacity:0.85; max-height:160px; overflow-y:auto;'
+  rawDetails.appendChild(rawSummary)
+  rawDetails.appendChild(deviceInfoRawEl)
+  panel.appendChild(rawDetails)
+
+  settingsSub.appendChild(panel)
+
+  wireCheckbox('checkboxDeviceInfoEnabled', (v) => {
+    cfg.deviceInfoEnabled = v
+    panel.style.display = v ? '' : 'none'
+    if (v && !latestDeviceInfo) refreshDeviceInfo()
+  })
+  if (cfg.deviceInfoEnabled) refreshDeviceInfo()
+}
+
 function renderDebugExtras() {
   /* eslint-disable-next-line no-undef */
   const debugContent = findGroupContent('desktop', 'Debug', 'renderDebugExtras', 'debugExtras')
@@ -2265,6 +2351,8 @@ function renderDebugExtras() {
   sensorLogEl = document.createElement('div')
   sensorLogEl.className = 'dev-mouse-log'
   sensorSub.appendChild(sensorLogEl)
+
+  renderDeviceInfoSettings(debugContent)
 }
 
 function renderHandysetDevGroups() {
