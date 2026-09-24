@@ -1294,6 +1294,66 @@ Commit: `c3e2728`, pushed to `https://github.com/LeisHo/Handy-Set`;
 Vercel auto-deployed.
 
 --------------------------------------------------------------------------------
+2026-09-24  -  05:51 PM - 05:55 PM EDT
+
+Direct request (detailed spec): add browser-based device identification
+(type/brand/model/platform/OS version/browser/version/mobile, with an
+explicit CONFIRMED/INFERRED/UNAVAILABLE distinction) and surface it
+through the existing Dev Panel's Debug group, primarily to test whether
+Chrome on a real Pixel 9a reports its exact model via User-Agent Client
+Hints.
+
+Added `src/deviceInfo.js` — a standalone `detectDeviceInfo()` async
+utility. Primary path: `navigator.userAgentData` (mobile/platform/brands)
++ `getHighEntropyValues(['model', 'platformVersion', 'fullVersionList'])`
+for the exact model. Fallback path (Safari, or any browser without
+Client Hints): `navigator.userAgent`/`navigator.platform` parsing for
+platform/browser/mobile only — never treated as an exact-model source,
+per the spec's own explicit prohibition on guessing a model from
+indirect signals. `deviceType`/`brand` are the only INFERRED fields
+(deviceType from mobile+platform; brand from a small, deliberately
+non-exhaustive model-prefix map — Pixel/Nexus->Google, SM-/Galaxy->
+Samsung, OnePlus, Redmi/Mi->Xiaomi, Moto->Motorola — or from an
+Apple-platform match), everything else is CONFIRMED (browser explicitly
+reported it) or UNAVAILABLE. No fingerprinting, no server calls, no
+extra persistence beyond the normal dev-panel settings blob.
+
+Wired into `main.js`'s `renderDebugExtras()` via a new
+`renderDeviceInfoSettings()`, added as a "Settings" subgroup inside the
+existing Debug group (no such subgroup existed before): a "Device
+Information" checkbox (`cfg.deviceInfoEnabled`, off by default,
+`addRow()`-built so it automatically gets `registerDevControlArray()`
+registration and Mobile/Landscape mirroring support like every other
+control) toggles a compact key/value diagnostic panel plus a collapsible
+`<details>` raw-data section (the exact `navigator.userAgentData`/
+`getHighEntropyValues()` return values) and a manual Refresh button — no
+polling, per the spec. Bumped `HANDYSET_SETTINGS_SCHEMA_VERSION` (new
+group/row structure) and `index.html`'s cache-buster.
+
+Live-verified on the deployed build (`https://handy-set.vercel.app/
+?dev=1`, real desktop Chromium — this sandbox's own embedded browser):
+checkbox toggle shows/hides the panel correctly; Client Hints WAS used
+(`modelSource: user-agent-client-hints`) but returned an empty `model`
+(genuine desktop Chrome/Chromium behavior — only mobile Android Chrome
+typically returns a model string), correctly rendered as "Not exposed
+by browser" / Confidence: Unavailable rather than any guessed value;
+Platform/Browser/Mobile all read correctly (Windows/Chromium/No);
+Refresh re-runs detection; unchecking hides the panel again; the
+row's own "Show in Mobile/Landscape" checkbox is present (confirming
+registration worked); zero console errors throughout.
+
+**Not verifiable in this environment: real Android/Pixel 9a Chrome or
+real iOS/Safari behavior** — no physical device available here. The
+code path for both is implemented per the spec (Client Hints for
+Android Chrome including the `model` high-entropy value; UA-string
+fallback for Safari, which doesn't implement `userAgentData` at all),
+but genuinely untested on real hardware. This is the one open item —
+see docs/PROJECT_PROGRESS.md.
+
+Commit: `4ceff5a`, pushed to `https://github.com/LeisHo/Handy-Set`;
+Vercel auto-deployed.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

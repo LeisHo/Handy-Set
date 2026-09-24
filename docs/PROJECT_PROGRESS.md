@@ -12,6 +12,19 @@ Nothing in progress. Pushed to `https://github.com/LeisHo/Handy-Set`
 
 ## Recently completed
 
+- **Added browser-based device identification, surfaced in Dev Panel ->
+  Debug -> Settings -> Device Information.** New `src/deviceInfo.js`:
+  User-Agent Client Hints (`navigator.userAgentData` +
+  `getHighEntropyValues()`) as the primary source for device
+  type/brand/model/platform/OS version/browser/version/mobile, with a
+  UA-string fallback for browsers without Client Hints (Safari). Every
+  field is explicitly CONFIRMED/INFERRED/UNAVAILABLE — never guesses an
+  exact model from screen size or other indirect signals. Live-verified
+  end-to-end on desktop Chromium (checkbox toggle, Refresh, correct
+  "Not exposed by browser" handling when Client Hints returns no model,
+  zero console errors) — real Android/Pixel 9a Chrome and real iOS/
+  Safari are NOT yet verified (no physical device available in this
+  environment); see What's Next.
 - **Production (no `?dev=1`) and the dev-mode URL showed different
   startup state — root-caused and fixed.** The git-tracked Sync settings
   apply mechanism (`applyFullDevPanelState()`) writes each value by
@@ -73,22 +86,29 @@ Nothing in progress. Pushed to `https://github.com/LeisHo/Handy-Set`
 
 ## What's next
 
-1. Find "Responsive Palm Rotation" — the user says this group exists in
+1. **Test Device Information on a real Pixel 9a + Chrome** (and ideally a
+   real iPhone/Safari) — open `https://handy-set.vercel.app/?dev=1` ->
+   DEV -> Debug -> Settings, check "Device Information". Confirm whether
+   Chrome's `getHighEntropyValues()` actually returns `model: "Pixel 9a"`
+   on real hardware (unverified — this environment has no physical
+   device), and that the fallback path behaves sensibly on Safari.
+2. Find "Responsive Palm Rotation" — the user says this group exists in
    their own app, but an exhaustive search of the git-tracked
    dev-panel-settings.json found no trace of it anywhere. Likely needs
    the user to hit Sync from whichever device/browser shows it (so its
    real state reaches git), or a screenshot/more specific description.
-2. Verify Phone Tilt gyroscope rotation specifically on the user's actual
-   Pixel 9a — still unverified, no physical device available here.
-3. ~~Decide on a visible default color scheme~~ — now moot for production:
+3. Verify Phone Tilt gyroscope rotation specifically on the user's actual
+   Pixel 9a — still unverified, no physical device available here (can be
+   folded into the same real-device session as item 1 above).
+4. ~~Decide on a visible default color scheme~~ — now moot for production:
    the startup-sync fix above means production correctly picks up the
    git-tracked gray background (`#bfbfbf`) instead of the all-white
    hardcoded default. Revisit only if the *hardcoded* literal defaults
    in `main.js` (the fallback when no git settings are reachable, e.g.
    `file://` or an offline API) still need their own deliberate tuning.
-4. Port Pose Offset X/Y/Z to Handy Dandies' camera-relative resolution
+5. Port Pose Offset X/Y/Z to Handy Dandies' camera-relative resolution
    before any saved pose is given a nonzero offset value.
-5. Tune default Camera/Lighting/Toon values to taste, now that Camera
+6. Tune default Camera/Lighting/Toon values to taste, now that Camera
    restore, the color/rim controls, and Set-as-Default persistence all
    actually work.
 
