@@ -1440,6 +1440,63 @@ concurrent Sync commit). Pushed to `https://github.com/LeisHo/Handy-Set`;
 Vercel auto-deployed.
 
 --------------------------------------------------------------------------------
+2026-09-25  -  03:37 AM - 03:42 AM EDT
+
+Direct correction, minutes after the Min/Max clamp fix above shipped:
+"i hard refreshed still seeing finger issues. i really dont think its
+implemented right. When i say it should stack, i only meant that
+regardless of cursor tracking wrist splay and palm rotaton, the saved
+poses should still be anchored correctly and be showed as i wanted
+them to." Correctly read as: the clamp fix bounded how extreme
+Responsive Wrist Splay's distortion of a saved pose could get, but
+never stopped a saved pose from being distorted at all — not what was
+wanted, and defaults to "no restriction" until manually narrowed, so a
+hard refresh alone couldn't have changed anything either way.
+
+Asked 2 short clarifying questions before touching code again, having
+already guessed wrong once this session in this exact spot: (1) which
+control "palm rotation" refers to — confirmed Phone Tilt's "Palm Faces
+Cursor" roll (not the still-unlocated "Responsive Palm Rotation"); (2)
+whether Reactive Wrist Splay should stop affecting saved-pose shape
+entirely, vs. just less extremely — confirmed entirely.
+
+Fix: `applyWristPoseToSkeleton()` no longer adds `extraSplayDeg`
+(Responsive Wrist Splay's live contribution) onto the wrist bone's
+applied rotation at all. Since finger curl's own axis reference reads
+this bone's actual applied local rotation (an already-correct,
+previously-verified design), removing the one addition decouples BOTH
+wrist and finger curl from the reactive system in a single change — no
+separate fix needed for curl. The parameter and Responsive Wrist
+Splay's whole group/live computation are left in place, just no longer
+wired into what renders, in case a future session wants to repurpose
+the live value for a wrapper-level effect instead.
+
+Live-verified decisively: with a "saved pose"-like state baked
+(wristSplay -25°, curlIndex 85%) via Reactive OFF, then turning
+Reactive Wrist Splay fully ON (its own -71°-at-rest curve) and pumping
+a real frame, both the wrist bone's and the index finger's LOCAL
+quaternions read BYTE-IDENTICAL (diff=0) before and after — full
+decoupling confirmed, not just bounded. Separately spot-checked Palm
+Faces Cursor (an arbitrary, large forced wrapper rotation): also
+diff=0 on both bones — confirms cursor-tracking/palm rotation was
+never actually the culprit (consistent with earlier this session's
+proof that wrapper-level rotation can't touch local bone quaternions),
+so no fix was needed there, only for Responsive Wrist Splay.
+
+No new console errors caused by this change — 4 errors seen were the
+same pre-existing "Cannot read properties of null (reading 'clone')"
+startup race already documented in CLAUDE.md's gotchas (confirmed
+present at v=47/48/50/53 too, unrelated to this fix), 2 of them stale
+entries from an earlier page load in the same tab.
+
+Also merged a 2nd concurrent remote Sync commit from the user's own
+live device (`bfd3f08`, dev-panel-settings.json only, no conflict)
+before pushing, same as the previous entry.
+
+Commit: `6e0f6a5`, merge `f264ba4`. Pushed to
+`https://github.com/LeisHo/Handy-Set`; Vercel auto-deployed.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

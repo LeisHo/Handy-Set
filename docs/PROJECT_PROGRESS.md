@@ -12,18 +12,25 @@ Nothing in progress. Pushed to `https://github.com/LeisHo/Handy-Set`
 
 ## Recently completed
 
-- **Added Min/Max clamp sliders for Wrist Rotation/Bend/Splay** (Pose ->
-  Wrist), after root-causing "fingers bent at weird angles when I click
-  a saved pose and hit Use with Reactive Wrist Splay on": a saved pose's
-  own Wrist Splay (e.g. -55) and Responsive Wrist Splay's own live
-  contribution (e.g. -71 at rest, per the currently-saved reactive
-  curve) were simply being summed with nothing capping the total
-  (-126), and since finger curl correctly tracks the wrist, that
-  dragged every finger's curl along with it. The 3 new clamps cap the
-  FINAL combined angle per axis, regardless of source — doesn't touch
-  the saved pose values or the reactive curve itself. Live-verified: a
-  narrowed clamp produces a byte-identical result to the clamped
-  boundary value alone, while the pose's own slider stays unchanged.
+- **Saved poses render exactly as authored, fully decoupled from
+  Responsive Wrist Splay** — root-caused "fingers bent at weird angles
+  when I click a saved pose and hit Use with Reactive Wrist Splay on"
+  down to `applyWristPoseToSkeleton()` summing the pose's own wristSplay
+  with Responsive Wrist Splay's live contribution (e.g. -55 + -71 at
+  rest = -126, and since finger curl correctly tracks the wrist, this
+  dragged every finger's curl along too). A first fix (Min/Max clamps on
+  the combined total) was directly rejected as the wrong approach — it
+  only bounded the distortion, it didn't stop a saved pose's shape from
+  being altered at all. Corrected: Responsive Wrist Splay's live value
+  is no longer wired into the wrist bone's applied rotation at all — the
+  feature's own group/controls/computation still exist for possible
+  future repurposing, just don't affect what renders. The 3 Min/Max
+  clamp sliders (Pose -> Wrist) are still there as a harmless safety
+  ceiling on the pose's own authored value, but no longer do the actual
+  reconciliation work. Live-verified: wrist AND finger local quaternions
+  are byte-identical (diff=0) with Reactive Wrist Splay fully on vs.
+  off, and diff=0 for Palm Faces Cursor too (confirmed never the actual
+  culprit — wrapper-level rotation can't touch local bone state).
   Separately confirmed (not yet fixed, not requested): Phone Tilt's own
   "Tracking Enabled" checkbox doesn't gate Responsive Wrist Splay or
   Reactive Arm Length — those have their own independent toggles, which
@@ -113,10 +120,12 @@ Nothing in progress. Pushed to `https://github.com/LeisHo/Handy-Set`
    currently only gates whole-hand rotation, NOT Responsive Wrist Splay
    or Reactive Arm Length (each has its own separate toggle). Flagged to
    the user 2026-09-25, not yet built (not requested).
-3. Now that Wrist Rotation/Bend/Splay have Min/Max clamps (2026-09-25),
-   consider whether the Responsive Wrist Splay curve itself (-71° at
-   rest — a large baseline even before any pose is added) should be
-   retuned, or whether the new clamps are sufficient going forward.
+3. Decide what Responsive Wrist Splay should actually DO now that its
+   live value no longer affects saved-pose shape at all (2026-09-25
+   correction) — the group/controls/live computation still exist but
+   are currently inert for rendering. Repurpose as a wrapper-level
+   effect (like Palm Faces Cursor, proven this session to never disturb
+   finger curl), or leave dormant until there's a concrete use for it.
 4. Find "Responsive Palm Rotation" — the user says this group exists in
    their own app, but an exhaustive search of the git-tracked
    dev-panel-settings.json found no trace of it anywhere. Likely needs
