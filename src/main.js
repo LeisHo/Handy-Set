@@ -518,20 +518,45 @@ function applyCurl(fingerName) {
 // "shows up differently" describes. Axis-letter assignment (X=bend,
 // Z=splay, Y=rotation/twist) was already correct; only the rotation
 // METHOD was wrong.
-// `extraSplayDeg` (default 0) is Responsive Wrist Splay's own live
-// contribution, added onto values.wristSplay before the single rotateZ
-// call — ported from HANDY DANDIES' own identical parameter.
+// `extraSplayDeg` -- REMOVED FROM THE APPLIED ROTATION 2026-09-25, per
+// direct instruction ("regardless of cursor tracking wrist splay and
+// palm rotation, the saved poses should still be anchored correctly and
+// be shown as i wanted them to" / confirmed: Reactive Wrist Splay should
+// have ZERO effect on a saved pose's finger/wrist shape, not just a
+// bounded one). Previously this was ADDED onto values.wristSplay before
+// the rotateZ call (ported from HANDY DANDIES' own identical parameter)
+// -- and since finger curl's own axis (computeCurlAxisRefQuat, below)
+// reads this bone's ACTUAL applied local rotation, that one addition was
+// enough to drag every finger's curl direction along with whatever
+// Responsive Wrist Splay happened to be doing live (root-caused the same
+// day: a saved pose's own wristSplay, e.g. -55, plus the live reactive
+// contribution, e.g. -71 at rest, summed to -126, an anatomically
+// impossible total -- see docs/CHANGELOG.txt). A Min/Max clamp on the
+// combined total (added earlier the same day) was the wrong fix for
+// this: it only bounds how extreme the distortion can get, it doesn't
+// stop a saved pose from being distorted at all, which is what was
+// actually wanted. The parameter itself is kept (not deleted) so
+// Responsive Wrist Splay's own group/controls/live computation
+// (applyReactiveWristSplayFrame(), computeResponsiveWristSplayDeg())
+// still exist and still run every frame when reactive -- they're simply
+// no longer wired into what actually gets rendered, in case a future
+// session wants to repurpose the live value for something that ISN'T a
+// saved pose's own skeletal shape (e.g. a wrapper-level effect, the way
+// Palm Faces Cursor already correctly is -- proven earlier this session
+// that a wrapper-level rotation can't affect finger curl's local
+// quaternion at all, which is exactly the property a decoupled
+// wrist-splay effect would need).
 function applyWristPoseToSkeleton(skeleton, values, extraSplayDeg = 0) {
   const bone = skeleton.getBoneByName('rHand')
   if (!bone) return
   const rest = boneRestQuat.rHand
   if (rest) bone.quaternion.copy(rest)
-  // Each axis's clamp applies to the FINAL combined angle -- e.g. a
-  // pose's own wristSplay plus Responsive Wrist Splay's live
-  // extraSplayDeg, summed, THEN clamped -- not to either source alone.
-  // See wristSplayClampRange's own cfg comment for why this exists.
+  // Clamped for safety against an extreme POSE-authored value alone --
+  // extraSplayDeg no longer contributes here, so this is not currently
+  // a "combined" clamp the way it was when first added; kept in place
+  // since it's still a harmless, useful ceiling.
   const bendDeg = clampToRange(values.wristBend || 0, wristBendClampParsed)
-  const splayDeg = clampToRange((values.wristSplay || 0) + extraSplayDeg, wristSplayClampParsed)
+  const splayDeg = clampToRange(values.wristSplay || 0, wristSplayClampParsed)
   const rotationDeg = clampToRange(values.wristRotation || 0, wristRotationClampParsed)
   bone.rotateX(THREE.MathUtils.degToRad(bendDeg))
   bone.rotateZ(THREE.MathUtils.degToRad(splayDeg))
