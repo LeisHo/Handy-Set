@@ -518,45 +518,28 @@ function applyCurl(fingerName) {
 // "shows up differently" describes. Axis-letter assignment (X=bend,
 // Z=splay, Y=rotation/twist) was already correct; only the rotation
 // METHOD was wrong.
-// `extraSplayDeg` -- REMOVED FROM THE APPLIED ROTATION 2026-09-25, per
-// direct instruction ("regardless of cursor tracking wrist splay and
-// palm rotation, the saved poses should still be anchored correctly and
-// be shown as i wanted them to" / confirmed: Reactive Wrist Splay should
-// have ZERO effect on a saved pose's finger/wrist shape, not just a
-// bounded one). Previously this was ADDED onto values.wristSplay before
-// the rotateZ call (ported from HANDY DANDIES' own identical parameter)
-// -- and since finger curl's own axis (computeCurlAxisRefQuat, below)
-// reads this bone's ACTUAL applied local rotation, that one addition was
-// enough to drag every finger's curl direction along with whatever
-// Responsive Wrist Splay happened to be doing live (root-caused the same
-// day: a saved pose's own wristSplay, e.g. -55, plus the live reactive
-// contribution, e.g. -71 at rest, summed to -126, an anatomically
-// impossible total -- see docs/CHANGELOG.txt). A Min/Max clamp on the
-// combined total (added earlier the same day) was the wrong fix for
-// this: it only bounds how extreme the distortion can get, it doesn't
-// stop a saved pose from being distorted at all, which is what was
-// actually wanted. The parameter itself is kept (not deleted) so
-// Responsive Wrist Splay's own group/controls/live computation
-// (applyReactiveWristSplayFrame(), computeResponsiveWristSplayDeg())
-// still exist and still run every frame when reactive -- they're simply
-// no longer wired into what actually gets rendered, in case a future
-// session wants to repurpose the live value for something that ISN'T a
-// saved pose's own skeletal shape (e.g. a wrapper-level effect, the way
-// Palm Faces Cursor already correctly is -- proven earlier this session
-// that a wrapper-level rotation can't affect finger curl's local
-// quaternion at all, which is exactly the property a decoupled
-// wrist-splay effect would need).
+// `extraSplayDeg` (default 0) is Responsive Wrist Splay's own live
+// contribution, added onto values.wristSplay before the rotateZ call.
+// REVERTED 2026-09-25 (same day as the decoupling attempt above this
+// comment used to describe) -- fully decoupling Responsive Wrist Splay
+// from rendering also silently killed its live function everywhere,
+// not just for saved poses, which the user did not want ("all phone
+// tilt function died"). The correct scope, per direct correction: Wrist
+// Splay and Whole-Hand-Rotation stay fully live/reactive as before;
+// what a SAVED POSE contributes is what's restricted instead -- see
+// applyPosePreset()'s and the Tween pose-apply path's own comments for
+// the actual fix (both now omit wristSplay/modelRotX/Y/Z from what a
+// saved pose overwrites, leaving whatever's currently live untouched).
 function applyWristPoseToSkeleton(skeleton, values, extraSplayDeg = 0) {
   const bone = skeleton.getBoneByName('rHand')
   if (!bone) return
   const rest = boneRestQuat.rHand
   if (rest) bone.quaternion.copy(rest)
-  // Clamped for safety against an extreme POSE-authored value alone --
-  // extraSplayDeg no longer contributes here, so this is not currently
-  // a "combined" clamp the way it was when first added; kept in place
-  // since it's still a harmless, useful ceiling.
+  // Clamp is a safety ceiling on the FINAL combined angle (pose value +
+  // reactive extraSplayDeg, summed then clamped) -- see
+  // wristSplayClampRange's own cfg comment.
   const bendDeg = clampToRange(values.wristBend || 0, wristBendClampParsed)
-  const splayDeg = clampToRange(values.wristSplay || 0, wristSplayClampParsed)
+  const splayDeg = clampToRange((values.wristSplay || 0) + extraSplayDeg, wristSplayClampParsed)
   const rotationDeg = clampToRange(values.wristRotation || 0, wristRotationClampParsed)
   bone.rotateX(THREE.MathUtils.degToRad(bendDeg))
   bone.rotateZ(THREE.MathUtils.degToRad(splayDeg))
@@ -1337,8 +1320,28 @@ function applyToonPreset(item) {
   rebuildGradientMap()
   syncPairsFromCfg(TOON_SYNC_PAIRS)
 }
+// Fields a SAVED POSE never overwrites when applied -- Wrist Splay and
+// Whole-Hand-Rotation X/Y/Z stay whatever they currently are (live,
+// Phone-Tilt/Reactive-Wrist-Splay-driven or otherwise set), regardless
+// of what value the pose itself was saved with. Direct correction
+// 2026-09-25, after a full-decoupling fix at the rendering layer (make
+// Reactive Wrist Splay's live contribution never affect wrist rotation
+// at all) turned out to kill its live function everywhere, not just
+// for saved poses -- not what was wanted ("all phone tilt function
+// died... just omit the saved pose wrist splay and whole hand rotation
+// data. only implement the other saved setting data"). This is the
+// correctly-scoped fix: restrict what a SAVED POSE can set, leave every
+// live system fully functional. Every other saved-pose field (finger
+// curls, wrist bend, hide wrist, pose offset/scale) still applies
+// normally.
+const POSE_FIELDS_OMITTED_FROM_APPLY = ['wristSplay', 'modelRotX', 'modelRotY', 'modelRotZ']
+function withLiveFieldsPreserved(poseValues) {
+  const merged = { ...poseValues }
+  POSE_FIELDS_OMITTED_FROM_APPLY.forEach((k) => { merged[k] = cfg[k] })
+  return merged
+}
 function applyPosePreset(item) {
-  Object.assign(cfg, item)
+  Object.assign(cfg, withLiveFieldsPreserved(item))
   applyPoseValuesToHand(cfg)
   syncPairsFromCfg(POSE_SYNC_PAIRS)
 }
@@ -1398,11 +1401,13 @@ function applyTweenAtT(t) {
     if (remaining <= seg.weight || isLast) {
       if (seg.kind === 'hold') {
         const pose = SAVED_POSES.find((p) => p.name === seg.poseName)
-        if (pose) applyPoseValuesToHand(pose)
+        // withLiveFieldsPreserved() -- Tween playback is saved-pose data
+        // too, same omission as applyPosePreset() (see its own comment).
+        if (pose) applyPoseValuesToHand(withLiveFieldsPreserved(pose))
       } else {
         const a = SAVED_POSES.find((p) => p.name === seg.poseA)
         const b = SAVED_POSES.find((p) => p.name === seg.poseB)
-        if (a && b) applyPoseValuesToHand(lerpPoseValues(a, b, seg.weight > 0 ? THREE.MathUtils.clamp(remaining / seg.weight, 0, 1) : 1))
+        if (a && b) applyPoseValuesToHand(withLiveFieldsPreserved(lerpPoseValues(a, b, seg.weight > 0 ? THREE.MathUtils.clamp(remaining / seg.weight, 0, 1) : 1)))
       }
       return
     }
