@@ -12,6 +12,22 @@ Nothing in progress. Pushed to `https://github.com/LeisHo/Handy-Set`
 
 ## Recently completed
 
+- **Added Min/Max clamp sliders for Wrist Rotation/Bend/Splay** (Pose ->
+  Wrist), after root-causing "fingers bent at weird angles when I click
+  a saved pose and hit Use with Reactive Wrist Splay on": a saved pose's
+  own Wrist Splay (e.g. -55) and Responsive Wrist Splay's own live
+  contribution (e.g. -71 at rest, per the currently-saved reactive
+  curve) were simply being summed with nothing capping the total
+  (-126), and since finger curl correctly tracks the wrist, that
+  dragged every finger's curl along with it. The 3 new clamps cap the
+  FINAL combined angle per axis, regardless of source — doesn't touch
+  the saved pose values or the reactive curve itself. Live-verified: a
+  narrowed clamp produces a byte-identical result to the clamped
+  boundary value alone, while the pose's own slider stays unchanged.
+  Separately confirmed (not yet fixed, not requested): Phone Tilt's own
+  "Tracking Enabled" checkbox doesn't gate Responsive Wrist Splay or
+  Reactive Arm Length — those have their own independent toggles, which
+  is why gyro effects can persist with the whole Phone Tilt group off.
 - **Added browser-based device identification, surfaced in Dev Panel ->
   Debug -> Settings -> Device Information.** New `src/deviceInfo.js`:
   User-Agent Client Hints (`navigator.userAgentData` +
@@ -92,27 +108,36 @@ Nothing in progress. Pushed to `https://github.com/LeisHo/Handy-Set`
    Chrome's `getHighEntropyValues()` actually returns `model: "Pixel 9a"`
    on real hardware (unverified — this environment has no physical
    device), and that the fallback path behaves sensibly on Safari.
-2. Find "Responsive Palm Rotation" — the user says this group exists in
+2. Decide whether a single master kill-switch for all gyro-driven
+   effects is wanted — Phone Tilt's own "Tracking Enabled" checkbox
+   currently only gates whole-hand rotation, NOT Responsive Wrist Splay
+   or Reactive Arm Length (each has its own separate toggle). Flagged to
+   the user 2026-09-25, not yet built (not requested).
+3. Now that Wrist Rotation/Bend/Splay have Min/Max clamps (2026-09-25),
+   consider whether the Responsive Wrist Splay curve itself (-71° at
+   rest — a large baseline even before any pose is added) should be
+   retuned, or whether the new clamps are sufficient going forward.
+4. Find "Responsive Palm Rotation" — the user says this group exists in
    their own app, but an exhaustive search of the git-tracked
    dev-panel-settings.json found no trace of it anywhere. Likely needs
    the user to hit Sync from whichever device/browser shows it (so its
    real state reaches git), or a screenshot/more specific description.
-3. Verify Phone Tilt gyroscope rotation specifically on the user's actual
+5. Verify Phone Tilt gyroscope rotation specifically on the user's actual
    Pixel 9a — still unverified, no physical device available here (can be
    folded into the same real-device session as item 1 above).
-4. ~~Decide on a visible default color scheme~~ — now moot for production:
+6. ~~Decide on a visible default color scheme~~ — now moot for production:
    the startup-sync fix above means production correctly picks up the
    git-tracked gray background (`#bfbfbf`) instead of the all-white
    hardcoded default. Revisit only if the *hardcoded* literal defaults
    in `main.js` (the fallback when no git settings are reachable, e.g.
    `file://` or an offline API) still need their own deliberate tuning.
-5. Port Pose Offset X/Y/Z to Handy Dandies' camera-relative resolution
+7. Port Pose Offset X/Y/Z to Handy Dandies' camera-relative resolution
    before any saved pose is given a nonzero offset value.
-6. Tune default Camera/Lighting/Toon values to taste, now that Camera
+8. Tune default Camera/Lighting/Toon values to taste, now that Camera
    restore, the color/rim controls, and Set-as-Default persistence all
    actually work.
 
 ## Open questions / blockers
 
-- **"Responsive Palm Rotation"** — see What's next #1. Not blocking other
+- **"Responsive Palm Rotation"** — see What's next #4. Not blocking other
   work, but unresolved.

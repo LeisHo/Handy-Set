@@ -1354,6 +1354,92 @@ Commit: `4ceff5a`, pushed to `https://github.com/LeisHo/Handy-Set`;
 Vercel auto-deployed.
 
 --------------------------------------------------------------------------------
+2026-09-25  -  02:59 AM - 03:30 AM EDT
+
+Direct report: "when reactive wrist splay is turned on, as well as other
+cursor tracking things, it messes with my finger settings. You forgot
+to account for the 2 sets of data working together nicely" — clarified
+as mobile, and specifically: "I click a saved pose and hit use. The
+fingers are bent at weird angles. it the same exact problem that other
+projects have."
+
+**Root-caused with real numbers, not a guess.** Checked the actual
+`SAVED_POSES` data: `wristSplay` values are 0, -55, 0, -50 — small,
+clearly tuned by eye assuming little/no reactive contribution. Checked
+the currently-saved Responsive Wrist Splay curve/range
+(`{"min":5,"max":-71}`, curve y=1 at x=0): evaluates to **-71° at
+rest** (tiltMagnitude=0, i.e. phone held level, not tilted at all).
+`applyWristPoseToSkeleton()` sums `values.wristSplay + extraSplayDeg`
+unconditionally — so "Big Open Palm (S)" (wristSplay -55) with
+Responsive Wrist Splay on produces a combined **-126°** wrist splay,
+nowhere near the pose's own -55°. Since finger curl's axis correctly
+tracks the wrist's current bend/splay (an intentional, correct,
+previously-fixed design — closing a fist stays closing toward the palm
+regardless of wrist angle), that -126° wrist twist drags every
+finger's curl direction along with it — "bent at weird angles."
+
+Investigated and ruled out (before landing on the real cause,
+documented so a future session doesn't retread this): matrixWorld
+staleness in `rotateOnTrueWorldAxis()`'s `bone.getWorldQuaternion()`
+call — confirmed via three.js 0.169.0's own source
+(`updateWorldMatrix(true,false)` runs on every call, always fresh) and
+2 live empirical tests (a controlled wrapper jump, and a "hand-relative
+world quaternion before/after wrapper rotates" test) — both showed
+zero staleness effect. Also checked HANDY DANDIES' own real, documented
+"thumb pose looks wrong" saga (its CHANGELOG, 2026-09-14) for a
+structurally similar bug (idle branch refreshing wrist every frame but
+never re-baking the thumb's own curl) — confirmed Handyset does NOT
+have that specific bug, since `applyReactiveWristSplayFrame()` already
+re-bakes wrist AND all 5 fingers' curl together, every frame, at both
+of its only 2 call sites.
+
+**Fix, per direct instruction after discussing 3 possible reconciliation
+approaches ("can't you just add them" / "add 3... min max... sliders"):**
+added 3 Min/Max clamp-range controls to the Pose group's own "Wrist"
+subgroup — Wrist Rotation, Wrist Bend, Wrist Splay — each capping the
+FINAL combined angle actually applied in `applyWristPoseToSkeleton()`,
+regardless of how many sources (pose slider, reactive splay, any future
+source) contributed to it. Reuses the existing `buildReactiveRangeWidget`
+dual-handle range-bar control (same one already used for Reactive Arm
+Length and Wrist Splay's own curve range) rather than building a new
+widget. Defaults match each axis's own existing slider bounds (Rotation
+±360, Bend ±90, Splay ±180) — i.e. no additional restriction until the
+user narrows one down; doesn't touch the user's own saved pose values or
+reactive curve, only adds a ceiling on top.
+
+Live-verified decisively: with the Splay clamp narrowed to {min:-10,
+max:10}, setting the pose's own Wrist Splay slider to -25 produced a
+wrist-bone quaternion BYTE-IDENTICAL to what -10 alone (unclamped)
+produces (diff=0), while `cfg.wristSplay` itself stayed at -25 (the
+pose's own slider value is untouched — only the applied result is
+clamped). Restored the clamp to its default (wide/no-op) range after
+the test. No new console errors at the deployed v=54 (2 stale errors
+seen were from a prior v=53 page load in the same tab's console
+history, not new).
+
+**Separately answered, same session, via code inspection (no fix
+requested/made yet):** "even when i turn off all settings in Phone
+Tilt group, my phone gyro still has an effect" — `cfg.trackingEnabled`
+(Phone Tilt's own master checkbox) only gates the whole-hand rigid
+rotation in `animate()` (line ~1429). It does NOT gate Responsive Wrist
+Splay (own group, own toggle) or Reactive Arm Length/Crop Wrist (Pose
+group's own Wrist subgroup, own toggle) — both read the same shared
+`tiltMagnitude`, fed by a `deviceorientation` listener that stays
+attached and updating regardless of Phone Tilt's own checkbox state.
+Not a bug so much as 3 independently-toggled features sharing one input
+signal — flagged to the user, no master-kill-switch built (not
+requested).
+
+Also merged a concurrent remote commit ("Update dev-panel-settings.json
+via Save Settings", `8a23457`) from the user's own live device Sync,
+before pushing — touched only the settings JSON, no conflict with this
+session's `src/main.js`/`index.html` changes.
+
+Commits: `f9d0bb2` (wrist clamps), merge `e80ee73` (integrating the
+concurrent Sync commit). Pushed to `https://github.com/LeisHo/Handy-Set`;
+Vercel auto-deployed.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
