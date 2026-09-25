@@ -25,7 +25,7 @@ import { detectDeviceInfo } from './deviceInfo.js'
 // this simply clears the stale local save; it does not touch the
 // separate git-tracked save (data/processed/dev-panel-settings.json,
 // reset directly when this was first found).
-const HANDYSET_SETTINGS_SCHEMA_VERSION = '2026-09-24a'
+const HANDYSET_SETTINGS_SCHEMA_VERSION = '2026-09-25a'
 try {
   if (localStorage.getItem('handysetSettingsSchemaVersion') !== HANDYSET_SETTINGS_SCHEMA_VERSION) {
     localStorage.removeItem('devPanelSettings')
@@ -89,6 +89,21 @@ const cfg = {
   wristSplayResponsiveEnabled: true, wristSplayDefault: 7, wristSplayReactiveEnabled: true,
   wristSplayRange: '{"min":5,"max":-71}',
   wristSplayCurve: '[{"x":0,"y":1},{"x":0.31833343505859374,"y":0.6961458841959636},{"x":1,"y":0.042812347412109375}]',
+  // Wrist axis clamps — direct request 2026-09-25, after diagnosing why
+  // a saved pose's own Wrist Splay (e.g. -55) plus Responsive Wrist
+  // Splay's own live contribution (e.g. -71 at rest) sum to an
+  // anatomically-impossible total (-126) with no ceiling: pose value and
+  // reactive value are each tuned independently and just get added, so
+  // nothing stops the SUM from exceeding a sane range. These 3 ranges
+  // clamp the FINAL combined angle actually applied to the wrist bone
+  // for each axis (applyWristPoseToSkeleton()) — independent of how many
+  // sources contributed to it (pose slider, reactive splay, any future
+  // source). Defaults are each axis's own existing slider bounds (see
+  // the Wrist subgroup below) — i.e. "off" (no additional restriction)
+  // until the user narrows one down.
+  wristRotationClampRange: '{"min":-360,"max":360}',
+  wristBendClampRange: '{"min":-90,"max":90}',
+  wristSplayClampRange: '{"min":-180,"max":180}',
   // Lighting
   keyAzimuth: 117, keyElevation: 56, keyTargetHeight: 71, keyIntensity: 6, keyColor: '#ffffff',
   ambientIntensity: 0, ambientSkyColor: '#ffffff', ambientGroundColor: '#3a2f2a',
@@ -256,6 +271,11 @@ let armLengthRangeParsed = { min: 0, max: 85 }
 let armLengthCurveParsed = [{ x: 0, y: 1 }, { x: 1, y: 0 }]
 let wristSplayRangeParsed = { min: 5, max: -71 }
 let wristSplayCurveParsed = [{ x: 0, y: 1 }, { x: 1, y: 0 }]
+// Wrist axis clamps (safety ceiling on the FINAL combined angle, not a
+// reactive curve's own range) — see cfg's own declaration comment.
+let wristRotationClampParsed = { min: -360, max: 360 }
+let wristBendClampParsed = { min: -90, max: 90 }
+let wristSplayClampParsed = { min: -180, max: 180 }
 const curveWidgetResyncs = []
 
 function catmullRomY(y0, y1, y2, y3, t) {
@@ -305,6 +325,20 @@ function parseArmLengthConfig() {
 function parseWristSplayConfig() {
   try { wristSplayRangeParsed = JSON.parse(cfg.wristSplayRange) } catch (e) { /* keep last-good value */ }
   try { wristSplayCurveParsed = JSON.parse(cfg.wristSplayCurve).sort((a, b) => a.x - b.x) } catch (e) { /* keep last-good value */ }
+}
+function parseWristClampConfig() {
+  try { wristRotationClampParsed = JSON.parse(cfg.wristRotationClampRange) } catch (e) { /* keep last-good value */ }
+  try { wristBendClampParsed = JSON.parse(cfg.wristBendClampRange) } catch (e) { /* keep last-good value */ }
+  try { wristSplayClampParsed = JSON.parse(cfg.wristSplayClampRange) } catch (e) { /* keep last-good value */ }
+}
+// A clamp range's own min/max handles can end up in either order (same
+// as wristSplayRangeParsed/armLengthRangeParsed above, which are LERP
+// endpoints, not true min<=max bounds) — normalize before clamping,
+// since THREE.MathUtils.clamp() assumes min<=max and silently misbehaves
+// otherwise.
+function clampToRange(value, range) {
+  const lo = Math.min(range.min, range.max), hi = Math.max(range.min, range.max)
+  return THREE.MathUtils.clamp(value, lo, hi)
 }
 // Returns a 0-1 crop fraction (0 = full arm, 1 = fully cropped at wrist).
 // `distanceT` is `tiltMagnitude` (0-1) — see cfg's own comment.
@@ -492,9 +526,16 @@ function applyWristPoseToSkeleton(skeleton, values, extraSplayDeg = 0) {
   if (!bone) return
   const rest = boneRestQuat.rHand
   if (rest) bone.quaternion.copy(rest)
-  bone.rotateX(THREE.MathUtils.degToRad(values.wristBend || 0))
-  bone.rotateZ(THREE.MathUtils.degToRad((values.wristSplay || 0) + extraSplayDeg))
-  bone.rotateY(THREE.MathUtils.degToRad(values.wristRotation || 0))
+  // Each axis's clamp applies to the FINAL combined angle -- e.g. a
+  // pose's own wristSplay plus Responsive Wrist Splay's live
+  // extraSplayDeg, summed, THEN clamped -- not to either source alone.
+  // See wristSplayClampRange's own cfg comment for why this exists.
+  const bendDeg = clampToRange(values.wristBend || 0, wristBendClampParsed)
+  const splayDeg = clampToRange((values.wristSplay || 0) + extraSplayDeg, wristSplayClampParsed)
+  const rotationDeg = clampToRange(values.wristRotation || 0, wristRotationClampParsed)
+  bone.rotateX(THREE.MathUtils.degToRad(bendDeg))
+  bone.rotateZ(THREE.MathUtils.degToRad(splayDeg))
+  bone.rotateY(THREE.MathUtils.degToRad(rotationDeg))
 }
 
 function computeBaseQuatFromValues(values) {
@@ -1919,6 +1960,23 @@ function renderPoseGroup(content) {
   ;[['wristRotation', -360, 360, 'Wrist Rotation (Deg)'], ['wristBend', -90, 90, 'Wrist Bend (Deg)'], ['wristSplay', -30, 30, 'Wrist Splay (Deg)']].forEach(([k, mn, mx, label]) => {
     addRow(subWrist, { id: 'slider' + k, label, type: 'slider', min: mn, max: mx, step: 1, value: cfg[k] })
     wireSlider('slider' + k, (v) => { cfg[k] = v; applyPoseValuesToHand(cfg) })
+  })
+  // Wrist axis clamps -- direct request 2026-09-25, after diagnosing why
+  // a saved pose's own Wrist Splay plus Responsive Wrist Splay's live
+  // contribution can sum past any anatomical limit (e.g. -55 + -71 =
+  // -126) with nothing capping the total. Each clamps the FINAL combined
+  // angle actually applied to that axis (applyWristPoseToSkeleton()),
+  // not either contributing source alone. Same dual-handle range-bar
+  // widget already used for Reactive Arm Length/Wrist Splay's own curve
+  // range above/below -- reused for consistency, not rebuilt.
+  ;[
+    ['wristRotationClampRange', 'Min / Max Wrist Rotation (Deg)', -360, 360, parseWristClampConfig],
+    ['wristBendClampRange', 'Min / Max Wrist Bend (Deg)', -90, 90, parseWristClampConfig],
+    ['wristSplayClampRange', 'Min / Max Wrist Splay (Deg, Combined)', -180, 180, parseWristClampConfig]
+  ].forEach(([key, label, trackMin, trackMax, parseFn]) => {
+    const row = addRow(subWrist, { id: 'text' + key, label, type: 'text', inputType: 'text', value: cfg[key] })
+    wireTextInput('text' + key, (v) => { cfg[key] = v; parseFn(); applyPoseValuesToHand(cfg) })
+    buildReactiveRangeWidget(row, { trackMin, trackMax, isPercent: false, crossClamp: false, minLabel: 'Min', maxLabel: 'Max', unit: '°', onExternalChange: (v) => { cfg[key] = v; parseFn(); applyPoseValuesToHand(cfg) } })
   })
   // Reactive Arm Length -- ported from HANDY DANDIES (see cfg's own
   // declaration comment for the single-hand distance-input adaptation:
