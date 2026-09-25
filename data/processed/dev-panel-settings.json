@@ -14,51 +14,51 @@
     "slidermodelRotX": 0,
     "slidermodelRotY": 0,
     "slidermodelRotZ": 0,
-    "sliderthumbCurl": 0,
-    "sliderthumbSplay": -48,
-    "sliderthumbSplay2": -8,
-    "slidercurlBiasThumb": 0,
-    "sliderbaseOnlyCurlThumb": -61,
+    "sliderthumbCurl": -15,
+    "sliderthumbSplay": -87,
+    "sliderthumbSplay2": -15,
+    "slidercurlBiasThumb": 32,
+    "sliderbaseOnlyCurlThumb": 0,
     "slidermidOnlyCurlThumb": 0,
-    "slidertipOnlyCurlThumb": 0,
-    "slidertipTwistThumb": 0,
+    "slidertipOnlyCurlThumb": -30,
+    "slidertipTwistThumb": -47,
     "sliderwristRotation": 0,
-    "sliderwristBend": 0,
+    "sliderwristBend": -35,
     "sliderwristSplay": 0,
     "checkboxCropWristEnabled": true,
     "sliderHideWrist": 78,
     "checkboxReactiveArmLengthEnabled": true,
-    "slidercurlIndex": 0,
-    "slidersplayIndex": -68,
+    "slidercurlIndex": -5,
+    "slidersplayIndex": -5,
     "slidersplayIndex2": 0,
     "slidercurlBiasIndex": 0,
-    "sliderbaseOnlyCurlIndex": 0,
-    "slidermidOnlyCurlIndex": -5,
+    "sliderbaseOnlyCurlIndex": 6,
+    "slidermidOnlyCurlIndex": 0,
     "slidertipOnlyCurlIndex": 0,
     "slidertipTwistIndex": 0,
-    "slidercurlMiddle": 0,
-    "slidersplayMiddle": -6,
+    "slidercurlMiddle": 90,
+    "slidersplayMiddle": -15,
     "slidersplayMiddle2": 0,
     "slidercurlBiasMiddle": 0,
-    "sliderbaseOnlyCurlMiddle": 0,
-    "slidermidOnlyCurlMiddle": -5,
-    "slidertipOnlyCurlMiddle": 0,
+    "sliderbaseOnlyCurlMiddle": -4,
+    "slidermidOnlyCurlMiddle": 15,
+    "slidertipOnlyCurlMiddle": -40,
     "slidertipTwistMiddle": 0,
-    "slidercurlRing": 0,
-    "slidersplayRing": -34,
+    "slidercurlRing": 95,
+    "slidersplayRing": 40,
     "slidersplayRing2": 0,
     "slidercurlBiasRing": 0,
-    "sliderbaseOnlyCurlRing": 0,
-    "slidermidOnlyCurlRing": -5,
-    "slidertipOnlyCurlRing": 0,
+    "sliderbaseOnlyCurlRing": -15,
+    "slidermidOnlyCurlRing": 15,
+    "slidertipOnlyCurlRing": -30,
     "slidertipTwistRing": 0,
-    "slidercurlPinky": 0,
-    "slidersplayPinky": 86,
+    "slidercurlPinky": 90,
+    "slidersplayPinky": -90,
     "slidersplayPinky2": 0,
     "slidercurlBiasPinky": 0,
     "sliderbaseOnlyCurlPinky": 0,
-    "slidermidOnlyCurlPinky": -5,
-    "slidertipOnlyCurlPinky": 0,
+    "slidermidOnlyCurlPinky": 12,
+    "slidertipOnlyCurlPinky": -20,
     "slidertipTwistPinky": 0,
     "sliderposeOffsetX": 0,
     "sliderposeOffsetY": 0,
@@ -77,7 +77,7 @@
     "checkboxCameraMaxExtentsEnabled": false,
     "checkboxTrackingEnabled": true,
     "sliderTrackingDamping": 0.2,
-    "sliderTargetDepthFactor": 2.15,
+    "sliderTargetDepthFactor": 2,
     "checkboxShowTargetMarker": true,
     "checkboxPalmFacesCursor": false,
     "sliderPalmFaceRotationOffset": 23,
@@ -107,10 +107,10 @@
     "checkboxDeviceInfoEnabled": true
   },
   "layout": {
-    "left": 45,
-    "top": 501,
+    "left": 79,
+    "top": 6,
     "width": 313,
-    "height": 276
+    "height": 671
   },
   "devPanelStyle": {
     "titleFontSize": 17,
@@ -1894,6 +1894,18 @@
               "items": [
                 {
                   "type": "row",
+                  "key": "textwristRotationClampRange"
+                },
+                {
+                  "type": "row",
+                  "key": "textwristBendClampRange"
+                },
+                {
+                  "type": "row",
+                  "key": "textwristSplayClampRange"
+                },
+                {
+                  "type": "row",
                   "key": "sliderwristRotation"
                 },
                 {
@@ -1906,6 +1918,9 @@
                 }
               ],
               "rowKeys": [
+                "textwristRotationClampRange",
+                "textwristBendClampRange",
+                "textwristSplayClampRange",
                 "sliderwristRotation",
                 "sliderwristBend",
                 "sliderwristSplay"
@@ -2236,6 +2251,18 @@
             "items": [
               {
                 "type": "row",
+                "key": "textwristRotationClampRange"
+              },
+              {
+                "type": "row",
+                "key": "textwristBendClampRange"
+              },
+              {
+                "type": "row",
+                "key": "textwristSplayClampRange"
+              },
+              {
+                "type": "row",
                 "key": "sliderwristRotation"
               },
               {
@@ -2248,6 +2275,9 @@
               }
             ],
             "rowKeys": [
+              "textwristRotationClampRange",
+              "textwristBendClampRange",
+              "textwristSplayClampRange",
               "sliderwristRotation",
               "sliderwristBend",
               "sliderwristSplay"
@@ -4577,7 +4607,7 @@
     "desktop:Tween": true,
     "desktop:Saved Tween Sequences": false,
     "desktop:Field Layout": true,
-    "desktop:Phone Tilt": false,
+    "desktop:Phone Tilt": true,
     "desktop:Target": false,
     "desktop:Responsive Wrist Splay": true,
     "desktop:Tracking": false,
@@ -4592,7 +4622,7 @@
     "desktop:Ring": true,
     "desktop:Pinky": true,
     "desktop:Pose Offset": true,
-    "desktop:Saved Poses": false,
+    "desktop:Saved Poses": true,
     "desktop:Camera": true,
     "desktop:Saved Cameras": false,
     "desktop:Lighting": true,
