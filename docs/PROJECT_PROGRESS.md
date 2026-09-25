@@ -12,25 +12,30 @@ Nothing in progress. Pushed to `https://github.com/LeisHo/Handy-Set`
 
 ## Recently completed
 
-- **Saved poses render exactly as authored, fully decoupled from
-  Responsive Wrist Splay** — root-caused "fingers bent at weird angles
-  when I click a saved pose and hit Use with Reactive Wrist Splay on"
-  down to `applyWristPoseToSkeleton()` summing the pose's own wristSplay
-  with Responsive Wrist Splay's live contribution (e.g. -55 + -71 at
-  rest = -126, and since finger curl correctly tracks the wrist, this
-  dragged every finger's curl along too). A first fix (Min/Max clamps on
-  the combined total) was directly rejected as the wrong approach — it
-  only bounded the distortion, it didn't stop a saved pose's shape from
-  being altered at all. Corrected: Responsive Wrist Splay's live value
-  is no longer wired into the wrist bone's applied rotation at all — the
-  feature's own group/controls/computation still exist for possible
-  future repurposing, just don't affect what renders. The 3 Min/Max
-  clamp sliders (Pose -> Wrist) are still there as a harmless safety
-  ceiling on the pose's own authored value, but no longer do the actual
-  reconciliation work. Live-verified: wrist AND finger local quaternions
-  are byte-identical (diff=0) with Reactive Wrist Splay fully on vs.
-  off, and diff=0 for Palm Faces Cursor too (confirmed never the actual
-  culprit — wrapper-level rotation can't touch local bone state).
+- **A saved pose no longer overwrites Wrist Splay or Whole-Hand-Rotation
+  X/Y/Z — Responsive Wrist Splay and Phone Tilt stay fully live.** Root
+  cause of the original "fingers bent at weird angles" report:
+  `applyWristPoseToSkeleton()` summed the pose's own wristSplay with
+  Responsive Wrist Splay's live contribution (e.g. -55 + -71 at rest =
+  -126), and since finger curl correctly tracks the wrist, that dragged
+  every finger's curl along too. 2 earlier fixes this same day both got
+  the scope wrong and were directly corrected: Min/Max clamps only
+  bounded the distortion rather than stopping it; a full rendering-layer
+  decoupling stopped Responsive Wrist Splay from having ANY live effect
+  at all ("all phone tilt function died"), which wasn't wanted either.
+  The correct scope, per direct instruction: leave every live system
+  (Reactive Wrist Splay, Phone Tilt) fully functional, and instead make
+  applying a SAVED POSE (`applyPosePreset`/"Use", and Tween's own
+  hold/lerp playback) skip `wristSplay`/`modelRotX`/`modelRotY`/
+  `modelRotZ` specifically — those 4 stay whatever they currently are;
+  every other saved field still applies normally. Live-verified via the
+  real "Use" button: set wristSplay/modelRotY to distinctive test
+  values, applied "Fist" (whose own data has both at 0), confirmed both
+  stayed untouched while curlIndex correctly updated to the pose's own
+  value (90). Also re-confirmed Reactive Wrist Splay's live wrist
+  movement is genuinely restored. The 3 Min/Max clamp sliders (Pose ->
+  Wrist) are still there as a harmless safety ceiling, unused by this
+  particular fix.
   Separately confirmed (not yet fixed, not requested): Phone Tilt's own
   "Tracking Enabled" checkbox doesn't gate Responsive Wrist Splay or
   Reactive Arm Length — those have their own independent toggles, which
@@ -120,33 +125,27 @@ Nothing in progress. Pushed to `https://github.com/LeisHo/Handy-Set`
    currently only gates whole-hand rotation, NOT Responsive Wrist Splay
    or Reactive Arm Length (each has its own separate toggle). Flagged to
    the user 2026-09-25, not yet built (not requested).
-3. Decide what Responsive Wrist Splay should actually DO now that its
-   live value no longer affects saved-pose shape at all (2026-09-25
-   correction) — the group/controls/live computation still exist but
-   are currently inert for rendering. Repurpose as a wrapper-level
-   effect (like Palm Faces Cursor, proven this session to never disturb
-   finger curl), or leave dormant until there's a concrete use for it.
-4. Find "Responsive Palm Rotation" — the user says this group exists in
+3. Find "Responsive Palm Rotation" — the user says this group exists in
    their own app, but an exhaustive search of the git-tracked
    dev-panel-settings.json found no trace of it anywhere. Likely needs
    the user to hit Sync from whichever device/browser shows it (so its
    real state reaches git), or a screenshot/more specific description.
-5. Verify Phone Tilt gyroscope rotation specifically on the user's actual
+4. Verify Phone Tilt gyroscope rotation specifically on the user's actual
    Pixel 9a — still unverified, no physical device available here (can be
    folded into the same real-device session as item 1 above).
-6. ~~Decide on a visible default color scheme~~ — now moot for production:
+5. ~~Decide on a visible default color scheme~~ — now moot for production:
    the startup-sync fix above means production correctly picks up the
    git-tracked gray background (`#bfbfbf`) instead of the all-white
    hardcoded default. Revisit only if the *hardcoded* literal defaults
    in `main.js` (the fallback when no git settings are reachable, e.g.
    `file://` or an offline API) still need their own deliberate tuning.
-7. Port Pose Offset X/Y/Z to Handy Dandies' camera-relative resolution
+6. Port Pose Offset X/Y/Z to Handy Dandies' camera-relative resolution
    before any saved pose is given a nonzero offset value.
-8. Tune default Camera/Lighting/Toon values to taste, now that Camera
+7. Tune default Camera/Lighting/Toon values to taste, now that Camera
    restore, the color/rim controls, and Set-as-Default persistence all
    actually work.
 
 ## Open questions / blockers
 
-- **"Responsive Palm Rotation"** — see What's next #4. Not blocking other
+- **"Responsive Palm Rotation"** — see What's next #3. Not blocking other
   work, but unresolved.

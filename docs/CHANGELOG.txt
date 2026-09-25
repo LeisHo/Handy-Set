@@ -1497,6 +1497,48 @@ Commit: `6e0f6a5`, merge `f264ba4`. Pushed to
 `https://github.com/LeisHo/Handy-Set`; Vercel auto-deployed.
 
 --------------------------------------------------------------------------------
+2026-09-25  -  03:47 AM - 03:52 AM EDT
+
+Direct correction, minutes after the full-decoupling fix above shipped:
+"okay that didt work. all phone tilt function died. instead heres what
+i want. just omit the saved pose wrist splay and whole hand rotation
+data. oonly implement the other saved setting data."
+
+Live-checked the actual regression before touching code: Phone Tilt's
+core wrapper mechanism was NOT broken — a real mousemove dispatch still
+produced a large (diff 0.78) wrapper quaternion change. What had
+actually died was Responsive Wrist Splay's own visible effect
+(intentionally, per the previous fix's own decoupling) — the user's
+"phone tilt function" description covers more than the literal
+`cfg.trackingEnabled` code path.
+
+Reverted `applyWristPoseToSkeleton()` back to composing `extraSplayDeg`
+into the wrist rotation — Wrist Splay and Whole-Hand-Rotation are fully
+live/reactive again, exactly as before any of today's wrist-splay work
+started. Instead, added `withLiveFieldsPreserved(poseValues)`: a saved
+pose's own `wristSplay`/`modelRotX`/`modelRotY`/`modelRotZ` are no
+longer copied into `cfg` at all when applying a pose (`applyPosePreset`,
+i.e. "Use", and Tween's own hold/lerp playback) — those 4 fields stay
+whatever they currently are, live-driven or otherwise, while every
+other saved field (finger curls, wrist bend, hide wrist, pose
+offset/scale) still applies normally.
+
+Live-verified via the REAL "Use" button (list-picker item click +
+button click, not a direct function call): set `wristSplay=-22`,
+`modelRotY=77`, `curlIndex=3` manually, then clicked "Use" on the
+"Fist" saved pose (whose own data has `wristSplay:0`, `modelRotY:0`,
+`curlIndex:90`). Result: `wristSplay` and `modelRotY` stayed at -22/77
+(untouched), `curlIndex` correctly became 90 (applied from the pose) —
+exactly the requested behavior. Also re-confirmed Reactive Wrist
+Splay's live function is genuinely restored (wrist quaternion
+measurably differs with Reactive on vs. off again). No new console
+errors — same pre-existing stale startup-race entries as every prior
+deploy today.
+
+Commit: `d4f6baf`. Pushed to `https://github.com/LeisHo/Handy-Set`
+(no concurrent Sync commit this round); Vercel auto-deployed.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
