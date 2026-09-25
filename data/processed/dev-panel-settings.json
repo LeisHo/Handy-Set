@@ -24,10 +24,10 @@
     "slidertipTwistThumb": 0,
     "sliderwristRotation": 0,
     "sliderwristBend": 0,
-    "sliderwristSplay": -30,
-    "checkboxCropWristEnabled": false,
-    "sliderHideWrist": 100,
-    "checkboxReactiveArmLengthEnabled": false,
+    "sliderwristSplay": 0,
+    "checkboxCropWristEnabled": true,
+    "sliderHideWrist": 78,
+    "checkboxReactiveArmLengthEnabled": true,
     "slidercurlIndex": 0,
     "slidersplayIndex": -68,
     "slidersplayIndex2": 0,
@@ -65,8 +65,8 @@
     "sliderposeOffsetZ": 0,
     "sliderPoseScale": 1,
     "checkboxWristSplayResponsiveEnabled": false,
-    "sliderWristSplayDefault": 7,
-    "checkboxWristSplayReactiveEnabled": true,
+    "sliderWristSplayDefault": -74,
+    "checkboxWristSplayReactiveEnabled": false,
     "sliderCameraX": -1.5,
     "sliderCameraY": 204.5,
     "sliderCameraZ": -7,
@@ -76,11 +76,11 @@
     "checkboxLockCameraZoom": false,
     "checkboxCameraMaxExtentsEnabled": false,
     "checkboxTrackingEnabled": true,
-    "sliderTrackingDamping": 1,
-    "sliderTargetDepthFactor": 0.6,
+    "sliderTrackingDamping": 0.2,
+    "sliderTargetDepthFactor": 2.15,
     "checkboxShowTargetMarker": true,
-    "checkboxPalmFacesCursor": true,
-    "sliderPalmFaceRotationOffset": 0,
+    "checkboxPalmFacesCursor": false,
+    "sliderPalmFaceRotationOffset": 23,
     "sliderKeyAzimuth": 360,
     "sliderKeyElevation": -3,
     "sliderKeyTargetHeight": -18,
@@ -103,13 +103,14 @@
     "checkboxShowGridHelper": false,
     "checkboxShowWireframe": false,
     "checkboxSensorStream": false,
-    "sliderSensorInterval": 200
+    "sliderSensorInterval": 200,
+    "checkboxDeviceInfoEnabled": true
   },
   "layout": {
-    "left": 20,
-    "top": 20,
-    "width": 347,
-    "height": 622
+    "left": 45,
+    "top": 501,
+    "width": 313,
+    "height": 276
   },
   "devPanelStyle": {
     "titleFontSize": 17,
@@ -1269,6 +1270,22 @@
           {
             "type": "group",
             "section": {
+              "key": "desktop:Settings",
+              "items": [
+                {
+                  "type": "row",
+                  "key": "checkboxDeviceInfoEnabled"
+                }
+              ],
+              "rowKeys": [
+                "checkboxDeviceInfoEnabled"
+              ],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "group",
+            "section": {
               "key": "desktop:Mouse Log",
               "items": [
                 {
@@ -1333,6 +1350,19 @@
           "checkboxShowWireframe"
         ],
         "subgroups": [
+          {
+            "key": "desktop:Settings",
+            "items": [
+              {
+                "type": "row",
+                "key": "checkboxDeviceInfoEnabled"
+              }
+            ],
+            "rowKeys": [
+              "checkboxDeviceInfoEnabled"
+            ],
+            "subgroups": []
+          },
           {
             "key": "desktop:Mouse Log",
             "items": [
@@ -3216,6 +3246,15 @@
           {
             "type": "group",
             "section": {
+              "key": "mobile:Settings",
+              "items": [],
+              "rowKeys": [],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "group",
+            "section": {
               "key": "mobile:Sensors",
               "items": [],
               "rowKeys": [],
@@ -3225,6 +3264,12 @@
         ],
         "rowKeys": [],
         "subgroups": [
+          {
+            "key": "mobile:Settings",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
           {
             "key": "mobile:Sensors",
             "items": [],
@@ -3261,6 +3306,108 @@
         "items": [],
         "rowKeys": [],
         "subgroups": []
+      },
+      {
+        "key": "mobile:Phone Tilt",
+        "items": [
+          {
+            "type": "group",
+            "section": {
+              "key": "mobile:Target",
+              "items": [],
+              "rowKeys": [],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "group",
+            "section": {
+              "key": "mobile:Responsive Wrist Splay",
+              "items": [
+                {
+                  "type": "group",
+                  "section": {
+                    "key": "mobile:Tracking",
+                    "items": [],
+                    "rowKeys": [],
+                    "subgroups": []
+                  }
+                }
+              ],
+              "rowKeys": [],
+              "subgroups": [
+                {
+                  "key": "mobile:Tracking",
+                  "items": [],
+                  "rowKeys": [],
+                  "subgroups": []
+                }
+              ]
+            }
+          },
+          {
+            "type": "group",
+            "section": {
+              "key": "mobile:New Group",
+              "items": [],
+              "rowKeys": [],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "group",
+            "section": {
+              "key": "mobile:Palm Facing",
+              "items": [],
+              "rowKeys": [],
+              "subgroups": []
+            }
+          }
+        ],
+        "rowKeys": [],
+        "subgroups": [
+          {
+            "key": "mobile:Target",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
+          {
+            "key": "mobile:Responsive Wrist Splay",
+            "items": [
+              {
+                "type": "group",
+                "section": {
+                  "key": "mobile:Tracking",
+                  "items": [],
+                  "rowKeys": [],
+                  "subgroups": []
+                }
+              }
+            ],
+            "rowKeys": [],
+            "subgroups": [
+              {
+                "key": "mobile:Tracking",
+                "items": [],
+                "rowKeys": [],
+                "subgroups": []
+              }
+            ]
+          },
+          {
+            "key": "mobile:New Group",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
+          {
+            "key": "mobile:Palm Facing",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          }
+        ]
       },
       {
         "key": "mobile:Pose",
@@ -3424,131 +3571,6 @@
             "key": "mobile:Saved Cameras",
             "items": [],
             "rowKeys": [],
-            "subgroups": []
-          }
-        ]
-      },
-      {
-        "key": "mobile:Phone Tilt",
-        "items": [
-          {
-            "type": "group",
-            "section": {
-              "key": "mobile:Tracking",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "checkboxMobileTrackingEnabled"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderMobileTrackingDamping"
-                }
-              ],
-              "rowKeys": [
-                "checkboxMobileTrackingEnabled",
-                "sliderMobileTrackingDamping"
-              ],
-              "subgroups": []
-            }
-          },
-          {
-            "type": "group",
-            "section": {
-              "key": "mobile:Target",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "sliderMobileTargetDepthFactor"
-                },
-                {
-                  "type": "row",
-                  "key": "checkboxMobileShowTargetMarker"
-                }
-              ],
-              "rowKeys": [
-                "sliderMobileTargetDepthFactor",
-                "checkboxMobileShowTargetMarker"
-              ],
-              "subgroups": []
-            }
-          },
-          {
-            "type": "group",
-            "section": {
-              "key": "mobile:Palm Facing",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "checkboxMobilePalmFacesCursor"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderMobilePalmFaceRotationOffset"
-                }
-              ],
-              "rowKeys": [
-                "checkboxMobilePalmFacesCursor",
-                "sliderMobilePalmFaceRotationOffset"
-              ],
-              "subgroups": []
-            }
-          }
-        ],
-        "rowKeys": [],
-        "subgroups": [
-          {
-            "key": "mobile:Tracking",
-            "items": [
-              {
-                "type": "row",
-                "key": "checkboxMobileTrackingEnabled"
-              },
-              {
-                "type": "row",
-                "key": "sliderMobileTrackingDamping"
-              }
-            ],
-            "rowKeys": [
-              "checkboxMobileTrackingEnabled",
-              "sliderMobileTrackingDamping"
-            ],
-            "subgroups": []
-          },
-          {
-            "key": "mobile:Target",
-            "items": [
-              {
-                "type": "row",
-                "key": "sliderMobileTargetDepthFactor"
-              },
-              {
-                "type": "row",
-                "key": "checkboxMobileShowTargetMarker"
-              }
-            ],
-            "rowKeys": [
-              "sliderMobileTargetDepthFactor",
-              "checkboxMobileShowTargetMarker"
-            ],
-            "subgroups": []
-          },
-          {
-            "key": "mobile:Palm Facing",
-            "items": [
-              {
-                "type": "row",
-                "key": "checkboxMobilePalmFacesCursor"
-              },
-              {
-                "type": "row",
-                "key": "sliderMobilePalmFaceRotationOffset"
-              }
-            ],
-            "rowKeys": [
-              "checkboxMobilePalmFacesCursor",
-              "sliderMobilePalmFaceRotationOffset"
-            ],
             "subgroups": []
           }
         ]
@@ -4154,6 +4176,15 @@
           {
             "type": "group",
             "section": {
+              "key": "landscape:Settings",
+              "items": [],
+              "rowKeys": [],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "group",
+            "section": {
               "key": "landscape:Sensors",
               "items": [],
               "rowKeys": [],
@@ -4163,6 +4194,12 @@
         ],
         "rowKeys": [],
         "subgroups": [
+          {
+            "key": "landscape:Settings",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
           {
             "key": "landscape:Sensors",
             "items": [],
@@ -4199,6 +4236,108 @@
         "items": [],
         "rowKeys": [],
         "subgroups": []
+      },
+      {
+        "key": "landscape:Phone Tilt",
+        "items": [
+          {
+            "type": "group",
+            "section": {
+              "key": "landscape:Target",
+              "items": [],
+              "rowKeys": [],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "group",
+            "section": {
+              "key": "landscape:Responsive Wrist Splay",
+              "items": [
+                {
+                  "type": "group",
+                  "section": {
+                    "key": "landscape:Tracking",
+                    "items": [],
+                    "rowKeys": [],
+                    "subgroups": []
+                  }
+                }
+              ],
+              "rowKeys": [],
+              "subgroups": [
+                {
+                  "key": "landscape:Tracking",
+                  "items": [],
+                  "rowKeys": [],
+                  "subgroups": []
+                }
+              ]
+            }
+          },
+          {
+            "type": "group",
+            "section": {
+              "key": "landscape:New Group",
+              "items": [],
+              "rowKeys": [],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "group",
+            "section": {
+              "key": "landscape:Palm Facing",
+              "items": [],
+              "rowKeys": [],
+              "subgroups": []
+            }
+          }
+        ],
+        "rowKeys": [],
+        "subgroups": [
+          {
+            "key": "landscape:Target",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
+          {
+            "key": "landscape:Responsive Wrist Splay",
+            "items": [
+              {
+                "type": "group",
+                "section": {
+                  "key": "landscape:Tracking",
+                  "items": [],
+                  "rowKeys": [],
+                  "subgroups": []
+                }
+              }
+            ],
+            "rowKeys": [],
+            "subgroups": [
+              {
+                "key": "landscape:Tracking",
+                "items": [],
+                "rowKeys": [],
+                "subgroups": []
+              }
+            ]
+          },
+          {
+            "key": "landscape:New Group",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
+          {
+            "key": "landscape:Palm Facing",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          }
+        ]
       },
       {
         "key": "landscape:Pose",
@@ -4367,131 +4506,6 @@
         ]
       },
       {
-        "key": "landscape:Phone Tilt",
-        "items": [
-          {
-            "type": "group",
-            "section": {
-              "key": "landscape:Tracking",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "checkboxLandscapeTrackingEnabled"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderLandscapeTrackingDamping"
-                }
-              ],
-              "rowKeys": [
-                "checkboxLandscapeTrackingEnabled",
-                "sliderLandscapeTrackingDamping"
-              ],
-              "subgroups": []
-            }
-          },
-          {
-            "type": "group",
-            "section": {
-              "key": "landscape:Target",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "sliderLandscapeTargetDepthFactor"
-                },
-                {
-                  "type": "row",
-                  "key": "checkboxLandscapeShowTargetMarker"
-                }
-              ],
-              "rowKeys": [
-                "sliderLandscapeTargetDepthFactor",
-                "checkboxLandscapeShowTargetMarker"
-              ],
-              "subgroups": []
-            }
-          },
-          {
-            "type": "group",
-            "section": {
-              "key": "landscape:Palm Facing",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "checkboxLandscapePalmFacesCursor"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderLandscapePalmFaceRotationOffset"
-                }
-              ],
-              "rowKeys": [
-                "checkboxLandscapePalmFacesCursor",
-                "sliderLandscapePalmFaceRotationOffset"
-              ],
-              "subgroups": []
-            }
-          }
-        ],
-        "rowKeys": [],
-        "subgroups": [
-          {
-            "key": "landscape:Tracking",
-            "items": [
-              {
-                "type": "row",
-                "key": "checkboxLandscapeTrackingEnabled"
-              },
-              {
-                "type": "row",
-                "key": "sliderLandscapeTrackingDamping"
-              }
-            ],
-            "rowKeys": [
-              "checkboxLandscapeTrackingEnabled",
-              "sliderLandscapeTrackingDamping"
-            ],
-            "subgroups": []
-          },
-          {
-            "key": "landscape:Target",
-            "items": [
-              {
-                "type": "row",
-                "key": "sliderLandscapeTargetDepthFactor"
-              },
-              {
-                "type": "row",
-                "key": "checkboxLandscapeShowTargetMarker"
-              }
-            ],
-            "rowKeys": [
-              "sliderLandscapeTargetDepthFactor",
-              "checkboxLandscapeShowTargetMarker"
-            ],
-            "subgroups": []
-          },
-          {
-            "key": "landscape:Palm Facing",
-            "items": [
-              {
-                "type": "row",
-                "key": "checkboxLandscapePalmFacesCursor"
-              },
-              {
-                "type": "row",
-                "key": "sliderLandscapePalmFaceRotationOffset"
-              }
-            ],
-            "rowKeys": [
-              "checkboxLandscapePalmFacesCursor",
-              "sliderLandscapePalmFaceRotationOffset"
-            ],
-            "subgroups": []
-          }
-        ]
-      },
-      {
         "key": "landscape:Lighting",
         "items": [
           {
@@ -4557,13 +4571,14 @@
     "desktop:TABS": false,
     "desktop:BUTTONS": false,
     "desktop:Debug": true,
-    "desktop:Mouse Log": false,
+    "desktop:Settings": false,
+    "desktop:Mouse Log": true,
     "desktop:Sensors": false,
     "desktop:Tween": true,
     "desktop:Saved Tween Sequences": false,
     "desktop:Field Layout": true,
     "desktop:Phone Tilt": false,
-    "desktop:Target": true,
+    "desktop:Target": false,
     "desktop:Responsive Wrist Splay": true,
     "desktop:Tracking": false,
     "desktop:New Group": true,
@@ -4585,7 +4600,6 @@
     "desktop:Toon Shading": true,
     "desktop:Saved Toon Shading": false,
     "desktop:Background": true,
-    "mobile:Responsive Wrist Splay": false,
     "mobile:Dev Panel": true,
     "mobile:MECHANICS": false,
     "mobile:PANEL UI": false,
@@ -4596,10 +4610,17 @@
     "mobile:TABS": false,
     "mobile:BUTTONS": false,
     "mobile:Debug": false,
+    "mobile:Settings": false,
     "mobile:Sensors": false,
     "mobile:Tween": false,
     "mobile:Saved Tween Sequences": false,
     "mobile:Field Layout": false,
+    "mobile:Phone Tilt": false,
+    "mobile:Target": true,
+    "mobile:Responsive Wrist Splay": true,
+    "mobile:Tracking": false,
+    "mobile:New Group": false,
+    "mobile:Palm Facing": true,
     "mobile:Pose": true,
     "mobile:ROTATION": false,
     "mobile:THUMB": false,
@@ -4612,16 +4633,11 @@
     "mobile:Saved Poses": false,
     "mobile:Camera": false,
     "mobile:Saved Cameras": false,
-    "mobile:Phone Tilt": false,
-    "mobile:Tracking": false,
-    "mobile:Target": false,
-    "mobile:Palm Facing": false,
     "mobile:Lighting": false,
     "mobile:Saved Lighting": false,
     "mobile:Toon Shading": false,
     "mobile:Saved Toon Shading": false,
     "mobile:Background": false,
-    "landscape:Responsive Wrist Splay": false,
     "landscape:Dev Panel": true,
     "landscape:MECHANICS": true,
     "landscape:PANEL UI": true,
@@ -4632,10 +4648,17 @@
     "landscape:TABS": true,
     "landscape:BUTTONS": true,
     "landscape:Debug": true,
+    "landscape:Settings": false,
     "landscape:Sensors": true,
     "landscape:Tween": true,
     "landscape:Saved Tween Sequences": true,
     "landscape:Field Layout": true,
+    "landscape:Phone Tilt": false,
+    "landscape:Target": true,
+    "landscape:Responsive Wrist Splay": false,
+    "landscape:Tracking": false,
+    "landscape:New Group": false,
+    "landscape:Palm Facing": false,
     "landscape:Pose": true,
     "landscape:ROTATION": true,
     "landscape:THUMB": true,
@@ -4648,10 +4671,6 @@
     "landscape:Saved Poses": true,
     "landscape:Camera": true,
     "landscape:Saved Cameras": true,
-    "landscape:Phone Tilt": false,
-    "landscape:Tracking": false,
-    "landscape:Target": true,
-    "landscape:Palm Facing": false,
     "landscape:Lighting": true,
     "landscape:Saved Lighting": true,
     "landscape:Toon Shading": true,
@@ -4702,7 +4721,7 @@
     "mobile:Camera": null,
     "mobile:Tracking": null,
     "mobile:Target": null,
-    "mobile:Palm Facing": null,
+    "mobile:Palm Facing": "RESPONSIVE PALM ROTATION",
     "mobile:Phone Tilt": null,
     "mobile:Saved Lighting": null,
     "mobile:Lighting": null,
@@ -4752,7 +4771,7 @@
     "landscape:Camera": null,
     "landscape:Tracking": null,
     "landscape:Target": null,
-    "landscape:Palm Facing": null,
+    "landscape:Palm Facing": "RESPONSIVE PALM ROTATION",
     "landscape:Phone Tilt": null,
     "landscape:Saved Lighting": null,
     "landscape:Lighting": null,
@@ -4882,7 +4901,19 @@
     "mobile:Responsive Wrist Splay": null,
     "landscape:Responsive Wrist Splay": null,
     "desktop:New Group": "RESPONSIVE WRIST CROP",
-    "desktop:Palm Facing": "RESPONSIVE PALM ROTATION"
+    "desktop:Palm Facing": "RESPONSIVE PALM ROTATION",
+    "mobile:Settings": null,
+    "mobile:New Group": "RESPONSIVE WRIST CROP",
+    "landscape:Settings": null,
+    "landscape:New Group": "RESPONSIVE WRIST CROP",
+    "checkboxMobileWristSplayResponsiveEnabled": null,
+    "checkboxMobileWristSplayReactiveEnabled": null,
+    "sliderMobileWristSplayDefault": null,
+    "checkboxMobileReactiveArmLengthEnabled": null,
+    "checkboxLandscapeWristSplayResponsiveEnabled": null,
+    "checkboxLandscapeWristSplayReactiveEnabled": null,
+    "sliderLandscapeWristSplayDefault": null,
+    "checkboxLandscapeReactiveArmLengthEnabled": null
   },
   "devTextOverridesManual": [
     "desktop:New Group",
@@ -4946,19 +4977,32 @@
     "sliderposeOffsetY": false,
     "sliderposeOffsetZ": false,
     "sliderPoseScale": false,
-    "checkboxTrackingEnabled": true,
-    "sliderTrackingDamping": true,
-    "sliderTargetDepthFactor": true,
-    "checkboxShowTargetMarker": true,
-    "checkboxPalmFacesCursor": true,
-    "sliderPalmFaceRotationOffset": true
+    "checkboxTrackingEnabled": false,
+    "sliderTrackingDamping": false,
+    "sliderTargetDepthFactor": false,
+    "checkboxShowTargetMarker": false,
+    "checkboxPalmFacesCursor": false,
+    "sliderPalmFaceRotationOffset": false,
+    "checkboxWristSplayResponsiveEnabled": false,
+    "checkboxWristSplayReactiveEnabled": false,
+    "sliderWristSplayDefault": false,
+    "checkboxReactiveArmLengthEnabled": false,
+    "textWristSplayRange": false,
+    "textWristSplayCurve": false,
+    "textArmLengthRange": false,
+    "textArmLengthCurve": false
   },
   "devIndependence": {
     "mobile": {},
     "landscape": {}
   },
   "devDeviceValues": {
-    "mobile": {},
+    "mobile": {
+      "sliderTargetDepthFactor": -0.85,
+      "checkboxTrackingEnabled": false,
+      "sliderTrackingDamping": 0.27,
+      "checkboxPalmFacesCursor": false
+    },
     "landscape": {}
   },
   "defaultCamera": {
