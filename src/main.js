@@ -508,11 +508,31 @@ function applyCurlToSkeleton(fingerName, skeleton, baseQuat, wrapperQuat, values
     if (i === 0 && baseOnly) rotateOnTrueWorldAxis(bone, curlAxis, THREE.MathUtils.degToRad((baseOnly / 100) * maxDegs[0] * sign), wrapperQuat)
     if (i === 1 && midOnly) rotateOnTrueWorldAxis(bone, curlAxis, THREE.MathUtils.degToRad((midOnly / 100) * maxDegs[1] * sign), wrapperQuat)
     if (i === joints.length - 1 && tipOnly) rotateOnTrueWorldAxis(bone, curlAxis, THREE.MathUtils.degToRad((tipOnly / 100) * maxDegs[i] * sign), wrapperQuat)
+    // CORRECTED 2026-09-26 -- used `bone.rotateOnWorldAxis()` (three.js's
+    // own built-in), which is NOT actually a true-world-space rotation
+    // once the bone's parent chain carries any real rotation -- it treats
+    // the given axis as already expressed in the bone's PARENT's local
+    // frame, a well-known three.js naming trap. `twistAxis` (from
+    // segmentDirection(), below) IS a genuine world-space direction
+    // (derived from 2 bones' real current world positions), so it needs
+    // the SAME robust conversion `rotateOnTrueWorldAxis()` already gives
+    // curl/splay -- just WITHOUT an exclude-quat, since this axis is
+    // already correct as true world space and has nothing to exclude
+    // (unlike FINGER_CURL_AXIS, a canonical pose-relative constant that
+    // DOES need wrapper excluded). Ported verbatim from HANDY DANDIES'
+    // own real fix for this exact issue (its own `rotateOnTrueWorldAxis`
+    // comment documents the identical trap on the identical rig). Found
+    // via direct report: "Fist" pose (tipTwistThumb:46, the only nonzero
+    // tipTwist value in that pose) showed ~31-53deg drift on rThumb3
+    // specifically under Wrist Bend/Rotation, while every other joint on
+    // every other finger measured ~0deg -- isolating this to Tip Twist's
+    // own separate code path, not the curl/splay system this session's
+    // earlier fix already corrected.
     if (i === joints.length - 1 && tipTwist) {
       const prevBone = skeleton.getBoneByName(joints[i - 1])
       if (prevBone) {
         const twistAxis = segmentDirection(prevBone, bone)
-        bone.rotateOnWorldAxis(twistAxis, THREE.MathUtils.degToRad((tipTwist / 100) * FINGER_TIP_TWIST_MAX_DEG))
+        rotateOnTrueWorldAxis(bone, twistAxis, THREE.MathUtils.degToRad((tipTwist / 100) * FINGER_TIP_TWIST_MAX_DEG))
       }
     }
   })
