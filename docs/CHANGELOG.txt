@@ -1821,6 +1821,47 @@ Commit: `30484a2`. Pushed to `https://github.com/LeisHo/Handy-Set`;
 Vercel auto-deployed.
 
 --------------------------------------------------------------------------------
+2026-09-26  -  09:02 AM - 09:06 AM EDT
+
+Direct follow-up report, after the rotation/curl-tracking fixes above:
+"beter but i think something is still wrong with the finger and thumb
+splay settings. with the post Fist, the figner splays arent showing
+correctly its not aggregiously wrong, but its still not the pose i
+intended."
+
+Read HANDY DANDIES' real `applyCurlToSkeleton()` directly (not
+reconstructed) and compared its per-joint rotation ORDER against this
+project's own: HANDY DANDIES applies **splay, then splay2, then curl
+(+bias), then base/mid/tip-only curl, then tip twist** — this project
+had **curl FIRST**, splay/splay2 after. Since `rotateOnTrueWorldAxis()`
+reads the bone's `getWorldQuaternion()` fresh on every call, whichever
+rotation runs first sees the bone still at rest, but every rotation
+after it sees the PRIOR rotation already baked in — its own
+world-axis-to-local conversion gets conjugated by that prior rotation's
+inverse. With curl running first, splay's own axis was being computed
+relative to the CURLED joint instead of rest — a real error that scales
+with how much curl is simultaneously active on that same joint, which
+is exactly "not aggressively wrong" (a secondary coupling effect on top
+of an otherwise-correct pose) rather than obviously broken.
+
+Fixed by reordering to match HANDY DANDIES exactly — no new math, every
+individual `rotateOnTrueWorldAxis()` call was already verified correct
+in this session's earlier rounds; only the sequence changed.
+
+Live-verified: applied Fist's real index (curl 90, splay 18) and thumb
+(curl 75, splay 42, splay2 13, curlBias 32) values via the real
+sliders — every tested bone quaternion (`rThumb1-3`, `rIndex1-3`) came
+back a well-formed unit quaternion (magnitude ~1.0000000, no NaN), and
+a screenshot shows a natural, correctly-articulated closed fist with
+clean knuckle definition, no twisted or degenerate geometry. No console
+errors at the deployed build.
+
+`index.html`'s own `main.js` cache-buster bumped `?v=61` -> `?v=62`.
+
+Commit: `8b4ab8d`, merge `a17d077`. Pushed to
+`https://github.com/LeisHo/Handy-Set`; Vercel auto-deployed.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

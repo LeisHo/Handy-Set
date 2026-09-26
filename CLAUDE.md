@@ -801,3 +801,41 @@ wiring, and are still open:
   pattern to check against, not a fresh derivation.** See
   `docs/CHANGELOG.txt`'s matching 2026-09-26 (03:31 AM - 03:54 AM EDT)
   entry for the full account.
+- **`applyCurlToSkeleton()`'s own per-joint rotation ORDER was wrong —
+  curl was applied BEFORE splay/splay2, HANDY DANDIES' real source
+  applies splay/splay2 FIRST, then curl.** Found 2026-09-26, right after
+  the Whole-Hand Rotation fix above, per a direct follow-up: "the finger
+  splays arent showing correctly... not aggressively wrong, but its
+  still not the pose i intended" (on the "Fist" saved pose). This is a
+  DIFFERENT bug class from every other curl-axis fix above (those were
+  all about the `baseQuat`/`excludeQuat` MATH being wrong) — the
+  individual `rotateOnTrueWorldAxis()` calls were each already correct
+  in isolation; the SEQUENCE they ran in wasn't. Since that function
+  reads the bone's `getWorldQuaternion()` FRESH on every call, whichever
+  rotation runs first sees the bone at rest, but every rotation AFTER it
+  sees the PRIOR one already baked into the bone's local quaternion —
+  its own world-axis-to-local conversion gets conjugated by that prior
+  rotation's inverse. With curl running first (this project's original
+  order), splay's own axis was computed relative to the CURLED joint
+  instead of rest — an error that scales with how much curl is
+  simultaneously active on that SAME joint, which is exactly why it
+  looked like a subtle, "not aggressively wrong" deviation rather than
+  an obviously broken pose (Fist has real curl+splay both active on the
+  same joint for index and thumb — the worst case for this bug).
+  Correct order, read directly from HANDY DANDIES' real
+  `applyCurlToSkeleton()`: **splay → splay2 → curl(+bias) → base-only
+  curl → mid-only curl → tip-only curl → tip twist**. Fixed by moving
+  the splay/splay2 blocks to run before curl (no new math — every
+  individual rotation call was already correct, only the order changed).
+  Live-verified: applied Fist's real index/thumb curl+splay values via
+  the real sliders — every tested bone quaternion is a well-formed unit
+  quaternion (no NaN, magnitude ~1.0), and a screenshot shows a natural,
+  correctly-articulated closed fist with clean knuckle definition.
+  **If a future report describes a finger/thumb pose looking subtly
+  "off" (not obviously broken) specifically on a pose with substantial
+  curl AND splay both active on the same joint, check the ORDER
+  rotations are applied in, not just the axis math — this bug class is
+  invisible on poses that only use ONE of curl/splay/splay2 per joint,
+  since order doesn't matter when there's nothing else to conjugate
+  against.** See `docs/CHANGELOG.txt`'s matching 2026-09-26
+  (09:02 AM - 09:06 AM EDT) entry for the full account.

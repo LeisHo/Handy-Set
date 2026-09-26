@@ -12,6 +12,22 @@ Nothing in progress. Pushed to `https://github.com/LeisHo/Handy-Set`
 
 ## Recently completed
 
+- **RESOLVED (2026-09-26, 4th pass): finger/thumb splay was subtly off
+  on poses with both curl AND splay active on the same joint (e.g.
+  "Fist"'s index and thumb) — a rotation-ORDER bug, not an axis-math
+  bug.** HANDY DANDIES' real `applyCurlToSkeleton()` applies splay/
+  splay2 BEFORE curl; this project had curl first. Since
+  `rotateOnTrueWorldAxis()` reads the bone's world quaternion fresh each
+  call, applying curl first meant splay's own axis got computed relative
+  to the already-curled joint instead of rest — an error proportional to
+  how much curl was also active, exactly matching "not aggressively
+  wrong, but not the pose I intended." Fixed by reordering to match
+  HANDY DANDIES exactly (no new math, every individual rotation call was
+  already correct). Live-verified: Fist's real index/thumb values
+  produce well-formed unit quaternions and a natural, correctly-
+  articulated closed fist. See `docs/CHANGELOG.txt`'s matching
+  2026-09-26 (09:02-09:06 AM) entry.
+
 - **RESOLVED (2026-09-26, 3rd pass): the same curl-axis-tracking bug
   class, this time on Whole-Hand Rotation (modelRotX/Y/Z) instead of the
   wrist -- 0.0deg (floating-point noise) drift across all 3 axes,
