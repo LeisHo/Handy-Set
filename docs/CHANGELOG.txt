@@ -1705,6 +1705,55 @@ Commits: `d132e9b` (1st attempt, superseded), `765378a` (the real fix).
 Pushed to `https://github.com/LeisHo/Handy-Set`; Vercel auto-deployed.
 
 --------------------------------------------------------------------------------
+2026-09-26  -  01:40 AM - 01:46 AM EDT
+
+Direct follow-up, minutes after the previous entry's "0deg drift,
+matching HANDO" claim: "better but not fully fixed... with Fist, at
+wrist rotation 90 the thumb is close to the hand, but at -90 it splays
+out more" -- then, after a first thumb-only check landed, a broader
+correction: "the other fingers also dont look perfect... it seems like a
+splay issue for all segments."
+
+**Measured every joint on every finger (15 bones), both Wrist Bend and
+Wrist Rotation, using the same relative-to-wrist drift test already
+built.** Result: 14 of 15 bones measured pure floating-point noise
+(<0.04deg) on both axes -- ONLY `rThumb3` showed real drift: ~31deg
+(Bend) and ~53deg (Rotation). This directly matches "Fist" being the
+ONLY saved pose with a nonzero `tipTwist*` value at all
+(`tipTwistThumb:46`; every other finger's tipTwist is 0 in every saved
+pose) -- isolating this to Tip Twist's own separate code path, not a
+general "splay" issue as the report's own wording guessed (a reasonable
+guess from the visual symptom, but not what was actually happening).
+
+Root cause: `bone.rotateOnWorldAxis(twistAxis, angle)` -- three.js's own
+built-in method -- silently treats its axis argument as already expressed
+in the bone's PARENT's local frame, not true world space, once any
+ancestor carries real rotation (a well-documented three.js naming trap).
+`twistAxis` (from `segmentDirection()`, computed live from 2 bones' real
+current world positions) IS genuinely in world space, so this call was
+wrong the moment the wrist itself carried any real rotation. Fixed by
+switching to `rotateOnTrueWorldAxis(bone, twistAxis, angle)` -- the SAME
+robust helper curl/splay already use, just called WITHOUT an exclude-quat
+(nothing to exclude, since this axis is already correct true-world,
+unlike the canonical `FINGER_CURL_AXIS` constants). Ported verbatim from
+HANDY DANDIES' own real fix for this identical issue -- its own
+`rotateOnTrueWorldAxis()` comment documents the exact same trap on the
+exact same rig, and its own Tip Twist call site already uses this exact
+pattern.
+
+**Re-verified with the full 15-bone x 2-axis sweep after deploying
+(`v60`): every single measurement is now floating-point noise
+(<0.035deg), including `rThumb3` (0.0deg on both axes, down from
+31-53deg).** Screenshot comparison at Wrist Rotation +90 vs -90 on
+"Fist" shows the thumb staying symmetrically tucked into the fist in
+both directions -- no visible splay-out difference.
+
+`index.html`'s own `main.js` cache-buster bumped `?v=59` -> `?v=60`.
+
+Commit: `51eb107`. Pushed to `https://github.com/LeisHo/Handy-Set`;
+Vercel auto-deployed.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

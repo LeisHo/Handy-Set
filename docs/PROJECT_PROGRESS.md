@@ -12,6 +12,20 @@ Nothing in progress. Pushed to `https://github.com/LeisHo/Handy-Set`
 
 ## Recently completed
 
+- **RESOLVED (2026-09-26, 2nd pass): a real, separate residual bug found
+  right after the fix below was declared complete -- Tip Twist's own
+  code path, not the curl/splay system. Now genuinely fully fixed: a
+  15-bone x 2-axis (Bend/Rotation) sweep is 0.0deg (floating-point noise)
+  on every single measurement.** Root cause: `bone.rotateOnWorldAxis()`
+  (three.js's own built-in) silently misinterprets its axis as the
+  bone's PARENT's local frame once any ancestor has real rotation --
+  only ever visible on `rThumb3` because "Fist" is the only saved pose
+  with a nonzero `tipTwist*` value at all. Fixed by switching to the
+  SAME `rotateOnTrueWorldAxis()` helper curl/splay already use (no
+  exclude-quat needed here), ported verbatim from HANDY DANDIES' own
+  real fix for this identical issue. See `docs/CHANGELOG.txt`'s matching
+  2026-09-26 (01:40-01:46 AM) entry.
+
 - **RESOLVED (2026-09-26): the curl-axis-tracks-wrist bug is genuinely,
   completely fixed -- 0.0deg measured drift across Wrist Splay/Bend/
   Rotation's own full ranges, on 3 different fingers, matching HANDO's

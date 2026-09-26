@@ -733,3 +733,30 @@ wiring, and are still open:
   reference project might not have active in a quick test. See
   `docs/CHANGELOG.txt`'s 2026-09-26 (2nd) entry for the full derivation
   and live-verification numbers.
+- **`bone.rotateOnWorldAxis()` (three.js's own built-in) is NOT a true
+  world-space rotation once the bone's ancestor chain carries any real
+  rotation — it silently treats the given axis as already expressed in
+  the bone's PARENT's local frame, a well-known three.js naming trap.**
+  Found 2026-09-26, right after the curl/splay fix above was declared
+  complete: a direct follow-up report ("Fist... at wrist rotation 90 the
+  thumb is close, at -90 it splays out more," then broadened to "the
+  other fingers also dont look perfect... a splay issue for all
+  segments") turned out to be neither a splay bug nor a regression of
+  the fix above — a full 15-bone × 2-axis (Bend/Rotation) drift sweep
+  showed EVERY joint at ~0° EXCEPT `rThumb3`, at ~31-53°. Isolated to
+  Tip Twist's own code path: "Fist" is the only saved pose with a
+  nonzero `tipTwist*` value at all (`tipTwistThumb: 46`), so this was the
+  only joint actually exercising `bone.rotateOnWorldAxis(twistAxis,
+  angle)` — a call that was ALWAYS wrong here, just never visible until
+  a pose with a real Tip Twist value met a real wrist rotation. Fixed by
+  switching to `rotateOnTrueWorldAxis(bone, twistAxis, angle)` (no
+  exclude-quat — `segmentDirection()`'s own output is already genuine
+  world space, unlike `FINGER_CURL_AXIS`), ported verbatim from HANDY
+  DANDIES' own real fix for this identical trap on the identical rig —
+  its own `rotateOnTrueWorldAxis()` comment documents this exact case.
+  Re-verified: full 15×2 sweep at 0.0° (floating-point noise) after the
+  fix. **If a future report describes ONE specific finger/joint looking
+  wrong while others look fine, check which pose fields are actually
+  NONZERO for that exact joint in the saved pose being used before
+  assuming a general axis/formula bug — a code path that's never
+  exercised can hide a real bug indefinitely.**
