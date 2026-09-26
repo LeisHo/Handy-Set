@@ -415,50 +415,46 @@ const _splay2AxisScratch = new THREE.Vector3()
 const _curlWristDeltaScratch = new THREE.Quaternion()
 const _curlWristRestInvScratch = new THREE.Quaternion()
 const _curlAxisRefQuat = new THREE.Quaternion()
-// CORRECTED 2026-09-26 -- the conjugation above used `wristRestForAxis`
-// (rHand's own LOCAL rest quaternion) alone, which is only an
-// APPROXIMATION of what the formula actually needs: the wrist's FULL
-// WORLD rest orientation (excluding baseQuat/wrapper, which sit above the
-// whole skeleton and aren't part of this correction). rHand's parent
-// chain (rForearmBend/rForearmTwist/etc.) has its own nonzero rest
-// rotation too -- omitting it means the conjugation is only exact when
-// that parent-chain rest rotation happens to be near-identity, and drifts
-// increasingly as it isn't. Confirmed as the real cause of "wrist moves,
-// fingers point the wrong direction": measuring the index finger's own
-// orientation RELATIVE TO THE WRIST before/after a wrist-only change (an
-// invariant that should barely move, since no curl/splay VALUE changed)
-// showed ~2.5 deg drift for Wrist Splay (+-30 deg range) but ~101-116 deg
-// drift for Wrist Bend (+-90 deg range) -- the same formula, small-angle-
-// accurate but breaking down badly at the angles Bend's own slider
-// actually reaches. Fixed by conjugating against the wrist's real WORLD
-// rest quaternion (`getWristWorldRestQuat()`, composed once from every
-// ancestor bone's own rest LOCAL quaternion, root-most first, walking up
-// from rHand's own parent) instead of rHand's LOCAL rest quaternion
-// alone. Still correctly reduces to exactly `baseQuat` when delta=I
-// (the wristWorldRest factor cancels algebraically regardless of its
-// value), so the already-established degenerate-case requirement is
-// unaffected. HANDY DANDIES shares this exact formula verbatim and very
-// likely has this same latent bug -- it just may never have been
-// exercised at Bend angles this large.
-let _wristWorldRestQuat = null
-function getWristWorldRestQuat(wristBone) {
-  if (_wristWorldRestQuat) return _wristWorldRestQuat
-  const chain = []
-  let node = wristBone.parent
-  while (node && boneRestQuat[node.name]) { chain.unshift(node.name); node = node.parent }
-  const q = new THREE.Quaternion()
-  chain.forEach((name) => q.multiply(boneRestQuat[name]))
-  q.multiply(boneRestQuat.rHand)
-  _wristWorldRestQuat = q
-  return q
-}
+// CORRECTED 2026-09-26 (2nd round) -- the 2026-09-26 (1st round) fix
+// directly above was ALSO wrong, caught by diffing against HANDO's own
+// real source (the canonical implementation, per direct instruction: "we
+// also have [Fist] in HANDO. so use our data to compare") rather than
+// re-deriving blind a 3rd time. HANDO went through this EXACT same bug
+// 3 times (its own CHANGELOG, 2026-09-11/15/16) before landing on the
+// real, verified-correct formula -- reading that history directly showed
+// the 1st-round fix here algebraically simplifies to
+// `baseQuat * P_rest * Q * R^-1 * P_rest^-1` (P_rest = the wrist's
+// ancestor-chain rest-composed quaternion, Q = wristBone.quaternion
+// current, R = wristRest), which has a spurious trailing `* P_rest^-1`
+// HANDO's own real formula does NOT have. The correct formula (HANDO's,
+// after its own 3rd correction, generalizing to any hierarchy depth):
+//   axisRefQuat = P_now * Q * R^-1
+// where P_now is the wrist bone's own PARENT's LIVE WORLD quaternion
+// (measured directly via getWorldQuaternion() after forcing a fresh
+// ancestor-only matrix update -- NOT a rest-composed approximation, and
+// NOT baseQuat/modelRoot alone, since P_now already includes baseQuat as
+// a real ancestor transform whenever a real wrist bone exists). HANDO's
+// own comment on this exact point: "identical to [the old modelRoot-only
+// formula] ONLY when the wrist's parent's world quat happens to equal
+// modelRoot.quaternion exactly, i.e. nothing else sits between them" --
+// not true here, since rHand's parent chain (rForearmTwist/rForearmBend)
+// sits between h.clone (baseQuat) and rHand. Also corrects a wrong
+// assumption baked into the 1st-round fix's own degenerate-case check:
+// this does NOT reduce to bare `baseQuat` at delta=identity (it reduces
+// to `P_now`, which only equals `baseQuat` if the wrist's ancestor chain
+// has zero rest rotation of its own -- not the case for this rig). The
+// `baseQuat` fallback below is for the no-wrist-bone case only, matching
+// HANDO's own structure exactly.
+const _wristParentWorldScratch = new THREE.Quaternion()
 function computeCurlAxisRefQuat(skeleton, baseQuat) {
   const wristBoneForAxis = skeleton.getBoneByName('rHand')
   const wristRestForAxis = boneRestQuat.rHand
-  if (!wristBoneForAxis || !wristRestForAxis) return baseQuat
-  const wristWorldRest = getWristWorldRestQuat(wristBoneForAxis)
-  const delta = _curlWristDeltaScratch.copy(wristRestForAxis).invert().multiply(wristBoneForAxis.quaternion)
-  return _curlAxisRefQuat.copy(baseQuat).multiply(wristWorldRest).multiply(delta).multiply(_curlWristRestInvScratch.copy(wristWorldRest).invert())
+  if (!wristBoneForAxis || !wristRestForAxis || !wristBoneForAxis.parent) return baseQuat
+  // Q * R^-1
+  const qRInv = _curlWristDeltaScratch.copy(wristBoneForAxis.quaternion).multiply(_curlWristRestInvScratch.copy(wristRestForAxis).invert())
+  wristBoneForAxis.parent.updateWorldMatrix(true, false) // fresh ancestor chain only, not descendants
+  wristBoneForAxis.parent.getWorldQuaternion(_wristParentWorldScratch) // P_now
+  return _curlAxisRefQuat.copy(_wristParentWorldScratch).multiply(qRInv)
 }
 function applyCurlToSkeleton(fingerName, skeleton, baseQuat, wrapperQuat, values) {
   const joints = FINGER_JOINTS[fingerName]
