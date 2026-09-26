@@ -658,3 +658,39 @@ wiring, and are still open:
   from) likely has this exact same latent bug** — worth checking whether
   its production deployment's actual rendered defaults match its
   git-tracked Sync'd settings, not just what shows under `?dev=1`.
+- **`computeCurlAxisRefQuat()`'s conjugation was missing a factor —
+  partially fixed 2026-09-26, NOT fully resolved, disclosed honestly
+  rather than declared done.** The formula conjugated the wrist's local
+  delta-from-rest by `boneRestQuat.rHand` alone; `rHand`'s own parent
+  chain (`rForearmTwist`/`rForearmBend`) has nonzero rest rotation the
+  old formula silently ignored. Quantitative test (index finger's
+  orientation RELATIVE TO THE WRIST, which should barely drift when only
+  a wrist slider changes): before the fix, Wrist Splay (±30°) drifted
+  ~2.5°, Wrist Rotation (±180°) ~11°, **Wrist Bend (±90°) ~101-116°** —
+  the exact "wrist moves, fingers point the wrong direction" report,
+  worst on Bend because it has the widest slider range and the old
+  formula's error scales with angle. Fixed via `getWristWorldRestQuat()`
+  (composes every ancestor bone's own rest quaternion, root-most first,
+  instead of just `rHand`'s own) — still correctly reduces to `baseQuat`
+  at delta=identity. **Re-measured after deploying: real but incomplete.**
+  Splay ~0.6-0.7° (much better). Bend ~31-41° (real improvement from
+  ~101-116°, but still a visible error, and inconsistent by finger:
+  index ~31°, middle ~2.8°, pinky ~40° — the fix's own derivation
+  predicts NO finger-dependence, since each finger's own carpal bone
+  should cancel out algebraically; it doesn't in practice, meaning the
+  derivation is still incomplete somewhere). **Wrist Rotation got WORSE:
+  ~11° before, ~41° after.** Shipped anyway because it's a real,
+  measured improvement on the specific axis (Bend) the direct report was
+  about — but this is NOT a complete fix, and the Rotation regression
+  needs weighing against real usage before assuming this trade was
+  worth it. If this needs another attempt: don't guess a 3rd formula
+  cold — instrument `computeCurlAxisRefQuat()`'s own intermediate values
+  (`P`, `Q`, `delta`) live and compare against directly-measured world
+  quaternions, per finger (`rIndex1` vs `rMid1` vs `rPinky1` — each has
+  its own distinct carpal parent, `rCarpal1`-`4`; `rThumb1` uniquely has
+  none, parented straight to `rHand`), before proposing a fix — this
+  round's own derivation looked sound on paper and still didn't fully
+  match reality. HANDY DANDIES shares this exact formula verbatim
+  (confirmed by direct source comparison) and has not been checked for
+  this same bug. See `docs/CHANGELOG.txt`'s 2026-09-26 entry for the full
+  test methodology and numbers.

@@ -1539,6 +1539,93 @@ Commit: `d4f6baf`. Pushed to `https://github.com/LeisHo/Handy-Set`
 (no concurrent Sync commit this round); Vercel auto-deployed.
 
 --------------------------------------------------------------------------------
+2026-09-26  -  00:30 AM - 00:47 AM EDT
+
+Investigated cross-project (from a HANDY DANDIES session, per direct
+instruction: "This new project made after you cant implement the hand
+correctly... go investigate"), then implemented 2 fixes here after
+direct confirmation ("yeah do it") plus new data ("the poses seem to
+outright ignoring the local pose's Wrist and rotation settings... if i
+change the wrist sliders, the wrist moves but the fingers stay pointing
+in the wrong direction" / "the fingers dont follow is own wrist
+sliders").
+
+**Fix 1 (clean, confirmed): reverted the 2026-09-25 `withLiveFieldsPreserved()`
+fix.** Live-verified via the real "Use" button that it had its own real
+regression: `SAVED_POSES` has 2 pairs ("Big Open Palm"/"Big Open Palm
+(S)", "Fist"/"Fist - Bent Back") that are byte-identical except for
+`wristSplay` -- that field IS the pose's defining feature for the "(S)"/
+"Bent Back" variants. Since the fix omitted `wristSplay`/`modelRotX/Y/Z`
+from EVERY pose application unconditionally, applying either splayed
+variant produced a wrist-bone quaternion byte-IDENTICAL to its non-
+splayed sibling (confirmed directly: `Fist` and `Fist - Bent Back`
+produced the exact same `rHand` quaternion via "Use"). Reverted
+`withLiveFieldsPreserved()` to a pass-through -- a saved pose's own wrist/
+rotation fields apply normally again. The original reactive-stacking
+problem this was chasing already has its own correctly-scoped fix sitting
+unused (the Min/Max clamp sliders, same day) -- narrow those instead if
+stacking becomes a problem again.
+
+**Fix 2 (real, measured improvement -- NOT a complete fix, disclosed
+honestly): `computeCurlAxisRefQuat()`'s conjugation reference was
+missing a factor.** Built a quantitative test (not a visual guess):
+measure the index finger's own orientation RELATIVE TO THE WRIST (a
+quaternion that should barely change when only the wrist rotates, since
+no curl/splay VALUE changed) before and after moving each wrist slider
+across its own full range. Before this fix: Splay (+-30 deg) drifted
+~2.5 deg, Rotation (+-180 deg) ~11 deg, but Bend (+-90 deg) drifted
+**~101-116 deg** -- the exact "fingers point the wrong direction" bug,
+and the reason it showed up specifically on Bend (the axis with the
+widest slider range, where a small-angle-only approximation error
+compounds the most).
+
+Root cause: the formula conjugated the wrist's local delta-from-rest by
+`boneRestQuat.rHand` ALONE -- but `rHand`'s own parent chain
+(`rForearmTwist`/`rForearmBend`) has nonzero rest rotation of its own,
+which the formula silently omitted. Fixed via a new
+`getWristWorldRestQuat()`, composing every ancestor bone's own rest
+LOCAL quaternion (root-most first) before `rHand`'s own, so the
+conjugation reference is the wrist's real WORLD rest orientation, not
+just its local one. Still algebraically reduces to exactly `baseQuat`
+at delta=identity (the required degenerate case, per this file's own
+`applyCurlToSkeleton()` gotcha).
+
+**Re-measured after deploying (`v57`): real improvement, not a full
+fix.** Splay drift dropped to ~0.6-0.7 deg. Bend dropped to ~31-41 deg
+(varies by finger: index ~31-32, middle ~2.8, pinky ~40-41) -- a
+roughly 3x-ish reduction from ~101-116 deg, but still a real, visible
+error, not zero. **Rotation got WORSE: ~11 deg before this fix, ~41 deg
+after.** The finger-to-finger variance for the identical Bend test
+(2.8-41 deg across index/middle/pinky) doesn't match the derivation this
+fix was based on (which predicts NO finger-dependence, since each
+finger's own carpal bone -- `rCarpal1`-`4`, confirmed each finger has a
+DIFFERENT one, with `rThumb1` uniquely parented straight to `rHand` with
+no carpal at all -- should cancel out of the math). That contradiction
+was NOT resolved before time/effort on this specific investigation ran
+out -- flagged here explicitly rather than either (a) claiming this is
+fully fixed, or (b) continuing to guess a 3rd time in the same sitting,
+both of which are exactly the pattern already documented 3 times over in
+this file's own 2026-09-25 entries for this same general area.
+
+**Honest net assessment:** shipped because it's a real, measured
+improvement on the SPECIFIC axis the direct report was about (Bend), not
+because the underlying rig-math problem is solved. If Wrist Rotation's
+own real-world usage matters as much as Bend's, this trade (better Bend,
+worse Rotation) may not be net-positive -- worth a direct check with real
+use before assuming this is settled. HANDY DANDIES shares this exact
+`computeCurlAxisRefQuat()` formula verbatim (confirmed by direct source
+comparison) and very likely has this same latent bug, just probably
+never exercised at Bend's full +-90 deg range there either.
+
+Also reverted the `wristSplay` slider back to `0` and Bend/Rotation back
+to `0` after each test round, and did not touch the 3 unused-but-present
+Min/Max wrist clamp sliders or `SAVED_POSES`' own data.
+
+Commit: `b628ab4`. Pushed to `https://github.com/LeisHo/Handy-Set`;
+Vercel auto-deployed (confirmed live at `v57` before writing this entry).
+`index.html`'s own `main.js` cache-buster bumped `?v=56` -> `?v=57`.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

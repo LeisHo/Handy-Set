@@ -7,10 +7,41 @@ append-only history.
 
 ## Currently working on
 
-Nothing in progress. Pushed to `https://github.com/LeisHo/Handy-Set`
-(deployed via the Vercel project at `https://vercel.com/lpeis/handy-set`).
+**OPEN, not resolved: `computeCurlAxisRefQuat()`'s curl-axis-tracks-wrist
+formula is measurably better but still wrong at large Wrist Bend angles,
+and Wrist Rotation got measurably worse from the 2026-09-26 fix attempt.**
+Quantitative drift test (index finger's orientation relative to the
+wrist, before/after a wrist-only slider change): Splay improved from
+~2.5 deg to ~0.6-0.7 deg (good). Bend improved from ~101-116 deg to
+~31-41 deg (real improvement, still a real, visible error -- and varies
+oddly by finger: index ~31, middle ~2.8, pinky ~40, which the fix's own
+derivation doesn't explain). Rotation got WORSE: ~11 deg before, ~41 deg
+after. Root cause of the residual/finger-variance is NOT understood --
+each finger has a DIFFERENT carpal bone (`rCarpal1`-`4`; thumb has none,
+parented straight to `rHand`) that the current fix's math says shouldn't
+matter but empirically seems to. Next session: don't re-guess a 3rd
+formula blind -- instrument the actual intermediate quaternions
+(`P`/`Q`/`delta` inside `computeCurlAxisRefQuat()`) live and compare
+against the ACTUAL measured world quaternions at each stage, per finger,
+before proposing another fix. See `docs/CHANGELOG.txt`'s 2026-09-26 entry
+for the full test methodology and numbers, and `CLAUDE.md`'s matching
+gotcha. HANDY DANDIES shares this exact formula verbatim and has not
+been checked for the same bug.
+
+Otherwise pushed to `https://github.com/LeisHo/Handy-Set` (deployed via
+the Vercel project at `https://vercel.com/lpeis/handy-set`).
 
 ## Recently completed
+
+- **Reverted the 2026-09-25 `withLiveFieldsPreserved()` fix (2026-09-26)
+  -- it had its own real regression.** It omitted a saved pose's own
+  `wristSplay`/`modelRotX/Y/Z` unconditionally, which silently broke 2 of
+  the 4 `SAVED_POSES` ("Big Open Palm (S)", "Fist - Bent Back") that are
+  defined ENTIRELY by their own `wristSplay` value -- confirmed applying
+  either produced a wrist quaternion byte-identical to its non-splayed
+  sibling. A saved pose's wrist/rotation fields apply normally again; the
+  original reactive-stacking problem already has its own correct fix
+  (the Min/Max clamp sliders) sitting unused.
 
 - **A saved pose no longer overwrites Wrist Splay or Whole-Hand-Rotation
   X/Y/Z — Responsive Wrist Splay and Phone Tilt stay fully live.** Root
