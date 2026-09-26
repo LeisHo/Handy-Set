@@ -694,3 +694,42 @@ wiring, and are still open:
   (confirmed by direct source comparison) and has not been checked for
   this same bug. See `docs/CHANGELOG.txt`'s 2026-09-26 entry for the full
   test methodology and numbers.
+- **CORRECTED, same day — the bug above is now GENUINELY, COMPLETELY
+  FIXED (0.0° measured drift on every axis, every finger tested), and it
+  was never actually in `computeCurlAxisRefQuat()` at all.** Found by
+  directly comparing HANDY DANDIES' own real, working call site
+  (`applyCurlToSkeleton(fingerName, hand.skinnedMesh.skeleton,
+  cloneBaseQuat, hand.wrapper.quaternion)` — passes the wrapper's
+  quaternion ALONE) against this project's own `curlExcludeQuatForHand()`
+  (was `h.wrapper.quaternion * h.clone.quaternion` — wrapper combined
+  with `baseQuat`). That extra `baseQuat` factor is the real bug:
+  `rotateOnTrueWorldAxis()` divides this exclude-quat out of a bone's
+  TRUE world quaternion BEFORE computing a local axis, while
+  `computeCurlAxisRefQuat()` separately composes `baseQuat * Q * R^-1`
+  — for these to cancel cleanly, the exclude-quat must contain EXACTLY
+  the wrapper's own rotation and nothing more. Including `baseQuat` a 2nd
+  time divides it out too EARLY (before the wrist's own current rotation
+  Q enters the expression), leaving a real residual conjugation
+  (`Q^-1 * baseQuat * Q`, not identity) instead of clean cancellation —
+  ~0 when Q is near rest (why Splay's own ±30° range looked "mostly
+  fine"), large when Q is far from rest (why Bend's ±90° and Rotation's
+  ±180° both broke badly) — exactly the signature already measured
+  above. Fix: `curlExcludeQuatForHand()` now returns the wrapper's
+  quaternion alone; `computeCurlAxisRefQuat()` reverted to its ORIGINAL
+  formula (`baseQuat * wristRest * delta * wristRest^-1`) — it was never
+  actually wrong, it just needed the correct exclude-quat paired with it.
+  Both of this same day's earlier "fixes" to that function (the
+  ancestor-chain composition, then the HANDO-style live-parent-quaternion
+  formula) are reverted as unnecessary. **A real methodology trap hit
+  while verifying this against HANDO directly, worth flagging for next
+  time:** the first HANDO comparison run showed HANDO at 0° drift too
+  easily — it turned out HANDO's own Whole-Hand Rotation was simply OFF
+  (identity) in that test, an apples-to-oranges comparison against this
+  project's own ALWAYS-nontrivial `alignQuat`. Re-testing HANDO WITH a
+  substantial Whole-Hand Rotation active (still 0° drift there) is what
+  confirmed HANDO's formula genuinely works in general, rather than only
+  working by coincidence in an easy case — don't trust a cross-project
+  comparison that didn't control for every "always-on" factor the
+  reference project might not have active in a quick test. See
+  `docs/CHANGELOG.txt`'s 2026-09-26 (2nd) entry for the full derivation
+  and live-verification numbers.

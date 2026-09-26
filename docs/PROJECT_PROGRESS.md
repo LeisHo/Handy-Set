@@ -7,31 +7,34 @@ append-only history.
 
 ## Currently working on
 
-**OPEN, not resolved: `computeCurlAxisRefQuat()`'s curl-axis-tracks-wrist
-formula is measurably better but still wrong at large Wrist Bend angles,
-and Wrist Rotation got measurably worse from the 2026-09-26 fix attempt.**
-Quantitative drift test (index finger's orientation relative to the
-wrist, before/after a wrist-only slider change): Splay improved from
-~2.5 deg to ~0.6-0.7 deg (good). Bend improved from ~101-116 deg to
-~31-41 deg (real improvement, still a real, visible error -- and varies
-oddly by finger: index ~31, middle ~2.8, pinky ~40, which the fix's own
-derivation doesn't explain). Rotation got WORSE: ~11 deg before, ~41 deg
-after. Root cause of the residual/finger-variance is NOT understood --
-each finger has a DIFFERENT carpal bone (`rCarpal1`-`4`; thumb has none,
-parented straight to `rHand`) that the current fix's math says shouldn't
-matter but empirically seems to. Next session: don't re-guess a 3rd
-formula blind -- instrument the actual intermediate quaternions
-(`P`/`Q`/`delta` inside `computeCurlAxisRefQuat()`) live and compare
-against the ACTUAL measured world quaternions at each stage, per finger,
-before proposing another fix. See `docs/CHANGELOG.txt`'s 2026-09-26 entry
-for the full test methodology and numbers, and `CLAUDE.md`'s matching
-gotcha. HANDY DANDIES shares this exact formula verbatim and has not
-been checked for the same bug.
-
-Otherwise pushed to `https://github.com/LeisHo/Handy-Set` (deployed via
-the Vercel project at `https://vercel.com/lpeis/handy-set`).
+Nothing in progress. Pushed to `https://github.com/LeisHo/Handy-Set`
+(deployed via the Vercel project at `https://vercel.com/lpeis/handy-set`).
 
 ## Recently completed
+
+- **RESOLVED (2026-09-26): the curl-axis-tracks-wrist bug is genuinely,
+  completely fixed -- 0.0deg measured drift across Wrist Splay/Bend/
+  Rotation's own full ranges, on 3 different fingers, matching HANDO's
+  own real deployment exactly.** The real root cause (found via direct
+  algebra, cross-checked against HANDY DANDIES' own working call site):
+  `curlExcludeQuatForHand()` incorrectly combined `baseQuat` into the
+  quaternion `rotateOnTrueWorldAxis()` excludes from a bone's world
+  orientation -- HANDY DANDIES' own equivalent passes the wrapper's
+  rotation ALONE. That extra factor left a real, angle-dependent residual
+  (a conjugation that doesn't cancel) instead of a clean cancellation --
+  near-zero at small angles (why Wrist Splay's own +-30deg range looked
+  "mostly fine"), huge at large ones (Wrist Bend's own +-90deg, Wrist
+  Rotation's own +-180deg). Fixed by excluding only the wrapper, and
+  reverting `computeCurlAxisRefQuat()` to its original, always-correct
+  formula (it never needed changing -- it just needed the right
+  exclude-quat next to it). 2 earlier same-day attempts at this exact fix
+  (an ancestor-chain rest composition, then a HANDO-style live-parent-
+  quaternion port) are both reverted -- neither was wrong in isolation,
+  neither was actually the bug. See `docs/CHANGELOG.txt`'s 2026-09-26
+  (2nd) entry for the full account, including why the HANDO comparison
+  that found this had to control for HANDO's own Whole-Hand Rotation
+  being off in the first naive test (a non-apples-to-apples comparison
+  that briefly looked like it disproved the fix).
 
 - **Reverted the 2026-09-25 `withLiveFieldsPreserved()` fix (2026-09-26)
   -- it had its own real regression.** It omitted a saved pose's own

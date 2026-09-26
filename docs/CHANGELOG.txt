@@ -1626,6 +1626,85 @@ Vercel auto-deployed (confirmed live at `v57` before writing this entry).
 `index.html`'s own `main.js` cache-buster bumped `?v=56` -> `?v=57`.
 
 --------------------------------------------------------------------------------
+2026-09-26  -  01:07 AM - 01:30 AM EDT
+
+**The Wrist Bend/Rotation drift from the previous entry is now genuinely,
+completely fixed -- 0deg measured drift across every axis and every
+finger tested, matching HANDO's own real deployment exactly.** Direct
+instruction: "we also have [Fist] in HANDO. so use our data to compare,"
+followed by "with Fist, change wrist rotation to 100 then 180, the
+fingers change directions and not correctly along with the wrist
+rotation" -- confirming Rotation was ALSO broken, not just Bend.
+
+**1st attempt this round (superseded): ported HANDO's own `P_now * Q *
+R^-1` formula** (P_now = the wrist bone's own PARENT's LIVE WORLD
+quaternion) after reading HANDO's real CHANGELOG history, which went
+through this exact bug 3 times (2026-09-11/15/16) before landing on this
+generalized formula. Deployed (`v58`), then re-measured with the same
+drift test: Splay/Bend both improved somewhat over the previous entry's
+numbers, but NOT to zero, and Rotation stayed broken. Investigated
+further and found this rig's own wrist-parent chain
+(`rForearmTwist`/`rForearmBend`) has an EXACTLY-identity rest-world
+orientation (measured directly, not assumed) -- meaning `P_now` reduces
+to plain `baseQuat` here, making this "fix" algebraically IDENTICAL to
+the original, never-modified formula. It genuinely wasn't the right fix
+for this file; kept HANDO's own formula on record as correct FOR HANDO
+(confirmed live there, 0deg drift even under a substantial Whole-Hand
+Rotation) since the actual bug turned out to be one level up.
+
+**Real fix, found via direct algebra + comparing the EXACT quaternion
+composition against HANDY DANDIES' own real, working call site:**
+`curlExcludeQuatForHand(h)` was returning `h.wrapper.quaternion *
+h.clone.quaternion` (wrapper combined with baseQuat) -- HANDY DANDIES'
+own equivalent call passes `hand.wrapper.quaternion` ALONE, never
+combined with its own baseQuat. Worked out on paper why this matters:
+`rotateOnTrueWorldAxis()` divides this exclude-quat out of a bone's TRUE
+world quaternion before computing a local rotation axis;
+`computeCurlAxisRefQuat()` separately composes `baseQuat * Q * R^-1`
+(Q = wrist's current local quat, R = its rest local quat). For these two
+to cancel down to a clean, wrist-orientation-INDEPENDENT local axis (the
+whole point of this mechanism), the exclude-quat must contain EXACTLY
+what needs to cancel against `axisRefQuat`'s own `baseQuat` term and
+nothing more. Including `baseQuat` a 2nd time in the exclude-quat means
+it gets divided out too EARLY -- before the wrist's own rotation Q enters
+the expression -- leaving a real, nonzero residual conjugation
+(`Q^-1 * baseQuat * Q`) instead of a clean cancellation. This residual is
+~0 when Q is near identity (why Splay, whose slider only reaches +-30deg,
+looked "mostly fine") and grows large as Q moves further from identity
+(why Bend, at +-90deg, and Rotation, at +-180deg, both broke badly) --
+exactly the signature already measured in the previous entry.
+
+Fix: `curlExcludeQuatForHand()` now returns `h.wrapper.quaternion` alone.
+Reverted `computeCurlAxisRefQuat()` back to its ORIGINAL, simple formula
+(`baseQuat * wristRest * delta * wristRest^-1`) -- it was never actually
+wrong on its own; it just needed the correct exclude-quat paired with it.
+Both of today's earlier "fixes" to that function (the ancestor-chain
+rest-composition attempt, then the HANDO-style `P_now` attempt) are fully
+reverted as unnecessary now that the real bug is fixed at its actual
+source.
+
+**Live-verified decisively, deployed at `v59`:** re-ran the exact same
+drift test (index finger's orientation relative to the wrist,
+before/after each wrist slider's own full range) on "Fist" --
+Splay/Bend/Rotation all measured *0.0deg* drift (down from the previous
+entry's 2.5/101-116/11deg, and this round's own intermediate 0.6-0.7/
+31-41/41deg). Cross-checked 2 more fingers (`rMid1`, `rPinky1`) at the
+same Bend/Rotation tests -- all effectively 0deg (`rPinky1` showed
+0.004-0.014deg, floating-point noise). Also re-confirmed the earlier
+`withLiveFieldsPreserved()` revert still holds correctly alongside this
+fix: "Fist" and "Fist - Bent Back" now produce genuinely DIFFERENT wrist
+quaternions again (byte-different, not identical). Screenshot at Wrist
+Bend=90deg on "Fist" shows a clean, anatomically correct bent fist -- no
+visible finger distortion.
+
+`index.html`'s own `main.js` cache-buster bumped `?v=58` -> `?v=59`
+(after an intermediate, since-superseded `?v=57` -> `?v=58` for the
+reverted 1st attempt).
+
+Commits: `d132e9b` (1st attempt, superseded), `765378a` (the real fix).
+Pushed to `https://github.com/LeisHo/Handy-Set`; Vercel auto-deployed.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
