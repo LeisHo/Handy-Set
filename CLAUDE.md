@@ -760,3 +760,44 @@ wiring, and are still open:
   NONZERO for that exact joint in the saved pose being used before
   assuming a general axis/formula bug — a code path that's never
   exercised can hide a real bug indefinitely.**
+- **CORRECTED, same day (3rd round) — the SAME curl-axis-tracking bug
+  class as the wrist fix above, this time on Whole-Hand Rotation
+  (modelRotX/Y/Z), not the wrist.** Direct report: "the same issue is
+  occurring but with Whole Hand rotation. All 3 axes." Root cause:
+  `applyCurl()`/`applyPoseValuesToHand()`/`applyReactiveWristSplayFrame()`
+  all passed `alignQuat` (modelRot-EXCLUDED) as `applyCurlToSkeleton()`'s
+  own `baseQuat` — a 2026-09-21 workaround for a double-counting bug
+  that existed in `curlExcludeQuatForHand()` AT THE TIME (it used to
+  ALSO exclude `h.clone.quaternion`, which already contains
+  `modelRotQuat`). Once the wrist fix above corrected
+  `curlExcludeQuatForHand()` to exclude `wrapper.quaternion` alone, this
+  workaround went stale (an asymmetry: baseQuat still avoiding
+  modelRotQuat while the exclude no longer needed to) but was never
+  revisited. Confirmed by direct comparison against HANDY DANDIES' own
+  real, working call site: `cloneBaseQuat = alignQuat *
+  wholeHandRotQuat`, passed as `baseQuat` WITH `wrapper.quaternion`
+  alone excluded — i.e. baseQuat there correctly BAKES IN Whole-Hand
+  Rotation, matching the same intent as the wrist's own `wristRest *
+  delta * wristRest^-1` composition. Fixed by passing `h.currentBaseQuat`
+  (already computed fresh by `applyPoseValuesToHand()` before every
+  curl call) instead of `alignQuat` at all 3 real call sites. Verified
+  via a standalone quaternion-math script (no browser needed) BEFORE
+  editing: buggy code drifts 12.4-71.3° across modelRotX/Y/Z
+  individually, combined, and the degenerate wristBend=wristSplay=0
+  case; the fix measures 0.0000° on all 5. Live-verified against the
+  real running app via real dev-panel slider `input` events (not a
+  direct function call — `applyPoseValuesToHand` isn't exposed on
+  `window.__debug` here) and direct `getWorldQuaternion()` reads:
+  0.0058-0.0245° (floating-point noise) across all 3 axes. **If a
+  future report describes this same "fingers point wrong when I change
+  an unrelated whole-hand transform" symptom for some OTHER transform
+  (a new pivot, a new per-hand offset, etc.), check whether that
+  transform's own contribution is correctly baked into BOTH `baseQuat`
+  (so the curl axis reference rotates with it) AND left OUT of
+  `curlExcludeQuatForHand()` (so it isn't divided out a 2nd time) —
+  this is now the 3rd time this exact double-counting-vs-omission
+  asymmetry has caused this bug in this file alone (wrist, Whole-Hand
+  Rotation), and HANDY DANDIES' own real call site is the reference
+  pattern to check against, not a fresh derivation.** See
+  `docs/CHANGELOG.txt`'s matching 2026-09-26 (03:31 AM - 03:54 AM EDT)
+  entry for the full account.

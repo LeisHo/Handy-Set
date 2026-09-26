@@ -12,6 +12,25 @@ Nothing in progress. Pushed to `https://github.com/LeisHo/Handy-Set`
 
 ## Recently completed
 
+- **RESOLVED (2026-09-26, 3rd pass): the same curl-axis-tracking bug
+  class, this time on Whole-Hand Rotation (modelRotX/Y/Z) instead of the
+  wrist -- 0.0deg (floating-point noise) drift across all 3 axes,
+  individually and combined, both via a standalone quaternion-math
+  script and live against the real running app.** Root cause:
+  `applyCurl()`/`applyPoseValuesToHand()`/`applyReactiveWristSplayFrame()`
+  all passed `alignQuat` (modelRot-excluded) as `applyCurlToSkeleton()`'s
+  `baseQuat` -- a 2026-09-21 workaround for a double-counting bug that
+  existed in `curlExcludeQuatForHand()` at the time (it used to also
+  exclude `h.clone.quaternion`, which already contains `modelRotQuat`).
+  Once the 2nd-pass fix below corrected `curlExcludeQuatForHand()` to
+  exclude `wrapper.quaternion` alone, that workaround went stale and
+  should have been reverted alongside it, but wasn't. Fixed by passing
+  `h.currentBaseQuat` (which correctly bakes in `modelRotQuat`) at all 3
+  real call sites, matching HANDY DANDIES' own real, working pattern
+  (`cloneBaseQuat = alignQuat * wholeHandRotQuat`, wrapper alone
+  excluded) confirmed by reading that file's source directly. See
+  `docs/CHANGELOG.txt`'s matching 2026-09-26 (03:31-03:54 AM) entry.
+
 - **RESOLVED (2026-09-26, 2nd pass): a real, separate residual bug found
   right after the fix below was declared complete -- Tip Twist's own
   code path, not the curl/splay system. Now genuinely fully fixed: a

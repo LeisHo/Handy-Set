@@ -1754,6 +1754,73 @@ Commit: `51eb107`. Pushed to `https://github.com/LeisHo/Handy-Set`;
 Vercel auto-deployed.
 
 --------------------------------------------------------------------------------
+2026-09-26  -  03:31 AM - 03:54 AM EDT
+
+Direct report: "the same issue is occurring but with Whole Hand
+rotation. All 3 axes" -- the exact curl-axis-tracks-a-transform bug
+class this session already root-caused and fixed for the wrist (the
+`01:07 AM - 01:30 AM EDT` entry above), now showing up for
+modelRotX/Y/Z.
+
+Root cause: `applyCurl()`, `applyPoseValuesToHand()`, and
+`applyReactiveWristSplayFrame()` all passed `alignQuat`
+(modelRot-EXCLUDED) as `applyCurlToSkeleton()`'s own `baseQuat` argument
+-- a 2026-09-21 workaround (see that date's own comment, left in place
+per this file's own correction convention) for a double-counting bug
+that existed in `curlExcludeQuatForHand()` AT THE TIME: it used to also
+exclude `h.clone.quaternion`, which itself already contains
+`modelRotQuat` (via `computeBaseQuatFromValues()`). With
+baseQuat=h.currentBaseQuat (bakes in modelRotQuat) AND exclude=wrapper*
+clone (ALSO bakes in modelRotQuat a 2nd time), modelRotQuat was
+double-counted -- exactly the wrist bug's own double-counting pattern,
+just for a different transform. Switching baseQuat to `alignQuat` was a
+workaround for that, not a real fix, and was never revisited once this
+session's earlier round fixed `curlExcludeQuatForHand()` to exclude
+`wrapper.quaternion` ALONE -- which removed the double-counting on the
+EXCLUDE side but left this asymmetry (baseQuat avoiding modelRotQuat
+while the exclude no longer needs it to).
+
+Cross-checked against HANDY DANDIES' own real, working call site before
+touching anything: `applyCurlToSkeleton(fingerName,
+hand.skinnedMesh.skeleton, cloneBaseQuat, hand.wrapper.quaternion)`,
+where `cloneBaseQuat = alignQuat.copy().multiply(wholeHandRotQuat)` --
+i.e. baseQuat there DOES bake in Whole-Hand Rotation, paired with a
+wrapper-alone exclude. Read directly from that file's source, not
+assumed from memory.
+
+Verified via a standalone quaternion-math script (mirroring
+`rotateOnTrueWorldAxis()`/`computeCurlAxisRefQuat()` exactly, no browser
+needed) BEFORE editing this file: the current buggy code
+(baseQuat=alignQuat) drifts 12.4-71.3deg across 5 test cases (modelRotX
+alone, modelRotY alone, modelRotZ alone, all 3 combined, and the
+degenerate wristBend=wristSplay=0 case -- this project's own
+documented lesson about always testing the delta=identity degenerate
+case, not just nonzero cases). The fix (baseQuat=h.currentBaseQuat)
+measures 0.0000deg drift on all 5.
+
+Fixed all 3 real call sites (`applyCurl()`,
+`applyPoseValuesToHand()`, `applyReactiveWristSplayFrame()`) to pass
+`h.currentBaseQuat` instead of `alignQuat`. `h.currentBaseQuat` is
+guaranteed fresh at every one of these call sites --
+`applyPoseValuesToHand()` sets it immediately before applying curl for
+every finger on the same hand.
+
+Live-verified against the real running app (not just the standalone
+script): dispatched real `input` events on the actual dev-panel sliders
+(`slidermodelRotX/Y/Z`, `slidercurlIndex`) -- never a direct function
+call, since `applyPoseValuesToHand` isn't exposed on `window.__debug`
+here -- and measured the index finger's own orientation RELATIVE TO THE
+WRIST bone (must be invariant to a rigid whole-hand rotation) via
+`getWorldQuaternion()` on both bones. Result: 0.0058-0.0245deg drift
+(floating-point noise, same threshold this session's other fixes used)
+across modelRotX alone, modelRotZ alone, and all 3 axes combined.
+
+`index.html`'s own `main.js` cache-buster bumped `?v=60` -> `?v=61`.
+
+Commit: `30484a2`. Pushed to `https://github.com/LeisHo/Handy-Set`;
+Vercel auto-deployed.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
