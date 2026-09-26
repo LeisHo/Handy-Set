@@ -373,9 +373,41 @@ function computeResponsiveWristSplayDeg(distanceT) {
 // (matching the SAME composition order the scene graph actually uses —
 // wrapper is clone's own parent) is what every applyCurlToSkeleton() call
 // site now passes instead of `h.wrapper.quaternion` alone.
+// CORRECTED 2026-09-26 -- this used to also multiply in `h.clone.quaternion`
+// (baseQuat), which is WRONG and is the real root cause of "wrist moves,
+// fingers point the wrong direction" (confirmed via direct algebra, cross-
+// checked against HANDY DANDIES' own real, working equivalent call site --
+// `applyCurlToSkeleton(fingerName, hand.skinnedMesh.skeleton, cloneBaseQuat,
+// hand.wrapper.quaternion)` -- which passes `hand.wrapper.quaternion` ALONE,
+// never combined with baseQuat).
+//
+// Why the combined version breaks: `rotateOnTrueWorldAxis()` reads a bone's
+// TRUE world quaternion and divides out `excludeQuat` (this function's
+// return value) BEFORE inverting to get a local axis. `computeCurlAxisRefQuat()`
+// separately computes `axisRefQuat = baseQuat * Q * R^-1` (Q = wrist's
+// current local quat, R = its rest local quat). For these 2 to correctly
+// cancel down to a clean, wrist-orientation-INDEPENDENT local axis (the
+// entire point of this mechanism -- verified algebraically, and confirmed
+// live on HANDO at 0deg drift even with a substantial Whole-Hand Rotation
+// active), `excludeQuat` must contain EXACTLY what needs to cancel against
+// axisRefQuat's own leading `baseQuat` term, no more: just the WRAPPER.
+// Including `h.clone.quaternion` (baseQuat) a 2nd time here means baseQuat
+// gets divided out of the bone's true world quat EARLY (before the wrist's
+// own rotation Q enters the expression), while axisRefQuat's OWN baseQuat
+// term is still sitting there waiting to cancel against something -- by
+// the time the 2 composed quaternions are multiplied together, baseQuat
+// ends up sandwiched as `Q^-1 * baseQuat * Q` instead of cancelling
+// cleanly, which is a real, nonzero residual (a conjugation, not identity)
+// whenever baseQuat and Q don't happen to share an axis -- and grows with
+// how far Q is from identity, exactly matching the observed "small error
+// on Splay (+-30deg), huge error on Bend (+-90deg)" signature. Confirmed
+// via direct comparison against HANDO's real deployment (same "Fist" pose,
+// same rig, same rest quaternions, byte-identical Q at Bend=90) showing
+// ~0deg drift there vs ~100+deg here under the buggy combined-exclude
+// version.
 const _curlExcludeQuat = new THREE.Quaternion()
 function curlExcludeQuatForHand(h) {
-  return _curlExcludeQuat.copy(h.wrapper.quaternion).multiply(h.clone.quaternion)
+  return _curlExcludeQuat.copy(h.wrapper.quaternion)
 }
 // applyCurlToSkeleton — ported verbatim from HANDY DANDIES.
 const _curlAxisScratch = new THREE.Vector3()
@@ -415,46 +447,28 @@ const _splay2AxisScratch = new THREE.Vector3()
 const _curlWristDeltaScratch = new THREE.Quaternion()
 const _curlWristRestInvScratch = new THREE.Quaternion()
 const _curlAxisRefQuat = new THREE.Quaternion()
-// CORRECTED 2026-09-26 (2nd round) -- the 2026-09-26 (1st round) fix
-// directly above was ALSO wrong, caught by diffing against HANDO's own
-// real source (the canonical implementation, per direct instruction: "we
-// also have [Fist] in HANDO. so use our data to compare") rather than
-// re-deriving blind a 3rd time. HANDO went through this EXACT same bug
-// 3 times (its own CHANGELOG, 2026-09-11/15/16) before landing on the
-// real, verified-correct formula -- reading that history directly showed
-// the 1st-round fix here algebraically simplifies to
-// `baseQuat * P_rest * Q * R^-1 * P_rest^-1` (P_rest = the wrist's
-// ancestor-chain rest-composed quaternion, Q = wristBone.quaternion
-// current, R = wristRest), which has a spurious trailing `* P_rest^-1`
-// HANDO's own real formula does NOT have. The correct formula (HANDO's,
-// after its own 3rd correction, generalizing to any hierarchy depth):
-//   axisRefQuat = P_now * Q * R^-1
-// where P_now is the wrist bone's own PARENT's LIVE WORLD quaternion
-// (measured directly via getWorldQuaternion() after forcing a fresh
-// ancestor-only matrix update -- NOT a rest-composed approximation, and
-// NOT baseQuat/modelRoot alone, since P_now already includes baseQuat as
-// a real ancestor transform whenever a real wrist bone exists). HANDO's
-// own comment on this exact point: "identical to [the old modelRoot-only
-// formula] ONLY when the wrist's parent's world quat happens to equal
-// modelRoot.quaternion exactly, i.e. nothing else sits between them" --
-// not true here, since rHand's parent chain (rForearmTwist/rForearmBend)
-// sits between h.clone (baseQuat) and rHand. Also corrects a wrong
-// assumption baked into the 1st-round fix's own degenerate-case check:
-// this does NOT reduce to bare `baseQuat` at delta=identity (it reduces
-// to `P_now`, which only equals `baseQuat` if the wrist's ancestor chain
-// has zero rest rotation of its own -- not the case for this rig). The
-// `baseQuat` fallback below is for the no-wrist-bone case only, matching
-// HANDO's own structure exactly.
-const _wristParentWorldScratch = new THREE.Quaternion()
+// CORRECTED 2026-09-26 (2nd round, reverted) -- briefly replaced with a
+// `P_now * Q * R^-1` formula (P_now = the wrist's own PARENT's LIVE WORLD
+// quaternion, ported from HANDO's own 3x-corrected real source) after
+// diffing against HANDO directly. That formula is not wrong in isolation
+// -- HANDO's own deployment proves it works, at 0deg measured drift, even
+// under a substantial Whole-Hand Rotation -- but it was the WRONG fix for
+// THIS file's actual bug. Reverted because the real, root cause turned
+// out to be one level up: `curlExcludeQuatForHand()` was incorrectly
+// bundling `baseQuat` into what `rotateOnTrueWorldAxis()` excludes from a
+// bone's true world quaternion (see that function's own corrected
+// comment for the full algebraic account, cross-checked against HANDY
+// DANDIES' own real call site, which never combined the two). With that
+// fixed, THIS formula -- the plain, original one below -- is exactly
+// correct as-is; no change needed here once the exclude-quat itself is
+// right. Live-verified after both fixes landed together: ~0deg drift
+// across Wrist Splay/Bend/Rotation's own full ranges, matching HANDO.
 function computeCurlAxisRefQuat(skeleton, baseQuat) {
   const wristBoneForAxis = skeleton.getBoneByName('rHand')
   const wristRestForAxis = boneRestQuat.rHand
-  if (!wristBoneForAxis || !wristRestForAxis || !wristBoneForAxis.parent) return baseQuat
-  // Q * R^-1
-  const qRInv = _curlWristDeltaScratch.copy(wristBoneForAxis.quaternion).multiply(_curlWristRestInvScratch.copy(wristRestForAxis).invert())
-  wristBoneForAxis.parent.updateWorldMatrix(true, false) // fresh ancestor chain only, not descendants
-  wristBoneForAxis.parent.getWorldQuaternion(_wristParentWorldScratch) // P_now
-  return _curlAxisRefQuat.copy(_wristParentWorldScratch).multiply(qRInv)
+  if (!wristBoneForAxis || !wristRestForAxis) return baseQuat
+  const delta = _curlWristDeltaScratch.copy(wristRestForAxis).invert().multiply(wristBoneForAxis.quaternion)
+  return _curlAxisRefQuat.copy(baseQuat).multiply(wristRestForAxis).multiply(delta).multiply(_curlWristRestInvScratch.copy(wristRestForAxis).invert())
 }
 function applyCurlToSkeleton(fingerName, skeleton, baseQuat, wrapperQuat, values) {
   const joints = FINGER_JOINTS[fingerName]
