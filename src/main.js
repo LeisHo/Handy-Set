@@ -493,10 +493,23 @@ function applyCurlToSkeleton(fingerName, skeleton, baseQuat, wrapperQuat, values
     const rest = boneRestQuat[boneName]
     if (rest) bone.quaternion.copy(rest)
 
-    const weight = curlBiasWeight(i, joints.length, bias)
-    const curlAngle = THREE.MathUtils.degToRad((curlDeg / 100) * maxDegs[i] * weight * sign)
-    rotateOnTrueWorldAxis(bone, curlAxis, curlAngle, wrapperQuat)
-
+    // ORDER CORRECTED 2026-09-26 -- splay/splay2 now apply BEFORE curl,
+    // matching HANDY DANDIES' real source exactly (this project's own
+    // version had curl first, splay/splay2 after -- found by reading
+    // HANDY DANDIES' real applyCurlToSkeleton() directly after a direct
+    // report: "the finger splays arent showing correctly... not
+    // aggressively wrong, but not the pose i intended"). This matters
+    // because rotateOnTrueWorldAxis() re-reads the bone's CURRENT
+    // getWorldQuaternion() fresh on every call -- so whichever rotation
+    // runs first sees the bone still at rest, but every rotation AFTER
+    // it sees the PREVIOUS rotation already baked into the bone's local
+    // quaternion, and its own world-axis-to-local conversion gets
+    // conjugated by that prior rotation's inverse. With curl applied
+    // first (this project's old order), splay's own axis was being
+    // computed relative to the CURLED joint instead of REST -- a real,
+    // measurable error that scales with how much curl is also active on
+    // that same joint, which is exactly why it looked "not aggressively
+    // wrong" (a secondary/coupling effect) rather than obviously broken.
     if (i === FINGER_SPLAY_JOINT_INDEX[fingerName]) {
       const splayAngle = THREE.MathUtils.degToRad((splayDeg / 100) * FINGER_SPLAY_MAX_DEG[fingerName] * FINGER_SPLAY_SIGN[fingerName])
       rotateOnTrueWorldAxis(bone, splayAxis, splayAngle, wrapperQuat)
@@ -505,6 +518,10 @@ function applyCurlToSkeleton(fingerName, skeleton, baseQuat, wrapperQuat, values
       const splay2Angle = THREE.MathUtils.degToRad((splay2Deg / 100) * FINGER_SPLAY2_MAX_DEG[fingerName] * FINGER_SPLAY2_SIGN[fingerName])
       rotateOnTrueWorldAxis(bone, splay2Axis, splay2Angle, wrapperQuat)
     }
+    const weight = curlBiasWeight(i, joints.length, bias)
+    const curlAngle = THREE.MathUtils.degToRad((curlDeg / 100) * maxDegs[i] * weight * sign)
+    rotateOnTrueWorldAxis(bone, curlAxis, curlAngle, wrapperQuat)
+
     if (i === 0 && baseOnly) rotateOnTrueWorldAxis(bone, curlAxis, THREE.MathUtils.degToRad((baseOnly / 100) * maxDegs[0] * sign), wrapperQuat)
     if (i === 1 && midOnly) rotateOnTrueWorldAxis(bone, curlAxis, THREE.MathUtils.degToRad((midOnly / 100) * maxDegs[1] * sign), wrapperQuat)
     if (i === joints.length - 1 && tipOnly) rotateOnTrueWorldAxis(bone, curlAxis, THREE.MathUtils.degToRad((tipOnly / 100) * maxDegs[i] * sign), wrapperQuat)
