@@ -537,30 +537,51 @@ function applyCurlToSkeleton(fingerName, skeleton, baseQuat, wrapperQuat, values
     }
   })
 }
-// `alignQuat` (NOT `h.currentBaseQuat`) is deliberately what's passed as
-// applyCurlToSkeleton()'s own `baseQuat` argument at every call site below
-// — found live 2026-09-21, same round as the Whole-Hand Rotation pivot
-// fix: `h.currentBaseQuat` = `alignQuat * modelRotQuat` (see
-// computeBaseQuatFromValues()), and computeCurlAxisRefQuat() BAKES
-// `baseQuat` directly into the finger curl axis reference frame (unlike
-// `wrapperQuat`, which is only ever EXCLUDED via rotateOnTrueWorldAxis()'s
-// own world-to-local conversion, never baked in). Passing the FULL
-// `h.currentBaseQuat` here meant every finger's curl AXIS silently
-// rotated along with modelRotX/Y/Z — confirmed live: the index fingertip's
-// own direction relative to its base joint, re-expressed in the hand's
-// own local frame (i.e. with h.clone's rotation undone), differed
-// substantially between modelRotY=90 and modelRotY=-45, even though no
-// curl/splay cfg value changed at all. This bug was ALREADY PRESENT
-// before this session (computeBaseQuatFromValues() already folded in
-// modelRotX/Y/Z from the start) — it was invisible only because
-// modelRotX/Y/Z never actually rotated anything visible until the pivot
-// fix above, so there was nothing to visibly compare against. `alignQuat`
-// (the hand's own fixed bind-pose alignment, with NO modelRot folded in)
-// is the correct, modelRot-INVARIANT reference — matching the same
-// intent as excluding wrapperQuat, just via the direct-bake code path
-// instead of the exclude-via-world-quaternion one.
+// CORRECTED 2026-09-26 (3rd round) -- REVERTED the 2026-09-21 fix
+// described below. Direct report: "the same issue is occurring but with
+// Whole Hand rotation. All 3 axes" -- the exact curl-axis-tracking bug
+// class this session already root-caused and fixed for the WRIST, now
+// showing up for Whole-Hand Rotation instead.
+//
+// The 2026-09-21 reasoning below was correct that passing full
+// `h.currentBaseQuat` caused real drift -- but wrong about WHY, and
+// picked the wrong fix. At that time, `curlExcludeQuatForHand()` still
+// had the (not-yet-discovered) bug this session's earlier round fixed:
+// it excluded `wrapper.quaternion * clone.quaternion`, and
+// `clone.quaternion` ALSO contains modelRotQuat (via
+// `computeBaseQuatFromValues()`). With baseQuat=h.currentBaseQuat (bakes
+// in modelRotQuat) AND exclude=wrapper*clone (ALSO bakes in modelRotQuat
+// a 2nd time), modelRotQuat was double-counted -- the exact same
+// double-counting bug class as the wrist one, just for a different
+// transform. Switching baseQuat to `alignQuat` (modelRot-excluded) was a
+// workaround for that double-counting, not a real fix, and it was never
+// revisited once `curlExcludeQuatForHand()` was corrected to exclude
+// `wrapper.quaternion` ALONE (see that function's own comment) -- which
+// removed the double-counting on the EXCLUDE side, but left this
+// call site still avoiding modelRotQuat on the BASEQUAT side, an
+// asymmetry that itself produces drift (confirmed below).
+//
+// Verified via a standalone quaternion-math script (mirroring
+// rotateOnTrueWorldAxis()/computeCurlAxisRefQuat() exactly, no browser
+// needed) before touching this file: with the CURRENT code
+// (baseQuat=alignQuat), a finger bone's local orientation drifts
+// 12.4-71.3deg across 5 test cases (each axis individually, all 3
+// combined, and the degenerate wristBend=wristSplay=0 case) purely from
+// changing modelRotX/Y/Z, with wrist/curl/splay held fixed. Switching
+// baseQuat to `h.currentBaseQuat` (which correctly bakes in modelRotQuat,
+// matching `curlExcludeQuatForHand()`'s now-correct wrapper-alone
+// exclude) measured 0.0000deg drift on every one of the same 5 cases --
+// this exactly matches HANDY DANDIES' own real, working call site
+// (`applyCurlToSkeleton(fingerName, hand.skinnedMesh.skeleton,
+// cloneBaseQuat, hand.wrapper.quaternion)`, where `cloneBaseQuat =
+// alignQuat.copy().multiply(wholeHandRotQuat)` -- i.e. baseQuat there
+// ALSO bakes in Whole-Hand Rotation), confirmed by reading that file's
+// own source directly rather than assuming. `h.currentBaseQuat` is
+// guaranteed fresh at every call site below: `applyPoseValuesToHand()`
+// sets it (line ~670) immediately before calling `applyCurlToSkeleton`
+// for every finger on the same hand.
 function applyCurl(fingerName) {
-  hands.forEach((h) => applyCurlToSkeleton(fingerName, h.skinnedMesh.skeleton, alignQuat, curlExcludeQuatForHand(h), cfg))
+  hands.forEach((h) => applyCurlToSkeleton(fingerName, h.skinnedMesh.skeleton, h.currentBaseQuat, curlExcludeQuatForHand(h), cfg))
 }
 
 // Wrist bend/splay/rotation — same rotateOnTrueWorldAxis mechanism as the
@@ -670,8 +691,9 @@ function applyPoseValuesToHand(poseValues) {
     h.currentBaseQuat.copy(computeBaseQuatFromValues(poseValues))
     applyModelRootTransform(h, poseValues)
     applyWristPoseToSkeleton(h.skinnedMesh.skeleton, poseValues, extraSplay)
-    // alignQuat + curlExcludeQuatForHand(h) — see applyCurl()'s own 2 comments.
-    FINGER_NAMES.forEach((name) => applyCurlToSkeleton(name, h.skinnedMesh.skeleton, alignQuat, curlExcludeQuatForHand(h), poseValues))
+    // h.currentBaseQuat + curlExcludeQuatForHand(h) — see applyCurl()'s
+    // own comment (2026-09-26, 3rd round) for why alignQuat was wrong here.
+    FINGER_NAMES.forEach((name) => applyCurlToSkeleton(name, h.skinnedMesh.skeleton, h.currentBaseQuat, curlExcludeQuatForHand(h), poseValues))
   })
   cfg.hideWrist = poseValues.hideWrist || 0
   updateWristCrop()
@@ -692,8 +714,9 @@ function applyReactiveWristSplayFrame() {
   const extraSplay = computeResponsiveWristSplayDeg(tiltMagnitude)
   hands.forEach((h) => {
     applyWristPoseToSkeleton(h.skinnedMesh.skeleton, cfg, extraSplay)
-    // alignQuat + curlExcludeQuatForHand(h) — see applyCurl()'s own 2 comments.
-    FINGER_NAMES.forEach((name) => applyCurlToSkeleton(name, h.skinnedMesh.skeleton, alignQuat, curlExcludeQuatForHand(h), cfg))
+    // h.currentBaseQuat + curlExcludeQuatForHand(h) — see applyCurl()'s
+    // own comment (2026-09-26, 3rd round) for why alignQuat was wrong here.
+    FINGER_NAMES.forEach((name) => applyCurlToSkeleton(name, h.skinnedMesh.skeleton, h.currentBaseQuat, curlExcludeQuatForHand(h), cfg))
   })
 }
 
