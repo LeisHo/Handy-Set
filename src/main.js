@@ -415,12 +415,50 @@ const _splay2AxisScratch = new THREE.Vector3()
 const _curlWristDeltaScratch = new THREE.Quaternion()
 const _curlWristRestInvScratch = new THREE.Quaternion()
 const _curlAxisRefQuat = new THREE.Quaternion()
+// CORRECTED 2026-09-26 -- the conjugation above used `wristRestForAxis`
+// (rHand's own LOCAL rest quaternion) alone, which is only an
+// APPROXIMATION of what the formula actually needs: the wrist's FULL
+// WORLD rest orientation (excluding baseQuat/wrapper, which sit above the
+// whole skeleton and aren't part of this correction). rHand's parent
+// chain (rForearmBend/rForearmTwist/etc.) has its own nonzero rest
+// rotation too -- omitting it means the conjugation is only exact when
+// that parent-chain rest rotation happens to be near-identity, and drifts
+// increasingly as it isn't. Confirmed as the real cause of "wrist moves,
+// fingers point the wrong direction": measuring the index finger's own
+// orientation RELATIVE TO THE WRIST before/after a wrist-only change (an
+// invariant that should barely move, since no curl/splay VALUE changed)
+// showed ~2.5 deg drift for Wrist Splay (+-30 deg range) but ~101-116 deg
+// drift for Wrist Bend (+-90 deg range) -- the same formula, small-angle-
+// accurate but breaking down badly at the angles Bend's own slider
+// actually reaches. Fixed by conjugating against the wrist's real WORLD
+// rest quaternion (`getWristWorldRestQuat()`, composed once from every
+// ancestor bone's own rest LOCAL quaternion, root-most first, walking up
+// from rHand's own parent) instead of rHand's LOCAL rest quaternion
+// alone. Still correctly reduces to exactly `baseQuat` when delta=I
+// (the wristWorldRest factor cancels algebraically regardless of its
+// value), so the already-established degenerate-case requirement is
+// unaffected. HANDY DANDIES shares this exact formula verbatim and very
+// likely has this same latent bug -- it just may never have been
+// exercised at Bend angles this large.
+let _wristWorldRestQuat = null
+function getWristWorldRestQuat(wristBone) {
+  if (_wristWorldRestQuat) return _wristWorldRestQuat
+  const chain = []
+  let node = wristBone.parent
+  while (node && boneRestQuat[node.name]) { chain.unshift(node.name); node = node.parent }
+  const q = new THREE.Quaternion()
+  chain.forEach((name) => q.multiply(boneRestQuat[name]))
+  q.multiply(boneRestQuat.rHand)
+  _wristWorldRestQuat = q
+  return q
+}
 function computeCurlAxisRefQuat(skeleton, baseQuat) {
   const wristBoneForAxis = skeleton.getBoneByName('rHand')
   const wristRestForAxis = boneRestQuat.rHand
   if (!wristBoneForAxis || !wristRestForAxis) return baseQuat
+  const wristWorldRest = getWristWorldRestQuat(wristBoneForAxis)
   const delta = _curlWristDeltaScratch.copy(wristRestForAxis).invert().multiply(wristBoneForAxis.quaternion)
-  return _curlAxisRefQuat.copy(baseQuat).multiply(wristRestForAxis).multiply(delta).multiply(_curlWristRestInvScratch.copy(wristRestForAxis).invert())
+  return _curlAxisRefQuat.copy(baseQuat).multiply(wristWorldRest).multiply(delta).multiply(_curlWristRestInvScratch.copy(wristWorldRest).invert())
 }
 function applyCurlToSkeleton(fingerName, skeleton, baseQuat, wrapperQuat, values) {
   const joints = FINGER_JOINTS[fingerName]
@@ -1320,25 +1358,28 @@ function applyToonPreset(item) {
   rebuildGradientMap()
   syncPairsFromCfg(TOON_SYNC_PAIRS)
 }
-// Fields a SAVED POSE never overwrites when applied -- Wrist Splay and
-// Whole-Hand-Rotation X/Y/Z stay whatever they currently are (live,
-// Phone-Tilt/Reactive-Wrist-Splay-driven or otherwise set), regardless
-// of what value the pose itself was saved with. Direct correction
-// 2026-09-25, after a full-decoupling fix at the rendering layer (make
-// Reactive Wrist Splay's live contribution never affect wrist rotation
-// at all) turned out to kill its live function everywhere, not just
-// for saved poses -- not what was wanted ("all phone tilt function
-// died... just omit the saved pose wrist splay and whole hand rotation
-// data. only implement the other saved setting data"). This is the
-// correctly-scoped fix: restrict what a SAVED POSE can set, leave every
-// live system fully functional. Every other saved-pose field (finger
-// curls, wrist bend, hide wrist, pose offset/scale) still applies
-// normally.
-const POSE_FIELDS_OMITTED_FROM_APPLY = ['wristSplay', 'modelRotX', 'modelRotY', 'modelRotZ']
+// CORRECTED 2026-09-26 -- REVERTED. The 2026-09-25 fix directly above
+// (kept here, struck through in spirit, for the same reason this file
+// keeps every prior correction on record) omitted wristSplay/modelRotX/Y/Z
+// from EVERY saved-pose application, unconditionally. Confirmed as its own
+// real, separate bug via direct byte-level comparison: 2 of this
+// project's 4 SAVED_POSES ("Big Open Palm (S)", "Fist - Bent Back") are
+// defined ENTIRELY by their own wristSplay value (every other field is
+// byte-identical to their non-splayed sibling) -- applying either one via
+// "Use" produced a wrist-bone quaternion byte-IDENTICAL to its sibling,
+// silently discarding the pose's own defining feature, not just blocking
+// unwanted reactive drift. A saved pose's own wristSplay/modelRotX/Y/Z are
+// exactly as real/load-bearing as its finger curls -- they should never
+// have been treated as "live-only" fields. The ORIGINAL problem this was
+// chasing (a saved pose's wristSplay summing with Responsive Wrist
+// Splay's own live contribution past any sane limit, e.g. -55 + -71 =
+// -126) already has the correctly-scoped fix sitting unused: the 3
+// Min/Max clamp sliders added earlier the same day (wristSplayClampParsed
+// etc., applied inside applyWristPoseToSkeleton() to the FINAL combined
+// angle regardless of source) -- narrow those if reactive stacking is a
+// problem again, rather than reintroducing a field-omission mechanism.
 function withLiveFieldsPreserved(poseValues) {
-  const merged = { ...poseValues }
-  POSE_FIELDS_OMITTED_FROM_APPLY.forEach((k) => { merged[k] = cfg[k] })
-  return merged
+  return poseValues
 }
 function applyPosePreset(item) {
   Object.assign(cfg, withLiveFieldsPreserved(item))
