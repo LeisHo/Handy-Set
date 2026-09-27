@@ -741,14 +741,12 @@ function applyBaseArmRotation() {
     if (!baseBone) return
 
     const baseWorldPos = new THREE.Vector3()
-    const baseWorldQuat = new THREE.Quaternion()
     baseBone.getWorldPosition(baseWorldPos)
-    baseBone.getWorldQuaternion(baseWorldQuat)
 
-    // Desired rotation from current slider values
-    const rotX = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0).applyQuaternion(baseWorldQuat), cfg.baseRotationX * Math.PI / 180)
-    const rotY = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0).applyQuaternion(baseWorldQuat), cfg.baseRotationY * Math.PI / 180)
-    const rotZ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1).applyQuaternion(baseWorldQuat), cfg.baseRotationZ * Math.PI / 180)
+    // Desired rotation from current slider values, in the bone's LOCAL axes
+    const rotX = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), cfg.baseRotationX * Math.PI / 180)
+    const rotY = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), cfg.baseRotationY * Math.PI / 180)
+    const rotZ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), cfg.baseRotationZ * Math.PI / 180)
 
     const desiredQuat = new THREE.Quaternion()
     desiredQuat.multiplyQuaternions(rotX, rotY).multiply(rotZ)
@@ -1643,11 +1641,9 @@ function animate() {
   controls.update()
   syncCameraPanelFromLive()
   if (!isPaused) {
-    if (cfg.trackingEnabled && hands.length) {
-      updateTiltTarget()
-    }
     // Phone Tilt rotation (only when tracking is enabled AND we have input)
     if (cfg.trackingEnabled && hands.length && (latestOrientation !== null || lastInputSource === 'mouse')) {
+      updateTiltTarget()
       hands.forEach((h) => {
         const m = new THREE.Matrix4().lookAt(h.wrapper.position, tiltTarget, UP)
         let desired = new THREE.Quaternion().setFromRotationMatrix(m)
@@ -2346,14 +2342,10 @@ function renderPhoneTiltGroup(content) {
   // etc.) even though "cursor" is a slight misnomer for a phone-tilt
   // mechanic, since you asked for exact setting names. Flag if you'd
   // rather these say "Tilt" instead of "Cursor" throughout.
-  const subTracking = addSubgroup(content, 'Tracking')
-  addRow(subTracking, { id: 'checkboxTrackingEnabled', label: 'Tracking Enabled', type: 'checkbox' })
+  const subTarget = addSubgroup(content, 'Target')
+  addRow(subTarget, { id: 'checkboxTrackingEnabled', label: 'Tracking Enabled', type: 'checkbox' })
   document.getElementById('checkboxTrackingEnabled').checked = cfg.trackingEnabled
   wireCheckbox('checkboxTrackingEnabled', (v) => { cfg.trackingEnabled = v; if (v) requestMotionPermissionIfNeeded() })
-  addRow(subTracking, { id: 'sliderTrackingDamping', label: 'Look-At Damping (x)', type: 'slider', min: 0.02, max: 1, step: 0.01, value: cfg.trackingDamping })
-  wireSlider('sliderTrackingDamping', (v) => { cfg.trackingDamping = v })
-
-  const subTarget = addSubgroup(content, 'Target')
   addRow(subTarget, { id: 'sliderTargetDepthFactor', label: 'Cursor Target Depth (x Field Radius)', type: 'slider', min: -2, max: 2, step: 0.05, value: cfg.targetDepthFactor })
   wireSlider('sliderTargetDepthFactor', (v) => { cfg.targetDepthFactor = v })
   addRow(subTarget, { id: 'checkboxShowTargetMarker', label: 'Show Target Marker', type: 'checkbox' })
