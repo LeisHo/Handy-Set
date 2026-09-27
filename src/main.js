@@ -1684,12 +1684,43 @@ function updateTiltTarget() {
     if (haveHit) {
       tiltTarget.copy(_tiltRaycastHit)
       // armBaseDistanceT -- see this variable's own top-of-file comment.
-      // Only refreshed on a genuine hit (matching tiltTarget itself,
-      // which also only updates on a hit) so a dead-zone freeze holds
-      // this steady too, rather than snapping to a stale ratio.
       const distRaw = Math.hypot(tiltTarget.x - tiltOriginGround.x, tiltTarget.z - tiltOriginGround.z)
       const maxDist = computeMaxArmBaseGroundDistance()
       armBaseDistanceT = maxDist > 1e-6 ? THREE.MathUtils.clamp(distRaw / maxDist, 0, 1) : 0
+    } else {
+      // CORRECTED 2026-09-27 -- this used to leave armBaseDistanceT
+      // completely untouched on a miss (freezing it, same as tiltTarget
+      // itself), matching Palm Rotation's own deliberate "just don't
+      // trigger" dead-zone behavior. Direct reports made clear that's
+      // the wrong call for the 3 FEATURES that consume this metric
+      // (Wrist Splay, Base Arm Rotation, Pose Tween): "messing wit the
+      // Curve graph does noting" / "even the default position hand
+      // gets shifted" / "maybe you are applying the target pose's
+      // rotation to everything." Root cause, confirmed live (2 state
+      // reads minutes apart, with real interaction in between, came
+      // back BIT-IDENTICAL): the ground-plane raycast only hits the
+      // bottom ~third of the screen (this project's own documented,
+      // camera-framing-dependent dead zone) -- any cursor position
+      // near the dev panel (exactly where you'd be dragging curve
+      // control points) misses it, silently freezing armBaseDistanceT
+      // at whatever unrelated value it last happened to hold. For Palm
+      // Rotation (a single rotation staying wherever it was) that's a
+      // reasonable, deliberately-chosen fallback; for these 3 features
+      // -- especially Pose Tween, a full-pose swap -- a frozen,
+      // arbitrary, LEFTOVER blend amount looks like "stuck on the
+      // target pose" or "the curve doesn't do anything," depending on
+      // what it happened to freeze at. Fixed by falling back to
+      // tiltMagnitude (screen-distance-from-center -- always live, no
+      // raycast/dead-zone dependency at all, the same metric Reactive
+      // Arm Length already uses) whenever the ground-plane raycast
+      // misses, so armBaseDistanceT never truly freezes -- it's a
+      // worse (less physically-grounded) approximation than the real
+      // arm-base-distance measurement, but a live, responsive
+      // approximation beats a frozen, arbitrary one for these 3
+      // features. tiltTarget/tiltTargetValid (Palm Rotation's own
+      // inputs) are untouched by this -- that feature's freeze-on-miss
+      // behavior was explicitly requested and stays exactly as-is.
+      armBaseDistanceT = tiltMagnitude
     }
   } else {
     tiltTargetValid = true // device-orientation always has real input, never raycast-gated
