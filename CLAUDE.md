@@ -940,3 +940,55 @@ wiring, and are still open:
   axis, don't silently ship it — the coincidence itself is worth
   surfacing, the way this one was.** See `docs/CHANGELOG.txt`'s matching
   2026-09-27 (2nd) entry for the full account.
+- **CORRECTED, same day (3rd pass) — the "surface the coincidence, then
+  avoid it" conclusion in the entry directly above was WRONG.** Direct
+  correction: "i said palm face rotation cursor tracking should be
+  rotating the entire arm by the Y axis of the forearm bone. the
+  rotation should be anchored to the base point of the forearm bone" /
+  "its a locaize rotation." Surfacing the world-UP-vs-bone-Y coincidence
+  was the right call per §0c (don't silently ship an unexplained
+  divergence) — but the correct response to it was to ask/confirm, not
+  to unilaterally pick a different axis than what was actually
+  specified. The user wants the REAL forearm-bone-local Y axis, full
+  stop, whether or not it happens to equal `wristCropNormalAligned` on
+  this rig. Also corrected in this same pass: Palm Faces Cursor and
+  Palm Face Rotation are ONE combined, LOCAL, single-axis rotation (not
+  a full 3D `lookAt` with a separate roll on top, per the 2nd pass) —
+  `desired = Quaternion.setFromAxisAngle(armYAxisAligned, degToRad(baseDeg
+  + offsetDeg))`, where `baseDeg = palmFacesCursor ?
+  computeRadialRollDeg(wrapperPos, tiltTarget) : 0` — matching HANDY
+  DANDIES' own `computeRollQuat()` composition pattern (just with a
+  different axis/anchor). `armYAxisAligned` and `computeRadialRollDeg()`
+  (both removed in the 2nd pass) are restored.
+- **New in this same pass: the rotation is ANCHORED at the forearm
+  bone's own base position, not `h.wrapper`'s own arbitrary local
+  origin.** Recomputed every frame from `h.clone`'s LIVE transform
+  (its scale/quaternion/position all change as poses/model-rotation
+  are applied): `pivotLocal = forearmPosRaw.multiplyScalar(scale)
+  .applyQuaternion(h.clone.quaternion).add(h.clone.position)`, then the
+  same `position = pivot - rotation*pivot` technique
+  `applyModelRootTransform()` already uses for `modelRotationPivot` —
+  just one level up (`h.wrapper` instead of `h.clone`). **This
+  overwrites `h.wrapper.position` outright every frame now**, which
+  previously held only the field-grid layout position set once by
+  `relayoutField()` — added `h.basePosition` (a new per-hand field) to
+  preserve that grid placement, added back in as
+  `h.wrapper.position.copy(h.basePosition).add(pivotLocal).sub(rotatedPivot)`.
+  If a future Field Layout feature (multi-hand grids) ever seems to
+  mis-position hands once Palm Rotation/Cursor Tracking is active,
+  check `h.basePosition` is being read/written correctly before
+  assuming the grid math itself is wrong.
+  Live-verified precisely (not just visually): with a 60deg slider
+  offset, `rForearmBend`'s own real world position (via
+  `getWorldPosition()`) was unchanged to floating-point noise (~2e-15)
+  despite the whole arm visibly rotating 60deg around it; the applied
+  quaternion matched an independently-computed
+  `Quaternion.setFromAxisAngle(armYAxisAligned, 60deg)` exactly
+  (`angleTo` 0deg). Repeated with Palm Faces Cursor's own dynamic angle
+  (real mouse movement, `computeRadialRollDeg` against the live
+  `tiltTarget`) instead of a fixed offset — identical result. **If this
+  feature needs correction a 4th time, re-read this entry's own
+  `desired`/pivot formulas directly rather than re-deriving from
+  scratch — the axis and composition pattern are now directly
+  user-confirmed, not a guess.** See `docs/CHANGELOG.txt`'s matching
+  2026-09-27 (3rd) entry for the full account.

@@ -1974,6 +1974,71 @@ Commit: `d95e8f0`. Pushed to `https://github.com/LeisHo/Handy-Set`;
 Vercel auto-deployed.
 
 --------------------------------------------------------------------------------
+2026-09-27  -  (3rd, same day)
+
+Direct correction of the 2nd-round fix above: "i said palm face
+rotation cursor tracking should be rotating the entire arm by the Y
+axis of the forearm bone. the rotation should be anchored to the base
+point of the forearm bone." Followed mid-turn by: "its a locaize
+rotation."
+
+Re-read the 2nd round's own reasoning and realized it had drawn the
+wrong conclusion from a correct finding: it measured the
+`rForearmBend` bone's own local Y axis, found it numerically
+coincided with `wristCropNormalAligned` on this rig (bones authored
+with local Y along their own length), and swapped to world UP to
+avoid that "coincidence" -- but the user wants the real forearm-bone Y
+axis specifically, whether or not it happens to match Handy Dandies'
+own axis. Also re-read the 2nd round's own architecture: Palm Faces
+Cursor was a full 3D `lookAt`, with Palm Face Rotation as a separate
+roll composed on top -- this message clarifies both are meant to be
+ONE combined, LOCAL, single-axis rotation instead, matching HANDY
+DANDIES' own `computeRollQuat()` composition pattern (a dynamic angle
+from `computeRadialRollDeg()` when Palm Faces Cursor is on, plus the
+slider's own offset, both added together, both around one fixed
+local axis) -- just with a different axis and anchor than HANDY
+DANDIES uses.
+
+Restored `armYAxisAligned` (the bone's own local Y, measured once at
+bind pose) and `computeRadialRollDeg()` (both removed in the 2nd
+round). Replaced the lookAt-based `desired` with:
+`desired = Quaternion.setFromAxisAngle(armYAxisAligned, degToRad(baseDeg + offsetDeg))`
+where `baseDeg = palmFacesCursor ? computeRadialRollDeg(wrapperPos,
+tiltTarget) : 0`.
+
+New: the rotation is ANCHORED at the forearm bone's own base position
+-- a requirement that didn't exist in either prior round. Recomputes a
+local-space pivot every frame from `h.clone`'s LIVE transform (its
+scale/quaternion/position all change as poses/model-rotation are
+applied): `pivotLocal = forearmPosRaw * scale, rotated by
+h.clone.quaternion, plus h.clone.position` -- then applies the exact
+same `position = pivot - rotation*pivot` technique
+`applyModelRootTransform()` already uses for `modelRotationPivot`, one
+level up (`h.wrapper` instead of `h.clone`). Added `h.basePosition` (a
+new per-hand field storing the hand's own field-grid placement, set by
+`relayoutField()`) since this now overwrites `h.wrapper.position`
+outright every frame instead of leaving it untouched as before.
+
+Live-verified precisely, not just visually: with `palmFaceRotationOffset
+= 60` (Palm Faces Cursor off), `hands[0].wrapper.quaternion` matched
+an independently-computed `Quaternion.setFromAxisAngle(armYAxisAligned,
+60deg)` EXACTLY (`angleTo` 0 deg) -- confirming the axis. The
+`rForearmBend` bone's own live WORLD position, read directly via
+`getWorldPosition()`, was UNCHANGED before vs. after applying the 60
+deg rotation to floating-point noise only (~2e-15 across all 3
+components) -- confirming the anchor: the forearm base did not move
+at all despite the whole arm visibly rotating 60 deg around it. Same
+2 checks repeated with Palm Faces Cursor's own dynamic angle (real
+mouse movement, `computeRadialRollDeg` against the live `tiltTarget`)
+instead of a fixed slider value -- both passed identically (`angleTo`
+0 deg, forearm position unchanged).
+
+`index.html`'s own `main.js` cache-buster bumped `?v=73` -> `?v=74`.
+
+Commit: `eaa726c`. Pushed to `https://github.com/LeisHo/Handy-Set`;
+Vercel auto-deployed.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

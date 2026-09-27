@@ -12,19 +12,27 @@ Nothing in progress. Pushed to `https://github.com/LeisHo/Handy-Set`
 
 ## Recently completed
 
-- **RESOLVED (2026-09-27, 2nd pass): Palm Faces Cursor was computing an
-  extra, buggy roll on top of the lookAt (read from a bone's own LIVE
-  previous-frame world quaternion, compounding frame to frame) instead
-  of "just rotating to follow the cursor."** Fixed by making it produce
-  only the lookAt. Added a new Palm Face Rotation (Deg) slider,
-  deliberately rolling around world UP (not Handy Dandies' own
-  wristCropNormalAligned axis — an earlier draft found the forearm
-  bone's local Y coincides with that axis exactly on this rig, so world
-  UP was used instead to keep it genuinely different, per direct
-  instruction). Removed the dead, never-wired-up earlier partial port
-  of Handy Dandies' compass-roll mechanism. Live-verified both by direct
-  math comparison and through the real dev-panel slider control. See
-  `docs/CHANGELOG.txt`'s matching 2026-09-27 (2nd) entry.
+- **RESOLVED (2026-09-27, 3rd pass — supersedes the 2nd pass below):
+  Palm Faces Cursor and Palm Face Rotation are ONE combined, LOCAL,
+  single-axis rotation around the forearm bone's own Y axis
+  (`armYAxisAligned`), anchored at the forearm bone's own base
+  position — not a full 3D lookAt (the 2nd pass's own approach) and
+  not world UP (also the 2nd pass — wrongly avoided using the real
+  bone-local-Y axis just because it happens to numerically coincide
+  with Handy Dandies' own `wristCropNormalAligned` on this rig).**
+  `baseDeg` (Palm Faces Cursor's own dynamic angle, from
+  `computeRadialRollDeg()`) plus the Palm Face Rotation slider's offset
+  are added together and applied as one rotation, matching HANDY
+  DANDIES' own composition pattern. The anchor is new: the rotation
+  pivots at the forearm base (recomputed from `h.clone`'s live
+  transform every frame, same `pivot - rotation*pivot` technique
+  `applyModelRootTransform()` already uses for `modelRotationPivot`,
+  one level up). Live-verified precisely: the forearm bone's real world
+  position is unchanged (~2e-15 floating-point noise) across a 60deg
+  rotation, and the applied quaternion matches an independently
+  computed one exactly (`angleTo` 0deg), for both the slider and
+  cursor-tracking's own dynamic angle. See `docs/CHANGELOG.txt`'s
+  matching 2026-09-27 (3rd) entry.
 
 - **RESOLVED (2026-09-27): Tracking Enabled itself caused the whole arm
   to rotate, even with Palm Rotation/Responsive Wrist Splay/Wrist Crop
