@@ -1197,3 +1197,19 @@ wiring, and are still open:
   the 2nd time a plausible-sounding "wrap bug" theory was disproven this
   way, with the real cause living elsewhere (the dead-zone freeze).**
   See `docs/CHANGELOG.txt`'s matching 2026-09-27 (11th) entry.
+- **`applyBaseArmRotation()` (`baseRotationX/Y/Z`) is the 4TH place
+  this exact "baseQuat doesn't bake in a whole-hand-level rotation"
+  bug class has been found in this file** (Whole-Hand Rotation
+  `modelRotX/Y/Z`, wrist bend/splay/rotation, now this). It mutated
+  `h.clone.quaternion` directly, never touching `h.currentBaseQuat` (the
+  curl-axis reference) — fixed by applying the same `deltaQuat` to both,
+  then immediately re-baking finger curl. **If a future whole-hand-level
+  rotation mechanism is added to this file, check from the start
+  whether it updates `h.currentBaseQuat` — this has now been missed 4
+  times.** Verified via the established relative-to-`h.clone.quaternion`
+  drift test: 0.000-0.016deg across 4 joints with real curl+splay
+  active. Disclosed, unfixed: this doesn't unify Base Rotation's own
+  pivot (`rForearmBend`'s live position) with Whole-Hand Rotation's own
+  pivot (`modelRotationPivot`) — combining both sliders can still shift
+  where Base Rotation's pivot ends up; not the reported bug. See
+  `docs/CHANGELOG.txt`'s matching 2026-09-27 (12th) entry.

@@ -8,17 +8,18 @@ append-only history.
 ## Currently working on
 
 - **Multi-part request in progress (2026-09-27):** (1) DONE — Palm
-  Rotation direction inverted + wrap-safe smoothing. (2) NOT STARTED —
-  Whole-Hand-Rotation-at-Base (`baseRotationX/Y/Z`) suffering the same
-  curl-axis-reference bug class already fixed elsewhere in this file.
-  (3) NOT STARTED — new "Responsive Arm Rotation at Base" subgroup in
-  Phone Tilt (on/off, fine-tune slider, min/max range, curve graph,
-  reusing the existing `buildReactiveRangeWidget`/
+  Rotation direction inverted + wrap-safe smoothing. (2) DONE —
+  Whole-Hand-Rotation-at-Base curl-axis bug fixed (same class as 3
+  prior fixes). (3) NOT STARTED — new "Responsive Arm Rotation at Base"
+  subgroup in Phone Tilt (on/off, fine-tune slider, min/max range,
+  curve graph, reusing the existing `buildReactiveRangeWidget`/
   `buildReactiveCurveWidget` infra). (4) NOT STARTED — apply the same
   distance metric to Responsive Wrist Splay. (5) NOT STARTED — new
   "Responsive Pose Tween" subgroup (on/off, target pose, curve graph,
   tweening default<->target pose safely through the existing pose
   pipeline).
+- **Also reported: Saved Cameras doesn't persist ("it doesnt seem to
+  save still").** Investigating.
 
 Pushed to `https://github.com/LeisHo/Handy-Set`
 (deployed via the Vercel project at `https://vercel.com/lpeis/handy-set`).

@@ -2416,6 +2416,41 @@ Commit: `982eb34`. Pushed to `https://github.com/LeisHo/Handy-Set`;
 Vercel auto-deployed.
 
 --------------------------------------------------------------------------------
+2026-09-27  -  (12th, same day)
+
+Direct report: "The whole hand rotation at base is suffering the same
+rotatin axis messing with Fiigner poses as before. fix that."
+
+Root cause: `applyBaseArmRotation()` (`baseRotationX/Y/Z` sliders)
+mutates `h.clone.quaternion` directly via its own delta-tracking,
+bypassing `h.currentBaseQuat` -- the `baseQuat` every
+`applyCurlToSkeleton()` call uses as its finger-curl axis reference.
+Same bug class already fixed 3 times in this file (Whole-Hand Rotation
+`modelRotX/Y/Z`, wrist bend/splay/rotation). Fixed by applying the
+exact same `deltaQuat` to `h.currentBaseQuat`, and re-baking finger
+curl/splay immediately after (matching
+`applyReactiveWristSplayFrame()`'s own pattern) so the actual bone
+quaternions don't stay stale.
+
+Disclosed: this does not unify Base Rotation's own pivot
+(`rForearmBend`'s live position) with Whole-Hand Rotation's own pivot
+(`modelRotationPivot`/palm center) into one formula -- a later
+`applyModelRootTransform()` call can still shift where Base Rotation's
+pivot ends up. Not the reported bug (curl axis, now fixed); flagged as
+a known follow-up.
+
+Verified using this project's own established methodology for this bug
+class (bone orientation RELATIVE to `h.clone.quaternion`, before/after,
+expecting ~0deg drift): with real curl+splay on 2 fingers and a
+combined 45/60/-30 deg base rotation change, drift was 0.000-0.016deg
+(floating-point noise) across all 4 tested joints.
+
+`index.html`'s own `main.js` cache-buster bumped `?v=84` -> `?v=85`.
+
+Commit: `4142335`. Pushed to `https://github.com/LeisHo/Handy-Set`;
+Vercel auto-deployed.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
