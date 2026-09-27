@@ -732,13 +732,11 @@ function applyReactiveWristSplayFrame() {
   })
 }
 
-// Base arm rotation — applied separately from pose data, stacks with it.
-// Rotates the whole hand around rForearmBend (first arm bone) using that
-// bone's own local axes, pivoting at the bone's position.
+// Base arm rotation — applied at h.clone level when slider changes, not every frame.
+// Rotates around rForearmBend using its own axes. Stores last applied state to
+// avoid accumulation: only applies the DELTA since last call.
 function applyBaseArmRotation() {
   hands.forEach((h) => {
-    if (cfg.baseRotationX === 0 && cfg.baseRotationY === 0 && cfg.baseRotationZ === 0) return
-
     const baseBone = h.skinnedMesh.skeleton.getBoneByName('rForearmBend')
     if (!baseBone) return
 
@@ -747,22 +745,25 @@ function applyBaseArmRotation() {
     baseBone.getWorldPosition(baseWorldPos)
     baseBone.getWorldQuaternion(baseWorldQuat)
 
-    // Create rotation in the base bone's local axes
+    // Desired rotation from current slider values
     const rotX = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0).applyQuaternion(baseWorldQuat), cfg.baseRotationX * Math.PI / 180)
     const rotY = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0).applyQuaternion(baseWorldQuat), cfg.baseRotationY * Math.PI / 180)
     const rotZ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1).applyQuaternion(baseWorldQuat), cfg.baseRotationZ * Math.PI / 180)
 
-    const baseRotQuat = new THREE.Quaternion()
-    baseRotQuat.multiplyQuaternions(rotX, rotY).multiply(rotZ)
+    const desiredQuat = new THREE.Quaternion()
+    desiredQuat.multiplyQuaternions(rotX, rotY).multiply(rotZ)
 
-    // Apply rotation: position = basePos - rotation*(scale*basePos)
-    const newPos = h.wrapper.position.clone()
-    newPos.sub(baseWorldPos)
-    newPos.applyQuaternion(baseRotQuat)
-    newPos.add(baseWorldPos)
-    h.wrapper.position.copy(newPos)
+    // Only apply the DELTA: desired / lastApplied (so we don't compound)
+    if (!h.lastBaseArmQuat) h.lastBaseArmQuat = new THREE.Quaternion()
+    const deltaQuat = desiredQuat.clone().multiply(h.lastBaseArmQuat.clone().invert())
 
-    h.wrapper.quaternion.multiplyQuaternions(baseRotQuat, h.wrapper.quaternion)
+    // Apply delta to position and quaternion
+    const offset = h.clone.position.clone().sub(baseWorldPos)
+    offset.applyQuaternion(deltaQuat)
+    h.clone.position.copy(baseWorldPos).add(offset)
+
+    h.clone.quaternion.multiplyQuaternions(deltaQuat, h.clone.quaternion)
+    h.lastBaseArmQuat.copy(desiredQuat)
   })
 }
 
@@ -1668,8 +1669,6 @@ function animate() {
         h.wrapper.quaternion.slerp(desired, cfg.trackingDamping)
       })
     }
-    // Apply base arm rotation separately
-    applyBaseArmRotation()
     applyReactiveWristSplayFrame()
   }
   curveWidgetResyncs.forEach((fn) => fn())
@@ -2176,7 +2175,7 @@ function renderPoseGroup(content) {
   const subBaseRotation = addSubgroup(content, 'Whole-Hand Rotation at Base')
   ;[['baseRotationX', -180, 180, 'Base Rotation X (Deg)'], ['baseRotationY', -180, 180, 'Base Rotation Y (Deg)'], ['baseRotationZ', -180, 180, 'Base Rotation Z (Deg)']].forEach(([k, mn, mx, label]) => {
     addRow(subBaseRotation, { id: 'slider' + k, label, type: 'slider', min: mn, max: mx, step: 1, value: cfg[k] })
-    wireSlider('slider' + k, (v) => { cfg[k] = v })
+    wireSlider('slider' + k, (v) => { cfg[k] = v; applyBaseArmRotation() })
   })
 
   const subThumb = addSubgroup(content, 'THUMB')
