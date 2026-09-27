@@ -2782,6 +2782,114 @@ function buildReactiveCurveWidget(row, opts) {
   })
 }
 
+// ---------------------------------------------------------------------
+// Mobile/Landscape mirroring for the Phone Tilt group's own min/max
+// range sliders and curve graphs -- direct report 2026-09-27: "when I
+// check the show in mobile checkbox, the min max sliders and curve
+// graphs aren't showing up in mobile." Root cause, confirmed by direct
+// comparison against the real .claude/TEMPLATE_DEV_PANEL.html (not
+// assumed): these widgets are built on top of a hidden `type: 'text'`
+// control, and devPanel.js's own automatic per-device mirroring
+// (ensureDynamicTargetRow()) explicitly excludes 'text'/'number'
+// controls -- the shared template's own documented, permanent scope
+// limit ("outside this system's scope for now"). The "Show in Mobile/
+// Landscape" checkbox itself still exists (added by devPanel.js's own
+// generic backfill pass, independent of this), so it can be checked --
+// checking it just silently did nothing.
+//
+// Fixed with a SEPARATE, HANDYSET-owned mirroring mechanism, scoped to
+// the 3 curve/range controls actually in the Phone Tilt group
+// (Responsive Arm Rotation at Base's range+curve, Responsive Pose
+// Tween's curve). Per direct confirmation (AskUserQuestion, 2026-09-27):
+// the mirror is a SHARED-VALUE mirror -- Mobile/Landscape show the
+// exact same widget, editing the SAME cfg field as Desktop -- NOT an
+// independently-tunable per-device copy (none of these 3 fields have a
+// per-device variant anywhere else in this file, so "independent"
+// wouldn't mean anything real for them).
+//
+// Polled every frame via curveWidgetResyncs (the SAME mechanism this
+// file already uses to detect devPanel.js state changes that don't
+// fire a clean event, e.g. a Reset/Restore writing straight to
+// input.value) rather than wired to one specific trigger -- the
+// checkbox can change via a direct click, a Sync/Reset restore, OR a
+// tab switch recreating the group structure, and polling handles all 3
+// uniformly without needing to hook each one separately. Also handles
+// the 3-way sync a shared value needs: every frame, the Desktop input's
+// own value AND both mirrors' own values are forced to match the
+// canonical cfg field -- each widget's OWN internal resync (pushed by
+// buildReactiveRangeWidget/buildReactiveCurveWidget above, watching its
+// own input's value) then picks up the write and redraws, so dragging
+// ANY of the 3 (Desktop, Mobile, Landscape) correctly updates the other
+// 2 as well.
+const PHONE_TILT_MIRROR_WIDGETS = [
+  { textId: 'textBaseArmRotationRange', groupSid: 'Responsive Arm Rotation at Base', kind: 'range',
+    label: 'Min / Max Rotation (Deg)', trackMin: -180, trackMax: 180, isPercent: false, minLabel: 'Min', maxLabel: 'Max', unit: '°',
+    cfgKey: 'baseArmRotationRange', parseFn: () => parseBaseArmRotationConfig() },
+  { textId: 'textBaseArmRotationCurve', groupSid: 'Responsive Arm Rotation at Base', kind: 'curve',
+    label: 'Rotation Curve (Distance -> Rotation)', caption: 'X: Cursor Distance From Arm Base / Phone Tilt (0-1)  ·  Y: Rotation Fraction (0=Min, 1=Max)',
+    cfgKey: 'baseArmRotationCurve', parseFn: () => parseBaseArmRotationConfig() },
+  { textId: 'textPoseTweenCurve', groupSid: 'Responsive Pose Tween', kind: 'curve',
+    label: 'Tween Curve (Distance -> Tween Progress)', caption: 'X: Cursor Distance From Arm Base / Phone Tilt (0-1)  ·  Y: Tween Progress (0=Default Pose, 1=Target Pose)',
+    cfgKey: 'poseTweenCurve', parseFn: () => parsePoseTweenConfig() }
+]
+// window.findGroupContent() (devPanel.js) only matches a group that's a
+// DIRECT CHILD of the tab content (its own selector uses a `>`
+// combinator) -- it can't find "Responsive Arm Rotation at Base" or
+// "Responsive Pose Tween", both nested one level inside the top-level
+// "Phone Tilt" group. Confirmed live: findGroupContent logged repeated
+// "group not found" console.warn calls even though a plain, any-depth
+// querySelector for the same data-sid found the element without issue.
+// This is a HANDYSET-owned lookup used in its place, identical except
+// for dropping that `>` restriction.
+function findNestedGroupContent(tabId, groupSid) {
+  const title = document.querySelector('#' + tabId + 'TabContent .dev-section-title[data-sid="' + groupSid.replace(/"/g, '\\"') + '"]')
+  return title ? title.nextElementSibling : null
+}
+function syncPhoneTiltWidgetMirrors() {
+  if (typeof window.isDevRowVisible !== 'function') return
+  PHONE_TILT_MIRROR_WIDGETS.forEach((spec) => {
+    const canonicalValue = cfg[spec.cfgKey]
+    const desktopInput = document.getElementById(spec.textId)
+    if (desktopInput && desktopInput.value !== canonicalValue) desktopInput.value = canonicalValue
+    const visible = window.isDevRowVisible(spec.textId)
+    ;['mobile', 'landscape'].forEach((tab) => {
+      const devicePrefix = tab === 'landscape' ? 'Landscape' : 'Mobile'
+      const mirrorId = spec.textId + devicePrefix
+      const existingInput = document.getElementById(mirrorId)
+      if (!visible) {
+        if (existingInput) existingInput.closest('.dev-row').remove()
+        return
+      }
+      if (existingInput) {
+        if (existingInput.value !== canonicalValue) existingInput.value = canonicalValue
+        return
+      }
+      const content = findNestedGroupContent(tab, spec.groupSid)
+      if (!content) return // group not mirrored to this tab yet (user hasn't switched there) -- retry next frame
+      const row = document.createElement('div')
+      row.className = 'dev-row'
+      const label = document.createElement('span')
+      label.className = 'dev-label'
+      label.textContent = spec.label
+      row.appendChild(label)
+      const input = document.createElement('input')
+      input.type = 'text'
+      input.id = mirrorId
+      input.className = 'dev-text-input'
+      input.value = canonicalValue
+      row.appendChild(input)
+      content.appendChild(row)
+      input.addEventListener('input', (e) => { cfg[spec.cfgKey] = e.target.value; spec.parseFn() })
+      if (spec.kind === 'range') {
+        buildReactiveRangeWidget(row, { trackMin: spec.trackMin, trackMax: spec.trackMax, isPercent: spec.isPercent, crossClamp: false, minLabel: spec.minLabel, maxLabel: spec.maxLabel, unit: spec.unit, onExternalChange: (v) => { cfg[spec.cfgKey] = v; spec.parseFn() } })
+      } else {
+        buildReactiveCurveWidget(row, { caption: spec.caption, onExternalChange: (v) => { cfg[spec.cfgKey] = v; spec.parseFn() } })
+      }
+    })
+  })
+}
+curveWidgetResyncs.push(syncPhoneTiltWidgetMirrors)
+
 // Labels match HANDY DANDIES' own DEV_GROUPS exactly (grepped from its
 // main.js, not reconstructed) — including the thumb's own 2 irregular
 // labels ("Thumb Tip Splay" / "Thumb 2nd Segment Curl" instead of the
