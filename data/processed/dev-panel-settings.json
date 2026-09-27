@@ -14,6 +14,9 @@
     "slidermodelRotX": 90,
     "slidermodelRotY": 0,
     "slidermodelRotZ": 0,
+    "sliderbaseRotationX": 0,
+    "sliderbaseRotationY": 0,
+    "sliderbaseRotationZ": 0,
     "sliderthumbCurl": 75,
     "sliderthumbSplay": 42,
     "sliderthumbSplay2": 13,
@@ -67,23 +70,22 @@
     "checkboxWristSplayResponsiveEnabled": false,
     "sliderWristSplayDefault": -74,
     "checkboxWristSplayReactiveEnabled": false,
-    "sliderCameraX": 3.5,
-    "sliderCameraY": 31.5,
-    "sliderCameraZ": 60.5,
-    "sliderCameraFov": 77,
-    "sliderCameraZoom": 62,
+    "sliderCameraX": 1,
+    "sliderCameraY": 130,
+    "sliderCameraZ": 5,
+    "sliderCameraFov": 15,
+    "sliderCameraZoom": 99.5,
     "checkboxLockCameraPan": false,
     "checkboxLockCameraZoom": false,
     "checkboxLockCameraRotate": false,
-    "sliderCameraYaw": 24,
-    "sliderCameraPitch": -2,
+    "sliderCameraYaw": -174,
+    "sliderCameraPitch": -87,
     "checkboxCameraMaxExtentsEnabled": false,
     "checkboxTrackingEnabled": false,
     "sliderTrackingDamping": 0.2,
     "sliderTargetDepthFactor": 2,
     "checkboxShowTargetMarker": false,
     "checkboxPalmFacesCursor": false,
-    "sliderPalmFaceRotationOffset": 23,
     "sliderKeyAzimuth": 360,
     "sliderKeyElevation": -3,
     "sliderKeyTargetHeight": -18,
@@ -1510,6 +1512,10 @@
         "key": "desktop:Phone Tilt",
         "items": [
           {
+            "type": "row",
+            "key": "checkboxTrackingEnabled"
+          },
+          {
             "type": "group",
             "section": {
               "key": "desktop:Target",
@@ -1520,11 +1526,16 @@
                 },
                 {
                   "type": "row",
+                  "key": "sliderTrackingDamping"
+                },
+                {
+                  "type": "row",
                   "key": "checkboxShowTargetMarker"
                 }
               ],
               "rowKeys": [
                 "sliderTargetDepthFactor",
+                "sliderTrackingDamping",
                 "checkboxShowTargetMarker"
               ],
               "subgroups": []
@@ -1559,20 +1570,8 @@
                   "type": "group",
                   "section": {
                     "key": "desktop:Tracking",
-                    "items": [
-                      {
-                        "type": "row",
-                        "key": "checkboxTrackingEnabled"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderTrackingDamping"
-                      }
-                    ],
-                    "rowKeys": [
-                      "checkboxTrackingEnabled",
-                      "sliderTrackingDamping"
-                    ],
+                    "items": [],
+                    "rowKeys": [],
                     "subgroups": []
                   }
                 }
@@ -1587,20 +1586,8 @@
               "subgroups": [
                 {
                   "key": "desktop:Tracking",
-                  "items": [
-                    {
-                      "type": "row",
-                      "key": "checkboxTrackingEnabled"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderTrackingDamping"
-                    }
-                  ],
-                  "rowKeys": [
-                    "checkboxTrackingEnabled",
-                    "sliderTrackingDamping"
-                  ],
+                  "items": [],
+                  "rowKeys": [],
                   "subgroups": []
                 }
               ]
@@ -1650,21 +1637,18 @@
                 {
                   "type": "row",
                   "key": "checkboxPalmFacesCursor"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderPalmFaceRotationOffset"
                 }
               ],
               "rowKeys": [
-                "checkboxPalmFacesCursor",
-                "sliderPalmFaceRotationOffset"
+                "checkboxPalmFacesCursor"
               ],
               "subgroups": []
             }
           }
         ],
-        "rowKeys": [],
+        "rowKeys": [
+          "checkboxTrackingEnabled"
+        ],
         "subgroups": [
           {
             "key": "desktop:Target",
@@ -1675,11 +1659,16 @@
               },
               {
                 "type": "row",
+                "key": "sliderTrackingDamping"
+              },
+              {
+                "type": "row",
                 "key": "checkboxShowTargetMarker"
               }
             ],
             "rowKeys": [
               "sliderTargetDepthFactor",
+              "sliderTrackingDamping",
               "checkboxShowTargetMarker"
             ],
             "subgroups": []
@@ -1711,20 +1700,8 @@
                 "type": "group",
                 "section": {
                   "key": "desktop:Tracking",
-                  "items": [
-                    {
-                      "type": "row",
-                      "key": "checkboxTrackingEnabled"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderTrackingDamping"
-                    }
-                  ],
-                  "rowKeys": [
-                    "checkboxTrackingEnabled",
-                    "sliderTrackingDamping"
-                  ],
+                  "items": [],
+                  "rowKeys": [],
                   "subgroups": []
                 }
               }
@@ -1739,20 +1716,8 @@
             "subgroups": [
               {
                 "key": "desktop:Tracking",
-                "items": [
-                  {
-                    "type": "row",
-                    "key": "checkboxTrackingEnabled"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderTrackingDamping"
-                  }
-                ],
-                "rowKeys": [
-                  "checkboxTrackingEnabled",
-                  "sliderTrackingDamping"
-                ],
+                "items": [],
+                "rowKeys": [],
                 "subgroups": []
               }
             ]
@@ -1796,15 +1761,10 @@
               {
                 "type": "row",
                 "key": "checkboxPalmFacesCursor"
-              },
-              {
-                "type": "row",
-                "key": "sliderPalmFaceRotationOffset"
               }
             ],
             "rowKeys": [
-              "checkboxPalmFacesCursor",
-              "sliderPalmFaceRotationOffset"
+              "checkboxPalmFacesCursor"
             ],
             "subgroups": []
           }
@@ -1813,6 +1773,32 @@
       {
         "key": "desktop:Pose",
         "items": [
+          {
+            "type": "group",
+            "section": {
+              "key": "desktop:Whole-Hand Rotation at Base",
+              "items": [
+                {
+                  "type": "row",
+                  "key": "sliderbaseRotationX"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderbaseRotationY"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderbaseRotationZ"
+                }
+              ],
+              "rowKeys": [
+                "sliderbaseRotationX",
+                "sliderbaseRotationY",
+                "sliderbaseRotationZ"
+              ],
+              "subgroups": []
+            }
+          },
           {
             "type": "group",
             "section": {
@@ -2178,6 +2164,29 @@
         ],
         "rowKeys": [],
         "subgroups": [
+          {
+            "key": "desktop:Whole-Hand Rotation at Base",
+            "items": [
+              {
+                "type": "row",
+                "key": "sliderbaseRotationX"
+              },
+              {
+                "type": "row",
+                "key": "sliderbaseRotationY"
+              },
+              {
+                "type": "row",
+                "key": "sliderbaseRotationZ"
+              }
+            ],
+            "rowKeys": [
+              "sliderbaseRotationX",
+              "sliderbaseRotationY",
+              "sliderbaseRotationZ"
+            ],
+            "subgroups": []
+          },
           {
             "key": "desktop:ROTATION",
             "items": [
@@ -3463,6 +3472,15 @@
           {
             "type": "group",
             "section": {
+              "key": "mobile:Whole-Hand Rotation at Base",
+              "items": [],
+              "rowKeys": [],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "group",
+            "section": {
               "key": "mobile:ROTATION",
               "items": [],
               "rowKeys": [],
@@ -3544,6 +3562,12 @@
         ],
         "rowKeys": [],
         "subgroups": [
+          {
+            "key": "mobile:Whole-Hand Rotation at Base",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
           {
             "key": "mobile:ROTATION",
             "items": [],
@@ -4393,6 +4417,15 @@
           {
             "type": "group",
             "section": {
+              "key": "landscape:Whole-Hand Rotation at Base",
+              "items": [],
+              "rowKeys": [],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "group",
+            "section": {
               "key": "landscape:ROTATION",
               "items": [],
               "rowKeys": [],
@@ -4474,6 +4507,12 @@
         ],
         "rowKeys": [],
         "subgroups": [
+          {
+            "key": "landscape:Whole-Hand Rotation at Base",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
           {
             "key": "landscape:ROTATION",
             "items": [],
@@ -4625,13 +4664,14 @@
     "desktop:Tween": true,
     "desktop:Saved Tween Sequences": false,
     "desktop:Field Layout": true,
-    "desktop:Phone Tilt": true,
-    "desktop:Target": true,
+    "desktop:Phone Tilt": false,
+    "desktop:Target": false,
     "desktop:Responsive Wrist Splay": false,
     "desktop:Tracking": false,
     "desktop:New Group": false,
     "desktop:Palm Facing": false,
     "desktop:Pose": true,
+    "desktop:Whole-Hand Rotation at Base": false,
     "desktop:ROTATION": false,
     "desktop:THUMB": true,
     "desktop:Wrist": false,
@@ -4670,6 +4710,7 @@
     "mobile:New Group": false,
     "mobile:Palm Facing": true,
     "mobile:Pose": true,
+    "mobile:Whole-Hand Rotation at Base": false,
     "mobile:ROTATION": false,
     "mobile:THUMB": false,
     "mobile:Wrist": false,
@@ -4708,6 +4749,7 @@
     "landscape:New Group": false,
     "landscape:Palm Facing": false,
     "landscape:Pose": true,
+    "landscape:Whole-Hand Rotation at Base": false,
     "landscape:ROTATION": true,
     "landscape:THUMB": true,
     "landscape:Wrist": true,
@@ -4961,7 +5003,9 @@
     "checkboxLandscapeWristSplayResponsiveEnabled": null,
     "checkboxLandscapeWristSplayReactiveEnabled": null,
     "sliderLandscapeWristSplayDefault": null,
-    "checkboxLandscapeReactiveArmLengthEnabled": null
+    "checkboxLandscapeReactiveArmLengthEnabled": null,
+    "mobile:Whole-Hand Rotation at Base": null,
+    "landscape:Whole-Hand Rotation at Base": null
   },
   "devTextOverridesManual": [
     "desktop:New Group",
