@@ -1093,3 +1093,38 @@ wiring, and are still open:
   equivalent direct, quantitative live check) is what caught it, not a
   visual impression.** See `docs/CHANGELOG.txt`'s matching 2026-09-27
   (5th) entry for the full account.
+- **6th round, same feature: Palm Rotation's angle is measured between
+  the forearm base's OWN ground-projected position and the cursor's
+  own ground-projected position — never screen center.** Direct spec:
+  "Use the base point of the forearm bone. then project that
+  perpendicular to the camera on to the ground plane. then use that
+  point and the projected cursor point to measure the rotation angle."
+  Every earlier round (including the 5th's own magnitude fix) still
+  measured the cursor's offset from SCREEN CENTER — an arbitrary
+  reference never actually tied to where the hand is — then bolted
+  that offset onto `hand.wrapper.position` afterward. `tiltOriginGround`
+  (new module var) = `rForearmBend`'s live world position, slid along
+  `camera.getWorldDirection()` until it lands on world Y=0 (NOT
+  straight down — "perpendicular to the camera" means along the
+  camera's own optical axis). `tiltTarget` (reused) = the cursor's own
+  raycast onto that SAME Y=0 plane (`cursorTargetPlane`, the old
+  vertical Z=0 plane, is now fully unused and removed). `baseDeg`
+  reads X/Z off both ground points via `computeRadialRollDeg()`'s
+  existing `{x,y}` shape (Z aliased into `.y`) for the mouse path only
+  — device-orientation is untouched, it has no camera ray to ground-
+  project. Live-verified: `rForearmBend`'s real world position
+  unchanged (~7e-14) across the rotation (anchor intact); screen
+  center reads ~-0.44 deg (correctly near-neutral). **This is now the
+  6th correction on this one feature (axis, anchor, magnitude, and now
+  measurement origin) — if it needs a 7th, re-read this entry's own
+  point-A/point-B construction directly rather than re-deriving.** See
+  `docs/CHANGELOG.txt`'s matching 2026-09-27 (6th) entry.
+- **New: `THREE.AxesHelper`/Ground Plane slab both live in the SAME
+  scene-decoration category — neither is related to Palm Rotation's
+  own Y=0 MATH plane above, despite both mentioning "ground."** The
+  Ground Plane group's slab is a real, visible `BoxGeometry` with a
+  fixed, non-slider-exposed thickness constant
+  (`GROUND_PLANE_THICKNESS`) — Ground Height positions its TOP face
+  (`position.y = height - thickness/2`), Ground Scale touches only
+  X/Z. Live-verified via `Box3.setFromObject()`, not just visually.
+  See `docs/CHANGELOG.txt`'s matching 2026-09-27 (7th) entry.

@@ -2177,6 +2177,100 @@ Commit: `b56783f`. Pushed to `https://github.com/LeisHo/Handy-Set`;
 Vercel auto-deployed.
 
 --------------------------------------------------------------------------------
+2026-09-27  -  (6th, same day)
+
+Direct correction: "ok the rotation still isnt looking good on desktop.
+I guess I didnt give you a point to measre from. Use the base point of
+the forearm bone. then project that perpendicular to the camera on to
+the ground plane. then use that point and the projected cursor point
+to measure the rotation angle."
+
+Every prior round on this feature measured the cursor's offset from
+SCREEN CENTER -- an arbitrary reference with no relationship to where
+the hand actually is -- then added that offset onto
+`hand.wrapper.position` afterward. Never actually measured "cursor
+relative to the hand" as one consistent operation.
+
+Rewrote `updateTiltTarget()`'s mouse branch exactly per spec:
+- Point A (new module var `tiltOriginGround`): `rForearmBend`'s own
+  LIVE world position (already held stable frame-to-frame by the
+  existing pivot/anchor math in `animate()`), projected onto the world
+  Y=0 ground plane by sliding it along the CAMERA's own forward
+  direction (`camera.getWorldDirection()`) -- "project that
+  perpendicular to the camera," i.e. along the camera's own optical
+  axis. Degenerate fallback (camera looking perfectly horizontally,
+  forward.y ~0) drops straight down instead of leaving a stale value.
+- Point B (`tiltTarget`, reused): the cursor's own raycast through the
+  camera, now hitting that SAME Y=0 ground plane (previously a
+  vertical Z=0 plane, `cursorTargetPlane` -- removed entirely, fully
+  unused after this change; the device-orientation branch never used
+  it either).
+- `baseDeg` (mouse path only) now reads X/Z off these 2 ground points
+  via `computeRadialRollDeg()`'s existing `{x,y}` shape (world Z
+  aliased into the `.y` slot). Device-orientation is untouched -- no
+  camera ray to ground-project in the first place.
+
+Live-verified: `rForearmBend`'s real world position unchanged (~7e-14
+noise) across the rotation -- the anchor still holds. Cursor at screen
+center (203,457) -> ~-0.44 deg (correctly near-neutral); a lower-right
+position (350,700, near `tiltMagnitude`'s 1.0 clamp) -> a large
+rotation -- confirms the angle now genuinely responds to the cursor's
+position relative to the hand, not an arbitrary screen-center
+reference.
+
+`index.html`'s own `main.js` cache-buster bumped `?v=78` -> `?v=79`.
+
+Commit: `d975d8a`. Pushed to `https://github.com/LeisHo/Handy-Set`;
+Vercel auto-deployed.
+
+--------------------------------------------------------------------------------
+2026-09-27  -  (7th, same day)
+
+Direct spec, via the project's own `*DC*`/`*D*` dev-panel shorthand
+(CLAUDE.md §12g):
+```
+*DC* GROUND PLANE*
+*D* GROUND PLANE ON AND OFF*
+*D* GROUND HEIGHT*
+*D* GROUND COLOR*
+*D* GROUND SCALE*
+```
+plus 2 clarifications: "Top plane of the ground will be the datum line
+for the ground height" and "Scale just means horizontal dimensions,
+not the thikcness." Separately, mid-turn: "then in the debug group,
+add a gizmo to display the world XYZ axes" / "as in add a cehckbox
+that allows me to turn that on annd off."
+
+Added a real, visible ground slab (`THREE.BoxGeometry`, fixed non-
+adjustable thickness constant `GROUND_PLANE_THICKNESS = 1`) -- NOT the
+same thing as Palm Rotation's own invisible Y=0 math plane from the
+entry above (unrelated; both happen to reference "ground," one is a
+raycast target, this one is scene decoration). `updateGroundPlane()`
+positions it so the TOP face sits exactly at `cfg.groundHeight`
+(`position.y = height - thickness/2`) and scales only X/Z by
+`cfg.groundScale` (Y scale hardcoded to 1, never touched by that
+slider). New "Ground Plane" dev-panel group with all 4 controls in
+the specified order.
+
+Also added `THREE.AxesHelper(50)` + a "Show World Axes Gizmo" checkbox
+in the existing Debug group, mirroring the already-present "Show Grid
+Helper" checkbox's exact pattern (default off, `axesHelper.visible`
+toggled directly).
+
+Live-verified: real checkbox clicks (not direct cfg writes) toggle
+both; `Box3.setFromObject()` on the ground mesh confirmed its top face
+sits at exactly Y=0 (default) and Y=25 (after moving the height
+slider) -- never the box's center; its scale vector read `[200,1,200]`
+after setting Ground Scale to 200, confirming Y is untouched. A
+screenshot with both enabled showed the gray slab under the hand and
+the AxesHelper's green (Y) axis line running through the scene.
+
+`index.html`'s own `main.js` cache-buster bumped `?v=79` -> `?v=80`.
+
+Commit: `b020c78`. Pushed to `https://github.com/LeisHo/Handy-Set`;
+Vercel auto-deployed.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

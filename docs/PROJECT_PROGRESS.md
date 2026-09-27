@@ -12,6 +12,25 @@ Nothing in progress. Pushed to `https://github.com/LeisHo/Handy-Set`
 
 ## Recently completed
 
+- **NEW (2026-09-27): Ground Plane dev-panel group (real visible slab,
+  4 controls: On/Off, Height, Color, Scale) + a World Axes Gizmo
+  checkbox in Debug.** Ground Height positions the slab's TOP face
+  (not center); Ground Scale only affects X/Z (thickness is a fixed
+  constant). Both live-verified: real checkbox clicks + `Box3`-measured
+  world bounds. See `docs/CHANGELOG.txt`'s matching 2026-09-27 (7th)
+  entry.
+
+- **RESOLVED (2026-09-27, 6th pass): Palm rotation still didn't feel
+  right on desktop — root cause was measuring the cursor's offset from
+  SCREEN CENTER (arbitrary) instead of from the hand's own actual
+  position.** Fixed per direct spec: the forearm base's live world
+  position is projected onto the world Y=0 ground plane along the
+  CAMERA's own forward direction, and the cursor is raycast onto that
+  same ground plane — the rotation angle is measured directly between
+  those two points. Live-verified: forearm anchor still holds (~7e-14
+  noise), screen-center now correctly reads ~0deg. See
+  `docs/CHANGELOG.txt`'s matching 2026-09-27 (6th) entry.
+
 - **RESOLVED (2026-09-27, 5th pass): Palm rotation snapped instantly to
   full strength on any nonzero cursor offset or device tilt, instead of
   scaling proportionally — fixed mouse "not aligned with cursor" feel
