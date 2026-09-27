@@ -122,6 +122,13 @@ const cfg = {
   showGridHelper: false, showAxesHelper: false, showWireframe: false,
   // Ground Plane
   groundPlaneEnabled: false, groundHeight: 0, groundColor: '#808080', groundScale: 200,
+  // Finger Gizmos -- visual-only (no TransformControls/IK dragging, per
+  // direct confirmation), ported conceptually from HANDO's own real
+  // setupFingerGizmos()/marker-sync code (read directly, not
+  // reconstructed). Axis Length/Thickness are this project's own
+  // addition, not present in HANDO's version.
+  fingerGizmosEnabled: false, fingerGizmoSize: 1, fingerGizmoColor: '#ffcc00',
+  fingerGizmoAxisLength: 4, fingerGizmoAxisThickness: 0.3,
   sensorStreamEnabled: false, sensorIntervalMs: 200,
   deviceInfoEnabled: false
 }
@@ -199,6 +206,137 @@ const FINGER_BASE_ONLY_CURL_KEY = { thumb: 'baseOnlyCurlThumb', index: 'baseOnly
 const FINGER_TIP_ONLY_CURL_KEY = { thumb: 'tipOnlyCurlThumb', index: 'tipOnlyCurlIndex', middle: 'tipOnlyCurlMiddle', ring: 'tipOnlyCurlRing', pinky: 'tipOnlyCurlPinky' }
 const FINGER_MID_ONLY_CURL_KEY = { thumb: 'midOnlyCurlThumb', index: 'midOnlyCurlIndex', middle: 'midOnlyCurlMiddle', ring: 'midOnlyCurlRing', pinky: 'midOnlyCurlPinky' }
 const FINGER_TIP_TWIST_MAX_DEG = 90
+
+// =======================================================================
+// Finger Gizmos -- VISUAL ONLY (confirmed with the user: markers + axis
+// lines at every joint, no TransformControls/click-to-drag/CCD-IK).
+// Ported conceptually from HANDO's own real setupFingerGizmos()/
+// updateJointMarker()/getFingerTipWorldPosition() (read directly from
+// J:\CLAUDE\PROJECTS\HANDO\src\main.js, not reconstructed) -- same
+// per-joint marker + tip-offset-for-the-last-joint approach, minus the
+// TransformControls/IK machinery HANDO also has. Axis Length/Thickness
+// sliders are this project's own addition, not present in HANDO's
+// version, per direct request ("also provide 3 lines depicting the 3
+// axes at points that have them... a slider... for the length... a
+// slider to control the thickness").
+// -----------------------------------------------------------------------
+const FINGER_GIZMO_TIP_LENGTH_FACTOR = 0.6 // matches HANDO's own constant
+const fingerGizmoTipLocalOffset = {} // per finger name, computed once (bone rest lengths are shared across every hand -- same model)
+const _gizmoTipWorldPos = new THREE.Vector3()
+const _gizmoBoneWorldQuat = new THREE.Quaternion()
+const _gizmoAxisDir = new THREE.Vector3()
+const _gizmoAxisMid = new THREE.Vector3()
+const GIZMO_AXIS_COLORS = { x: 0xff0000, y: 0x00ff00, z: 0x0000ff } // three.js's own gizmo convention, matching HANDO's own comment
+const fingerGizmoMarkerGeo = new THREE.SphereGeometry(1, 12, 12)
+// Unit cylinder along its own local Y, radius 1 -- scaled per-instance to
+// (thickness, length, thickness) and rotated so local Y aligns with the
+// target world axis direction.
+const fingerGizmoAxisGeo = new THREE.CylinderGeometry(1, 1, 1, 8)
+
+function jointKey(finger, jointIndex) { return `${finger}#${jointIndex}` }
+function isTipJoint(finger, jointIndex) { return jointIndex === FINGER_JOINTS[finger].length - 1 }
+
+// Called once, after the model loads -- bone REST lengths are identical
+// across every hand (all clones of the same model), so this is computed
+// globally, not per-hand.
+function computeFingerGizmoTipOffsets(skeleton) {
+  FINGER_NAMES.forEach((name) => {
+    const joints = FINGER_JOINTS[name]
+    const lastBone = skeleton.getBoneByName(joints[joints.length - 1])
+    if (!lastBone) return
+    fingerGizmoTipLocalOffset[name] = new THREE.Vector3(0, lastBone.position.length() * FINGER_GIZMO_TIP_LENGTH_FACTOR, 0)
+  })
+}
+function getFingerGizmoTipWorldPosition(skeleton, name, target) {
+  const joints = FINGER_JOINTS[name]
+  const lastBone = skeleton.getBoneByName(joints[joints.length - 1])
+  return target.copy(fingerGizmoTipLocalOffset[name] || new THREE.Vector3()).applyMatrix4(lastBone.matrixWorld)
+}
+
+// Builds the 15 markers + 45 axis-line cylinders for ONE hand, stored
+// directly on that hand's own entry (mirrors how clipPlane/
+// currentBaseQuat etc. are already stored per-hand) -- added to `scene`
+// directly (like HANDO's own markers), NOT parented under h.wrapper/
+// h.clone, so their own transform is set purely from each bone's live
+// matrixWorld each frame with no double-transformation risk.
+function setupFingerGizmosForHand(handEntry) {
+  handEntry.gizmoMarkers = {}
+  handEntry.gizmoAxisLines = {}
+  FINGER_NAMES.forEach((finger) => {
+    FINGER_JOINTS[finger].forEach((_, jointIndex) => {
+      const marker = new THREE.Mesh(fingerGizmoMarkerGeo, new THREE.MeshBasicMaterial({ color: cfg.fingerGizmoColor, depthTest: false, transparent: true, opacity: 0.9 }))
+      marker.renderOrder = 999
+      marker.visible = false
+      scene.add(marker)
+      handEntry.gizmoMarkers[jointKey(finger, jointIndex)] = marker
+
+      const axes = {}
+      ;['x', 'y', 'z'].forEach((axis) => {
+        const line = new THREE.Mesh(fingerGizmoAxisGeo, new THREE.MeshBasicMaterial({ color: GIZMO_AXIS_COLORS[axis], depthTest: false, transparent: true, opacity: 0.9 }))
+        line.renderOrder = 999
+        line.visible = false
+        scene.add(line)
+        axes[axis] = line
+      })
+      handEntry.gizmoAxisLines[jointKey(finger, jointIndex)] = axes
+    })
+  })
+}
+// Removes one hand's own gizmo meshes from the scene -- called from
+// rebuildField() before the old `hands` array is discarded, since these
+// meshes are NOT parented under h.wrapper (removing the wrapper alone
+// would leak them into the scene forever otherwise).
+function teardownFingerGizmosForHand(handEntry) {
+  if (handEntry.gizmoMarkers) Object.values(handEntry.gizmoMarkers).forEach((m) => scene.remove(m))
+  if (handEntry.gizmoAxisLines) Object.values(handEntry.gizmoAxisLines).forEach((axes) => Object.values(axes).forEach((m) => scene.remove(m)))
+}
+
+const _gizmoWorldAxisX = new THREE.Vector3(), _gizmoWorldAxisY = new THREE.Vector3(), _gizmoWorldAxisZ = new THREE.Vector3()
+const _gizmoAlignQuat = new THREE.Quaternion()
+const _gizmoUnitY = new THREE.Vector3(0, 1, 0)
+function updateFingerGizmoJoint(handEntry, finger, jointIndex) {
+  const marker = handEntry.gizmoMarkers[jointKey(finger, jointIndex)]
+  const axes = handEntry.gizmoAxisLines[jointKey(finger, jointIndex)]
+  const bone = handEntry.skinnedMesh.skeleton.getBoneByName(FINGER_JOINTS[finger][jointIndex])
+  if (!bone) return
+  if (isTipJoint(finger, jointIndex)) marker.position.copy(getFingerGizmoTipWorldPosition(handEntry.skinnedMesh.skeleton, finger, _gizmoTipWorldPos))
+  else marker.position.setFromMatrixPosition(bone.matrixWorld)
+  bone.getWorldQuaternion(_gizmoBoneWorldQuat)
+  marker.quaternion.copy(_gizmoBoneWorldQuat)
+  marker.scale.setScalar(cfg.fingerGizmoSize)
+  marker.material.color.set(cfg.fingerGizmoColor)
+
+  _gizmoWorldAxisX.set(1, 0, 0).applyQuaternion(_gizmoBoneWorldQuat)
+  _gizmoWorldAxisY.set(0, 1, 0).applyQuaternion(_gizmoBoneWorldQuat)
+  _gizmoWorldAxisZ.set(0, 0, 1).applyQuaternion(_gizmoBoneWorldQuat)
+  const dirs = { x: _gizmoWorldAxisX, y: _gizmoWorldAxisY, z: _gizmoWorldAxisZ }
+  ;['x', 'y', 'z'].forEach((axisName) => {
+    const line = axes[axisName]
+    const dir = dirs[axisName]
+    // The cylinder extends FROM the joint outward along `dir` -- its own
+    // local Y (the geometry's default axis) is rotated to align with
+    // `dir`, and its center is offset by half the length so its BASE
+    // (not center) sits at the joint.
+    _gizmoAlignQuat.setFromUnitVectors(_gizmoUnitY, dir)
+    line.quaternion.copy(_gizmoAlignQuat)
+    line.position.copy(marker.position).addScaledVector(dir, cfg.fingerGizmoAxisLength / 2)
+    line.scale.set(cfg.fingerGizmoAxisThickness, cfg.fingerGizmoAxisLength, cfg.fingerGizmoAxisThickness)
+  })
+}
+function updateAllFingerGizmos() {
+  if (!cfg.fingerGizmosEnabled) return
+  hands.forEach((h) => {
+    if (!h.gizmoMarkers) return
+    FINGER_NAMES.forEach((finger) => FINGER_JOINTS[finger].forEach((_, i) => updateFingerGizmoJoint(h, finger, i)))
+  })
+}
+function setFingerGizmosVisible(v) {
+  hands.forEach((h) => {
+    if (h.gizmoMarkers) Object.values(h.gizmoMarkers).forEach((m) => { m.visible = v })
+    if (h.gizmoAxisLines) Object.values(h.gizmoAxisLines).forEach((axes) => Object.values(axes).forEach((m) => { m.visible = v }))
+  })
+  if (v) updateAllFingerGizmos()
+}
 
 const POSE_KEY_DEFAULTS = {}
 FINGER_NAMES.forEach((f) => {
@@ -1270,7 +1408,10 @@ function updateTiltTarget() {
 // DANDIES build once fieldRows/fieldCols are actually raised above 1.
 // =======================================================================
 function rebuildField() {
-  hands.forEach((h) => { if (h.wrapper.parent) h.wrapper.parent.remove(h.wrapper) })
+  hands.forEach((h) => {
+    if (h.wrapper.parent) h.wrapper.parent.remove(h.wrapper)
+    teardownFingerGizmosForHand(h) // NOT parented under h.wrapper -- must be removed separately or they leak into the scene
+  })
   hands = []
   const rows = Math.max(1, Math.round(cfg.fieldRows))
   const cols = Math.max(1, Math.round(cfg.fieldCols))
@@ -1359,6 +1500,7 @@ function rebuildField() {
       // updateWristClipPlaneForHand()'s own declaration comment for why
       // this needs to run every frame, not just on UI triggers.
       skinnedMesh.onBeforeRender = () => updateWristClipPlaneForHand(handEntry)
+      setupFingerGizmosForHand(handEntry)
       hands.push(handEntry)
     }
   }
@@ -1418,6 +1560,7 @@ new GLTFLoader().load(MODEL_URL, async (gltf) => {
   if (!skinned) { loadingEl.textContent = 'No skinned mesh found in model.'; return }
   root.traverse((o) => { if (o.isMesh && o !== skinned) o.visible = false })
   root.updateMatrixWorld(true)
+  computeFingerGizmoTipOffsets(skinned.skeleton) // bone rest lengths, shared across every hand clone
 
   const wristBone = skinned.skeleton.getBoneByName('rHand')
   const tipBone = skinned.skeleton.getBoneByName('rMid3')
@@ -1895,6 +2038,7 @@ function animate() {
       }
     }
     applyReactiveWristSplayFrame()
+    updateAllFingerGizmos()
   }
   curveWidgetResyncs.forEach((fn) => fn())
   composer.render()
@@ -2941,6 +3085,19 @@ function renderHandysetDevGroups() {
   wireColor('colorGroundColor', (v) => { cfg.groundColor = v; updateGroundPlane() })
   addRow(groundContent, { id: 'sliderGroundScale', label: 'Ground Scale (Horizontal, World Units)', type: 'slider', min: 10, max: 2000, step: 10, value: cfg.groundScale })
   wireSlider('sliderGroundScale', (v) => { cfg.groundScale = v; updateGroundPlane() })
+
+  const gizmoContent = addGroup('Finger Gizmos')
+  addRow(gizmoContent, { id: 'checkboxFingerGizmosEnabled', label: 'Finger Gizmos On/Off', type: 'checkbox' })
+  document.getElementById('checkboxFingerGizmosEnabled').checked = cfg.fingerGizmosEnabled
+  wireCheckbox('checkboxFingerGizmosEnabled', (v) => { cfg.fingerGizmosEnabled = v; setFingerGizmosVisible(v) })
+  addRow(gizmoContent, { id: 'sliderFingerGizmoSize', label: 'Gizmo Size (x)', type: 'slider', min: 0.1, max: 5, step: 0.05, value: cfg.fingerGizmoSize })
+  wireSlider('sliderFingerGizmoSize', (v) => { cfg.fingerGizmoSize = v })
+  addRow(gizmoContent, { id: 'colorFingerGizmoColor', label: 'Gizmo Color', type: 'color', value: cfg.fingerGizmoColor })
+  wireColor('colorFingerGizmoColor', (v) => { cfg.fingerGizmoColor = v })
+  addRow(gizmoContent, { id: 'sliderFingerGizmoAxisLength', label: 'Axis Line Length (World Units)', type: 'slider', min: 0.5, max: 20, step: 0.25, value: cfg.fingerGizmoAxisLength })
+  wireSlider('sliderFingerGizmoAxisLength', (v) => { cfg.fingerGizmoAxisLength = v })
+  addRow(gizmoContent, { id: 'sliderFingerGizmoAxisThickness', label: 'Axis Line Thickness (World Units)', type: 'slider', min: 0.02, max: 3, step: 0.02, value: cfg.fingerGizmoAxisThickness })
+  wireSlider('sliderFingerGizmoAxisThickness', (v) => { cfg.fingerGizmoAxisThickness = v })
 
   renderDebugExtras()
 
