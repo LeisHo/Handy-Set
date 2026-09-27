@@ -1394,7 +1394,11 @@ function applyCameraPreset(item) {
   camera.updateProjectionMatrix()
   controls.update()
   cfg.cameraZoom = item.zoom !== undefined ? item.zoom : camera.position.distanceTo(controls.target)
+  cfg.cameraRotX = item.cameraRotX !== undefined ? item.cameraRotX : 0
+  cfg.cameraRotY = item.cameraRotY !== undefined ? item.cameraRotY : 0
+  cfg.cameraRotZ = item.cameraRotZ !== undefined ? item.cameraRotZ : 0
   Object.assign(cfg, { cameraX: camera.position.x, cameraY: camera.position.y, cameraZ: camera.position.z, cameraFov: camera.fov, targetX: controls.target.x, targetY: controls.target.y, targetZ: controls.target.z })
+  setCameraBaseQuaternion()
   syncPairsFromCfg(CAMERA_SYNC_PAIRS)
 }
 function applyLightingPreset(item) {
@@ -1593,6 +1597,8 @@ function animate() {
     applyRendererSize(window.innerWidth, window.innerHeight)
   }
   controls.update()
+  applyCameraRotation()
+  syncCameraRotationSliders()
   if (!isPaused) {
     if (cfg.trackingEnabled && hands.length) {
       updateTiltTarget()
@@ -1923,7 +1929,7 @@ function addFingerSliders(content, finger) {
 }
 
 function capturePoseFromCfg() { const o = {}; POSE_PRESET_KEYS.forEach((k) => { o[k] = cfg[k] }); return o }
-function captureCameraFromLive() { return { x: camera.position.x, y: camera.position.y, z: camera.position.z, fov: camera.fov, tx: controls.target.x, ty: controls.target.y, tz: controls.target.z, zoom: cfg.cameraZoom } }
+function captureCameraFromLive() { return { x: camera.position.x, y: camera.position.y, z: camera.position.z, fov: camera.fov, tx: controls.target.x, ty: controls.target.y, tz: controls.target.z, zoom: cfg.cameraZoom, cameraRotX: cfg.cameraRotX, cameraRotY: cfg.cameraRotY, cameraRotZ: cfg.cameraRotZ } }
 function captureLightingFromLive() { const o = {}; LIGHTING_PRESET_KEYS.forEach((k) => { o[k] = cfg[k] }); return o }
 
 // Full list-picker widget, ported to match HANDY DANDIES' own
@@ -2239,6 +2245,11 @@ function applyCameraLockState() {
   controls.enableZoom = !cfg.lockCameraZoom
   controls.enableRotate = !cfg.lockCameraRotate
 }
+// Store the "base" camera state (before any slider rotations) for readback
+let cameraBaseQuaternion = null
+function setCameraBaseQuaternion() {
+  cameraBaseQuaternion = camera.quaternion.clone()
+}
 function applyCameraRotation() {
   // Rotates the camera around its own local axes (camera-anchored). The
   // rotation is applied by rotating the camera's position relative to the
@@ -2264,6 +2275,44 @@ function applyCameraRotation() {
   // Reposition camera at the new direction
   camera.position.copy(target).add(direction.multiplyScalar(distance))
   controls.update()
+}
+function syncCameraRotationSliders() {
+  // Extract camera's current rotation and update slider values to match.
+  // This keeps sliders in sync when the user rotates with the mouse (OrbitControls).
+  const target = controls.target
+  const dir = camera.position.clone().sub(target).normalize()
+
+  // Create a quaternion from the camera direction
+  const tmpQuat = new THREE.Quaternion()
+  tmpQuat.setFromUnitVectors(new THREE.Vector3(0, 0, -1), dir)
+
+  // Convert to euler angles
+  const euler = new THREE.Euler().setFromQuaternion(tmpQuat, 'YXZ')
+
+  // Update cfg values (in degrees) and clamp to -180 to 180
+  let rotX = THREE.MathUtils.radToDeg(euler.x)
+  let rotY = THREE.MathUtils.radToDeg(euler.y)
+  let rotZ = THREE.MathUtils.radToDeg(euler.z)
+
+  // Normalize angles to -180 to 180
+  while (rotX > 180) rotX -= 360
+  while (rotX < -180) rotX += 360
+  while (rotY > 180) rotY -= 360
+  while (rotY < -180) rotY += 360
+  while (rotZ > 180) rotZ -= 360
+  while (rotZ < -180) rotZ += 360
+
+  cfg.cameraRotX = rotX
+  cfg.cameraRotY = rotY
+  cfg.cameraRotZ = rotZ
+
+  // Update slider DOM values without triggering change events
+  const sliderX = document.getElementById('sliderCameraRotX')
+  const sliderY = document.getElementById('sliderCameraRotY')
+  const sliderZ = document.getElementById('sliderCameraRotZ')
+  if (sliderX) sliderX.value = Math.round(rotX)
+  if (sliderY) sliderY.value = Math.round(rotY)
+  if (sliderZ) sliderZ.value = Math.round(rotZ)
 }
 // Simplified vs. Handy Dandies' own version: clamps zoom distance only
 // (controls.maxDistance), not the full pan-target clamped-to-boundary-
