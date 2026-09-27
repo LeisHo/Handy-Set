@@ -12,6 +12,20 @@ Nothing in progress. Pushed to `https://github.com/LeisHo/Handy-Set`
 
 ## Recently completed
 
+- **RESOLVED (2026-09-27, 2nd pass): Palm Faces Cursor was computing an
+  extra, buggy roll on top of the lookAt (read from a bone's own LIVE
+  previous-frame world quaternion, compounding frame to frame) instead
+  of "just rotating to follow the cursor."** Fixed by making it produce
+  only the lookAt. Added a new Palm Face Rotation (Deg) slider,
+  deliberately rolling around world UP (not Handy Dandies' own
+  wristCropNormalAligned axis — an earlier draft found the forearm
+  bone's local Y coincides with that axis exactly on this rig, so world
+  UP was used instead to keep it genuinely different, per direct
+  instruction). Removed the dead, never-wired-up earlier partial port
+  of Handy Dandies' compass-roll mechanism. Live-verified both by direct
+  math comparison and through the real dev-panel slider control. See
+  `docs/CHANGELOG.txt`'s matching 2026-09-27 (2nd) entry.
+
 - **RESOLVED (2026-09-27): Tracking Enabled itself caused the whole arm
   to rotate, even with Palm Rotation/Responsive Wrist Splay/Wrist Crop
   all off.** An earlier same-morning fix (Haiku session, `dd070b3`)

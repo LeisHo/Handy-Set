@@ -874,3 +874,69 @@ wiring, and are still open:
   all in that feature's own compute path — it wasn't, for 2 of the 3,
   until this fix.** See `docs/CHANGELOG.txt`'s matching 2026-09-27
   entry for the full account.
+- **CORRECTED, same day (2nd pass) — the `hands.forEach` gating
+  structure the entry above describes ("wrapping that whole
+  `hands.forEach` block in `if (cfg.palmFacesCursor)`") no longer
+  matches the code.** Direct follow-up report: "Palm faces cursor
+  doesnt work correctly. It should just be rotating to follow the
+  cursor. Also provide a Palm Face Rotation slider just like Handy
+  Dandies but it should be adjusting the palm rotation around the Y
+  axis of the arm, which may be different from Handy Dandies." Per the
+  user's own NEW standing rule ("from now on when i tell you to
+  reference another project, take that as a hard rule — you must
+  always check what i tell you to reference"), read HANDY DANDIES' real
+  `computeRadialRollDeg()`/`computeRollQuat()`/animate()-loop usage
+  directly before touching anything. Found HANDYSET already had a
+  STALE, never-wired-up partial port of that exact mechanism sitting in
+  the file (defined at module scope, never called from `animate()`) —
+  the code actually running was a different, ad-hoc roll: an EXTRA
+  rotation composed on top of the lookAt, around a Y axis read from
+  `rForearmBend`'s own LIVE (previous-frame) world quaternion every
+  frame — a moving reference frame that compounds with itself and
+  duplicates what the lookAt already does, matching "doesn't work
+  correctly." `hands.forEach` now always runs (whenever
+  `cfg.trackingEnabled && hands.length`, no `if (cfg.palmFacesCursor)`
+  wrapper around the loop itself anymore); INSIDE the loop, `desired` is
+  the lookAt when `cfg.palmFacesCursor` is on, identity otherwise — so
+  the net visible effect (nothing, with both Palm Faces Cursor and Palm
+  Face Rotation at their off/0 defaults) is unchanged from the entry
+  above's own invariant, just restructured to also host the new
+  always-additive slider. Verified live: with `palmFacesCursor=true`,
+  the real wrapper quaternion matched an independently-computed pure
+  lookAt quaternion (`angleTo` ~0.0000017 deg) — confirming NO extra
+  roll is baked in anymore.
+- **New Palm Face Rotation (Deg) slider (`cfg.palmFaceRotationOffset`,
+  -180 to 180, def 0) rolls around world UP (0,1,0), applied in WORLD
+  SPACE via `desired.premultiply(...)` (i.e. AFTER the lookAt) — NOT
+  HANDY DANDIES' own axis (`wristCropNormalAligned`, composed in OBJECT
+  space via `desired.multiply(...)`, i.e. BEFORE the lookAt).** Found
+  2026-09-27: an earlier draft tried to stay closer to Handy Dandies'
+  own pattern by measuring `rForearmBend`'s own local Y axis at bind
+  pose (the same "measure once at load, align via `alignQuat`" recipe
+  `wristCropNormalAligned` itself uses) — live-tested and found this
+  measured vector was numerically IDENTICAL to `wristCropNormalAligned`
+  to 6 decimal places. Root cause: this rig's bones are authored with
+  local Y running along their own length (a common rigging convention),
+  so "the bone's local Y" and "the bone's own forward/length direction"
+  are the same vector here — using it would have made the new slider
+  behave identically to Handy Dandies' own, directly failing the user's
+  explicit "may be different from Handy Dandies" spec. Switched to
+  plain world UP instead (no bone measurement needed at all — simpler,
+  and trivially distinct from Handy Dandies' roughly-forward/-Z-ish
+  axis). Always composes onto `desired` regardless of
+  `cfg.palmFacesCursor` (matching HANDY DANDIES' own always-additive
+  slider behavior) — with the slider at its 0 default this has no
+  visible effect, so it doesn't violate the "Tracking Enabled alone =
+  no visible change" invariant above; a nonzero slider value is a
+  deliberate, expected effect, the same way `cfg.hideWrist`'s own
+  static (non-reactive) crop value already works elsewhere in this
+  file. Verified live 2 ways: (1) direct math — `cfg.palmFaceRotationOffset
+  = 45` with Palm Faces Cursor off produced a wrapper quaternion
+  matching a 45 deg rotation around (0,1,0) exactly (`angleTo` 0 deg);
+  (2) through the real dev-panel slider itself — typed 90 into its
+  click-to-type field, wrapper quaternion exactly matched a 90 deg
+  world-Y rotation. **If a future project's own "Y axis" or "local
+  axis" spec produces a degenerate/coincidental match with an existing
+  axis, don't silently ship it — the coincidence itself is worth
+  surfacing, the way this one was.** See `docs/CHANGELOG.txt`'s matching
+  2026-09-27 (2nd) entry for the full account.

@@ -1917,6 +1917,63 @@ Commit: `f9fc0cb`. Pushed to `https://github.com/LeisHo/Handy-Set`;
 Vercel auto-deployed.
 
 --------------------------------------------------------------------------------
+2026-09-27  -  (2nd, same day)
+
+Direct report, immediately after the Tracking Enabled fix above: "Palm
+faces cursor doesnt work correctly. It should just be rotating to
+follow the cursor. Also provide a Palm Face Rotation slider just like
+Handy Dandies bbut it should be adsusting the palm rotation around the
+Y axis of the arm. which may be different from Handy Dandies."
+
+Read HANDY DANDIES' real Palm Faces Cursor / Palm Face Rotation
+implementation directly (per the user's own new standing rule: always
+check a named reference project before implementing). Found HANDYSET
+already had a STALE, never-wired-up partial port of it
+(`computeRadialRollDeg()`/`computeRollQuat()`, defined at module scope
+but never called from `animate()`) -- the code actually running there
+was a different, ad-hoc mechanism: an extra roll composed on top of
+the lookAt, using a Y axis read from `rForearmBend`'s own LIVE
+(previous-frame) world quaternion every frame. That's a moving
+reference frame that compounds with itself frame to frame, and a
+redundant second cursor-relative rotation stacked on the lookAt's own
+-- consistent with "doesn't work correctly."
+
+Fixed by making Palm Faces Cursor produce ONLY the lookAt (`desired` =
+lookAt(...) when the checkbox is on, identity otherwise) -- "just
+rotating to follow the cursor," verified live by comparing the real
+wrapper quaternion against an independently-computed pure lookAt
+quaternion (angleTo ~0.0000017 deg, floating-point noise).
+
+Added the new Palm Face Rotation (Deg) slider (-180 to 180, def 0),
+composed onto `desired` in WORLD space via `premultiply` (applied
+AFTER the lookAt, not before) around world UP (0,1,0) -- a true "spin
+around vertical" regardless of current facing direction. Deliberately
+NOT Handy Dandies' own axis: an earlier draft measured
+`rForearmBend`'s own local Y at bind pose (mirroring how
+`wristCropNormalAligned` is measured) and found it numerically
+IDENTICAL to `wristCropNormalAligned` to 6 decimal places -- this
+rig's bones are authored with local Y running along their own length,
+so that axis choice would have made the new slider indistinguishable
+from Handy Dandies' own, failing the user's explicit "may be
+different" requirement. Switched to plain world UP instead: simpler,
+unambiguous, and trivially distinct from Handy Dandies' roughly
+forward/-Z-ish axis. Verified live two ways: (1) direct math --
+`cfg.palmFaceRotationOffset = 45` with Palm Faces Cursor off produced
+a wrapper quaternion exactly matching a 45 deg rotation around
+(0,1,0) (angleTo 0 deg); (2) through the real dev-panel slider control
+itself -- typed 90 into the click-to-type field, wrapper quaternion
+exactly matched a 90 deg world-Y rotation (angleTo 0 deg).
+
+Removed the dead `computeRadialRollDeg()`/`computeRollQuat()` (the
+stale, never-wired incomplete port mentioned above) rather than
+leaving 2 competing, unused-vs-used roll mechanisms in the file.
+
+`index.html`'s own `main.js` cache-buster bumped `?v=72` -> `?v=73`.
+
+Commit: `d95e8f0`. Pushed to `https://github.com/LeisHo/Handy-Set`;
+Vercel auto-deployed.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
