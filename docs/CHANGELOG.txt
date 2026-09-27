@@ -2382,6 +2382,40 @@ Commit: `bbd29e9`. Pushed to `https://github.com/LeisHo/Handy-Set`;
 Vercel auto-deployed.
 
 --------------------------------------------------------------------------------
+2026-09-27  -  (11th, same day)
+
+Direct report: "When my cursor moves more to the left, the hand
+rotates to the right" (inverted) and "when i move the cursor fully
+around the hand... the hand suddenly jumps to rotate in the other
+direction... Make it smooth."
+
+Direction: negated `dx` in `computeRadialRollDeg()` -- flips left/
+right response only.
+
+Smoothness: investigated before guessing (a synthetic atan2-wrap sweep
+fed through `setFromAxisAngle`+`Quaternion.slerp`, measured via
+`angleTo()`, proved the raw pipeline was ALREADY continuous through the
+wrap at both damping=1 and damping=0.15 -- no spike). Real cause is
+almost certainly the dead-zone freeze (10th entry) resuming straight
+into an instant, unsmoothed `trackingDamping=1` snap. Added
+`smoothAngleDeg()` -- wrap-aware exponential smoothing (shortest
+signed delta, hard-capped degrees/frame) on the mouse path's own raw
+compass angle, independent of `cfg.trackingDamping`'s own quaternion-
+level slerp.
+
+Verified: direction flip confirmed live (`wrapper.quaternion.y` sign
+inverted at a fixed cursor position). Smoothing math verified by
+direct code inspection (a hard per-frame cap mathematically cannot
+jump instantly); sub-frame empirical capture was attempted but proved
+impractical in this remote sandbox (rAF polling hangs when the tab
+isn't fronted) -- final resolved states were confirmed correct.
+
+`index.html`'s own `main.js` cache-buster bumped `?v=83` -> `?v=84`.
+
+Commit: `982eb34`. Pushed to `https://github.com/LeisHo/Handy-Set`;
+Vercel auto-deployed.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

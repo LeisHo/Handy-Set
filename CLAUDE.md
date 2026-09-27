@@ -1184,3 +1184,16 @@ wiring, and are still open:
   `AskUserQuestion` before building, given the large scope gap between
   "visual display" and "full interactive posing rig"). See
   `docs/CHANGELOG.txt`'s matching 2026-09-27 (10th) entry.
+- **Palm Rotation direction was inverted (left cursor rotated right);
+  a synthetic atan2-wrap test proved the quaternion pipeline was
+  already smooth, so the "sudden jump" root cause is the dead-zone
+  freeze resuming into an instant `trackingDamping=1` snap, not an
+  atan2 discontinuity.** `smoothAngleDeg()` now smooths the mouse
+  path's raw compass angle (wrap-aware, hard-capped deg/frame),
+  independent of `cfg.trackingDamping`. **Before assuming a NEW angle/
+  rotation bug on this feature is an atan2 or quaternion issue, test it
+  synthetically first (sweep `computeRadialRollDeg()` through its own
+  wrap, measure `angleTo()` on the resulting quaternions) — this is now
+  the 2nd time a plausible-sounding "wrap bug" theory was disproven this
+  way, with the real cause living elsewhere (the dead-zone freeze).**
+  See `docs/CHANGELOG.txt`'s matching 2026-09-27 (11th) entry.
