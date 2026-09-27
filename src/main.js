@@ -1597,7 +1597,6 @@ function animate() {
     applyRendererSize(window.innerWidth, window.innerHeight)
   }
   controls.update()
-  applyCameraRotation()
   syncCameraRotationSliders()
   if (!isPaused) {
     if (cfg.trackingEnabled && hands.length) {
@@ -2277,42 +2276,10 @@ function applyCameraRotation() {
   controls.update()
 }
 function syncCameraRotationSliders() {
-  // Extract camera's current rotation and update slider values to match.
-  // This keeps sliders in sync when the user rotates with the mouse (OrbitControls).
-  const target = controls.target
-  const dir = camera.position.clone().sub(target).normalize()
-
-  // Create a quaternion from the camera direction
-  const tmpQuat = new THREE.Quaternion()
-  tmpQuat.setFromUnitVectors(new THREE.Vector3(0, 0, -1), dir)
-
-  // Convert to euler angles
-  const euler = new THREE.Euler().setFromQuaternion(tmpQuat, 'YXZ')
-
-  // Update cfg values (in degrees) and clamp to -180 to 180
-  let rotX = THREE.MathUtils.radToDeg(euler.x)
-  let rotY = THREE.MathUtils.radToDeg(euler.y)
-  let rotZ = THREE.MathUtils.radToDeg(euler.z)
-
-  // Normalize angles to -180 to 180
-  while (rotX > 180) rotX -= 360
-  while (rotX < -180) rotX += 360
-  while (rotY > 180) rotY -= 360
-  while (rotY < -180) rotY += 360
-  while (rotZ > 180) rotZ -= 360
-  while (rotZ < -180) rotZ += 360
-
-  cfg.cameraRotX = rotX
-  cfg.cameraRotY = rotY
-  cfg.cameraRotZ = rotZ
-
-  // Update slider DOM values without triggering change events
-  const sliderX = document.getElementById('sliderCameraRotX')
-  const sliderY = document.getElementById('sliderCameraRotY')
-  const sliderZ = document.getElementById('sliderCameraRotZ')
-  if (sliderX) sliderX.value = Math.round(rotX)
-  if (sliderY) sliderY.value = Math.round(rotY)
-  if (sliderZ) sliderZ.value = Math.round(rotZ)
+  // Euler angle extraction from camera direction was unstable and created feedback
+  // loops causing slider jittering. The Camera Rotate sliders control camera rotation
+  // when adjusted. TODO: implement stable rotation readback (may require tracking
+  // camera rotation separately from OrbitControls position changes).
 }
 // Simplified vs. Handy Dandies' own version: clamps zoom distance only
 // (controls.maxDistance), not the full pan-target clamped-to-boundary-
