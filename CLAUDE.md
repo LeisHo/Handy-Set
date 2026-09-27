@@ -1263,3 +1263,70 @@ wiring, and are still open:
   ray, even one that looks locally reasonable ("perpendicular to the
   camera").** See `docs/CHANGELOG.txt`'s matching 2026-09-27 (14th)
   entry.
+- **`armBaseDistanceT` (Responsive Arm Rotation at Base / Responsive
+  Wrist Splay's shared distance metric, added 2026-09-27) is
+  DELIBERATELY different from `tiltMagnitude`** — direct request:
+  "make the right side of the X axis (max distance) be set as the
+  farthest distance from the arm base point to the edge of browser."
+  On the mouse path it's the real world XZ distance from
+  `tiltOriginGround` to `tiltTarget`, normalized against the farthest
+  of the 4 screen corners' own ground hits
+  (`computeMaxArmBaseGroundDistance()`); on the device-orientation path
+  it's just `tiltMagnitude` directly (no cursor/ground geometry exists
+  there). **Any FUTURE reactive feature must pick deliberately between
+  the 2 distance metrics now in this file** — `tiltMagnitude` (screen-
+  distance-from-center; still used by Reactive Arm Length) vs.
+  `armBaseDistanceT` (arm-base-relative; used by Base Arm Rotation and
+  Wrist Splay) — they are NOT interchangeable, and defaulting to
+  whichever one is already in scope at the call site is how this kind
+  of inconsistency creeps in.
+- **`applyBaseArmRotation(extraX)`'s per-frame delta-tracking
+  (`h.lastBaseArmQuat`) is correct — a same-day debugging session that
+  initially concluded otherwise was chasing a testing artifact, not a
+  real bug.** Comparing `h.clone.quaternion` values captured across
+  SEPARATE page reloads (rather than within one continuous session)
+  produced a false "toggling Off doesn't reset the rotation" reading,
+  because each reload's own actual starting baseline differed (this
+  project's dev panel persists control state across reloads via
+  localStorage) — 2 numbers that looked like "no reset happened" were
+  actually 2 DIFFERENT sessions' own correct-but-different baselines
+  being compared against each other. Resolved by re-testing within a
+  single uninterrupted session (clear localStorage once, then toggle
+  on/off back-to-back with no intervening reload) — confirmed 0 delta
+  drift (~1e-19) on Off. **If a future test on this project's own
+  reactive/delta-tracking features (Base Arm Rotation, Responsive Wrist
+  Splay, Reactive Arm Length, or any future one) seems to show a
+  "doesn't reset"/"doesn't update" result, verify the before/after
+  reads came from the SAME session (no reload in between) before
+  concluding it's a real bug** — this is now a documented, reproduced
+  false-positive pattern specific to this project's own persist-across-
+  reload dev panel behavior. See `docs/CHANGELOG.txt`'s matching
+  2026-09-27 (15th) entry for the full account.
+- **`applyResponsivePoseTweenFrame()` and `applyReactiveWristSplayFrame()`
+  are mutually exclusive per frame, not both-run** — `animate()` calls
+  `if (cfg.poseTweenResponsiveEnabled) { applyResponsivePoseTweenFrame() }
+  else { applyReactiveWristSplayFrame() }`. Pose Tween already re-bakes
+  the WHOLE pose (including wristSplay) every frame via
+  `applyPoseValuesToHand()`; running Wrist Splay's own reapplication in
+  the same frame would immediately overwrite that blended wrist value
+  with `cfg.wristSplay` (the Pose group's own slider, untouched by the
+  tween), undoing part of what the tween just did. **If a future
+  feature adds a 3rd whole-pose-rebaking reactive system, it needs the
+  same mutual-exclusion treatment against both of these** — Responsive
+  Arm Rotation at Base is fine running alongside either (it's a
+  separate bone/axis, rForearmBend's own rotation, untouched by
+  `applyPoseValuesToHand()`).
+- **"Default pose" for Responsive Pose Tween reads as `DEFAULT_POSE_NAME`
+  (a named pose), not a live snapshot of whatever's posed when the
+  feature is turned on** — a disclosed interpretation choice, since the
+  request's own wording ("tween between the default pose and the
+  target pose... the target pose is 100, and default is 0") was
+  genuinely ambiguous between "2 named endpoints" and "current state +
+  a named target." Chosen because it avoids needing a new "snapshot
+  captured at an arbitrary moment" mechanism this file doesn't
+  otherwise have, and because Target Pose is unambiguously a NAMED
+  pose (a picker), making a named Default the more parallel reading.
+  **If this interpretation turns out to be wrong, the fix is
+  `findSavedPoseByName(DEFAULT_POSE_NAME)` -> some captured live-cfg
+  snapshot inside `applyResponsivePoseTweenFrame()`, not a rewrite of
+  the blend math itself.**

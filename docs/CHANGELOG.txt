@@ -2575,6 +2575,109 @@ Commit: `e0677cd`. Pushed to `https://github.com/LeisHo/Handy-Set`;
 Vercel auto-deployed.
 
 --------------------------------------------------------------------------------
+2026-09-27  -  (15th, same day)
+
+Implements items 4-6 of the earlier 6-part request (items 1-3 were the
+Palm Rotation/Whole-Hand-Rotation-at-Base fixes, entries 11th-12th):
+"withi nthe phone tilt group, add a RESPONSIE ARM ROTATION AT BASE...
+Provide the same 2 new inputs for the Responsive wrist splay... add a
+'Responsive Pose Tween' subgroup."
+
+New shared distance metric, `armBaseDistanceT`: per the request ("make
+the right side of the X axis (max distance) be set as the farthest
+distance from the arm base point to the edge of browser... if parallel
+to the floor is 0, then 90 degrees in any tilt is 100"), this is
+DELIBERATELY different from the existing `tiltMagnitude` (screen-
+distance-from-CENTER). On the mouse path: the real world-space XZ
+distance from `tiltOriginGround` (the forearm base's own ground point)
+to `tiltTarget` (the cursor's own ground hit), normalized 0-1 against
+the farthest such distance reachable from any of the 4 screen corners
+(`computeMaxArmBaseGroundDistance()`, a new function -- 4 corner
+raycasts onto the same ground plane, only refreshed on a genuine hit
+so a dead-zone freeze holds this steady too). On the device-
+orientation path: identical to `tiltMagnitude` -- there's no cursor/
+ground geometry on mobile, and "the further the phone tilt" already IS
+what `tiltMagnitude` measures there.
+
+Item 4 -- new "Responsive Arm Rotation at Base" subgroup (Phone Tilt
+group): On/Off checkbox, fine-tune slider, min/max range, curve graph
+-- matching the request's own control list exactly (no separate
+"reactive" sub-toggle the way Reactive Arm Length/Responsive Wrist
+Splay have, since the request's list is just those 4 controls).
+`applyBaseArmRotation()` (the already curl-axis-safe function from the
+12th entry's fix) gained an `extraX` parameter -- the reactive amount
+is added onto `cfg.baseRotationX` every frame via a new
+`applyResponsiveBaseArmRotationFrame()`, reusing the SAME delta-
+tracking rather than a 2nd rotation system, so it inherits that fix's
+correctness for free.
+
+Item 5 -- Responsive Wrist Splay's existing curve/range now read
+`armBaseDistanceT` instead of `tiltMagnitude` (2 call sites:
+`applyPoseValuesToHand`, `applyReactiveWristSplayFrame`), plus updated
+UI captions/labels to describe the new metric. Reactive Arm Length is
+untouched, still reads `tiltMagnitude`.
+
+Item 6 -- new "Responsive Pose Tween" subgroup: On/Off, a Target Pose
+`<select>` over `SAVED_POSES` (new `wireSelect()` helper), and a curve
+graph. "Default pose" is read as `DEFAULT_POSE_NAME` (a named pose,
+parallel to Target Pose also being named) rather than a live snapshot
+of whatever's posed when the feature is turned on -- a disclosed
+interpretation choice, documented at `findSavedPoseByName()`'s own
+comment. `applyResponsivePoseTweenFrame()` blends EVERY numeric pose
+field between the 2 named poses by the curve's own Y output (0=Default,
+1=Target), then hands the blended object to the EXISTING
+`applyPoseValuesToHand()` pipeline -- deliberately never writing new
+bone-rotation code, so it inherits that pipeline's already-correct
+baseQuat/curl-exclude-quat pairing instead of risking a 5th instance of
+this file's own recurring curl-axis bug class. Mutually exclusive with
+Responsive Wrist Splay's own per-frame reapplication in the same frame
+(animate()'s own `if (cfg.poseTweenResponsiveEnabled) {...} else
+{applyReactiveWristSplayFrame()}`) -- Pose Tween already re-bakes the
+whole pose including wristSplay every frame; running Wrist Splay's own
+reapplication in the same frame would immediately overwrite that
+blended wrist value with `cfg.wristSplay` (the Pose group's own
+slider, untouched by the tween), undoing part of what the tween just
+did.
+
+Verified live via direct state inspection (finger-bone quaternion
+reads, not just screenshots -- a screenshot-only check would have been
+insufficient, see the debugging note below):
+- Base Arm Rotation: with `baseRotationX=0`, toggling On applied a
+  measured +30deg delta (matching the default curve's near-arm-base
+  value); toggling Off reverted `h.clone.quaternion` to the exact
+  pre-reactive baseline to floating-point noise (~1e-19).
+- Pose Tween: with Target Pose = "Big Open Palm" (curlIndex 0) against
+  Default = "Fist" (curlIndex 90), moving the cursor between 2 screen
+  positions produced 2 clearly DIFFERENT `rIndex1` bone quaternions
+  (`[0.104,0.070,-0.657,0.743]` near the arm base vs.
+  `[-0.120,-0.007,-0.034,0.992]` farther away) and 2 visibly different
+  screenshots (a closed fist vs. a splayed-open palm); disabling
+  reverted the bone exactly back to the live Fist-slider value.
+
+Debugging note, worth flagging for future work on this feature: an
+EARLIER round of this same verification (Base Arm Rotation's On/Off
+toggle) produced a confusing false negative -- comparing quaternion
+values captured across SEPARATE page reloads (rather than within one
+continuous session) meant each reload's own actual starting baseline
+differed (this project's dev panel persists control state), so 2
+numbers that looked like "it didn't reset" were actually 2 DIFFERENT
+sessions' own correct-but-different baselines being compared against
+each other. Resolved by re-testing within a single uninterrupted
+session (localStorage cleared once, then on/off toggled back-to-back
+without an intervening reload) -- confirmed the delta math was correct
+the whole time. If a future test on this project's own reactive/delta-
+tracking features seems to show a "doesn't reset" result, verify the
+before/after reads came from the SAME session before concluding it's a
+real bug.
+
+`index.html`'s own `main.js` cache-buster bumped `?v=87` -> `?v=92`
+(v88-v91 were intermediate debug-logging builds during the false-
+negative investigation above, never shipped as final).
+
+Commit: `c7bcc7f`. Pushed to `https://github.com/LeisHo/Handy-Set`;
+Vercel auto-deployed.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

@@ -7,17 +7,40 @@ append-only history.
 
 ## Currently working on
 
-- **Multi-part request in progress (2026-09-27):** (1) DONE — Palm
-  Rotation direction inverted + wrap-safe smoothing. (2) DONE —
-  Whole-Hand-Rotation-at-Base curl-axis bug fixed (same class as 3
-  prior fixes). (3) NOT STARTED — new "Responsive Arm Rotation at Base"
-  subgroup in Phone Tilt (on/off, fine-tune slider, min/max range,
-  curve graph, reusing the existing `buildReactiveRangeWidget`/
-  `buildReactiveCurveWidget` infra). (4) NOT STARTED — apply the same
-  distance metric to Responsive Wrist Splay. (5) NOT STARTED — new
-  "Responsive Pose Tween" subgroup (on/off, target pose, curve graph,
-  tweening default<->target pose safely through the existing pose
-  pipeline).
+Nothing in progress — the 6-part Palm Rotation/Responsive-features
+request (2026-09-27) is fully complete, plus 2 interjected fixes from
+the same session (Saved Cameras/list-picker persistence; Palm Rotation
+height/distance independence + forearm-base marker). See Recently
+completed below for the full account.
+
+Pushed to `https://github.com/LeisHo/Handy-Set`
+(deployed via the Vercel project at `https://vercel.com/lpeis/handy-set`).
+
+## Recently completed
+
+- **DONE (2026-09-27): items 4-6 of the 6-part Palm Rotation request —
+  Responsive Arm Rotation at Base, unified distance metric on
+  Responsive Wrist Splay, Responsive Pose Tween.** New shared
+  `armBaseDistanceT` metric (cursor-to-arm-base distance on desktop,
+  phone-tilt % on mobile — deliberately different from the existing
+  `tiltMagnitude`). Base Arm Rotation reuses `applyBaseArmRotation()`'s
+  own curl-axis-safe delta-tracking; Pose Tween blends between
+  `DEFAULT_POSE_NAME` and a picked target pose through the existing
+  `applyPoseValuesToHand()` pipeline, specifically to avoid a 5th
+  instance of this file's own recurring curl-axis bug class. Live-
+  verified via direct finger-bone quaternion reads (not just
+  screenshots): Base Arm Rotation's On/Off applies/reverts a measured
+  exact delta; Pose Tween visibly and measurably blends between Fist
+  and Big Open Palm by cursor distance. See `docs/CHANGELOG.txt`'s
+  matching 2026-09-27 (15th) entry.
+- **RESOLVED (2026-09-27): Palm Rotation depended on height and cursor
+  distance when it shouldn't have; added a 2nd marker for the forearm
+  base point.** `tiltOriginGround` now drops the forearm bone's world Y
+  directly instead of sliding it along the camera's forward direction
+  (which coupled the result to height/camera pitch); removed the
+  `tiltMagnitude` scaling on Palm Rotation's angle entirely. New cyan
+  `forearmBaseMarkerMesh`, sharing Show Target Marker's own checkbox.
+  See `docs/CHANGELOG.txt`'s matching 2026-09-27 (14th) entry.
 - **RESOLVED (2026-09-27): Saved Cameras (and all 5 list-pickers —
   Poses/Cameras/Lighting/Toon Shading/Tween Sequences) never actually
   persisted their Save/Overwrite/Rename/Delete/+Group/Import
@@ -27,11 +50,10 @@ append-only history.
   dedicated localStorage + best-effort remote-sync persistence layer.
   Live-verified: Save/Delete on Saved Cameras survives a real page
   reload. See `docs/CHANGELOG.txt`'s matching 2026-09-27 (13th) entry.
-
-Pushed to `https://github.com/LeisHo/Handy-Set`
-(deployed via the Vercel project at `https://vercel.com/lpeis/handy-set`).
-
-## Recently completed
+- **DONE (2026-09-27): items 1-2 of the same 6-part request — Palm
+  Rotation direction inverted + wrap-safe smoothing (11th entry);
+  Whole-Hand-Rotation-at-Base curl-axis bug fixed, same class as 3
+  prior fixes (12th entry).**
 
 - **NEW (2026-09-27): Finger Gizmos (visual-only, confirmed with the
   user — no TransformControls/IK dragging).** Markers + 3 colored axis
