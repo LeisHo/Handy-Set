@@ -7,10 +7,29 @@ append-only history.
 
 ## Currently working on
 
-Nothing in progress. Pushed to `https://github.com/LeisHo/Handy-Set`
-(deployed via the Vercel project at `https://vercel.com/lpeis/handy-set`).
+- **Open question for the user: Palm Rotation's Y=0 ground-plane raycast
+  only hits the plane in the bottom ~third of the screen** (camera looks
+  level-to-slightly-upward from Y~31.4, never down toward Y=0) — the
+  rest of the screen leaves `tiltTarget` frozen. Needs a decision: a
+  different reference Y, a different approach for the no-hit case, or
+  a camera-framing change. Not yet fixed.
+- **Finger Gizmos** (visual-only, confirmed with the user — no
+  TransformControls/IK): markers + 3 colored axis lines at every finger
+  joint, with Size/Color/Axis Length/Axis Thickness controls and an
+  on/off checkbox, ported conceptually from HANDO's own real
+  `setupFingerGizmos()`/marker-sync code (read directly, not
+  reconstructed) but without HANDO's TransformControls/CCD-IK dragging.
+  Not yet implemented.
+
+Pushed to `https://github.com/LeisHo/Handy-Set` (deployed via the
+Vercel project at `https://vercel.com/lpeis/handy-set`).
 
 ## Recently completed
+
+- **RESOLVED (2026-09-27): Show Target Marker checkbox had no actual
+  mesh behind it since Phone Tilt was first built.** Added a small
+  magenta sphere synced to `tiltTarget` every frame when enabled. See
+  `docs/CHANGELOG.txt`'s matching 2026-09-27 (8th) entry.
 
 - **NEW (2026-09-27): Ground Plane dev-panel group (real visible slab,
   4 controls: On/Off, Height, Color, Scale) + a World Axes Gizmo

@@ -2271,6 +2271,33 @@ Commit: `b020c78`. Pushed to `https://github.com/LeisHo/Handy-Set`;
 Vercel auto-deployed.
 
 --------------------------------------------------------------------------------
+2026-09-27  -  (8th, same day)
+
+Direct report: "check th show target marker checkbox. i cant see the
+marker." `checkboxShowTargetMarker`/`cfg.showTargetMarker` existed
+since Phone Tilt was first built but was never wired to a real mesh --
+`wireCheckbox()` only ever set the cfg flag. Added a small magenta
+sphere (`depthTest:false`, renders on top), synced to `tiltTarget`
+every frame in `animate()` when enabled.
+
+Found (not yet fixed) while verifying: the 6th-round ground-plane
+rewrite's raycast onto world Y=0 only actually hits that plane for
+roughly the BOTTOM THIRD of the screen with the current default camera
+framing (measured: screen Y 0-500px of ~900px tall = zero hits; ~600px
+and below = hits) -- the camera sits at Y~31.4 looking toward Y~33.6,
+level to slightly UPWARD, never down toward Y=0. Above that line,
+`tiltTarget` simply never updates (frozen at its last successful
+value), so Palm Rotation stops responding to the cursor across most of
+the screen. Not present with the old vertical Z=0 plane (near-guaranteed
+to be hit by any ray regardless of camera tilt). Surfaced to the user
+rather than silently choosing a replacement Y value.
+
+`index.html`'s own `main.js` cache-buster bumped `?v=80` -> `?v=81`.
+
+Commit: `3efa8a0`. Pushed to `https://github.com/LeisHo/Handy-Set`;
+Vercel auto-deployed.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

@@ -1128,3 +1128,20 @@ wiring, and are still open:
   (`position.y = height - thickness/2`), Ground Scale touches only
   X/Z. Live-verified via `Box3.setFromObject()`, not just visually.
   See `docs/CHANGELOG.txt`'s matching 2026-09-27 (7th) entry.
+- **`checkboxShowTargetMarker` was a dormant control (no mesh) since
+  Phone Tilt was first built — fixed 2026-09-27.** Wired to a small
+  magenta sphere synced to `tiltTarget` every frame.
+- **Real, unresolved limitation found while verifying that fix: the
+  6th-round Y=0 ground-plane raycast (see that entry above) only hits
+  the plane for the BOTTOM ~THIRD of the screen with the current
+  default camera framing** (camera Y~31.4, looking toward Y~33.6 —
+  level-to-upward, never down toward Y=0). Measured directly: screen Y
+  0-500px of ~900px tall never intersects; ~600px+ does. Above that
+  line `tiltTarget` is simply frozen at its last successful value, so
+  Palm Rotation stops responding to the cursor across most of the
+  screen — a real regression vs. the old vertical Z=0 plane (hit by
+  nearly any ray regardless of camera tilt). **Flagged to the user, not
+  silently patched** — needs a decision on the right fix (different
+  reference Y, a fallback for the no-hit case, or reconsidering camera
+  framing) before this is closed out. See `docs/CHANGELOG.txt`'s
+  matching 2026-09-27 (8th) entry.
