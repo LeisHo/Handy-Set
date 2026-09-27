@@ -67,13 +67,17 @@
     "checkboxWristSplayResponsiveEnabled": false,
     "sliderWristSplayDefault": -74,
     "checkboxWristSplayReactiveEnabled": false,
-    "sliderCameraX": 0.5,
-    "sliderCameraY": 124.5,
-    "sliderCameraZ": 5.5,
+    "sliderCameraX": 1,
+    "sliderCameraY": 130,
+    "sliderCameraZ": 5,
     "sliderCameraFov": 15,
     "sliderCameraZoom": 99.5,
     "checkboxLockCameraPan": true,
     "checkboxLockCameraZoom": true,
+    "checkboxLockCameraRotate": true,
+    "sliderCameraRotX": 0,
+    "sliderCameraRotY": 0,
+    "sliderCameraRotZ": 0,
     "checkboxCameraMaxExtentsEnabled": true,
     "checkboxTrackingEnabled": false,
     "sliderTrackingDamping": 0.2,
@@ -2517,6 +2521,34 @@
         "items": [
           {
             "type": "row",
+            "key": "checkboxLockCameraRotate"
+          },
+          {
+            "type": "row",
+            "key": "checkboxLockCameraPan"
+          },
+          {
+            "type": "row",
+            "key": "checkboxLockCameraZoom"
+          },
+          {
+            "type": "row",
+            "key": "checkboxCameraMaxExtentsEnabled"
+          },
+          {
+            "type": "row",
+            "key": "sliderCameraRotX"
+          },
+          {
+            "type": "row",
+            "key": "sliderCameraRotY"
+          },
+          {
+            "type": "row",
+            "key": "sliderCameraRotZ"
+          },
+          {
+            "type": "row",
             "key": "sliderCameraX"
           },
           {
@@ -2536,18 +2568,6 @@
             "key": "sliderCameraZoom"
           },
           {
-            "type": "row",
-            "key": "checkboxLockCameraPan"
-          },
-          {
-            "type": "row",
-            "key": "checkboxLockCameraZoom"
-          },
-          {
-            "type": "row",
-            "key": "checkboxCameraMaxExtentsEnabled"
-          },
-          {
             "type": "group",
             "section": {
               "key": "desktop:Saved Cameras",
@@ -2558,14 +2578,18 @@
           }
         ],
         "rowKeys": [
+          "checkboxLockCameraRotate",
+          "checkboxLockCameraPan",
+          "checkboxLockCameraZoom",
+          "checkboxCameraMaxExtentsEnabled",
+          "sliderCameraRotX",
+          "sliderCameraRotY",
+          "sliderCameraRotZ",
           "sliderCameraX",
           "sliderCameraY",
           "sliderCameraZ",
           "sliderCameraFov",
-          "sliderCameraZoom",
-          "checkboxLockCameraPan",
-          "checkboxLockCameraZoom",
-          "checkboxCameraMaxExtentsEnabled"
+          "sliderCameraZoom"
         ],
         "subgroups": [
           {
@@ -4613,7 +4637,7 @@
     "desktop:Tracking": false,
     "desktop:New Group": false,
     "desktop:Palm Facing": false,
-    "desktop:Pose": false,
+    "desktop:Pose": true,
     "desktop:ROTATION": false,
     "desktop:THUMB": true,
     "desktop:Wrist": false,
