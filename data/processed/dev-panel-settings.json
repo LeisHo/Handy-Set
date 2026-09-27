@@ -105,7 +105,17 @@
     "sliderRimPower": 0.5,
     "colorRimColor": "#ffffff",
     "colorBgColor": "#bfbfbf",
+    "checkboxGroundPlaneEnabled": true,
+    "sliderGroundHeight": 0,
+    "colorGroundColor": "#ffffff",
+    "sliderGroundScale": 200,
+    "checkboxFingerGizmosEnabled": false,
+    "sliderFingerGizmoSize": 1,
+    "colorFingerGizmoColor": "#ffcc00",
+    "sliderFingerGizmoAxisLength": 4,
+    "sliderFingerGizmoAxisThickness": 0.3,
     "checkboxShowGridHelper": false,
+    "checkboxShowAxesHelper": false,
     "checkboxShowWireframe": false,
     "checkboxSensorStream": false,
     "sliderSensorInterval": 200,
@@ -248,6 +258,67 @@
   },
   "sectionOrder": {
     "desktopTabContent": [
+      {
+        "key": "desktop:Ground Plane",
+        "items": [
+          {
+            "type": "row",
+            "key": "checkboxGroundPlaneEnabled"
+          },
+          {
+            "type": "row",
+            "key": "sliderGroundHeight"
+          },
+          {
+            "type": "row",
+            "key": "colorGroundColor"
+          },
+          {
+            "type": "row",
+            "key": "sliderGroundScale"
+          }
+        ],
+        "rowKeys": [
+          "checkboxGroundPlaneEnabled",
+          "sliderGroundHeight",
+          "colorGroundColor",
+          "sliderGroundScale"
+        ],
+        "subgroups": []
+      },
+      {
+        "key": "desktop:Finger Gizmos",
+        "items": [
+          {
+            "type": "row",
+            "key": "checkboxFingerGizmosEnabled"
+          },
+          {
+            "type": "row",
+            "key": "sliderFingerGizmoSize"
+          },
+          {
+            "type": "row",
+            "key": "colorFingerGizmoColor"
+          },
+          {
+            "type": "row",
+            "key": "sliderFingerGizmoAxisLength"
+          },
+          {
+            "type": "row",
+            "key": "sliderFingerGizmoAxisThickness"
+          }
+        ],
+        "rowKeys": [
+          "checkboxFingerGizmosEnabled",
+          "sliderFingerGizmoSize",
+          "colorFingerGizmoColor",
+          "sliderFingerGizmoAxisLength",
+          "sliderFingerGizmoAxisThickness"
+        ],
+        "subgroups": []
+      },
       {
         "key": "desktop:Dev Panel",
         "items": [
@@ -1270,7 +1341,11 @@
         "items": [
           {
             "type": "row",
-            "key": "__row0"
+            "key": "checkboxShowAxesHelper"
+          },
+          {
+            "type": "row",
+            "key": "__row1"
           },
           {
             "type": "group",
@@ -1350,7 +1425,8 @@
           }
         ],
         "rowKeys": [
-          "__row0",
+          "checkboxShowAxesHelper",
+          "__row1",
           "checkboxShowGridHelper",
           "checkboxShowWireframe"
         ],
@@ -2725,6 +2801,18 @@
     ],
     "mobileTabContent": [
       {
+        "key": "mobile:Ground Plane",
+        "items": [],
+        "rowKeys": [],
+        "subgroups": []
+      },
+      {
+        "key": "mobile:Finger Gizmos",
+        "items": [],
+        "rowKeys": [],
+        "subgroups": []
+      },
+      {
         "key": "mobile:Dev Panel",
         "items": [
           {
@@ -3669,6 +3757,18 @@
       }
     ],
     "landscapeTabContent": [
+      {
+        "key": "landscape:Ground Plane",
+        "items": [],
+        "rowKeys": [],
+        "subgroups": []
+      },
+      {
+        "key": "landscape:Finger Gizmos",
+        "items": [],
+        "rowKeys": [],
+        "subgroups": []
+      },
       {
         "key": "landscape:Dev Panel",
         "items": [
@@ -4616,45 +4716,49 @@
   },
   "sectionCollapseState": {
     "desktop:Saved Dev Settings": false,
+    "desktop:Ground Plane": true,
+    "desktop:Finger Gizmos": true,
     "desktop:Dev Panel": true,
-    "desktop:MECHANICS": false,
-    "desktop:PANEL UI": false,
-    "desktop:TEXT": false,
-    "desktop:Dev Panel Title": false,
-    "desktop:Group Title": false,
-    "desktop:Setting Title": false,
-    "desktop:TABS": false,
-    "desktop:BUTTONS": false,
+    "desktop:MECHANICS": true,
+    "desktop:PANEL UI": true,
+    "desktop:TEXT": true,
+    "desktop:Dev Panel Title": true,
+    "desktop:Group Title": true,
+    "desktop:Setting Title": true,
+    "desktop:TABS": true,
+    "desktop:BUTTONS": true,
     "desktop:Debug": true,
-    "desktop:Settings": false,
+    "desktop:Settings": true,
     "desktop:Mouse Log": true,
-    "desktop:Sensors": false,
+    "desktop:Sensors": true,
     "desktop:Tween": true,
-    "desktop:Saved Tween Sequences": false,
+    "desktop:Saved Tween Sequences": true,
     "desktop:Field Layout": true,
-    "desktop:Phone Tilt": false,
-    "desktop:Target": false,
-    "desktop:Responsive Wrist Splay": false,
-    "desktop:New Group": false,
-    "desktop:Palm Facing": false,
+    "desktop:Phone Tilt": true,
+    "desktop:Target": true,
+    "desktop:Responsive Wrist Splay": true,
+    "desktop:New Group": true,
+    "desktop:Palm Facing": true,
     "desktop:Pose": true,
-    "desktop:Whole-Hand Rotation at Base": false,
-    "desktop:ROTATION": false,
+    "desktop:Whole-Hand Rotation at Base": true,
+    "desktop:ROTATION": true,
     "desktop:THUMB": true,
-    "desktop:Wrist": false,
+    "desktop:Wrist": true,
     "desktop:Index": true,
     "desktop:Middle": true,
     "desktop:Ring": true,
     "desktop:Pinky": true,
     "desktop:Pose Offset": true,
-    "desktop:Saved Poses": false,
-    "desktop:Camera": false,
-    "desktop:Saved Cameras": false,
+    "desktop:Saved Poses": true,
+    "desktop:Camera": true,
+    "desktop:Saved Cameras": true,
     "desktop:Lighting": true,
     "desktop:Saved Lighting": true,
     "desktop:Toon Shading": true,
-    "desktop:Saved Toon Shading": false,
+    "desktop:Saved Toon Shading": true,
     "desktop:Background": true,
+    "mobile:Ground Plane": false,
+    "mobile:Finger Gizmos": false,
     "mobile:Dev Panel": true,
     "mobile:MECHANICS": false,
     "mobile:PANEL UI": false,
@@ -4694,6 +4798,8 @@
     "mobile:Toon Shading": false,
     "mobile:Saved Toon Shading": false,
     "mobile:Background": false,
+    "landscape:Ground Plane": false,
+    "landscape:Finger Gizmos": false,
     "landscape:Dev Panel": true,
     "landscape:MECHANICS": true,
     "landscape:PANEL UI": true,
@@ -4972,7 +5078,11 @@
     "sliderLandscapeWristSplayDefault": null,
     "checkboxLandscapeReactiveArmLengthEnabled": null,
     "mobile:Whole-Hand Rotation at Base": null,
-    "landscape:Whole-Hand Rotation at Base": null
+    "landscape:Whole-Hand Rotation at Base": null,
+    "mobile:Ground Plane": null,
+    "mobile:Finger Gizmos": null,
+    "landscape:Ground Plane": null,
+    "landscape:Finger Gizmos": null
   },
   "devTextOverridesManual": [
     "desktop:New Group",
