@@ -18,8 +18,15 @@ append-only history.
   "Responsive Pose Tween" subgroup (on/off, target pose, curve graph,
   tweening default<->target pose safely through the existing pose
   pipeline).
-- **Also reported: Saved Cameras doesn't persist ("it doesnt seem to
-  save still").** Investigating.
+- **RESOLVED (2026-09-27): Saved Cameras (and all 5 list-pickers —
+  Poses/Cameras/Lighting/Toon Shading/Tween Sequences) never actually
+  persisted their Save/Overwrite/Rename/Delete/+Group/Import
+  mutations.** Root cause: `buildListPicker()` called
+  `saveDevPanelSettings()`, which only captures REGISTERED dev-panel
+  controls — a raw items array has no such registration. Fixed with a
+  dedicated localStorage + best-effort remote-sync persistence layer.
+  Live-verified: Save/Delete on Saved Cameras survives a real page
+  reload. See `docs/CHANGELOG.txt`'s matching 2026-09-27 (13th) entry.
 
 Pushed to `https://github.com/LeisHo/Handy-Set`
 (deployed via the Vercel project at `https://vercel.com/lpeis/handy-set`).

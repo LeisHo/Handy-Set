@@ -2451,6 +2451,69 @@ Commit: `4142335`. Pushed to `https://github.com/LeisHo/Handy-Set`;
 Vercel auto-deployed.
 
 --------------------------------------------------------------------------------
+2026-09-27  -  (13th, same day)
+
+Direct report: "h and double check the saed cameras. it doesnt seem to
+save still" (Saved Cameras not persisting).
+
+Root cause, confirmed via direct localStorage inspection after a real
+Save click (monkey-patched window.prompt/confirm to drive the flow):
+`buildListPicker()`'s Save/Overwrite/Rename/Delete/+Group/Import
+handlers all mutate their own `items` array in memory, then call
+`saveDevPanelSettings()` hoping it persists -- but that (devPanel.js-
+owned) function only captures state from REGISTERED dev-panel controls
+(hidden inputs, sliders, etc.). A raw JS array like SAVED_CAMERAS has
+no such registration, so it was completely invisible to Sync --
+`devPanelSettings` in localStorage had no field for it at all, only
+the standard controls/layout/style keys. This silently affected all 5
+list-pickers built by this shared function (Saved Tween Sequences,
+Poses, Cameras, Lighting, Toon Shading), not just Cameras -- every
+mutation appeared to work (the in-memory array and its DOM list both
+updated) but reset to the hardcoded seed data on every reload.
+
+Fixed with a dedicated persistence layer, keyed by a new required
+`opts.storageKey` per list-picker: `persistListPickerItems()`
+(localStorage, always-on baseline per CLAUDE.md Section 12l, plus a
+best-effort async GET-merge-POST to the same git-tracked settings
+endpoint the existing `saveFieldAsDefault()`/`loadFieldDefaultIfSaved()`
+pattern already uses) is called after every mutation handler, in
+addition to the existing `saveDevPanelSettings()` call.
+`loadListPickerItemsFromLocalStorage()` runs synchronously at module
+load (right after the 5 SAVED_* arrays are declared), before anything
+else in the module reads them, so even Tween's own direct read of
+SAVED_POSES sees restored data. Remote (git-synced) data is merged in
+via `loadListPickerItemsFromRemoteData()`, called from the existing
+`loadRemoteSettingsOnStartup()` using its one shared GET response
+(rather than 5 separate per-list fetches) -- merged in BEFORE
+`ensureDevPanelBuilt()` runs, so a fresh production visit (no `?dev=1`,
+panel not yet built) renders each picker already showing the remote
+data; a dev-mode session whose panel was already eagerly built before
+this fetch resolves still gets the arrays updated correctly, only that
+one picker's already-rendered list doesn't visually refresh until next
+reload -- a minor, disclosed gap, since every later Save/Overwrite
+still reads the live (now-correct) array.
+
+Verified live end-to-end: cleared localStorage's list-picker key,
+clicked Save on Saved Cameras (name "TestCameraSaveXYZ") with prompt/
+confirm monkey-patched, confirmed the new entry appeared in
+`localStorage.handyset_listPicker_cameras`; reloaded the page for
+real (a genuine navigation, not a soft re-render) and confirmed the
+saved camera was still present in both localStorage AND the rendered
+list-picker UI -- the actual reported symptom, now fixed. Then
+exercised Delete on that same entry and confirmed localStorage
+correctly dropped back to the 7-camera seed set, proving the fix
+covers removal as well as addition. (Hit this sandbox's own documented
+"local static server intermittently fails to fully deliver a large
+script" gotcha twice during this verification -- `main.js` came back
+`net::ERR_CONNECTION_RESET` on 2 of 4 navigations; not a code issue,
+resolved by retrying the navigation.)
+
+`index.html`'s own `main.js` cache-buster bumped `?v=85` -> `?v=86`.
+
+Commit: `333201a`. Pushed to `https://github.com/LeisHo/Handy-Set`;
+Vercel auto-deployed.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

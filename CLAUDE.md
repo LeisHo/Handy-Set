@@ -1213,3 +1213,33 @@ wiring, and are still open:
   pivot (`modelRotationPivot`) — combining both sliders can still shift
   where Base Rotation's pivot ends up; not the reported bug. See
   `docs/CHANGELOG.txt`'s matching 2026-09-27 (12th) entry.
+- **Every list-picker built via `buildListPicker()` (Saved Poses/
+  Cameras/Lighting/Toon Shading/Tween Sequences) silently never
+  persisted ANY of its own Save/Overwrite/Rename/Delete/+Group/Import
+  mutations, since this file was first written — fixed 2026-09-27.**
+  Root cause: those handlers only ever mutated their own `items` array
+  in memory, then called `saveDevPanelSettings()` — but that
+  devPanel.js-owned function only captures state from REGISTERED
+  dev-panel controls (hidden inputs, sliders, etc.); a raw items array
+  has no such registration, so it was completely invisible to Sync.
+  Confirmed live via direct `localStorage` inspection: `devPanelSettings`
+  had no camera/pose/lighting/toon/tween field anywhere, only the
+  standard controls/layout/style keys. Fixed by adding a dedicated
+  persistence layer — `persistListPickerItems()` (localStorage +
+  best-effort remote GET-merge-POST, same shape as the existing
+  `saveFieldAsDefault()` pattern), gated by a new required
+  `opts.storageKey` on each `renderPresetPicker()` call site — wired
+  into every mutation handler. `loadListPickerItemsFromLocalStorage()`
+  runs synchronously right after the 5 `SAVED_*` arrays are declared
+  (module load time), before anything else reads them; remote-synced
+  data merges in via `loadRemoteSettingsOnStartup()`'s own single
+  shared GET, before `ensureDevPanelBuilt()` runs. **Any FUTURE
+  list-picker (a new `renderPresetPicker()` call, or a new raw array
+  fed through some other dev-panel control type) needs its own
+  `storageKey` — a control that only calls `saveDevPanelSettings()`
+  without one will hit this exact same silent-non-persistence bug
+  again.** Live-verified end-to-end: Save on Saved Cameras wrote to
+  `localStorage.handyset_listPicker_cameras`, survived a REAL page
+  reload (both in localStorage and in the rendered list UI), and
+  Delete correctly removed it again. See `docs/CHANGELOG.txt`'s
+  matching 2026-09-27 (13th) entry.
