@@ -1020,7 +1020,16 @@ let tiltMagnitude = 0, tiltAngle = 0
 let lastInputSource = 'device' // 'device' | 'mouse' — which path updateTiltTarget() should use this frame
 const cursorNDC = new THREE.Vector2(0, 0)
 const raycaster = new THREE.Raycaster()
-const cursorTargetPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0)
+// The mouse path's own measurement plane -- see updateTiltTarget()'s own
+// comment for the full account. World Y=0 (the same horizontal plane
+// hand.wrapper.position/h.basePosition already sit on for a default 1x1
+// field). Replaces a prior vertical Z=0 "cursorTargetPlane" -- removed,
+// no longer used by anything (the device-orientation branch never raycast
+// at all, it only ever used a synthesized tiltTarget).
+const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0)
+const _forearmWorldPos = new THREE.Vector3()
+const _cameraForwardVec = new THREE.Vector3()
+const tiltOriginGround = new THREE.Vector3()
 let latestOrientation = null
 const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0
 
@@ -1142,30 +1151,50 @@ function computeRadialRollDeg(handPos, targetPos) {
 // perspective raycast, not a fixed-radius normalized circle) without
 // depending on the hand's own position matching the camera's aim point.
 const _tiltRaycastHit = new THREE.Vector3()
-const _tiltCenterHit = new THREE.Vector3()
-const _centerNDC = new THREE.Vector2(0, 0)
 function updateTiltTarget() {
   if (lastInputSource === 'mouse') {
-    // Raycast onto a FIXED ground plane (Z=0 -- matching hand.wrapper.position.z,
-    // which is always 0 for every hand per relayoutField()) to get the XY
-    // offset from screen-center to cursor -- this plane choice is the "0"
-    // reference, never moved to chase targetDepthFactor (a same-day earlier
-    // attempt did that; reverted 2026-09-27 per direct correction -- moving
-    // the plane changes a point's Z, which under perspective changes where
-    // IT reprojects on screen, but never actually changes the XY OFFSET's
-    // own direction, since both raycasts always shared one plane either
-    // way -- so that change fixed nothing real). The Cursor Target Depth
-    // slider is then added ON TOP as a separate, independent Z (not the
-    // plane the offset itself was measured on).
-    raycaster.setFromCamera(_centerNDC, camera)
-    const haveCenter = raycaster.ray.intersectPlane(cursorTargetPlane, _tiltCenterHit)
-    raycaster.setFromCamera(cursorNDC, camera)
-    const haveHit = raycaster.ray.intersectPlane(cursorTargetPlane, _tiltRaycastHit)
-    if (haveCenter && haveHit) {
-      tiltTarget.x = hand.wrapper.position.x + (_tiltRaycastHit.x - _tiltCenterHit.x)
-      tiltTarget.y = hand.wrapper.position.y + (_tiltRaycastHit.y - _tiltCenterHit.y)
+    // REWRITTEN 2026-09-27 (6th round on this feature), direct spec: "I
+    // guess I didnt give you a point to measre from. Use the base point of
+    // the forearm bone. then project that perpendicular to the camera on
+    // to the ground plane. then use that point and the projected cursor
+    // point to measure the rotation angle." Every earlier round measured
+    // the cursor's offset from screen CENTER (an arbitrary reference with
+    // no relationship to where the hand actually is), then bolted that
+    // offset onto hand.wrapper.position afterward -- never actually
+    // measuring "cursor relative to the hand" as ONE consistent
+    // operation. This round measures both the hand and the cursor as
+    // points on the SAME ground plane and takes the angle directly
+    // between them.
+    //
+    // Point A (tiltOriginGround): the rForearmBend bone's own LIVE world
+    // position (already kept fixed/anchored by the pivot math in
+    // animate() -- see that block's own comment -- so this is stable
+    // frame to frame regardless of the rotation being computed from it),
+    // projected onto the world Y=0 ground plane by sliding it along the
+    // CAMERA's own forward direction (not straight down) -- "project that
+    // perpendicular to the camera," i.e. along the camera's optical axis,
+    // which is perpendicular to the camera's own image plane.
+    const forearmBone = hand.skinnedMesh.skeleton.getBoneByName('rForearmBend')
+    if (forearmBone) {
+      forearmBone.getWorldPosition(_forearmWorldPos)
+      camera.getWorldDirection(_cameraForwardVec)
+      if (Math.abs(_cameraForwardVec.y) > 1e-6) {
+        const t = -_forearmWorldPos.y / _cameraForwardVec.y
+        tiltOriginGround.copy(_forearmWorldPos).addScaledVector(_cameraForwardVec, t)
+      } else {
+        // Degenerate case: camera looking perfectly horizontally, its
+        // forward direction never reaches Y=0 -- fall back to a straight
+        // vertical drop instead of leaving a stale value.
+        tiltOriginGround.set(_forearmWorldPos.x, 0, _forearmWorldPos.z)
+      }
     }
-    tiltTarget.z = sceneState.fieldRadius * cfg.targetDepthFactor
+    // Point B (tiltTarget, reused): the cursor's own raycast through the
+    // camera, hitting that SAME ground plane -- the existing, already-
+    // correct technique, just now landing on Y=0 instead of the old
+    // vertical Z=0 plane.
+    raycaster.setFromCamera(cursorNDC, camera)
+    const haveHit = raycaster.ray.intersectPlane(groundPlane, _tiltRaycastHit)
+    if (haveHit) tiltTarget.copy(_tiltRaycastHit)
   } else {
     const maxOffset = sceneState.fieldRadius * 1.2
     tiltTarget.set(tiltMagnitude * maxOffset * Math.cos(tiltAngle), tiltMagnitude * maxOffset * Math.sin(tiltAngle), sceneState.fieldRadius * cfg.targetDepthFactor)
@@ -1675,7 +1704,7 @@ window.__debug = {
   get hand() { return hand }, get hands() { return hands }, get sceneState() { return sceneState },
   get wristPosRaw() { return wristPosRaw }, get forearmPosRaw() { return forearmPosRaw },
   get wristCropNormalAligned() { return wristCropNormalAligned }, get alignQuat() { return alignQuat },
-  get tiltTarget() { return tiltTarget },
+  get tiltTarget() { return tiltTarget }, get tiltOriginGround() { return tiltOriginGround },
   get handLengthRaw() { return handLengthRaw }, get handCenterLocal() { return handCenterLocal },
   getHandCenterWorld, updateWristCrop, computeBaseScale
 }
@@ -1767,8 +1796,21 @@ function animate() {
       // already computed for both input paths) now scales the angle
       // itself, so the rotation smoothly grows from 0 at dead-center/no-
       // tilt up to the full computed direction at max offset/tilt.
+      // Mouse's own baseDeg reads the X/Z ground-plane points
+      // (tiltOriginGround/tiltTarget, both on Y=0 -- see
+      // updateTiltTarget()'s own comment) via computeRadialRollDeg()'s
+      // existing {x,y} shape, with world Z aliased into the .y slot --
+      // device-orientation keeps its own original X/Y computation
+      // (h.wrapper.position/tiltTarget, unchanged) since it has no camera
+      // ray to ground-project in the first place.
+      const _originXZ = { x: tiltOriginGround.x, y: tiltOriginGround.z }
+      const _targetXZ = { x: tiltTarget.x, y: tiltTarget.z }
       hands.forEach((h) => {
-        const baseDeg = cfg.palmFacesCursor ? computeRadialRollDeg(h.wrapper.position, tiltTarget) * tiltMagnitude : 0
+        const baseDeg = cfg.palmFacesCursor
+          ? (lastInputSource === 'mouse'
+              ? computeRadialRollDeg(_originXZ, _targetXZ)
+              : computeRadialRollDeg(h.wrapper.position, tiltTarget)) * tiltMagnitude
+          : 0
         const totalRad = THREE.MathUtils.degToRad(baseDeg + (cfg.palmFaceRotationOffset || 0))
         const axis = UP
         const desired = new THREE.Quaternion().setFromAxisAngle(axis, totalRad)
