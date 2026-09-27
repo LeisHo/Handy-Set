@@ -119,7 +119,9 @@ const cfg = {
   // Tween
   tweenPoses: [], tweenT: 0, tweenFrameCount: 10, exportFramePrefix: 'tween',
   // Debug
-  showGridHelper: false, showWireframe: false,
+  showGridHelper: false, showAxesHelper: false, showWireframe: false,
+  // Ground Plane
+  groundPlaneEnabled: false, groundHeight: 0, groundColor: '#808080', groundScale: 200,
   sensorStreamEnabled: false, sensorIntervalMs: 200,
   deviceInfoEnabled: false
 }
@@ -917,6 +919,32 @@ updateKeyLightPosition()
 const gridHelper = new THREE.GridHelper(40, 40)
 gridHelper.visible = cfg.showGridHelper
 scene.add(gridHelper)
+
+const axesHelper = new THREE.AxesHelper(50)
+axesHelper.visible = cfg.showAxesHelper
+scene.add(axesHelper)
+
+// Ground Plane -- a real, visible slab (not the invisible math plane Palm
+// Rotation's own cursor-tracking raycasts onto -- see updateTiltTarget()'s
+// own comment; unrelated, this one is purely a scene decoration). Fixed,
+// non-user-adjustable thickness per direct instruction ("Scale just means
+// horizontal dimensions, not the thikcness"); Ground Height positions the
+// slab's TOP surface, not its center ("Top plane of the ground will be
+// the datum line for the ground height").
+const GROUND_PLANE_THICKNESS = 1
+const groundPlaneMesh = new THREE.Mesh(
+  new THREE.BoxGeometry(1, GROUND_PLANE_THICKNESS, 1),
+  new THREE.MeshStandardMaterial({ color: cfg.groundColor })
+)
+groundPlaneMesh.visible = cfg.groundPlaneEnabled
+scene.add(groundPlaneMesh)
+function updateGroundPlane() {
+  groundPlaneMesh.visible = cfg.groundPlaneEnabled
+  groundPlaneMesh.scale.set(cfg.groundScale, 1, cfg.groundScale)
+  groundPlaneMesh.position.y = cfg.groundHeight - GROUND_PLANE_THICKNESS / 2
+  groundPlaneMesh.material.color.set(cfg.groundColor)
+}
+updateGroundPlane()
 
 // Toon material + gradient map (simplified from HANDY DANDIES' own version
 // — this project re-derives a standard step-gradient rather than porting
@@ -2795,6 +2823,9 @@ function renderDebugExtras() {
   addRow(debugContent, { id: 'checkboxShowGridHelper', label: 'Show Grid Helper', type: 'checkbox' })
   document.getElementById('checkboxShowGridHelper').checked = cfg.showGridHelper
   wireCheckbox('checkboxShowGridHelper', (v) => { cfg.showGridHelper = v; gridHelper.visible = v })
+  addRow(debugContent, { id: 'checkboxShowAxesHelper', label: 'Show World Axes Gizmo', type: 'checkbox' })
+  document.getElementById('checkboxShowAxesHelper').checked = cfg.showAxesHelper
+  wireCheckbox('checkboxShowAxesHelper', (v) => { cfg.showAxesHelper = v; axesHelper.visible = v })
   addRow(debugContent, { id: 'checkboxShowWireframe', label: 'Show Wireframe', type: 'checkbox' })
   wireCheckbox('checkboxShowWireframe', (v) => { cfg.showWireframe = v; hands.forEach((h) => { h.skinnedMesh.material.wireframe = v }) })
   const pauseRow = document.createElement('div'); pauseRow.className = 'dev-row'
@@ -2855,6 +2886,17 @@ function renderHandysetDevGroups() {
   const bgContent = addGroup('Background')
   addRow(bgContent, { id: 'colorBgColor', label: 'Background Color', type: 'color', value: cfg.bgColor })
   wireColor('colorBgColor', (v) => { cfg.bgColor = v; scene.background.set(v) })
+
+  const groundContent = addGroup('Ground Plane')
+  addRow(groundContent, { id: 'checkboxGroundPlaneEnabled', label: 'Ground Plane On/Off', type: 'checkbox' })
+  document.getElementById('checkboxGroundPlaneEnabled').checked = cfg.groundPlaneEnabled
+  wireCheckbox('checkboxGroundPlaneEnabled', (v) => { cfg.groundPlaneEnabled = v; updateGroundPlane() })
+  addRow(groundContent, { id: 'sliderGroundHeight', label: 'Ground Height (World Units)', type: 'slider', min: -200, max: 200, step: 1, value: cfg.groundHeight })
+  wireSlider('sliderGroundHeight', (v) => { cfg.groundHeight = v; updateGroundPlane() })
+  addRow(groundContent, { id: 'colorGroundColor', label: 'Ground Color', type: 'color', value: cfg.groundColor })
+  wireColor('colorGroundColor', (v) => { cfg.groundColor = v; updateGroundPlane() })
+  addRow(groundContent, { id: 'sliderGroundScale', label: 'Ground Scale (Horizontal, World Units)', type: 'slider', min: 10, max: 2000, step: 10, value: cfg.groundScale })
+  wireSlider('sliderGroundScale', (v) => { cfg.groundScale = v; updateGroundPlane() })
 
   renderDebugExtras()
 
