@@ -57,12 +57,14 @@ const cfg = {
   // trackingEnabled is now a pure on/off gate for motion input; doesn't itself cause rotation
   trackingEnabled: true, trackingDamping: 1, targetDepthFactor: 0.6,
   showTargetMarker: false, palmFacesCursor: false,
-  // Palm Face Rotation -- unlike HANDY DANDIES' own slider (which rolls
-  // around wristCropNormalAligned, roughly the forearm's OWN long axis, in
-  // object space before the lookAt), this rolls around world UP in world
-  // space, AFTER the lookAt -- see animate()'s own comment for why. Direct
-  // instruction: "around the Y axis of the arm, which may be different
-  // from Handy Dandies."
+  // Palm Face Rotation -- adds onto Palm Faces Cursor's own dynamic angle
+  // (see animate()'s own comment), both rotating around the forearm
+  // bone's own local Y axis (armYAxisAligned), anchored at the forearm
+  // bone's own base position -- not HANDY DANDIES' own axis
+  // (wristCropNormalAligned), even though the two happen to coincide on
+  // this rig. Direct instruction: "rotating the entire arm by the Y axis
+  // of the forearm bone... anchored to the base point of the forearm
+  // bone... its a locaize rotation."
   palmFaceRotationOffset: 0,
   // Whole-Hand Rotation at Base (anchored at rForearmBend, using its own axes)
   baseRotationX: 0, baseRotationY: 0, baseRotationZ: 0,
@@ -252,6 +254,21 @@ const boneRestQuat = {}
 let wristPosRaw = new THREE.Vector3()
 let forearmPosRaw = new THREE.Vector3()
 let wristCropNormalAligned = null
+// Palm Face Rotation / Cursor Tracking's own roll axis -- the
+// rForearmBend bone's OWN local Y axis, measured once at bind pose (load
+// time) and re-expressed in the same "aligned" frame as
+// wristCropNormalAligned (via alignQuat). REINSTATED 2026-09-27 (3rd
+// round) after a direct correction: "i said palm face rotation cursor
+// tracking should be rotating the entire arm by the Y axis of the
+// forearm bone. the rotation should be anchored to the base point of the
+// forearm bone" / "its a locaize rotation." A prior round measured this
+// exact vector, found it numerically identical to wristCropNormalAligned
+// (this rig's bones are authored with local Y running along their own
+// length) and swapped to world UP instead to avoid that overlap -- WRONG
+// per this correction: the user wants the real forearm-bone Y axis
+// specifically, coincidence with wristCropNormalAligned or not, not a
+// generic world axis.
+let armYAxisAligned = null
 const modelRotationPivot = new THREE.Vector3()
 const sceneState = { fieldRadius: 10 }
 let toonMaterial = null
@@ -1096,14 +1113,19 @@ function initMotionInput() {
 
 const tiltTarget = new THREE.Vector3()
 const UP = new THREE.Vector3(0, 1, 0)
-// (An earlier, never-wired-up port of HANDY DANDIES' own
-// computeRadialRollDeg()/computeRollQuat() -- a dynamic compass-needle
-// roll around wristCropNormalAligned -- used to live here. Removed
-// 2026-09-27: never called from animate() (a separate, ad-hoc, buggy roll
-// was live there instead), and the user's actual spec for Palm Face
-// Rotation is a plain static slider around a different, fixed axis
-// world UP, not HANDY DANDIES' dynamic cursor-relative angle -- see
-// animate()'s own comment for the real, current mechanism.)
+// Ported from HANDY DANDIES' own real computeRadialRollDeg() -- REINSTATED
+// 2026-09-27 (3rd round on this feature) after a direct correction that
+// Palm Faces Cursor/Palm Face Rotation are ONE combined single-axis
+// rotation (around the forearm bone's own Y axis, anchored at its base --
+// see animate()'s own comment), not a full 3D lookAt with this formula
+// unused. dx/dy measured in world space (X right, Y up) -- deliberately
+// NOT projected through the camera to screen/NDC space, matching HANDY
+// DANDIES' own reasoning (see its own source comment): the world-space
+// XY plane is what "left/right/above/below the cursor" means here too.
+function computeRadialRollDeg(handPos, targetPos) {
+  const dx = handPos.x - targetPos.x, dy = handPos.y - targetPos.y
+  return THREE.MathUtils.radToDeg(Math.atan2(dx, -dy))
+}
 // See this section's own top comment: mouse input raycasts the true
 // cursor position (ported from Handy Dandies' real updateCursorTarget()),
 // device-orientation input keeps the normalized magnitude/angle circular
@@ -1242,7 +1264,13 @@ function rebuildField() {
       // correct dynamically-updated bounding sphere for.
       skinnedMesh.frustumCulled = false
 
-      const handEntry = { wrapper, clone, skinnedMesh, outlineMesh: null, currentBaseQuat: alignQuat.clone(), clipPlane: null, row: r, col: c }
+      // basePosition -- this hand's own field-grid placement (set by
+      // relayoutField()), kept SEPARATE from h.wrapper.position itself
+      // because animate()'s own Palm Face Rotation/Cursor Tracking now
+      // overwrites h.wrapper.position every frame (to anchor the rotation
+      // at the forearm base -- see that block's own comment) and needs
+      // something to add the pivot offset ON TOP OF, not replace outright.
+      const handEntry = { wrapper, clone, skinnedMesh, outlineMesh: null, currentBaseQuat: alignQuat.clone(), clipPlane: null, row: r, col: c, basePosition: new THREE.Vector3() }
       // Ported from HANDY DANDIES' own real onBeforeRender wiring — see
       // updateWristClipPlaneForHand()'s own declaration comment for why
       // this needs to run every frame, not just on UI triggers.
@@ -1268,6 +1296,7 @@ function relayoutField() {
     const rowOffsetX = cfg.useProgressiveOffset ? h.row * cfg.progressiveRowOffset : (h.row % 2 === 1 ? cfg.alternateRowOffset : 0)
     const x = h.col * cfg.columnSpacing - w / 2 + rowOffsetX
     const y = hgt / 2 - h.row * cfg.rowSpacing
+    h.basePosition.set(x, y, 0)
     h.wrapper.position.set(x, y, 0)
     h.wrapper.visible = !cfg.hideHands
     h.clone.scale.setScalar(computeBaseScale() * (cfg.poseScale ?? 1))
@@ -1322,6 +1351,9 @@ new GLTFLoader().load(MODEL_URL, async (gltf) => {
     forearmBaseBone.getWorldPosition(forearmBasePos)
     wristCropNormalAligned = wristPos.clone().sub(forearmBasePos).normalize().applyQuaternion(alignQuat)
     forearmPosRaw = forearmBasePos
+    const forearmBaseWorldQuat = new THREE.Quaternion()
+    forearmBaseBone.getWorldQuaternion(forearmBaseWorldQuat)
+    armYAxisAligned = new THREE.Vector3(0, 1, 0).applyQuaternion(forearmBaseWorldQuat).applyQuaternion(alignQuat)
   }
   wristPosRaw = wristPos.clone()
   // Whole-Hand Rotation's own pivot point — ported from HANDO's real
@@ -1629,6 +1661,7 @@ window.__debug = {
   get hand() { return hand }, get hands() { return hands }, get sceneState() { return sceneState },
   get wristPosRaw() { return wristPosRaw }, get forearmPosRaw() { return forearmPosRaw },
   get wristCropNormalAligned() { return wristCropNormalAligned }, get alignQuat() { return alignQuat },
+  get armYAxisAligned() { return armYAxisAligned },
   get tiltTarget() { return tiltTarget },
   get handLengthRaw() { return handLengthRaw }, get handCenterLocal() { return handCenterLocal },
   getHandCenterWorld, updateWristCrop, computeBaseScale
@@ -1664,42 +1697,50 @@ function animate() {
       // Responsive Wrist Splay/Wrist Crop read tiltMagnitude (set directly
       // by the mousemove/deviceorientation handlers, not by this call) so
       // they're unaffected either way; this only refreshes tiltTarget,
-      // which nothing needs before Palm Faces Cursor's lookAt uses it.
+      // which nothing needs before Palm Faces Cursor's own angle below.
       if (latestOrientation !== null || lastInputSource === 'mouse') updateTiltTarget()
-      // REWRITTEN 2026-09-27, direct report ("Palm faces cursor doesnt
-      // work correctly. It should just be rotating to follow the cursor"):
-      // the previous version computed an EXTRA roll on top of the lookAt,
-      // around a Y axis read from the bone's own LIVE (previous-frame)
-      // world quaternion -- a moving reference frame that compounds with
-      // itself frame to frame, and a redundant second cursor-relative
-      // rotation stacked on top of what the lookAt already does. Palm
-      // Faces Cursor now does exactly what it says: `desired` is nothing
-      // but the lookAt toward tiltTarget when the checkbox is on, identity
-      // otherwise -- "just rotating to follow the cursor."
-      //
-      // The separate, deliberate Palm Face Rotation slider composes its
-      // own roll on top, around world UP (0,1,0) -- the SAME axis the
-      // lookAt's own `UP` parameter uses -- applied via `premultiply`
-      // (world-space, AFTER the lookAt) so it's a true "spin around
-      // vertical" regardless of which way the arm currently faces, not a
-      // roll relative to the model's own bind-pose frame. Deliberately NOT
-      // HANDY DANDIES' own axis (wristCropNormalAligned, composed in
-      // OBJECT space via `desired.multiply(...)`, roughly the forearm's
-      // own length direction) -- direct instruction: "around the Y axis of
-      // the arm, which may be different from Handy Dandies." (An earlier
-      // draft of this fix measured the rForearmBend bone's own local Y at
-      // bind pose for this -- found live to numerically coincide with
-      // wristCropNormalAligned to 6 decimal places, since this rig's bones
-      // are authored with local Y running along their own length. World UP
-      // avoids that degenerate overlap entirely and is simpler besides.)
+      // REWRITTEN 2026-09-27 (3rd round), direct correction: "i said palm
+      // face rotation cursor tracking should be rotating the entire arm by
+      // the Y axis of the forearm bone. the rotation should be anchored to
+      // the base point of the forearm bone" / "its a locaize rotation."
+      // Palm Faces Cursor and Palm Face Rotation are ONE combined,
+      // LOCAL/localized single-axis rotation, not a full 3D lookAt (that
+      // was this feature's 2nd-round mistake) and not a world-space roll
+      // (its 2nd-round Palm Face Rotation axis was also wrong for the same
+      // reason). Both angles are just added together, matching HANDY
+      // DANDIES' own computeRollQuat() composition pattern:
+      //   baseDeg  = Palm Faces Cursor's own dynamic angle (0 when off) --
+      //              computeRadialRollDeg(), HANDY DANDIES' real formula,
+      //              read directly from its source, not reconstructed.
+      //   offsetDeg = the manual Palm Face Rotation slider, always additive.
+      //   axis      = armYAxisAligned, the rForearmBend bone's OWN local Y
+      //               axis (fixed, measured once at bind pose) -- NOT world
+      //               UP (a 2nd-round mistake) and NOT HANDY DANDIES' own
+      //               wristCropNormalAligned axis, even though (confirmed
+      //               live) the two happen to coincide on this rig.
+      //   anchor    = the forearm base's OWN position, recomputed from
+      //               h.clone's live transform every frame (its scale/
+      //               quaternion/position all change as poses/model
+      //               rotation are applied) via the SAME
+      //               `pivot - rotation*pivot` technique
+      //               applyModelRootTransform() already uses for
+      //               modelRotationPivot, one level up (h.wrapper instead
+      //               of h.clone). h.basePosition (the hand's own
+      //               field-grid placement, set by relayoutField()) is
+      //               added back in since this now overwrites
+      //               h.wrapper.position outright rather than leaving it
+      //               untouched.
       hands.forEach((h) => {
-        const desired = cfg.palmFacesCursor
-          ? new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().lookAt(h.wrapper.position, tiltTarget, UP))
-          : new THREE.Quaternion()
-        if (cfg.palmFaceRotationOffset) {
-          desired.premultiply(new THREE.Quaternion().setFromAxisAngle(UP, THREE.MathUtils.degToRad(cfg.palmFaceRotationOffset)))
-        }
+        const baseDeg = cfg.palmFacesCursor ? computeRadialRollDeg(h.wrapper.position, tiltTarget) : 0
+        const totalRad = THREE.MathUtils.degToRad(baseDeg + (cfg.palmFaceRotationOffset || 0))
+        const axis = armYAxisAligned || UP
+        const desired = new THREE.Quaternion().setFromAxisAngle(axis, totalRad)
         h.wrapper.quaternion.slerp(desired, cfg.trackingDamping)
+
+        const scale = computeBaseScale() * (cfg.poseScale ?? 1)
+        const pivotLocal = forearmPosRaw.clone().multiplyScalar(scale).applyQuaternion(h.clone.quaternion).add(h.clone.position)
+        const rotatedPivot = pivotLocal.clone().applyQuaternion(h.wrapper.quaternion)
+        h.wrapper.position.copy(h.basePosition).add(pivotLocal).sub(rotatedPivot)
       })
     }
     applyReactiveWristSplayFrame()
@@ -2393,10 +2434,10 @@ function renderPhoneTiltGroup(content) {
   addRow(subPalm, { id: 'checkboxPalmFacesCursor', label: 'Palm Faces Cursor', type: 'checkbox' })
   document.getElementById('checkboxPalmFacesCursor').checked = cfg.palmFacesCursor
   wireCheckbox('checkboxPalmFacesCursor', (v) => { cfg.palmFacesCursor = v })
-  // Rolls around world UP (the arm's own Y axis), NOT HANDY DANDIES' own
-  // wristCropNormalAligned axis -- see animate()'s own comment. Always
-  // composes onto `desired` (independent of Palm Faces Cursor), matching
-  // HANDY DANDIES' own always-additive slider behavior.
+  // Rolls around the forearm bone's own local Y axis (armYAxisAligned),
+  // anchored at its base -- see animate()'s own comment. Always additive
+  // onto Palm Faces Cursor's own dynamic angle, matching HANDY DANDIES'
+  // own composition pattern (though not its axis).
   addRow(subPalm, { id: 'sliderPalmFaceRotationOffset', label: 'Palm Face Rotation (Deg)', type: 'slider', min: -180, max: 180, step: 1, value: cfg.palmFaceRotationOffset })
   wireSlider('sliderPalmFaceRotationOffset', (v) => { cfg.palmFaceRotationOffset = v })
 }
