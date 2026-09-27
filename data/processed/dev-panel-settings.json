@@ -4647,7 +4647,7 @@
     "desktop:Pinky": true,
     "desktop:Pose Offset": true,
     "desktop:Saved Poses": false,
-    "desktop:Camera": true,
+    "desktop:Camera": false,
     "desktop:Saved Cameras": false,
     "desktop:Lighting": true,
     "desktop:Saved Lighting": true,
