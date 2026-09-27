@@ -924,6 +924,23 @@ const axesHelper = new THREE.AxesHelper(50)
 axesHelper.visible = cfg.showAxesHelper
 scene.add(axesHelper)
 
+// Target Marker -- shows where Palm Faces Cursor is actually tracking to
+// (tiltTarget, the cursor's own ground-plane hit -- see updateTiltTarget()'s
+// own comment). The checkboxShowTargetMarker control has existed since
+// this project's own Phone Tilt group was first built, but was never
+// wired to a real mesh (confirmed: wireCheckbox() only ever set the cfg
+// flag) -- direct report 2026-09-27: "check th show target marker
+// checkbox. i cant see the marker." Position synced every frame in
+// animate() (only meaningful once updateTiltTarget() has run at least
+// once with real input).
+const targetMarkerMesh = new THREE.Mesh(
+  new THREE.SphereGeometry(2, 16, 16),
+  new THREE.MeshBasicMaterial({ color: '#ff00ff', depthTest: false, transparent: true, opacity: 0.85 })
+)
+targetMarkerMesh.renderOrder = 999
+targetMarkerMesh.visible = cfg.showTargetMarker
+scene.add(targetMarkerMesh)
+
 // Ground Plane -- a real, visible slab (not the invisible math plane Palm
 // Rotation's own cursor-tracking raycasts onto -- see updateTiltTarget()'s
 // own comment; unrelated, this one is purely a scene decoration). Fixed,
@@ -1769,6 +1786,7 @@ function animate() {
       // they're unaffected either way; this only refreshes tiltTarget,
       // which nothing needs before Palm Faces Cursor's own angle below.
       if (latestOrientation !== null || lastInputSource === 'mouse') updateTiltTarget()
+      if (cfg.showTargetMarker) targetMarkerMesh.position.copy(tiltTarget)
       // REWRITTEN 2026-09-27 (3rd round), direct correction: "i said palm
       // face rotation cursor tracking should be rotating the entire arm by
       // the Y axis of the forearm bone. the rotation should be anchored to
@@ -2535,7 +2553,7 @@ function renderPhoneTiltGroup(content) {
   wireSlider('sliderTargetDepthFactor', (v) => { cfg.targetDepthFactor = v })
   addRow(subTarget, { id: 'checkboxShowTargetMarker', label: 'Show Target Marker', type: 'checkbox' })
   document.getElementById('checkboxShowTargetMarker').checked = cfg.showTargetMarker
-  wireCheckbox('checkboxShowTargetMarker', (v) => { cfg.showTargetMarker = v })
+  wireCheckbox('checkboxShowTargetMarker', (v) => { cfg.showTargetMarker = v; targetMarkerMesh.visible = v })
 
   const subPalm = addSubgroup(content, 'Palm Facing')
   addRow(subPalm, { id: 'checkboxPalmFacesCursor', label: 'Palm Faces Cursor', type: 'checkbox' })
