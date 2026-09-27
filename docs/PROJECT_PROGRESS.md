@@ -12,6 +12,23 @@ Nothing in progress. Pushed to `https://github.com/LeisHo/Handy-Set`
 
 ## Recently completed
 
+- **RESOLVED (2026-09-27): Tracking Enabled itself caused the whole arm
+  to rotate, even with Palm Rotation/Responsive Wrist Splay/Wrist Crop
+  all off.** An earlier same-morning fix (Haiku session, `dd070b3`)
+  moved `updateTiltTarget()` inside the input-check block but left the
+  actual wrapper reorientation (`hands.forEach` lookAt+slerp) running
+  unconditionally whenever tracking + input were present, independent
+  of `cfg.palmFacesCursor` — the checkbox that's actually supposed to
+  gate that rotation. Fixed by gating the reorientation on
+  `cfg.palmFacesCursor` (data pipeline `updateTiltTarget()` still runs
+  unconditionally, since Wrist Splay/Crop need live `tiltMagnitude`),
+  and by adding an explicit `cfg.trackingEnabled` check to
+  `computeArmLengthT()`/`computeResponsiveWristSplayDeg()` so Tracking
+  Enabled is a true master gate for all 3 features and has no visible
+  effect on its own. Live-verified via direct wrapper-quaternion
+  before/after checks with real mouse input. See
+  `docs/CHANGELOG.txt`'s matching 2026-09-27 entry.
+
 - **RESOLVED (2026-09-26, 4th pass): finger/thumb splay was subtly off
   on poses with both curl AND splay active on the same joint (e.g.
   "Fist"'s index and thumb) — a rotation-ORDER bug, not an axis-math

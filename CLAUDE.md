@@ -839,3 +839,38 @@ wiring, and are still open:
   since order doesn't matter when there's nothing else to conjugate
   against.** See `docs/CHANGELOG.txt`'s matching 2026-09-26
   (09:02 AM - 09:06 AM EDT) entry for the full account.
+- **`cfg.trackingEnabled` must never itself apply a rotation — it's a
+  pure data/master gate for Responsive Wrist Splay, Palm Rotation
+  (`cfg.palmFacesCursor`), and Wrist Crop, nothing more.** Found
+  2026-09-27, direct report: "when i turn on Tracking Enabled the whole
+  arm is rotating around some origin anchor outside of the arm... If
+  the other checkboxes on off are turned off, turning trackingenabled
+  on shouldnt show any visible change." An EARLIER same-morning fix
+  (Haiku session, `dd070b3`) had already attempted this exact report
+  and missed it — it moved `updateTiltTarget()` inside `animate()`'s
+  input-check block, but the real bug was one level down: the
+  `hands.forEach` body that actually computes and applies
+  `h.wrapper.quaternion.slerp(desired, ...)` ran unconditionally
+  whenever `cfg.trackingEnabled && hands.length && (input present)` —
+  completely independent of `cfg.palmFacesCursor`, the checkbox that's
+  actually supposed to gate this rotation. Fixed by wrapping that whole
+  `hands.forEach` block in `if (cfg.palmFacesCursor)` (kept
+  `updateTiltTarget()` itself unconditional inside the outer gate, since
+  Responsive Wrist Splay/Wrist Crop need live `tiltMagnitude`/
+  `tiltTarget` regardless of Palm Rotation), and by adding an explicit
+  `if (!cfg.trackingEnabled) return 0` to the TOP of both
+  `computeArmLengthT()` and `computeResponsiveWristSplayDeg()` — those
+  two previously only checked their OWN master toggle
+  (`cropWristEnabled`/`wristSplayResponsiveEnabled`), not
+  `trackingEnabled`, so with tracking off but a feature's own toggle on
+  they'd still have reacted to a live (or stale) `tiltMagnitude`.
+  Live-verified via direct `cfg`/`wrapper.quaternion` manipulation
+  (not just code reading): with `palmFacesCursor=false` and real mouse
+  movement dispatched, `hands[0].wrapper.quaternion` stayed exactly
+  `[0,0,0,1]`; flipping `palmFacesCursor=true` and moving the mouse
+  again produced a real non-identity quaternion. **If a future report
+  says one of these 3 features "does something even with its own
+  checkbox off," check whether `cfg.trackingEnabled` is being read at
+  all in that feature's own compute path — it wasn't, for 2 of the 3,
+  until this fix.** See `docs/CHANGELOG.txt`'s matching 2026-09-27
+  entry for the full account.
