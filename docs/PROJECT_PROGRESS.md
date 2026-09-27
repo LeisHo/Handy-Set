@@ -8,7 +8,7 @@ append-only history.
 ## Currently working on
 
 Nothing in progress — the 6-part Palm Rotation/Responsive-features
-request (2026-09-27) is fully complete, plus 8 interjected fixes from
+request (2026-09-27) is fully complete, plus 9 interjected fixes from
 the same session (Saved Cameras/list-picker persistence; Palm Rotation
 height/distance independence + forearm-base marker; a hand-disappears
 clash between Pose Tween and Base Arm Rotation; `armBaseDistanceT`
@@ -16,14 +16,36 @@ freezing at a stale value in the ground-raycast dead zone; Pose Tween
 applying the live Whole-Hand Rotation / Base Rotation sliders to
 whatever pose is showing; a follow-on fix for fingers freezing while
 the wrist kept responding; Save/Sync never persisting ANY curve/range
-text control project-wide; and Camera slider decimals/jitter/click-to-
-type). See Recently completed below for the full account.
+text control project-wide; Camera slider decimals/jitter/click-to-
+type; and Phone Tilt's "Show in Mobile/Landscape" checkbox not
+mirroring its 3 curve/range widgets). See Recently completed below for
+the full account.
 
 Pushed to `https://github.com/LeisHo/Handy-Set`
 (deployed via the Vercel project at `https://vercel.com/lpeis/handy-set`).
 
 ## Recently completed
 
+- **RESOLVED (2026-09-27): Phone Tilt's "Show in Mobile/Landscape"
+  checkbox did nothing for its 3 curve/range widgets (Min/Max Rotation,
+  Rotation Curve, Tween Curve) — checking it silently had no effect.**
+  Root cause: those widgets sit on top of a hidden `type: 'text'`
+  control, and devPanel.js's own generic per-device mirroring
+  explicitly excludes `'text'`/`'number'` controls — a genuine,
+  permanent scope limit of the shared template, confirmed by direct
+  comparison, not a HANDYSET-specific lag. Built a HANDYSET-owned
+  mirroring mechanism (shared value across Desktop/Mobile/Landscape,
+  per direct user confirmation), polled via the existing
+  `curveWidgetResyncs` array. A bug found during live verification
+  (the group-lookup helper used, devPanel.js's own
+  `findGroupContent()`, only matches a top-level group, not a nested
+  subgroup — both target groups here are nested one level inside
+  "Phone Tilt") was fixed with a HANDYSET-owned any-depth lookup.
+  Live-verified: all 3 mirrors render correctly on both Mobile and
+  Landscape, 3-way shared-value sync confirmed in both directions,
+  unchecking one control's checkbox removes only that control's own
+  mirror row. See `docs/CHANGELOG.txt`'s matching 2026-09-27 (22nd)
+  entry.
 - **RESOLVED (2026-09-27): Camera dev-panel sliders showed ~16-digit
   floats, felt jittery while dragging, and had no click-to-type.**
   Root cause of decimals/jitter: `syncCameraPanelFromLive()` runs every

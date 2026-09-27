@@ -3001,6 +3001,78 @@ Commit: `eb6f9a4`. Pushed to `https://github.com/LeisHo/Handy-Set`;
 Vercel auto-deployed.
 
 --------------------------------------------------------------------------------
+2026-09-27  -  (22nd, same day)
+
+Direct report: "I'm regards to phone tilt functions. When I check the
+show in mobile checkbox, the min max sliders and curve graphs aren't
+showing up in mobile."
+
+Root cause: the 3 curve/range controls in the Phone Tilt group
+(`textBaseArmRotationRange`, `textBaseArmRotationCurve`,
+`textPoseTweenCurve`) are built on top of a hidden `type: 'text'`
+control. devPanel.js's own generic per-device mirroring
+(`ensureDynamicTargetRow()`) explicitly excludes `'text'`/`'number'`
+controls -- confirmed via direct comparison against the real, canonical
+`.claude/TEMPLATE_DEV_PANEL.html` that this is a genuine, permanent,
+documented scope limit of the shared engine itself ("outside this
+system's scope for now"), not something HANDYSET's own copy had fallen
+behind on this time. The "Show in Mobile/Landscape" checkbox itself
+still existed and toggled correctly (its own state doesn't depend on
+the registry), which is exactly what made checking it silently do
+nothing rather than error.
+
+Asked the user via AskUserQuestion whether the Mobile/Landscape mirror
+should be a fully independent per-device copy or a shared value; user
+chose Shared (matches how these 3 settings already work today -- none
+of them are split per-device anywhere else in the file). Implemented a
+HANDYSET-owned mirroring mechanism (`PHONE_TILT_MIRROR_WIDGETS` +
+`syncPhoneTiltWidgetMirrors()`, main.js), polled every frame via the
+same pre-existing `curveWidgetResyncs` array the curve/range widgets
+already use to detect a devPanel.js Reset/Restore writing straight to
+`input.value` -- one mechanism handles a checkbox click, a Sync/Reset
+restore, and a tab switch uniformly. Every frame it also force-syncs
+the Desktop input and both mirrors' values to the canonical `cfg`
+field; each widget's own internal resync then redraws, so editing ANY
+of the 3 (Desktop, Mobile, Landscape) correctly propagates to the
+other 2.
+
+Bug found DURING live verification, fixed in the same pass: the
+mirror-creation code initially used devPanel.js's own
+`window.findGroupContent(tab, groupSid, ...)` to locate each mirrored
+row's target group -- but that function's own selector uses a
+direct-child combinator (`#mobileTabContent > .dev-section >
+.dev-section-title[data-sid="..."]`), so it can only find a TOP-LEVEL
+group, never a nested subgroup. Both target groups here ("Responsive
+Arm Rotation at Base", "Responsive Pose Tween") are nested one level
+inside the top-level "Phone Tilt" group -- confirmed live via repeated
+`console.warn` output from `findGroupContent` itself ("group not
+found"), while a plain any-depth `querySelector` for the same
+`data-sid` found the element without issue. Fixed by adding a small
+HANDYSET-owned `findNestedGroupContent(tabId, groupSid)` helper
+(main.js) -- identical to devPanel.js's own function except it drops
+the `>` restriction -- and using it in place of `window.findGroupContent`
+at the one call site.
+
+Live-verified after the fix (localStorage cleared, clean load,
+real `switchDevPanelTab()` calls + real frame pumps via screenshot, not
+just code reading): all 3 controls' Mobile AND Landscape mirror rows
+now render correctly (a working drag-range slider showing "Min: 0°
+Max: 30°", and 2 working SVG curve-editor widgets) the instant their
+own checkbox is checked; unchecking one control's checkbox removes
+only that control's own mirror row, leaving the other 2 untouched;
+editing the Desktop widget (`{"min":-45,"max":45}` via a real `input`
+event) propagated to the Mobile mirror within one frame, editing the
+Mobile mirror (`{"min":-90,"max":90}`) propagated back to both the
+Desktop input's own backing value and the Landscape mirror -- full
+3-way shared-value sync confirmed in both directions. No new console
+errors from any of this (the only console errors present were the
+pre-existing, unrelated `/api/save-settings` 404s -- expected on this
+sandbox's static server with no serverless backend, falls back to
+localStorage per workspace CLAUDE.md §12l).
+
+`index.html`'s own `main.js` cache-buster bumped `?v=99` -> `?v=100`.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

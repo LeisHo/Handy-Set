@@ -1472,3 +1472,30 @@ wiring, and are still open:
   file needs the same 2 guards, or it will reproduce this exact
   "shows 16 digits, fights the user's drag" symptom.** See
   `docs/CHANGELOG.txt`'s matching 2026-09-27 (21st) entry.
+- **devPanel.js's own `window.findGroupContent(tabId, groupSid, ...)`
+  only finds a TOP-LEVEL group, never a nested subgroup — its own
+  selector uses a direct-child combinator
+  (`#mobileTabContent > .dev-section > .dev-section-title[data-sid=...]`)
+  — found 2026-09-27 while fixing "Show in Mobile checkbox" doing
+  nothing for the Phone Tilt group's own curve/range widgets.** Those 3
+  controls (`textBaseArmRotationRange`/`textBaseArmRotationCurve`/
+  `textPoseTweenCurve`) are `type: 'text'` controls, which
+  `ensureDynamicTargetRow()` (devPanel.js) explicitly excludes from its
+  automatic mirroring (a genuine, permanent, documented scope limit of
+  the shared template itself, confirmed via direct comparison — not a
+  HANDYSET-specific lag this time), so this project built its own
+  mirroring mechanism (`PHONE_TILT_MIRROR_WIDGETS`/
+  `syncPhoneTiltWidgetMirrors()`, `main.js`) using
+  `window.findGroupContent()` to locate each mirrored row's target
+  group content — which failed for both target groups here
+  ("Responsive Arm Rotation at Base"/"Responsive Pose Tween", both
+  nested one level inside the top-level "Phone Tilt" group), confirmed
+  live via repeated `findGroupContent`-own `console.warn` ("group not
+  found") output. Fixed with a HANDYSET-owned
+  `findNestedGroupContent(tabId, groupSid)` (`main.js`) — identical
+  except it drops the `>` restriction. **Any future HANDYSET-owned code
+  that needs to locate a group's content div (mirroring, dynamic row
+  injection, etc.) should use `findNestedGroupContent()`, not
+  `window.findGroupContent()` directly, unless the group is known to
+  always be top-level.** See `docs/CHANGELOG.txt`'s matching 2026-09-27
+  (22nd) entry.
