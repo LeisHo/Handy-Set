@@ -74,7 +74,7 @@
     "sliderCameraZoom": 99.5,
     "checkboxLockCameraPan": true,
     "checkboxLockCameraZoom": true,
-    "checkboxCameraMaxExtentsEnabled": false,
+    "checkboxCameraMaxExtentsEnabled": true,
     "checkboxTrackingEnabled": false,
     "sliderTrackingDamping": 0.2,
     "sliderTargetDepthFactor": 2,
