@@ -85,7 +85,7 @@
     "sliderTargetDepthFactor": 2,
     "checkboxShowTargetMarker": false,
     "checkboxPalmFacesCursor": true,
-    "sliderPalmFaceRotationOffset": -14,
+    "sliderPalmFaceRotationOffset": 7,
     "checkboxBaseArmRotationResponsiveEnabled": true,
     "sliderBaseArmRotationFineTune": 9,
     "checkboxPoseTweenResponsiveEnabled": true,
