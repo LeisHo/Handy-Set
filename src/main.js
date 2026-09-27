@@ -51,7 +51,7 @@ const cfg = {
   cameraX: 3.598517809628556, cameraY: 31.35475415298584, cameraZ: 60.28634317626074,
   cameraFov: 32, targetX: 3.5985178096286012, targetY: 31.35475415298582, targetZ: -314.71365682373926,
   cameraZoom: 60, lockCameraPan: false, lockCameraZoom: false, lockCameraRotate: false,
-  cameraRotX: 0, cameraRotY: 0, cameraRotZ: 0, cameraMaxExtentsEnabled: false,
+  cameraYaw: 0, cameraPitch: 0, cameraMaxExtentsEnabled: false,
   cropWristEnabled: true,
   // Phone Tilt (renamed from Cursor Tracking)
   // trackingEnabled defaults true (corrected 2026-09-21, was false) --
@@ -1394,11 +1394,9 @@ function applyCameraPreset(item) {
   camera.updateProjectionMatrix()
   controls.update()
   cfg.cameraZoom = item.zoom !== undefined ? item.zoom : camera.position.distanceTo(controls.target)
-  cfg.cameraRotX = item.cameraRotX !== undefined ? item.cameraRotX : 0
-  cfg.cameraRotY = item.cameraRotY !== undefined ? item.cameraRotY : 0
-  cfg.cameraRotZ = item.cameraRotZ !== undefined ? item.cameraRotZ : 0
+  cfg.cameraYaw = item.cameraYaw !== undefined ? item.cameraYaw : 0
+  cfg.cameraPitch = item.cameraPitch !== undefined ? item.cameraPitch : 0
   Object.assign(cfg, { cameraX: camera.position.x, cameraY: camera.position.y, cameraZ: camera.position.z, cameraFov: camera.fov, targetX: controls.target.x, targetY: controls.target.y, targetZ: controls.target.z })
-  setCameraBaseQuaternion()
   syncPairsFromCfg(CAMERA_SYNC_PAIRS)
 }
 function applyLightingPreset(item) {
@@ -1597,7 +1595,6 @@ function animate() {
     applyRendererSize(window.innerWidth, window.innerHeight)
   }
   controls.update()
-  syncCameraRotationSliders()
   if (!isPaused) {
     if (cfg.trackingEnabled && hands.length) {
       updateTiltTarget()
@@ -1928,7 +1925,7 @@ function addFingerSliders(content, finger) {
 }
 
 function capturePoseFromCfg() { const o = {}; POSE_PRESET_KEYS.forEach((k) => { o[k] = cfg[k] }); return o }
-function captureCameraFromLive() { return { x: camera.position.x, y: camera.position.y, z: camera.position.z, fov: camera.fov, tx: controls.target.x, ty: controls.target.y, tz: controls.target.z, zoom: cfg.cameraZoom, cameraRotX: cfg.cameraRotX, cameraRotY: cfg.cameraRotY, cameraRotZ: cfg.cameraRotZ } }
+function captureCameraFromLive() { return { x: camera.position.x, y: camera.position.y, z: camera.position.z, fov: camera.fov, tx: controls.target.x, ty: controls.target.y, tz: controls.target.z, zoom: cfg.cameraZoom, cameraYaw: cfg.cameraYaw, cameraPitch: cfg.cameraPitch } }
 function captureLightingFromLive() { const o = {}; LIGHTING_PRESET_KEYS.forEach((k) => { o[k] = cfg[k] }); return o }
 
 // Full list-picker widget, ported to match HANDY DANDIES' own
@@ -2217,12 +2214,10 @@ function renderCameraGroup(content) {
   addRow(content, { id: 'checkboxLockCameraRotate', label: 'Lock Camera Rotate', type: 'checkbox' })
   document.getElementById('checkboxLockCameraRotate').checked = cfg.lockCameraRotate
   wireCheckbox('checkboxLockCameraRotate', (v) => { cfg.lockCameraRotate = v; applyCameraLockState() })
-  addRow(content, { id: 'sliderCameraRotX', label: 'Camera Rotate X (Deg)', type: 'slider', min: -180, max: 180, step: 1, value: cfg.cameraRotX })
-  wireSlider('sliderCameraRotX', (v) => { cfg.cameraRotX = v; applyCameraRotation() })
-  addRow(content, { id: 'sliderCameraRotY', label: 'Camera Rotate Y (Deg)', type: 'slider', min: -180, max: 180, step: 1, value: cfg.cameraRotY })
-  wireSlider('sliderCameraRotY', (v) => { cfg.cameraRotY = v; applyCameraRotation() })
-  addRow(content, { id: 'sliderCameraRotZ', label: 'Camera Rotate Z (Deg)', type: 'slider', min: -180, max: 180, step: 1, value: cfg.cameraRotZ })
-  wireSlider('sliderCameraRotZ', (v) => { cfg.cameraRotZ = v; applyCameraRotation() })
+  addRow(content, { id: 'sliderCameraYaw', label: 'Camera Yaw (Deg)', type: 'slider', min: -180, max: 180, step: 1, value: cfg.cameraYaw })
+  wireSlider('sliderCameraYaw', (v) => { cfg.cameraYaw = v; setCameraYawPitch(cfg.cameraYaw, cfg.cameraPitch) })
+  addRow(content, { id: 'sliderCameraPitch', label: 'Camera Pitch (Deg)', type: 'slider', min: -89, max: 89, step: 1, value: cfg.cameraPitch })
+  wireSlider('sliderCameraPitch', (v) => { cfg.cameraPitch = v; setCameraYawPitch(cfg.cameraYaw, cfg.cameraPitch) })
   addRow(content, { id: 'checkboxCameraMaxExtentsEnabled', label: 'Set Default Camera As Max Extents', type: 'checkbox' })
   document.getElementById('checkboxCameraMaxExtentsEnabled').checked = cfg.cameraMaxExtentsEnabled
   wireCheckbox('checkboxCameraMaxExtentsEnabled', (v) => { cfg.cameraMaxExtentsEnabled = v; updateCameraMaxExtentsBound() })
@@ -2244,42 +2239,26 @@ function applyCameraLockState() {
   controls.enableZoom = !cfg.lockCameraZoom
   controls.enableRotate = !cfg.lockCameraRotate
 }
-// Store the "base" camera state (before any slider rotations) for readback
-let cameraBaseQuaternion = null
-function setCameraBaseQuaternion() {
-  cameraBaseQuaternion = camera.quaternion.clone()
+// Extract yaw and pitch from camera direction (ported from HANDO)
+// Yaw: rotation around Y axis, Pitch: rotation around X axis
+function getCameraYawPitch() {
+  const dir = controls.target.clone().sub(camera.position)
+  const dist = dir.length() || 1
+  dir.normalize()
+  const pitch = Math.asin(Math.max(-1, Math.min(1, dir.y))) * 180 / Math.PI
+  const yaw = Math.atan2(dir.x, dir.z) * 180 / Math.PI
+  return { yaw, pitch, dist }
 }
-function applyCameraRotation() {
-  // Rotates the camera around its own local axes (camera-anchored). The
-  // rotation is applied by rotating the camera's position relative to the
-  // target point, maintaining the distance while changing the viewing angle.
-  const target = controls.target.clone()
-  const direction = camera.position.clone().sub(target)
-  const distance = direction.length()
-  if (distance < 1e-6) return
-  direction.normalize()
 
-  // Create quaternion from euler angles (in degrees, converted to radians)
-  const euler = new THREE.Euler(
-    THREE.MathUtils.degToRad(cfg.cameraRotX),
-    THREE.MathUtils.degToRad(cfg.cameraRotY),
-    THREE.MathUtils.degToRad(cfg.cameraRotZ),
-    'YXZ' // Order: Y first (yaw), then X (pitch), then Z (roll)
-  )
-  const rotQuat = new THREE.Quaternion().setFromEuler(euler)
-
-  // Apply rotation to the direction vector (rotates around camera's local axes)
-  direction.applyQuaternion(rotQuat)
-
-  // Reposition camera at the new direction
-  camera.position.copy(target).add(direction.multiplyScalar(distance))
+// Rotate by moving the target (not camera) to a point at current distance
+// along the new yaw/pitch direction (ported from HANDO)
+function setCameraYawPitch(yawDeg, pitchDeg) {
+  const dist = getCameraYawPitch().dist
+  const yaw = yawDeg * Math.PI / 180
+  const pitch = pitchDeg * Math.PI / 180
+  const dir = new THREE.Vector3(Math.cos(pitch) * Math.sin(yaw), Math.sin(pitch), Math.cos(pitch) * Math.cos(yaw))
+  controls.target.copy(camera.position).addScaledVector(dir, dist)
   controls.update()
-}
-function syncCameraRotationSliders() {
-  // Euler angle extraction from camera direction was unstable and created feedback
-  // loops causing slider jittering. The Camera Rotate sliders control camera rotation
-  // when adjusted. TODO: implement stable rotation readback (may require tracking
-  // camera rotation separately from OrbitControls position changes).
 }
 // Simplified vs. Handy Dandies' own version: clamps zoom distance only
 // (controls.maxDistance), not the full pan-target clamped-to-boundary-
