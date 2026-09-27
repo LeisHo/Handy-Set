@@ -1146,6 +1146,17 @@ const _tiltCenterHit = new THREE.Vector3()
 const _centerNDC = new THREE.Vector2(0, 0)
 function updateTiltTarget() {
   if (lastInputSource === 'mouse') {
+    // Raycast onto a FIXED ground plane (Z=0 -- matching hand.wrapper.position.z,
+    // which is always 0 for every hand per relayoutField()) to get the XY
+    // offset from screen-center to cursor -- this plane choice is the "0"
+    // reference, never moved to chase targetDepthFactor (a same-day earlier
+    // attempt did that; reverted 2026-09-27 per direct correction -- moving
+    // the plane changes a point's Z, which under perspective changes where
+    // IT reprojects on screen, but never actually changes the XY OFFSET's
+    // own direction, since both raycasts always shared one plane either
+    // way -- so that change fixed nothing real). The Cursor Target Depth
+    // slider is then added ON TOP as a separate, independent Z (not the
+    // plane the offset itself was measured on).
     raycaster.setFromCamera(_centerNDC, camera)
     const haveCenter = raycaster.ray.intersectPlane(cursorTargetPlane, _tiltCenterHit)
     raycaster.setFromCamera(cursorNDC, camera)
@@ -1743,8 +1754,21 @@ function animate() {
       //               added back in since this now overwrites
       //               h.wrapper.position outright rather than leaving it
       //               untouched.
+      // Scaled by tiltMagnitude (2026-09-27, direct correction/request):
+      // computeRadialRollDeg() is a pure atan2 -- direction only, blind to
+      // HOW FAR the cursor/tilt is from center. Any nonzero offset used to
+      // produce the SAME full rotation as a huge one, which is both what
+      // made mouse tracking feel disconnected/twitchy near screen-center
+      // (a tiny, noisy offset near (0,0) still snapped to a full-strength
+      // angle) and, on mobile, meant any small tilt immediately rotated
+      // the hand all the way to face that direction instead of easing in
+      // -- "the more i tilt the more the hand rotates to face that
+      // direction" was not actually true before this. tiltMagnitude (0-1,
+      // already computed for both input paths) now scales the angle
+      // itself, so the rotation smoothly grows from 0 at dead-center/no-
+      // tilt up to the full computed direction at max offset/tilt.
       hands.forEach((h) => {
-        const baseDeg = cfg.palmFacesCursor ? computeRadialRollDeg(h.wrapper.position, tiltTarget) : 0
+        const baseDeg = cfg.palmFacesCursor ? computeRadialRollDeg(h.wrapper.position, tiltTarget) * tiltMagnitude : 0
         const totalRad = THREE.MathUtils.degToRad(baseDeg + (cfg.palmFaceRotationOffset || 0))
         const axis = UP
         const desired = new THREE.Quaternion().setFromAxisAngle(axis, totalRad)
