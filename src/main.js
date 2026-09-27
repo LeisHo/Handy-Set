@@ -50,7 +50,8 @@ const cfg = {
   // Camera
   cameraX: 3.598517809628556, cameraY: 31.35475415298584, cameraZ: 60.28634317626074,
   cameraFov: 32, targetX: 3.5985178096286012, targetY: 31.35475415298582, targetZ: -314.71365682373926,
-  cameraZoom: 60, lockCameraPan: false, lockCameraZoom: false, cameraMaxExtentsEnabled: false,
+  cameraZoom: 60, lockCameraPan: false, lockCameraZoom: false, lockCameraRotate: false,
+  cameraRotX: 0, cameraRotY: 0, cameraRotZ: 0, cameraMaxExtentsEnabled: false,
   cropWristEnabled: true,
   // Phone Tilt (renamed from Cursor Tracking)
   // trackingEnabled defaults true (corrected 2026-09-21, was false) --
@@ -2196,6 +2197,15 @@ function renderCameraGroup(content) {
   addRow(content, { id: 'checkboxLockCameraZoom', label: 'Lock Camera Zoom', type: 'checkbox' })
   document.getElementById('checkboxLockCameraZoom').checked = cfg.lockCameraZoom
   wireCheckbox('checkboxLockCameraZoom', (v) => { cfg.lockCameraZoom = v; applyCameraLockState() })
+  addRow(content, { id: 'checkboxLockCameraRotate', label: 'Lock Camera Rotate', type: 'checkbox' })
+  document.getElementById('checkboxLockCameraRotate').checked = cfg.lockCameraRotate
+  wireCheckbox('checkboxLockCameraRotate', (v) => { cfg.lockCameraRotate = v; applyCameraLockState() })
+  addRow(content, { id: 'sliderCameraRotX', label: 'Camera Rotate X (Deg)', type: 'slider', min: -180, max: 180, step: 1, value: cfg.cameraRotX })
+  wireSlider('sliderCameraRotX', (v) => { cfg.cameraRotX = v; applyCameraRotation() })
+  addRow(content, { id: 'sliderCameraRotY', label: 'Camera Rotate Y (Deg)', type: 'slider', min: -180, max: 180, step: 1, value: cfg.cameraRotY })
+  wireSlider('sliderCameraRotY', (v) => { cfg.cameraRotY = v; applyCameraRotation() })
+  addRow(content, { id: 'sliderCameraRotZ', label: 'Camera Rotate Z (Deg)', type: 'slider', min: -180, max: 180, step: 1, value: cfg.cameraRotZ })
+  wireSlider('sliderCameraRotZ', (v) => { cfg.cameraRotZ = v; applyCameraRotation() })
   addRow(content, { id: 'checkboxCameraMaxExtentsEnabled', label: 'Set Default Camera As Max Extents', type: 'checkbox' })
   document.getElementById('checkboxCameraMaxExtentsEnabled').checked = cfg.cameraMaxExtentsEnabled
   wireCheckbox('checkboxCameraMaxExtentsEnabled', (v) => { cfg.cameraMaxExtentsEnabled = v; updateCameraMaxExtentsBound() })
@@ -2215,6 +2225,33 @@ function setCameraDistance(distance) {
 function applyCameraLockState() {
   controls.enablePan = !cfg.lockCameraPan
   controls.enableZoom = !cfg.lockCameraZoom
+  controls.enableRotate = !cfg.lockCameraRotate
+}
+function applyCameraRotation() {
+  // Rotates the camera around its own local axes (camera-anchored). The
+  // rotation is applied by rotating the camera's position relative to the
+  // target point, maintaining the distance while changing the viewing angle.
+  const target = controls.target.clone()
+  const direction = camera.position.clone().sub(target)
+  const distance = direction.length()
+  if (distance < 1e-6) return
+  direction.normalize()
+
+  // Create quaternion from euler angles (in degrees, converted to radians)
+  const euler = new THREE.Euler(
+    THREE.MathUtils.degToRad(cfg.cameraRotX),
+    THREE.MathUtils.degToRad(cfg.cameraRotY),
+    THREE.MathUtils.degToRad(cfg.cameraRotZ),
+    'YXZ' // Order: Y first (yaw), then X (pitch), then Z (roll)
+  )
+  const rotQuat = new THREE.Quaternion().setFromEuler(euler)
+
+  // Apply rotation to the direction vector (rotates around camera's local axes)
+  direction.applyQuaternion(rotQuat)
+
+  // Reposition camera at the new direction
+  camera.position.copy(target).add(direction.multiplyScalar(distance))
+  controls.update()
 }
 // Simplified vs. Handy Dandies' own version: clamps zoom distance only
 // (controls.maxDistance), not the full pan-target clamped-to-boundary-
