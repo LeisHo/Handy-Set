@@ -2678,6 +2678,74 @@ Commit: `c7bcc7f`. Pushed to `https://github.com/LeisHo/Handy-Set`;
 Vercel auto-deployed.
 
 --------------------------------------------------------------------------------
+2026-09-27  -  (16th, same day)
+
+Direct report: "when i set responsive pose tween, the hand dssappears.
+im rpetty sure its some bug clash with the rotation Whole hadn rotation
+at base slider."
+
+Root cause, confirmed live (not just from reading the code): the
+user's own hypothesis was exactly right. `applyModelRootTransform()`
+(called every frame by Responsive Pose Tween, via
+`applyPoseValuesToHand()`) unconditionally overwrites
+`h.clone.quaternion`/`position` from `h.currentBaseQuat` -- but never
+told `applyBaseArmRotation()` (the Base Rotation X/Y/Z sliders' own
+function) that this happened. That function's own delta-tracker
+(`h.lastBaseArmQuat` -- "what I last applied") went stale the instant
+`applyModelRootTransform()` ran again, computing its next delta
+relative to a rotation that no longer actually existed in
+`h.clone.quaternion`. With Responsive Arm Rotation at Base ALSO
+reactive (running every single frame right after the Pose Tween
+branch in `animate()`), the 2 systems fought over the exact same
+transform every frame using mutually inconsistent assumptions about
+what was already applied.
+
+Reproduced deliberately before attempting a fix: set Base Rotation X
+to 45deg via its plain slider, enabled Responsive Pose Tween (target
+"Big Open Palm"), then also enabled Responsive Arm Rotation at Base --
+screenshot showed the hand collapsed to a tiny sliver near the dev
+panel, matching the report exactly.
+
+Diagnosed WHY no single number looked wrong: `h.clone.quaternion`/
+`position`/`scale`, individual finger-bone quaternions, camera
+position/target, and frustum-culling state were all individually
+sane (no NaN, no zero-scale, reasonable magnitudes) when checked one
+at a time -- the actual smoking gun only showed up projecting the
+hand's own live bounding-box corners through the camera into screen
+space: they scattered to values like x=-3789 to x=2801 against a
+405px-wide viewport, meaning the camera had effectively ended up
+inside/beside the misplaced geometry. A pure "is this one number
+reasonable" check missed it; a screen-space projection check caught
+it immediately.
+
+Fixed by resetting `h.lastBaseArmQuat = null` inside
+`applyModelRootTransform()` itself -- the NEXT `applyBaseArmRotation()`
+call (same frame, since `animate()` calls it right after the Pose
+Tween/Wrist Splay branch) now treats the just-reset transform as its
+new baseline and applies its own rotation as ONE clean delta from
+identity, rather than a stale, no-longer-meaningful one. This also
+fixes the SAME latent clash for the non-reactive case (a plain Pose
+slider touch, or a saved-pose "Use", after Base Rotation X/Y/Z had
+been set) -- that combination silently discarded the base rotation
+too, just without the frame-repeated compounding that made the
+reactive case visually catastrophic. This is the file's own
+established "whole-hand-level rotation must invalidate/bake into
+whatever downstream system tracks it" lesson (previously hit 4 times
+on the baseQuat/curl-axis side) showing up a 5th time, on the
+position/quaternion delta-tracking side instead.
+
+Live-verified: re-ran the exact reproduction steps after the fix --
+hand renders normally (not a sliver, not scattered) with Pose Tween
+and reactive Base Arm Rotation both active simultaneously; confirmed
+the plain Base Rotation X slider (no Pose Tween involved) still
+visibly rotates the hand correctly on its own, no regression.
+
+`index.html`'s own `main.js` cache-buster bumped `?v=92` -> `?v=93`.
+
+Commit: `8b048f5`. Pushed to `https://github.com/LeisHo/Handy-Set`;
+Vercel auto-deployed.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

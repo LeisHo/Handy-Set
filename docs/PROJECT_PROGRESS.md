@@ -8,15 +8,31 @@ append-only history.
 ## Currently working on
 
 Nothing in progress — the 6-part Palm Rotation/Responsive-features
-request (2026-09-27) is fully complete, plus 2 interjected fixes from
+request (2026-09-27) is fully complete, plus 3 interjected fixes from
 the same session (Saved Cameras/list-picker persistence; Palm Rotation
-height/distance independence + forearm-base marker). See Recently
-completed below for the full account.
+height/distance independence + forearm-base marker; a real hand-
+disappears bug where Responsive Pose Tween and Base Arm Rotation
+fought over the same transform). See Recently completed below for the
+full account.
 
 Pushed to `https://github.com/LeisHo/Handy-Set`
 (deployed via the Vercel project at `https://vercel.com/lpeis/handy-set`).
 
 ## Recently completed
+
+- **RESOLVED (2026-09-27): hand disappeared (collapsed to a tiny
+  sliver) whenever Responsive Pose Tween and Responsive Arm Rotation
+  at Base were both active — user's own hypothesis ("bug clash with
+  the whole hand rotation at base slider") was exactly right.**
+  `applyModelRootTransform()` (run every frame by Pose Tween) reset
+  `h.clone.quaternion`/`position` without telling
+  `applyBaseArmRotation()`'s own delta-tracker, so the 2 systems fought
+  over the same transform using stale assumptions every frame. Fixed
+  by invalidating that tracker (`h.lastBaseArmQuat = null`) inside
+  `applyModelRootTransform()` itself. Reproduced the exact symptom
+  first, then confirmed the fix resolves it with both features active
+  simultaneously — see `docs/CHANGELOG.txt`'s matching 2026-09-27
+  (16th) entry.
 
 - **DONE (2026-09-27): items 4-6 of the 6-part Palm Rotation request —
   Responsive Arm Rotation at Base, unified distance metric on

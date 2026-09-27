@@ -1330,3 +1330,36 @@ wiring, and are still open:
   `findSavedPoseByName(DEFAULT_POSE_NAME)` -> some captured live-cfg
   snapshot inside `applyResponsivePoseTweenFrame()`, not a rewrite of
   the blend math itself.**
+- **`applyModelRootTransform()` must invalidate `h.lastBaseArmQuat`
+  (`applyBaseArmRotation()`'s own delta-tracker) EVERY time it runs —
+  a 5th instance of this file's "a whole-hand-level rotation must bake
+  into / invalidate whatever downstream system tracks it" bug class,
+  this time on the position/quaternion delta side rather than the
+  curl-axis side. Fixed 2026-09-27, direct report (user's own
+  hypothesis was exactly right): "when i set responsive pose tween,
+  the hand disappears. im pretty sure its some bug clash with...
+  whole hand rotation at base."** Root cause:
+  `applyModelRootTransform()` unconditionally overwrites
+  `h.clone.quaternion`/`position` from `h.currentBaseQuat` — it always
+  did this on a single slider touch or saved-pose "Use" too, but that
+  was a one-shot, easy-to-miss silent-discard. Responsive Pose Tween
+  calling it every frame (via `applyPoseValuesToHand()`) turned it
+  catastrophic: with Responsive Arm Rotation at Base ALSO reactive
+  (running every frame right after), the 2 systems fought over the
+  same transform every frame using stale assumptions about what was
+  already applied — confirmed live via screen-space bounding-box
+  projection that the geometry scattered far outside the viewport
+  (camera ending up effectively inside/beside the misplaced hand), NOT
+  a NaN/zero-scale case. **No single state value (scale, position, an
+  individual bone's quaternion) looked wrong in isolation — the
+  screen-space projection check was what actually caught it.** Fixed
+  by setting `h.lastBaseArmQuat = null` inside
+  `applyModelRootTransform()` itself, so the delta-tracker always
+  re-baselines against whatever this function JUST established, rather
+  than a possibly-stale prior value. **If a future feature adds ANOTHER
+  system that mutates `h.clone.quaternion`/`position`/`h.currentBaseQuat`
+  directly (not through `applyBaseArmRotation()`'s own delta path), it
+  needs this SAME invalidation — check `applyModelRootTransform()`'s
+  own comment for the pattern before assuming a new one-off reset is
+  needed.** See `docs/CHANGELOG.txt`'s matching 2026-09-27 (16th) entry
+  for the full reproduction/diagnosis account.
