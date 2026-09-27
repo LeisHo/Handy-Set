@@ -81,11 +81,11 @@
     "sliderCameraYaw": -174,
     "sliderCameraPitch": -87,
     "checkboxCameraMaxExtentsEnabled": false,
-    "checkboxTrackingEnabled": false,
-    "sliderTrackingDamping": 0.2,
+    "checkboxTrackingEnabled": true,
     "sliderTargetDepthFactor": 2,
     "checkboxShowTargetMarker": false,
-    "checkboxPalmFacesCursor": false,
+    "checkboxPalmFacesCursor": true,
+    "sliderPalmFaceRotationOffset": 0,
     "sliderKeyAzimuth": 360,
     "sliderKeyElevation": -3,
     "sliderKeyTargetHeight": -18,
@@ -1526,16 +1526,11 @@
                 },
                 {
                   "type": "row",
-                  "key": "sliderTrackingDamping"
-                },
-                {
-                  "type": "row",
                   "key": "checkboxShowTargetMarker"
                 }
               ],
               "rowKeys": [
                 "sliderTargetDepthFactor",
-                "sliderTrackingDamping",
                 "checkboxShowTargetMarker"
               ],
               "subgroups": []
@@ -1620,10 +1615,15 @@
               "items": [
                 {
                   "type": "row",
+                  "key": "sliderPalmFaceRotationOffset"
+                },
+                {
+                  "type": "row",
                   "key": "checkboxPalmFacesCursor"
                 }
               ],
               "rowKeys": [
+                "sliderPalmFaceRotationOffset",
                 "checkboxPalmFacesCursor"
               ],
               "subgroups": []
@@ -1643,16 +1643,11 @@
               },
               {
                 "type": "row",
-                "key": "sliderTrackingDamping"
-              },
-              {
-                "type": "row",
                 "key": "checkboxShowTargetMarker"
               }
             ],
             "rowKeys": [
               "sliderTargetDepthFactor",
-              "sliderTrackingDamping",
               "checkboxShowTargetMarker"
             ],
             "subgroups": []
@@ -1728,10 +1723,15 @@
             "items": [
               {
                 "type": "row",
+                "key": "sliderPalmFaceRotationOffset"
+              },
+              {
+                "type": "row",
                 "key": "checkboxPalmFacesCursor"
               }
             ],
             "rowKeys": [
+              "sliderPalmFaceRotationOffset",
               "checkboxPalmFacesCursor"
             ],
             "subgroups": []
