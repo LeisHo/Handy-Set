@@ -2850,6 +2850,100 @@ Commit: `a4de3bd`. Pushed to `https://github.com/LeisHo/Handy-Set`;
 Vercel auto-deployed.
 
 --------------------------------------------------------------------------------
+2026-09-27  -  (19th, same day)
+
+Direct follow-up, same day as the 18th entry: "and the responsive pose
+tween doesnt dissappera anhymore. but the pose isnt chanigng. the
+wrist data does. but fingers odnt."
+
+Root cause: a direct side effect of the 18th entry's own fix, which
+re-applies Base Rotation's slider value every frame from inside
+`applyResponsivePoseTweenFrame()` so it stays live throughout the
+tween. `applyBaseArmRotation()`'s own finger re-bake (at the end of
+that function, pre-existing since the 12th entry) was hardcoded to
+read from `cfg` -- correct for its normal call sites (a plain slider
+touch, or the reactive per-frame call), but wrong when called
+immediately after Pose Tween's own blend: it re-baked every finger
+curl/splay straight from `cfg`'s own live (un-tweened) slider values,
+silently overwriting the finger blend `applyPoseValuesToHand(blended)`
+had JUST correctly applied one line above. Wrist bone rotation lives
+in a completely different function (`applyWristPoseToSkeleton`,
+called only from inside `applyPoseValuesToHand`), untouched by this --
+exactly why wrist responded to the tween while fingers stayed frozen.
+
+Fixed by giving `applyBaseArmRotation()` an explicit `poseValues`
+parameter (default `cfg`, unchanged for every other call site) and
+threading `blended` through from `applyResponsivePoseTweenFrame()` for
+both the plain and reactive Base Rotation cases (also gave
+`applyResponsiveBaseArmRotationFrame()` the same parameter).
+`animate()` no longer calls `applyResponsiveBaseArmRotationFrame()` a
+2nd time when Pose Tween is active, since that call would only ever
+have used `cfg` too -- Pose Tween's own branch now handles Base
+Rotation's reapplication itself, correctly, either way.
+
+Live-verified: reproduced the exact symptom first (wrist bone
+quaternion changed between 2 cursor positions -- center vs. a far
+corner -- while the finger bone stayed bit-for-bit identical), then
+confirmed the fix makes the finger bone correctly track the blend too
+(matching the Big Open Palm target's own value at the far position).
+Re-confirmed rotation sliders + reactive Base Arm Rotation still work
+correctly combined with this fix (no regression on the 16th/18th
+entries' own fixes).
+
+`index.html`'s own `main.js` cache-buster bumped `?v=95` -> `?v=96`.
+
+Commit: `50db9fd`. Pushed to `https://github.com/LeisHo/Handy-Set`;
+Vercel auto-deployed.
+
+--------------------------------------------------------------------------------
+2026-09-27  -  (20th, same day)
+
+Direct report: "sae button isnt saving my phone tilt settings."
+
+Root cause, confirmed via the real git-tracked `dev-panel-settings.json`
+(not just code reading): `addRow()` explicitly excluded every
+`'text'`/`'number'` type control from `HANDYSET_CONTROLS` -- meaning
+EVERY curve/range JSON field in the entire project (Reactive Arm
+Length, Responsive Wrist Splay, the 3 wrist-axis clamps, Responsive
+Arm Rotation at Base, Responsive Pose Tween) was never registered
+with devPanel.js's own generic Save/Sync mechanism
+(`captureAllRegisteredControlValues()`/`applyControlValues()`, JS-13)
+-- both fully type-agnostic (`document.getElementById` +
+`.value`/`.checked`, neither cares about `ctrl.type` at all). Checked
+the real settings file directly: after 7 genuine Save/Sync round-trips
+from live usage, `textWristSplayRange`, `textArmLengthRange`,
+`textBaseArmRotationCurve`, `textPoseTweenCurve`, etc. were ALL absent
+from the saved `controls` blob -- only the simpler checkbox/slider/
+select fields had ever actually been saved. **This was a pre-existing,
+systemic gap, not something introduced this session** -- it affected
+every curve/range control in the project from the start, not just the
+new Phone Tilt ones that happened to surface it first.
+
+Fixed by removing the exclusion in `addRow()` -- every control now
+registers regardless of type. The exclusion only ever needed to route
+`'text'`/`'number'` rows to `buildTextInputRow()` instead of
+`buildUniformControlRow()` (the actual DOM/row-builder choice on the
+line above, untouched) -- it never needed to also skip registration,
+since `registerDevControlArray()` and its 2 consumers make no
+assumption about which builder produced the element, and
+`buildTextInputRow()`'s own output (a plain `<input id=ctrl.id>`)
+already satisfies their only real requirement.
+
+Live-verified: changed a curve/range text field (Base Arm Rotation's
+own min/max range), clicked Sync, confirmed the new value appeared in
+`localStorage.devPanelSettings` alongside the other fields; reloaded
+for real (not a soft re-render) and confirmed both the DOM control and
+`cfg` correctly restored the saved value. Console clean beyond the
+project's own already-documented pre-existing gotchas (the local
+static server's flaky large-file delivery, the `/api/save-settings`
+404s with no local backend).
+
+`index.html`'s own `main.js` cache-buster bumped `?v=96` -> `?v=97`.
+
+Commit: `d59ddaf`. Pushed to `https://github.com/LeisHo/Handy-Set`;
+Vercel auto-deployed.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

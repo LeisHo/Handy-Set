@@ -1409,3 +1409,39 @@ wiring, and are still open:
   toward that pose's own rotation — it always uses the live slider
   instead, by design, matching this direct request.** See
   `docs/CHANGELOG.txt`'s matching 2026-09-27 (18th) entry.
+- **`applyBaseArmRotation()` takes an explicit `poseValues` parameter
+  (default `cfg`) — fixed 2026-09-27, direct report: "the wrist data
+  does [change]. but fingers odnt."** This function's own finger
+  re-bake (present since the 12th entry) always used `cfg` before this
+  fix. That's correct for a plain slider touch or the reactive-per-
+  frame call, but was WRONG the moment the 18th entry's fix started
+  calling this function from INSIDE `applyResponsivePoseTweenFrame()`
+  to keep Base Rotation's slider live during the tween — the finger
+  re-bake silently overwrote the tween's own just-applied finger blend
+  back to `cfg`'s un-tweened values every frame, while wrist rotation
+  (a completely separate function, `applyWristPoseToSkeleton`,
+  untouched by this) kept responding correctly. **Any future call to
+  `applyBaseArmRotation()` from a context that already has its OWN
+  pose-values object (not the live `cfg`) MUST pass it explicitly as
+  the 2nd argument — the default silently reverts to `cfg` and will
+  reproduce this exact "some fields respond, others freeze" symptom
+  again.** See `docs/CHANGELOG.txt`'s matching 2026-09-27 (19th) entry.
+- **Every `'text'`/`'number'` type dev-panel control (every curve/range
+  JSON field in this file) was silently excluded from Save/Sync since
+  this project's very first commit — fixed 2026-09-27, direct report:
+  "sae button isnt saving my phone tilt settings."** `addRow()` skipped
+  `HANDYSET_CONTROLS.push(ctrl)` for these types, so devPanel.js's
+  generic capture/restore mechanism (`captureAllRegisteredControlValues()`/
+  `applyControlValues()`, both fully type-agnostic) never even saw
+  them. Confirmed via the real git-tracked settings file: 7 genuine
+  Save/Sync round-trips had never once saved `textWristSplayRange`,
+  `textArmLengthRange`, or any other curve/range field. This was NOT
+  scoped to the new Phone Tilt features — it affected every text-type
+  control in the whole project from the start. Fixed by registering
+  these controls too (the row-builder choice on the same line is
+  unrelated and untouched — `buildTextInputRow()` vs.
+  `buildUniformControlRow()` only decides how the DOM gets built, not
+  whether it gets saved). **If a future control is ever added with
+  `type: 'text'` or `'number'`, it registers automatically now — no
+  special-casing needed.** See `docs/CHANGELOG.txt`'s matching
+  2026-09-27 (20th) entry.

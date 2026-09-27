@@ -8,19 +8,45 @@ append-only history.
 ## Currently working on
 
 Nothing in progress — the 6-part Palm Rotation/Responsive-features
-request (2026-09-27) is fully complete, plus 5 interjected fixes from
+request (2026-09-27) is fully complete, plus 7 interjected fixes from
 the same session (Saved Cameras/list-picker persistence; Palm Rotation
 height/distance independence + forearm-base marker; a hand-disappears
 clash between Pose Tween and Base Arm Rotation; `armBaseDistanceT`
 freezing at a stale value in the ground-raycast dead zone; Pose Tween
-now applies the live Whole-Hand Rotation / Base Rotation sliders to
-whatever pose is showing, instead of discarding them). See Recently
-completed below for the full account.
+applying the live Whole-Hand Rotation / Base Rotation sliders to
+whatever pose is showing; a follow-on fix for fingers freezing while
+the wrist kept responding; and Save/Sync never persisting ANY curve/
+range text control project-wide). See Recently completed below for
+the full account.
 
 Pushed to `https://github.com/LeisHo/Handy-Set`
 (deployed via the Vercel project at `https://vercel.com/lpeis/handy-set`).
 
 ## Recently completed
+
+- **RESOLVED (2026-09-27): Save/Sync never persisted any curve/range
+  text control in the ENTIRE project (Reactive Arm Length, Responsive
+  Wrist Splay, the 3 wrist-axis clamps, Responsive Arm Rotation at
+  Base, Responsive Pose Tween) — a pre-existing, systemic gap, not
+  something from this session's own new features.** `addRow()`
+  excluded every `'text'`/`'number'` control from registration with
+  devPanel.js's Save/Sync mechanism, even though that mechanism is
+  fully type-agnostic and never needed the exclusion. Confirmed via
+  the real git-tracked settings file: 7 genuine Save/Sync round-trips
+  had NEVER once saved any of these fields. Fixed by removing the
+  exclusion. Live-verified: a curve/range edit now survives Sync + a
+  real reload. See `docs/CHANGELOG.txt`'s matching 2026-09-27 (20th)
+  entry.
+- **RESOLVED (2026-09-27): Pose Tween's finger poses froze (wrist kept
+  responding, fingers didn't) — a direct side effect of the previous
+  fix that re-applies Base Rotation's slider every frame.**
+  `applyBaseArmRotation()`'s own finger re-bake was hardcoded to `cfg`,
+  silently overwriting the tween's own finger blend right after it was
+  correctly applied. Fixed by giving that function an explicit
+  `poseValues` parameter and threading the tween's blended object
+  through. Live-verified: finger bone now tracks the blend correctly
+  at both ends. See `docs/CHANGELOG.txt`'s matching 2026-09-27 (19th)
+  entry.
 
 - **DONE (2026-09-27): Pose Tween now applies the live Whole-Hand
   Rotation X/Y/Z and Base Rotation X/Y/Z slider values to whatever
