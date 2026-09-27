@@ -8,18 +8,34 @@ append-only history.
 ## Currently working on
 
 Nothing in progress — the 6-part Palm Rotation/Responsive-features
-request (2026-09-27) is fully complete, plus 3 interjected fixes from
+request (2026-09-27) is fully complete, plus 4 interjected fixes from
 the same session (Saved Cameras/list-picker persistence; Palm Rotation
-height/distance independence + forearm-base marker; a real hand-
-disappears bug where Responsive Pose Tween and Base Arm Rotation
-fought over the same transform). See Recently completed below for the
-full account.
+height/distance independence + forearm-base marker; a hand-disappears
+clash between Pose Tween and Base Arm Rotation; `armBaseDistanceT`
+freezing at a stale value in the ground-raycast dead zone, which made
+Pose Tween look broken/stuck from the dev panel). See Recently
+completed below for the full account.
 
 Pushed to `https://github.com/LeisHo/Handy-Set`
 (deployed via the Vercel project at `https://vercel.com/lpeis/handy-set`).
 
 ## Recently completed
 
+- **RESOLVED (2026-09-27): `armBaseDistanceT` (Wrist Splay/Base Arm
+  Rotation/Pose Tween's shared distance metric) froze at a stale,
+  unrelated value whenever the mouse was near the dev panel — the
+  ground-plane raycast dead zone covers most of the upper screen,
+  exactly where curve control points get dragged. This is what made
+  Pose Tween look broken: "the curve graph does nothing," "even
+  default gets shifted," "you're applying the target's rotation to
+  everything" were all the SAME root cause.** Fixed by falling back to
+  `tiltMagnitude` (always-live, no raycast dependency) on a raycast
+  miss, so the metric never truly freezes. Palm Rotation's own
+  freeze-on-miss behavior (a different, deliberately-requested choice)
+  is untouched. Live-verified: pose now tracks smoothly with the mouse
+  over the dev panel, and a curve-shape edit at a fixed mouse position
+  now visibly changes the pose. See `docs/CHANGELOG.txt`'s matching
+  2026-09-27 (17th) entry.
 - **RESOLVED (2026-09-27): hand disappeared (collapsed to a tiny
   sliver) whenever Responsive Pose Tween and Responsive Arm Rotation
   at Base were both active — user's own hypothesis ("bug clash with
@@ -32,7 +48,8 @@ Pushed to `https://github.com/LeisHo/Handy-Set`
   `applyModelRootTransform()` itself. Reproduced the exact symptom
   first, then confirmed the fix resolves it with both features active
   simultaneously — see `docs/CHANGELOG.txt`'s matching 2026-09-27
-  (16th) entry.
+  (16th) entry. **This fix alone was insufficient — see the entry
+  directly above for the deeper root cause found on direct follow-up.**
 
 - **DONE (2026-09-27): items 4-6 of the 6-part Palm Rotation request —
   Responsive Arm Rotation at Base, unified distance metric on

@@ -2746,6 +2746,65 @@ Commit: `8b048f5`. Pushed to `https://github.com/LeisHo/Handy-Set`;
 Vercel auto-deployed.
 
 --------------------------------------------------------------------------------
+2026-09-27  -  (17th, same day)
+
+Direct follow-up, same day as the 16th entry above: "you didnt fix the
+pose tween thign fix that... for example, turn it on, then set the
+target pose to Big Open Palm or anyting else... messingw it hteh Curve
+graph does noting, so even the defualt position hand gets shifted...
+so i think aybe you are applying the target pose' rotation to
+everything."
+
+The 16th entry's fix (invalidating `h.lastBaseArmQuat` on every
+`applyModelRootTransform()` call) was real and necessary, but not
+sufficient -- it fixed the specific Base-Arm-Rotation clash, not the
+underlying reason Pose Tween itself looked broken.
+
+Root cause: `armBaseDistanceT` (added in the 15th entry, shared by
+Wrist Splay/Base Arm Rotation/Pose Tween) only ever updated inside
+`updateTiltTarget()`'s `if (haveHit) {...}` branch -- on a raycast
+MISS it was simply left untouched, frozen at whatever it last held.
+The ground-plane raycast misses for roughly the top 2/3 of the screen
+(this project's own already-documented camera-framing dead zone,
+originally scoped to Palm Rotation) -- and the dev panel, where a user
+actually drags curve control points, sits almost entirely in that
+dead zone. Confirmed live: 2 direct bone-quaternion reads, minutes
+apart with real curve/mouse interaction in between, came back
+bit-identical -- proof the value never moved.
+
+This explains all 3 symptoms as ONE root cause: "curve does nothing"
+(frozen X meant the curve's own shape stopped mattering, especially
+right at its clamped endpoint x=0 or x=1); "even default gets shifted"
+(the frozen value on enable was whatever UNRELATED leftover the
+raycast last produced, not actually 0/Default); "applying the target's
+rotation to everything" (if that leftover happened to be near 1, the
+hand would look permanently stuck near the target pose regardless of
+what the user did next).
+
+Palm Rotation's OWN freeze-on-miss (`tiltTarget`/`tiltTargetValid`) is
+a reasonable, deliberately-requested choice for that feature (a single
+rotation staying wherever it was). It's the wrong choice for a metric
+driving a FULL-POSE swap. Fixed by falling back to `tiltMagnitude`
+(screen-distance-from-center -- always live, no raycast dependency,
+already used by Reactive Arm Length) whenever the ground-plane raycast
+misses, so `armBaseDistanceT` never truly freezes again.
+`tiltTarget`/`tiltTargetValid` themselves are untouched -- Palm
+Rotation's own behavior is unchanged.
+
+Live-verified: with the mouse held directly over the dev panel (a
+confirmed dead-zone position), the pose now tracks `tiltMagnitude`
+smoothly -- matches Target near the panel edge, matches ~Default at
+screen center, and a live curve-shape edit at a FIXED mouse position
+immediately changed the applied pose (previously zero effect).
+Re-ran the 16th entry's own Base-Arm-Rotation-clash repro afterward
+with this fix also in place -- still resolved, no regression.
+
+`index.html`'s own `main.js` cache-buster bumped `?v=93` -> `?v=94`.
+
+Commit: `d3b294a`. Pushed to `https://github.com/LeisHo/Handy-Set`;
+Vercel auto-deployed.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

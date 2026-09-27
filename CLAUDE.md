@@ -1363,3 +1363,33 @@ wiring, and are still open:
   own comment for the pattern before assuming a new one-off reset is
   needed.** See `docs/CHANGELOG.txt`'s matching 2026-09-27 (16th) entry
   for the full reproduction/diagnosis account.
+- **`armBaseDistanceT` used to FREEZE (never update) on a ground-plane
+  raycast miss — fixed 2026-09-27, direct follow-up after the 16th
+  entry's fix turned out real but insufficient.** The dead zone (top
+  ~2/3 of screen, where the raycast misses) covers almost the entire
+  dev panel — meaning any interaction with the panel itself (dragging
+  a curve point, clicking a checkbox) left this metric frozen at
+  whatever UNRELATED value it last held. For Palm Rotation (whose own
+  `tiltTarget`/`tiltTargetValid` freeze the same way, deliberately) a
+  frozen rotation is a reasonable fallback. For a metric driving a
+  FULL-POSE swap (Pose Tween) or even a smaller reactive amount (Wrist
+  Splay, Base Arm Rotation), a frozen, arbitrary, leftover value reads
+  as "broken" — 3 reports that looked like 3 different bugs ("curve
+  does nothing," "even default position shifted," "applying the
+  target's rotation to everything") were this ONE root cause. Fixed by
+  falling back to `tiltMagnitude` (always-live, no raycast dependency)
+  on a miss — see `updateTiltTarget()`'s own comment. **This is now
+  the established pattern for this metric specifically: it must NEVER
+  simply hold its previous value on a miss, unlike `tiltTarget`/
+  `tiltTargetValid`, which are DELIBERATELY frozen on a miss and must
+  stay that way (Palm Rotation's own explicit spec).** If a future
+  report about Wrist Splay/Base Arm Rotation/Pose Tween describes
+  "stuck," "frozen," "does nothing while I'm doing X," or "randomly
+  jumps to a weird state," check whether the mouse was in the dead
+  zone during that interaction BEFORE assuming the feature's own math
+  is wrong — this exact symptom shape has already cost one full
+  debugging round here. See `docs/CHANGELOG.txt`'s matching
+  2026-09-27 (17th) entry for the live-verification methodology (a
+  bit-identical bone-quaternion read minutes apart, with real
+  interaction in between, is what actually proved the freeze — a
+  screenshot alone did not).
