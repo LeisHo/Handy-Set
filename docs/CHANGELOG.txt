@@ -2514,6 +2514,67 @@ Commit: `333201a`. Pushed to `https://github.com/LeisHo/Handy-Set`;
 Vercel auto-deployed.
 
 --------------------------------------------------------------------------------
+2026-09-27  -  (14th, same day)
+
+Direct interjected request, mid-turn: "when i turn on show target
+marker, also show a marker for where the forearm base point is which
+we are using to measure the degree of rotation. Height should not
+matter to rsponsie pam rtation since its purely an XZ plane angle
+measurement. the distance of the cursor to the hand should also have
+no effect o nte responsive palm rotaiton."
+
+3 changes, all in `updateTiltTarget()`/`animate()`'s own Palm Rotation
+block:
+
+1. New `forearmBaseMarkerMesh` (cyan sphere), synced to
+   `tiltOriginGround` every frame, sharing `checkboxShowTargetMarker`'s
+   own visibility with the existing (magenta) target marker rather than
+   getting its own separate checkbox -- the request asked for it as an
+   addition to that existing control.
+2. `tiltOriginGround` (Point A of the angle measurement) no longer
+   slides the forearm bone's world position along the camera's forward
+   direction until it reaches Y=0 -- it now just drops the Y coordinate
+   outright (`set(x, 0, z)`). The camera-ray slide made the resulting
+   XZ landing point depend on BOTH the forearm's own height and the
+   camera's pitch/yaw (a taller/shorter forearm, or a repositioned
+   camera, would slide the point sideways before the angle was ever
+   computed) -- exactly the height-coupling this request rules out. No
+   camera-ray math is needed at all once Y is simply discarded; removed
+   the now-unused `_cameraForwardVec` alongside it.
+3. Removed the `* tiltMagnitude` scaling on Palm Rotation's `baseDeg`
+   (added in the 5th round, both the mouse and device-orientation
+   paths) -- `computeRadialRollDeg()` is a pure `atan2`, direction
+   only; the rotation now applies that angle directly with zero
+   distance/magnitude component, matching "distance of the cursor to
+   the hand should have no effect." Reactive Arm Length and Responsive
+   Wrist Splay are untouched -- they still read `tiltMagnitude` for
+   their own curves; this change is scoped to Palm Rotation's `baseDeg`
+   only.
+
+Verified live via direct state inspection (not just visual): with a
+real mouse move driving the rotation, `impliedYdeg` (extracted from the
+resulting `wrapper.quaternion` via `Euler.setFromQuaternion`) matched
+an independently-computed `atan2(tiltOriginGround, tiltTarget)` to 13
+decimal places (168.2148200002795 vs 168.21482000027956) -- confirming
+no residual scaling factor survived the removal. Repositioned the
+camera to look down toward Y=0 to confirm both markers render at their
+correct, distinct world positions (cyan near the forearm, magenta at
+the cursor's ground hit) -- screenshot-verified. An initial attempt at
+this same distance-independence test (comparing a "tiny" 8px cursor
+offset against a "far" 350px one) produced identical results and
+briefly looked like a bug; traced to the tiny-offset test point simply
+falling in the already-documented Y=0 raycast dead-zone (top ~2/3 of
+screen misses the plane), which correctly freezes state rather than
+computing a bogus angle -- not a flaw in this fix, a flawed test
+setup, corrected by re-deriving the check from the exact-match
+`atan2` comparison instead.
+
+`index.html`'s own `main.js` cache-buster bumped `?v=86` -> `?v=87`.
+
+Commit: `e0677cd`. Pushed to `https://github.com/LeisHo/Handy-Set`;
+Vercel auto-deployed.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

@@ -1243,3 +1243,23 @@ wiring, and are still open:
   reload (both in localStorage and in the rendered list UI), and
   Delete correctly removed it again. See `docs/CHANGELOG.txt`'s
   matching 2026-09-27 (13th) entry.
+- **Projecting a world point onto Y=0 by sliding it along the CAMERA's
+  forward direction (rather than just dropping its Y coordinate) makes
+  the result depend on height/camera-pitch — a real trap for any
+  future "purely XZ" measurement in this file.** `tiltOriginGround`
+  (Palm Rotation's own Point A) did this in its 6th-round
+  implementation; direct correction 2026-09-27: "Height should not
+  matter to responsive palm rotation since its purely an XZ plane
+  angle measurement." A camera-ray slide-to-Y=0 is the right technique
+  for the CURSOR point (a genuine 2D screen input with no inherent
+  world position), but wrong for a point that already HAS a real world
+  position (the forearm bone) if the goal is "this point's own XZ,
+  full stop" — sliding along a non-vertical ray changes the XZ landing
+  spot based on how far the point started above/below Y=0, which
+  itself depends on the point's height and the camera's own angle.
+  Fixed by dropping Y directly (`set(x, 0, z)`), no camera involved.
+  **If a future feature needs another "ignore height" measurement,
+  drop the axis directly rather than projecting along any non-parallel
+  ray, even one that looks locally reasonable ("perpendicular to the
+  camera").** See `docs/CHANGELOG.txt`'s matching 2026-09-27 (14th)
+  entry.
