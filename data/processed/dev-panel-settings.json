@@ -70,24 +70,28 @@
     "checkboxWristSplayResponsiveEnabled": true,
     "sliderWristSplayDefault": -104,
     "checkboxWristSplayReactiveEnabled": true,
-    "sliderCameraX": 0,
-    "sliderCameraY": 97.5,
-    "sliderCameraZ": 4.5,
-    "sliderCameraFov": 32,
-    "sliderCameraZoom": 64.5,
+    "sliderCameraX": 1,
+    "sliderCameraY": 130,
+    "sliderCameraZ": 5,
+    "sliderCameraFov": 15,
+    "sliderCameraZoom": 99.5,
     "checkboxLockCameraPan": true,
     "checkboxLockCameraZoom": true,
     "checkboxLockCameraRotate": true,
-    "sliderCameraYaw": -175,
-    "sliderCameraPitch": -89,
+    "sliderCameraYaw": -174,
+    "sliderCameraPitch": -87,
     "checkboxCameraMaxExtentsEnabled": false,
     "checkboxTrackingEnabled": true,
     "sliderTargetDepthFactor": 2,
     "checkboxShowTargetMarker": true,
     "checkboxPalmFacesCursor": true,
     "sliderPalmFaceRotationOffset": 18,
+    "checkboxBaseArmRotationResponsiveEnabled": true,
+    "sliderBaseArmRotationFineTune": 9,
+    "checkboxPoseTweenResponsiveEnabled": false,
+    "selectPoseTweenTargetPoseName": "",
     "sliderKeyAzimuth": 360,
-    "sliderKeyElevation": 9,
+    "sliderKeyElevation": -3,
     "sliderKeyTargetHeight": -18,
     "sliderKeyIntensity": 6,
     "colorKeyColor": "#ffffff",
@@ -1341,11 +1345,11 @@
         "items": [
           {
             "type": "row",
-            "key": "checkboxShowAxesHelper"
+            "key": "__row0"
           },
           {
             "type": "row",
-            "key": "__row1"
+            "key": "checkboxShowAxesHelper"
           },
           {
             "type": "group",
@@ -1425,8 +1429,8 @@
           }
         ],
         "rowKeys": [
+          "__row0",
           "checkboxShowAxesHelper",
-          "__row1",
           "checkboxShowGridHelper",
           "checkboxShowWireframe"
         ],
@@ -1588,6 +1592,63 @@
         "key": "desktop:Phone Tilt",
         "items": [
           {
+            "type": "group",
+            "section": {
+              "key": "desktop:Responsive Arm Rotation at Base",
+              "items": [
+                {
+                  "type": "row",
+                  "key": "checkboxBaseArmRotationResponsiveEnabled"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderBaseArmRotationFineTune"
+                },
+                {
+                  "type": "row",
+                  "key": "textBaseArmRotationRange"
+                },
+                {
+                  "type": "row",
+                  "key": "textBaseArmRotationCurve"
+                }
+              ],
+              "rowKeys": [
+                "checkboxBaseArmRotationResponsiveEnabled",
+                "sliderBaseArmRotationFineTune",
+                "textBaseArmRotationRange",
+                "textBaseArmRotationCurve"
+              ],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "group",
+            "section": {
+              "key": "desktop:Responsive Pose Tween",
+              "items": [
+                {
+                  "type": "row",
+                  "key": "checkboxPoseTweenResponsiveEnabled"
+                },
+                {
+                  "type": "row",
+                  "key": "selectPoseTweenTargetPoseName"
+                },
+                {
+                  "type": "row",
+                  "key": "textPoseTweenCurve"
+                }
+              ],
+              "rowKeys": [
+                "checkboxPoseTweenResponsiveEnabled",
+                "selectPoseTweenTargetPoseName",
+                "textPoseTweenCurve"
+              ],
+              "subgroups": []
+            }
+          },
+          {
             "type": "row",
             "key": "checkboxTrackingEnabled"
           },
@@ -1710,6 +1771,57 @@
           "checkboxTrackingEnabled"
         ],
         "subgroups": [
+          {
+            "key": "desktop:Responsive Arm Rotation at Base",
+            "items": [
+              {
+                "type": "row",
+                "key": "checkboxBaseArmRotationResponsiveEnabled"
+              },
+              {
+                "type": "row",
+                "key": "sliderBaseArmRotationFineTune"
+              },
+              {
+                "type": "row",
+                "key": "textBaseArmRotationRange"
+              },
+              {
+                "type": "row",
+                "key": "textBaseArmRotationCurve"
+              }
+            ],
+            "rowKeys": [
+              "checkboxBaseArmRotationResponsiveEnabled",
+              "sliderBaseArmRotationFineTune",
+              "textBaseArmRotationRange",
+              "textBaseArmRotationCurve"
+            ],
+            "subgroups": []
+          },
+          {
+            "key": "desktop:Responsive Pose Tween",
+            "items": [
+              {
+                "type": "row",
+                "key": "checkboxPoseTweenResponsiveEnabled"
+              },
+              {
+                "type": "row",
+                "key": "selectPoseTweenTargetPoseName"
+              },
+              {
+                "type": "row",
+                "key": "textPoseTweenCurve"
+              }
+            ],
+            "rowKeys": [
+              "checkboxPoseTweenResponsiveEnabled",
+              "selectPoseTweenTargetPoseName",
+              "textPoseTweenCurve"
+            ],
+            "subgroups": []
+          },
           {
             "key": "desktop:Target",
             "items": [
@@ -3426,6 +3538,24 @@
           {
             "type": "group",
             "section": {
+              "key": "mobile:Responsive Arm Rotation at Base",
+              "items": [],
+              "rowKeys": [],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "group",
+            "section": {
+              "key": "mobile:Responsive Pose Tween",
+              "items": [],
+              "rowKeys": [],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "group",
+            "section": {
               "key": "mobile:Target",
               "items": [],
               "rowKeys": [],
@@ -3479,6 +3609,18 @@
         ],
         "rowKeys": [],
         "subgroups": [
+          {
+            "key": "mobile:Responsive Arm Rotation at Base",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
+          {
+            "key": "mobile:Responsive Pose Tween",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
           {
             "key": "mobile:Target",
             "items": [],
@@ -4383,6 +4525,24 @@
           {
             "type": "group",
             "section": {
+              "key": "landscape:Responsive Arm Rotation at Base",
+              "items": [],
+              "rowKeys": [],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "group",
+            "section": {
+              "key": "landscape:Responsive Pose Tween",
+              "items": [],
+              "rowKeys": [],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "group",
+            "section": {
               "key": "landscape:Target",
               "items": [],
               "rowKeys": [],
@@ -4436,6 +4596,18 @@
         ],
         "rowKeys": [],
         "subgroups": [
+          {
+            "key": "landscape:Responsive Arm Rotation at Base",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
+          {
+            "key": "landscape:Responsive Pose Tween",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
           {
             "key": "landscape:Target",
             "items": [],
@@ -4734,7 +4906,9 @@
     "desktop:Tween": true,
     "desktop:Saved Tween Sequences": true,
     "desktop:Field Layout": true,
-    "desktop:Phone Tilt": true,
+    "desktop:Phone Tilt": false,
+    "desktop:Responsive Arm Rotation at Base": false,
+    "desktop:Responsive Pose Tween": false,
     "desktop:Target": true,
     "desktop:Responsive Wrist Splay": true,
     "desktop:New Group": true,
@@ -4775,6 +4949,8 @@
     "mobile:Saved Tween Sequences": false,
     "mobile:Field Layout": false,
     "mobile:Phone Tilt": false,
+    "mobile:Responsive Arm Rotation at Base": false,
+    "mobile:Responsive Pose Tween": false,
     "mobile:Target": true,
     "mobile:Responsive Wrist Splay": true,
     "mobile:Tracking": false,
@@ -4816,6 +4992,8 @@
     "landscape:Saved Tween Sequences": true,
     "landscape:Field Layout": true,
     "landscape:Phone Tilt": false,
+    "landscape:Responsive Arm Rotation at Base": false,
+    "landscape:Responsive Pose Tween": false,
     "landscape:Target": true,
     "landscape:Responsive Wrist Splay": false,
     "landscape:Tracking": false,
@@ -5082,7 +5260,11 @@
     "mobile:Ground Plane": null,
     "mobile:Finger Gizmos": null,
     "landscape:Ground Plane": null,
-    "landscape:Finger Gizmos": null
+    "landscape:Finger Gizmos": null,
+    "mobile:Responsive Arm Rotation at Base": null,
+    "mobile:Responsive Pose Tween": null,
+    "landscape:Responsive Arm Rotation at Base": null,
+    "landscape:Responsive Pose Tween": null
   },
   "devTextOverridesManual": [
     "desktop:New Group",
