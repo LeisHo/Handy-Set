@@ -2111,6 +2111,72 @@ Commit: `15dafb3`. Pushed to `https://github.com/LeisHo/Handy-Set`;
 Vercel auto-deployed.
 
 --------------------------------------------------------------------------------
+2026-09-27  -  (5th, same day)
+
+Direct report: "does the cursor trackig have to track a 3d projected
+point? right now its not tracking correctly since the actual tracking
+point isnt aligned with my cursor" -- clarified mid-investigation
+("by cursor trakcign i meant the phone tilt bro") to mean this
+project's own Phone Tilt group, not a literal "cursor tracking"
+feature (a separate, brief detour checked 3JS ENGINE for an unrelated
+new commit there, per the user's own request, before returning here).
+
+First attempt: suspected `updateTiltTarget()`'s mouse-path raycast --
+both a center-ray and a cursor-ray hit a plane fixed at Z=0 to compute
+an XY offset, then `tiltTarget.z` was set independently to
+`fieldRadius * targetDepthFactor` (default 0.6, never 0). Tried moving
+`cursorTargetPlane` itself to that same depth so both raycasts and the
+final Z agreed. Live-verified by projecting the resulting `tiltTarget`
+back through the camera (`.project(camera)`) and comparing to the real
+cursor pixel -- found the reprojection landed nowhere close (off-canvas
+entirely), proving this "fix" hadn't actually helped. Root cause of
+the non-fix: moving the plane changes a point's Z, which changes WHERE
+that point reprojects on screen under perspective, but never changes
+the XY OFFSET's own direction -- both raycasts always shared one plane
+either way, before and after. Reverted per direct correction: "cant
+you just raycast to a specific groundplane height and use that as 0?
+then add the offset from the slider depth thing" -- back to a FIXED
+ground plane (Z=0, which already matches `hand.wrapper.position.z`,
+always 0 per `relayoutField()`) for the XY offset, with
+`targetDepthFactor` added on top as an independent Z, exactly as the
+code originally had it.
+
+The real, separate bug surfaced by a concurrent, related request ("on
+mobile, i wan the hand to rotate in the direction i am tilting. the
+more i tilt the more the hand rotates to face that direction"):
+`computeRadialRollDeg()` is a pure `atan2()` -- direction only, blind
+to magnitude. Any nonzero cursor offset OR device tilt, however small,
+produced the exact SAME full-strength rotation angle as a large one --
+explaining both symptoms at once: mouse tracking felt twitchy/
+disconnected near screen-center (a tiny, near-(0,0) offset is also
+numerically noisy for atan2, and was getting full weight), and on
+mobile any small tilt snapped instantly to the full "face that
+direction" rotation instead of easing in proportionally -- the
+`tiltMagnitude` scaling the mobile request asked for didn't actually
+exist yet.
+
+Fixed with one change covering both input paths at once, since they
+share this same formula in `animate()`: `baseDeg =
+computeRadialRollDeg(...) * tiltMagnitude` (previously unscaled).
+`tiltMagnitude` (0-1) was already computed for both mouse
+(`handleMouseMoveFallback()`) and device orientation
+(`handleDeviceOrientation()`) -- reused directly, no new state needed.
+
+Live-verified via real mouse movement + direct quaternion reads at 3
+screen positions: near-center (203,457, canvas center) -> ~-0.22 deg
+(effectively neutral); a moderate offset (top-right, 400,50) ->
+~-25.9 deg; a screen corner (bottom-right, 400,900) -> ~-156.0 deg
+(a different final angle than the top-right corner, correctly
+reflecting a different compass DIRECTION, not just distance) --
+smooth, monotonic scaling with distance from center at every tested
+point, not a snap.
+
+`index.html`'s own `main.js` cache-buster bumped `?v=77` -> `?v=78`.
+
+Commit: `b56783f`. Pushed to `https://github.com/LeisHo/Handy-Set`;
+Vercel auto-deployed.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

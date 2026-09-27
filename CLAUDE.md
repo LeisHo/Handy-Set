@@ -1047,3 +1047,49 @@ wiring, and are still open:
   already documented elsewhere in this file) rather than assuming the
   numeric check or the code is wrong.** See `docs/CHANGELOG.txt`'s
   matching 2026-09-27 (4th) entry for the full account.
+- **`computeRadialRollDeg()` is a pure `atan2` — direction only, blind
+  to magnitude — so Palm Rotation's angle must be explicitly scaled by
+  `tiltMagnitude` (in `animate()`, where `baseDeg` is computed) or ANY
+  nonzero cursor offset/device tilt snaps to the SAME full-strength
+  rotation as a huge one.** Found 2026-09-27 (5th round), direct
+  reports: mouse — "does the cursor trackig have to track a 3d
+  projected point? right now its not tracking correctly since the
+  actual tracking point isnt aligned with my cursor" (this turned out
+  to be a magnitude/proportionality complaint, not a genuine
+  directional-alignment bug — see below); mobile — "the more i tilt the
+  more the hand rotates to face that direction" (not actually true
+  before this fix). **A first attempt chased the wrong cause**:
+  suspected `updateTiltTarget()`'s raycast-onto-a-fixed-Z-plane, tried
+  moving the plane to match `targetDepthFactor`'s own depth so the
+  raycast and the final `tiltTarget.z` would agree — live-verified via
+  `tiltTarget.clone().project(camera)` reprojected back to screen
+  pixels, and the result landed nowhere near the real cursor (off-
+  canvas), proving the "fix" changed nothing real. Reason: moving the
+  plane changes a point's Z, which changes WHERE that point reprojects
+  on screen under perspective, but never changes the XY OFFSET's own
+  DIRECTION — both raycasts (center and cursor) always shared one
+  plane either way, so the offset's angle was never actually affected
+  by which fixed depth was chosen. Reverted to the original fixed
+  ground plane (Z=0, matching `hand.wrapper.position.z`, always 0) with
+  `targetDepthFactor` added on top as an independent Z, per direct
+  correction: "cant you just raycast to a specific groundplane height
+  and use that as 0? then add the offset from the slider depth thing."
+  **The REAL fix** was in `animate()`, not `updateTiltTarget()` at all:
+  `baseDeg = computeRadialRollDeg(...) * tiltMagnitude` — one line,
+  covering both the mouse and device-tilt input paths at once, since
+  both already compute `tiltMagnitude` and both feed the same formula.
+  Live-verified via real mouse movement at 3 screen positions: near-
+  center ~-0.22 deg, a moderate offset ~-25.9 deg, a screen corner
+  ~-156.0 deg (a different final angle than a DIFFERENT corner, at
+  similar distance from center — correctly reflecting direction, not
+  just magnitude). **If a future report on this feature describes
+  "not aligned" or "not tracking correctly," check whether the
+  complaint is really about magnitude/proportionality (is a SMALL
+  input producing a SMALL effect?) before assuming it's a
+  directional/raycast bug — this is now the 2nd time on this exact
+  feature (see the 3rd-round axis entry above) that a plausible-
+  looking raycast/geometry theory turned out not to be the real cause,
+  and both times a `.project(camera)`-based reprojection check (or an
+  equivalent direct, quantitative live check) is what caught it, not a
+  visual impression.** See `docs/CHANGELOG.txt`'s matching 2026-09-27
+  (5th) entry for the full account.

@@ -12,6 +12,23 @@ Nothing in progress. Pushed to `https://github.com/LeisHo/Handy-Set`
 
 ## Recently completed
 
+- **RESOLVED (2026-09-27, 5th pass): Palm rotation snapped instantly to
+  full strength on any nonzero cursor offset or device tilt, instead of
+  scaling proportionally — fixed mouse "not aligned with cursor" feel
+  and enabled the requested "more tilt = more rotation" mobile
+  behavior in one change.** `computeRadialRollDeg()` is a pure `atan2`
+  (direction only, magnitude-blind); a first attempt suspected the
+  raycast/depth-plane math instead and was disproven live (reprojecting
+  `tiltTarget` back through the camera showed it landing nowhere near
+  the real cursor, even after "fixing" it — the plane's depth was never
+  actually the issue, since both raycasts always shared one plane
+  either way). Fixed by scaling the resulting angle by `tiltMagnitude`
+  (already computed for both mouse and device-tilt input) in
+  `animate()` — one change covers both input paths. Live-verified: near
+  screen-center ~0deg, moderate offset ~-26deg, a corner ~-156deg —
+  smooth, monotonic, correct direction at each point. See
+  `docs/CHANGELOG.txt`'s matching 2026-09-27 (5th) entry.
+
 - **RESOLVED (2026-09-27, 4th pass — supersedes the 3rd pass's own axis
   choice below, anchor logic unchanged): Palm Faces Cursor and Palm
   Face Rotation rotate around plain canonical UP (0,1,0), not a
