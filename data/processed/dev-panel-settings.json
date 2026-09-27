@@ -1565,15 +1565,6 @@
                 {
                   "type": "row",
                   "key": "textWristSplayCurve"
-                },
-                {
-                  "type": "group",
-                  "section": {
-                    "key": "desktop:Tracking",
-                    "items": [],
-                    "rowKeys": [],
-                    "subgroups": []
-                  }
                 }
               ],
               "rowKeys": [
@@ -1583,14 +1574,7 @@
                 "textWristSplayRange",
                 "textWristSplayCurve"
               ],
-              "subgroups": [
-                {
-                  "key": "desktop:Tracking",
-                  "items": [],
-                  "rowKeys": [],
-                  "subgroups": []
-                }
-              ]
+              "subgroups": []
             }
           },
           {
@@ -1695,15 +1679,6 @@
               {
                 "type": "row",
                 "key": "textWristSplayCurve"
-              },
-              {
-                "type": "group",
-                "section": {
-                  "key": "desktop:Tracking",
-                  "items": [],
-                  "rowKeys": [],
-                  "subgroups": []
-                }
               }
             ],
             "rowKeys": [
@@ -1713,14 +1688,7 @@
               "textWristSplayRange",
               "textWristSplayCurve"
             ],
-            "subgroups": [
-              {
-                "key": "desktop:Tracking",
-                "items": [],
-                "rowKeys": [],
-                "subgroups": []
-              }
-            ]
+            "subgroups": []
           },
           {
             "key": "desktop:New Group",
@@ -4667,7 +4635,6 @@
     "desktop:Phone Tilt": false,
     "desktop:Target": false,
     "desktop:Responsive Wrist Splay": false,
-    "desktop:Tracking": false,
     "desktop:New Group": false,
     "desktop:Palm Facing": false,
     "desktop:Pose": true,
