@@ -2528,7 +2528,26 @@ function addRow(content, ctrl) {
   if (!ctrl.tab) ctrl.tab = 'desktop'
   const row = (ctrl.type === 'text' || ctrl.type === 'number') ? buildTextInputRow(ctrl) : buildUniformControlRow(ctrl)
   content.appendChild(row)
-  if (ctrl.type !== 'text' && ctrl.type !== 'number') HANDYSET_CONTROLS.push(ctrl)
+  // CORRECTED 2026-09-27, direct report: "sae button isnt saving my
+  // phone tilt settings." Root cause: every 'text'/'number' control
+  // (every curve/range JSON field in the file -- Reactive Arm Length,
+  // Responsive Wrist Splay, the 3 wrist-axis clamps, Responsive Arm
+  // Rotation at Base, Responsive Pose Tween) was excluded from
+  // HANDYSET_CONTROLS here, meaning captureAllRegisteredControlValues()/
+  // applyControlValues() (devPanel.js, JS-13) -- both fully generic,
+  // `document.getElementById(ctrl.id)` + `.value`/`.checked`, neither
+  // cares about `ctrl.type` at all -- never even saw these controls to
+  // capture or restore them. Confirmed live: `textWristSplayRange`,
+  // `textArmLengthRange`, `textBaseArmRotationCurve`,
+  // `textPoseTweenCurve`, etc. were ALL absent from the real,
+  // git-tracked `dev-panel-settings.json` after 7 real Save/Sync
+  // round-trips. The original exclusion only needed to route these
+  // rows to buildTextInputRow() instead of buildUniformControlRow()
+  // (the actual DOM/row-builder choice, on the line above, untouched
+  // by this fix) -- it never needed to also skip registration, since
+  // registerDevControlArray() and its 2 consumers make no assumption
+  // about which row-builder produced the element.
+  HANDYSET_CONTROLS.push(ctrl)
   return row
 }
 function wireSlider(id, onInput) {
