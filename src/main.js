@@ -1196,6 +1196,18 @@ function computeRadialRollDeg(handPos, targetPos) {
 // perspective raycast, not a fixed-radius normalized circle) without
 // depending on the hand's own position matching the camera's aim point.
 const _tiltRaycastHit = new THREE.Vector3()
+// True whenever the mouse path's own cursor-ray actually hit groundPlane
+// this frame -- direct instruction 2026-09-27, after finding the Y=0
+// plane only intersects the bottom ~third of the screen with this
+// project's default camera framing (it looks level-to-upward, not down):
+// "When the raycasting never hits the Y=0, just let the rotation not
+// trigger. this is only a desktop issue since mobile uses tilt." Read by
+// animate() to skip the WHOLE per-frame rotation update for the mouse
+// path (not just freeze tiltTarget) when false, so a miss never mixes a
+// stale tiltTarget with a fresh tiltOriginGround into a bogus angle.
+// Device-orientation always has real input (no raycast), so it's left
+// permanently true and never consulted for that path.
+let tiltTargetValid = true
 function updateTiltTarget() {
   if (lastInputSource === 'mouse') {
     // REWRITTEN 2026-09-27 (6th round on this feature), direct spec: "I
@@ -1239,8 +1251,10 @@ function updateTiltTarget() {
     // vertical Z=0 plane.
     raycaster.setFromCamera(cursorNDC, camera)
     const haveHit = raycaster.ray.intersectPlane(groundPlane, _tiltRaycastHit)
+    tiltTargetValid = haveHit
     if (haveHit) tiltTarget.copy(_tiltRaycastHit)
   } else {
+    tiltTargetValid = true // device-orientation always has real input, never raycast-gated
     const maxOffset = sceneState.fieldRadius * 1.2
     tiltTarget.set(tiltMagnitude * maxOffset * Math.cos(tiltAngle), tiltMagnitude * maxOffset * Math.sin(tiltAngle), sceneState.fieldRadius * cfg.targetDepthFactor)
   }
@@ -1851,22 +1865,34 @@ function animate() {
       // ray to ground-project in the first place.
       const _originXZ = { x: tiltOriginGround.x, y: tiltOriginGround.z }
       const _targetXZ = { x: tiltTarget.x, y: tiltTarget.z }
-      hands.forEach((h) => {
-        const baseDeg = cfg.palmFacesCursor
-          ? (lastInputSource === 'mouse'
-              ? computeRadialRollDeg(_originXZ, _targetXZ)
-              : computeRadialRollDeg(h.wrapper.position, tiltTarget)) * tiltMagnitude
-          : 0
-        const totalRad = THREE.MathUtils.degToRad(baseDeg + (cfg.palmFaceRotationOffset || 0))
-        const axis = UP
-        const desired = new THREE.Quaternion().setFromAxisAngle(axis, totalRad)
-        h.wrapper.quaternion.slerp(desired, cfg.trackingDamping)
+      // Direct instruction 2026-09-27, after finding the Y=0 ground plane
+      // only intersects the bottom ~third of the screen with this
+      // project's default camera framing: "When the raycasting never hits
+      // the Y=0, just let the rotation not trigger. this is only a
+      // desktop issue since mobile uses tilt." A missed raycast this
+      // frame skips the WHOLE per-hand update below (quaternion AND the
+      // anchor/position recompute) rather than computing a bogus angle
+      // from a stale tiltTarget mixed with a fresh tiltOriginGround --
+      // the rotation simply stays exactly where it was. Device-
+      // orientation is unaffected (tiltTargetValid is always true there).
+      if (!(lastInputSource === 'mouse' && cfg.palmFacesCursor && !tiltTargetValid)) {
+        hands.forEach((h) => {
+          const baseDeg = cfg.palmFacesCursor
+            ? (lastInputSource === 'mouse'
+                ? computeRadialRollDeg(_originXZ, _targetXZ)
+                : computeRadialRollDeg(h.wrapper.position, tiltTarget)) * tiltMagnitude
+            : 0
+          const totalRad = THREE.MathUtils.degToRad(baseDeg + (cfg.palmFaceRotationOffset || 0))
+          const axis = UP
+          const desired = new THREE.Quaternion().setFromAxisAngle(axis, totalRad)
+          h.wrapper.quaternion.slerp(desired, cfg.trackingDamping)
 
-        const scale = computeBaseScale() * (cfg.poseScale ?? 1)
-        const pivotLocal = forearmPosRaw.clone().multiplyScalar(scale).applyQuaternion(h.clone.quaternion).add(h.clone.position)
-        const rotatedPivot = pivotLocal.clone().applyQuaternion(h.wrapper.quaternion)
-        h.wrapper.position.copy(h.basePosition).add(pivotLocal).sub(rotatedPivot)
-      })
+          const scale = computeBaseScale() * (cfg.poseScale ?? 1)
+          const pivotLocal = forearmPosRaw.clone().multiplyScalar(scale).applyQuaternion(h.clone.quaternion).add(h.clone.position)
+          const rotatedPivot = pivotLocal.clone().applyQuaternion(h.wrapper.quaternion)
+          h.wrapper.position.copy(h.basePosition).add(pivotLocal).sub(rotatedPivot)
+        })
+      }
     }
     applyReactiveWristSplayFrame()
   }
