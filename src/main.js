@@ -58,13 +58,13 @@ const cfg = {
   trackingEnabled: true, trackingDamping: 1, targetDepthFactor: 0.6,
   showTargetMarker: false, palmFacesCursor: false,
   // Palm Face Rotation -- adds onto Palm Faces Cursor's own dynamic angle
-  // (see animate()'s own comment), both rotating around the forearm
-  // bone's own local Y axis (armYAxisAligned), anchored at the forearm
-  // bone's own base position -- not HANDY DANDIES' own axis
-  // (wristCropNormalAligned), even though the two happen to coincide on
-  // this rig. Direct instruction: "rotating the entire arm by the Y axis
-  // of the forearm bone... anchored to the base point of the forearm
-  // bone... its a locaize rotation."
+  // (see animate()'s own comment), both rotating around Y (the aligned/
+  // rendering frame's Y axis -- this rig's bones are unrotated at bind
+  // pose, so that's what "the forearm's Y axis" actually is), anchored
+  // at the forearm bone's own base position. Direct instruction:
+  // "rotating the entire arm by the Y axis of the forearm bone...
+  // anchored to the base point of the forearm bone... its a locaize
+  // rotation" / "I want the Forearms Y axis to be the axis of rotation."
   palmFaceRotationOffset: 0,
   // Whole-Hand Rotation at Base (anchored at rForearmBend, using its own axes)
   baseRotationX: 0, baseRotationY: 0, baseRotationZ: 0,
@@ -254,21 +254,6 @@ const boneRestQuat = {}
 let wristPosRaw = new THREE.Vector3()
 let forearmPosRaw = new THREE.Vector3()
 let wristCropNormalAligned = null
-// Palm Face Rotation / Cursor Tracking's own roll axis -- the
-// rForearmBend bone's OWN local Y axis, measured once at bind pose (load
-// time) and re-expressed in the same "aligned" frame as
-// wristCropNormalAligned (via alignQuat). REINSTATED 2026-09-27 (3rd
-// round) after a direct correction: "i said palm face rotation cursor
-// tracking should be rotating the entire arm by the Y axis of the
-// forearm bone. the rotation should be anchored to the base point of the
-// forearm bone" / "its a locaize rotation." A prior round measured this
-// exact vector, found it numerically identical to wristCropNormalAligned
-// (this rig's bones are authored with local Y running along their own
-// length) and swapped to world UP instead to avoid that overlap -- WRONG
-// per this correction: the user wants the real forearm-bone Y axis
-// specifically, coincidence with wristCropNormalAligned or not, not a
-// generic world axis.
-let armYAxisAligned = null
 const modelRotationPivot = new THREE.Vector3()
 const sceneState = { fieldRadius: 10 }
 let toonMaterial = null
@@ -1351,9 +1336,27 @@ new GLTFLoader().load(MODEL_URL, async (gltf) => {
     forearmBaseBone.getWorldPosition(forearmBasePos)
     wristCropNormalAligned = wristPos.clone().sub(forearmBasePos).normalize().applyQuaternion(alignQuat)
     forearmPosRaw = forearmBasePos
-    const forearmBaseWorldQuat = new THREE.Quaternion()
-    forearmBaseBone.getWorldQuaternion(forearmBaseWorldQuat)
-    armYAxisAligned = new THREE.Vector3(0, 1, 0).applyQuaternion(forearmBaseWorldQuat).applyQuaternion(alignQuat)
+    // ROOT CAUSE FOUND 2026-09-27 (4th round on this feature), direct
+    // report: "you are rotating the hand around x or z axis. I want the
+    // Forearms Y axis to be the axis of rotation." Measured
+    // `forearmBaseBone.quaternion`/`getWorldQuaternion()` directly and
+    // found BOTH are identity to ~1e-8 -- this rig keeps every bone
+    // UNROTATED at bind pose (orientation is baked into the mesh
+    // geometry/vertex positions instead, a common export convention).
+    // That means the bone's RAW local Y axis, (0,1,0) transformed by its
+    // own (trivial/identity) world quaternion then by `alignQuat`, is just
+    // "`alignQuat` applied to canonical raw Y" -- which this alignment
+    // happens to send to roughly ALIGNED -Z (confirmed: it's numerically
+    // identical to `wristCropNormalAligned`, the bone's own LENGTH
+    // direction). So "the bone's own local Y axis" and "Y in the aligned/
+    // rendering frame everything else in this file uses (camera X/Y/Z,
+    // modelRotY, etc.)" are two completely different vectors here, and
+    // the previous round's `armYAxisAligned` measurement -- despite being
+    // a mathematically correct reading of the bone's RAW-space Y -- was
+    // answering the wrong question. Since the bone has no meaningful
+    // local rotation to begin with, "the forearm's Y axis" can only
+    // sensibly mean Y in the aligned frame, i.e. plain canonical (0,1,0)
+    // -- see animate()'s own comment for where this is actually used.
   }
   wristPosRaw = wristPos.clone()
   // Whole-Hand Rotation's own pivot point — ported from HANDO's real
@@ -1661,7 +1664,6 @@ window.__debug = {
   get hand() { return hand }, get hands() { return hands }, get sceneState() { return sceneState },
   get wristPosRaw() { return wristPosRaw }, get forearmPosRaw() { return forearmPosRaw },
   get wristCropNormalAligned() { return wristCropNormalAligned }, get alignQuat() { return alignQuat },
-  get armYAxisAligned() { return armYAxisAligned },
   get tiltTarget() { return tiltTarget },
   get handLengthRaw() { return handLengthRaw }, get handCenterLocal() { return handCenterLocal },
   getHandCenterWorld, updateWristCrop, computeBaseScale
@@ -1713,11 +1715,22 @@ function animate() {
       //              computeRadialRollDeg(), HANDY DANDIES' real formula,
       //              read directly from its source, not reconstructed.
       //   offsetDeg = the manual Palm Face Rotation slider, always additive.
-      //   axis      = armYAxisAligned, the rForearmBend bone's OWN local Y
-      //               axis (fixed, measured once at bind pose) -- NOT world
-      //               UP (a 2nd-round mistake) and NOT HANDY DANDIES' own
-      //               wristCropNormalAligned axis, even though (confirmed
-      //               live) the two happen to coincide on this rig.
+      //   axis      = UP (0,1,0), i.e. Y in the ALIGNED/rendering frame --
+      //               NOT the bone's RAW local Y transformed through its
+      //               own quaternion (a 3rd-round attempt, `armYAxisAligned`,
+      //               now removed). Direct correction: "you are rotating
+      //               the hand around x or z axis. I want the Forearms Y
+      //               axis." Root cause (see forearmBaseBone's own
+      //               declaration comment near wristCropNormalAligned):
+      //               this rig's bones are UNROTATED at bind pose (local
+      //               quaternion ~identity), so "the bone's raw local Y"
+      //               is really just `alignQuat` applied to canonical raw
+      //               Y -- which lands on roughly ALIGNED -Z, not Y at
+      //               all (confirmed: numerically identical to
+      //               `wristCropNormalAligned`, the bone's own LENGTH
+      //               direction). Plain UP is what "the forearm's Y axis"
+      //               actually means once the bone's own rotation is
+      //               accounted for (there isn't one).
       //   anchor    = the forearm base's OWN position, recomputed from
       //               h.clone's live transform every frame (its scale/
       //               quaternion/position all change as poses/model
@@ -1733,7 +1746,7 @@ function animate() {
       hands.forEach((h) => {
         const baseDeg = cfg.palmFacesCursor ? computeRadialRollDeg(h.wrapper.position, tiltTarget) : 0
         const totalRad = THREE.MathUtils.degToRad(baseDeg + (cfg.palmFaceRotationOffset || 0))
-        const axis = armYAxisAligned || UP
+        const axis = UP
         const desired = new THREE.Quaternion().setFromAxisAngle(axis, totalRad)
         h.wrapper.quaternion.slerp(desired, cfg.trackingDamping)
 
@@ -2434,10 +2447,10 @@ function renderPhoneTiltGroup(content) {
   addRow(subPalm, { id: 'checkboxPalmFacesCursor', label: 'Palm Faces Cursor', type: 'checkbox' })
   document.getElementById('checkboxPalmFacesCursor').checked = cfg.palmFacesCursor
   wireCheckbox('checkboxPalmFacesCursor', (v) => { cfg.palmFacesCursor = v })
-  // Rolls around the forearm bone's own local Y axis (armYAxisAligned),
-  // anchored at its base -- see animate()'s own comment. Always additive
-  // onto Palm Faces Cursor's own dynamic angle, matching HANDY DANDIES'
-  // own composition pattern (though not its axis).
+  // Rolls around the forearm's own Y axis, anchored at its base -- see
+  // animate()'s own comment. Always additive onto Palm Faces Cursor's
+  // own dynamic angle, matching HANDY DANDIES' own composition pattern
+  // (though not its axis).
   addRow(subPalm, { id: 'sliderPalmFaceRotationOffset', label: 'Palm Face Rotation (Deg)', type: 'slider', min: -180, max: 180, step: 1, value: cfg.palmFaceRotationOffset })
   wireSlider('sliderPalmFaceRotationOffset', (v) => { cfg.palmFaceRotationOffset = v })
 }
