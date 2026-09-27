@@ -1164,3 +1164,23 @@ wiring, and are still open:
   whether the cursor is in the bottom ~third of the screen before
   investigating further.** See `docs/CHANGELOG.txt`'s matching
   2026-09-27 (9th) entry for the full account.
+- **Finger Gizmos (`fingerGizmoMarkers`/`fingerGizmoAxisLines` per
+  hand) are added directly to `scene`, NOT parented under
+  `h.wrapper`/`h.clone`.** Their own transform is set purely from each
+  bone's live `matrixWorld` each frame (`updateFingerGizmoJoint()`), so
+  there's no double-transformation risk from the hand's own wrapper
+  rotation/scale — but it also means `rebuildField()` MUST explicitly
+  call `teardownFingerGizmosForHand()` for every old hand before
+  discarding the `hands` array, since removing `h.wrapper` from its
+  parent does nothing to these meshes. **If a future Field Layout
+  change (raising `fieldRows`/`fieldCols` above 1x1, or any other
+  future `hands`-rebuilding code path) ever shows duplicate/leftover
+  gizmo markers after a rebuild, check that this teardown call wasn't
+  skipped.** HANDO's own real `setupFingerGizmos()`/
+  `updateJointMarker()`/`getFingerTipWorldPosition()` (read directly,
+  not reconstructed) is the reference for the marker/tip-offset
+  concept — this project deliberately does NOT have HANDO's
+  `TransformControls`/CCD-IK dragging (confirmed with the user via
+  `AskUserQuestion` before building, given the large scope gap between
+  "visual display" and "full interactive posing rig"). See
+  `docs/CHANGELOG.txt`'s matching 2026-09-27 (10th) entry.

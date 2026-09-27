@@ -2329,6 +2329,59 @@ Commit: `7e08da9`. Pushed to `https://github.com/LeisHo/Handy-Set`;
 Vercel auto-deployed.
 
 --------------------------------------------------------------------------------
+2026-09-27  -  (10th, same day)
+
+Direct request: "look at Hando's Finger Gizmos. I want that feature,
+but also provide 3 lines depicting the 3 axes at points that have
+them. provide a slider allowing me to control the length of the lines
+I also wwant a slider to control the thickness. Add a checkbox to turn
+on and off the gizmos rendering on top of the hand itself."
+
+Read HANDO's real `setupFingerGizmos()`/`updateJointMarker()`/
+`getFingerTipWorldPosition()` directly (per the standing hard rule)
+before writing anything -- found HANDO's own "Finger Gizmos" is a full
+click-to-drag `TransformControls` + CCD-IK posing system (a marker at
+every joint, both translate and rotate gizmos attached to whichever
+one is selected, dragging solves an IK chain down to the fingertip),
+not just a visual display. Given the large scope gap between "visual
+markers" and "full interactive IK rig," asked the user directly
+(`AskUserQuestion`) rather than guess -- confirmed: visual display
+only, no `TransformControls`/dragging/IK.
+
+Ported the marker + tip-offset concept from HANDO's real code: a
+sphere at every joint (`FINGER_JOINTS`, 5 fingers x 3 joints = 15 per
+hand); the tip joint specifically uses an estimated position past the
+last segment (`FINGER_GIZMO_TIP_LENGTH_FACTOR = 0.6`, matching HANDO's
+own constant), since this rig has no dedicated tip bone. Added, as
+this project's own extension (not present in HANDO): 3 colored
+cylinder "axis lines" per joint (X=red/Y=green/Z=blue -- three.js's
+own gizmo color convention, per HANDO's own source comment) extending
+from each marker along that bone's live world-space axes, plus new
+Axis Length and Axis Thickness sliders. Markers/lines are added
+directly to `scene` (NOT parented under `h.wrapper`/`h.clone`), so
+their own transform is set purely from each bone's live
+`matrixWorld` each frame with no double-transformation risk --
+`rebuildField()` was updated to explicitly tear them down before
+discarding the old `hands` array, since removing `h.wrapper` alone
+would otherwise leak them into the scene on every field rebuild.
+
+New "Finger Gizmos" dev-panel group, 5 controls: On/Off, Gizmo Size,
+Gizmo Color, Axis Line Length, Axis Line Thickness.
+
+Verified live: enabling produced exactly 15 marker meshes + 45
+axis-line meshes (confirmed by counting); a screenshot showed
+correctly colored R/G/B lines radiating from yellow marker spheres at
+every joint, rendering on top of the hand; raising the Size/Axis
+Length sliders visibly grew both in a follow-up screenshot; the On/Off
+checkbox correctly hid every mesh (`visible: false` confirmed
+directly).
+
+`index.html`'s own `main.js` cache-buster bumped `?v=82` -> `?v=83`.
+
+Commit: `bbd29e9`. Pushed to `https://github.com/LeisHo/Handy-Set`;
+Vercel auto-deployed.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

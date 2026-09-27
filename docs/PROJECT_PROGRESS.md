@@ -7,18 +7,22 @@ append-only history.
 
 ## Currently working on
 
-- **Finger Gizmos** (visual-only, confirmed with the user — no
-  TransformControls/IK): markers + 3 colored axis lines at every finger
-  joint, with Size/Color/Axis Length/Axis Thickness controls and an
-  on/off checkbox, ported conceptually from HANDO's own real
-  `setupFingerGizmos()`/marker-sync code (read directly, not
-  reconstructed) but without HANDO's TransformControls/CCD-IK dragging.
-  Not yet implemented.
-
-Pushed to `https://github.com/LeisHo/Handy-Set` (deployed via the
-Vercel project at `https://vercel.com/lpeis/handy-set`).
+Nothing in progress. Pushed to `https://github.com/LeisHo/Handy-Set`
+(deployed via the Vercel project at `https://vercel.com/lpeis/handy-set`).
 
 ## Recently completed
+
+- **NEW (2026-09-27): Finger Gizmos (visual-only, confirmed with the
+  user — no TransformControls/IK dragging).** Markers + 3 colored axis
+  lines (X=red/Y=green/Z=blue) at every finger joint (15 per hand),
+  with Gizmo Size/Color and Axis Line Length/Thickness sliders plus an
+  On/Off checkbox. Ported the marker/tip-offset concept from HANDO's
+  own real `setupFingerGizmos()` (read directly, not reconstructed) —
+  the axis lines themselves are this project's own addition, not in
+  HANDO's version. Live-verified: exact mesh counts (15+45), a
+  screenshot showing correctly colored lines on top of the hand,
+  slider-driven scale changes, and checkbox-driven visibility. See
+  `docs/CHANGELOG.txt`'s matching 2026-09-27 (10th) entry.
 
 - **RESOLVED (2026-09-27): the Y=0 ground-plane dead-zone (raycast only
   hit the bottom ~third of the screen) — per direct instruction, a
