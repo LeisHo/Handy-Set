@@ -1445,3 +1445,30 @@ wiring, and are still open:
   `type: 'text'` or `'number'`, it registers automatically now — no
   special-casing needed.** See `docs/CHANGELOG.txt`'s matching
   2026-09-27 (20th) entry.
+- **`src/devpanel/devPanel.js` was found to be 2 real fixes behind the
+  canonical `.claude/TEMPLATE_DEV_PANEL.html` (both dated 2026-09-24
+  there) — discovered and re-synced 2026-09-27, direct report: "why is
+  it showing like 10 decimal points? ... it is jittery ... allow me to
+  click and type."** This project's own file-map states this file is
+  "copied verbatim" from the template, but that's a point-in-time
+  copy, not a live link — the template has since gained (1)
+  `buildSliderRow()` adding `dev-value-editable` at row-creation time
+  and wiring a live `input`-event text sync (was: only a one-time
+  init-time pass, missing any dynamically-built row; no live sync at
+  all), and (2) the click-to-edit popup inheriting the source slider's
+  `step`/`min`/`max` (was: a bare `<input type=number>`, silently
+  defaulting to whole-number-only steps for any decimal-step slider).
+  Re-synced both, verbatim, from the real template file. **If a future
+  dev-panel oddity here doesn't match this project's own recent
+  history, check whether `devPanel.js` has drifted further behind the
+  template again before assuming it's a HANDYSET-specific bug** — a
+  quick `diff` against `.claude/TEMPLATE_DEV_PANEL.html`'s own
+  `<script>` block is cheap and can rule out (or confirm) a whole
+  class of "already fixed upstream" issues at once. Separately: the
+  camera group's own live-position-to-slider sync
+  (`syncCameraPanelFromLive()`, `main.js`) now rounds its DISPLAY to 2
+  decimals and skips resyncing a slider that currently has focus —
+  **any FUTURE per-frame live-sync-to-slider function added to this
+  file needs the same 2 guards, or it will reproduce this exact
+  "shows 16 digits, fights the user's drag" symptom.** See
+  `docs/CHANGELOG.txt`'s matching 2026-09-27 (21st) entry.

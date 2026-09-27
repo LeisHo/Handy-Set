@@ -2944,6 +2944,63 @@ Commit: `d59ddaf`. Pushed to `https://github.com/LeisHo/Handy-Set`;
 Vercel auto-deployed.
 
 --------------------------------------------------------------------------------
+2026-09-27  -  (21st, same day)
+
+Direct report: "the camera sliders feel a bit weird. 1. why is it
+showing like 10 decimal points? 2. When i drag the sliders, it is
+jittery. 3. allow me to click and type to overwrite the number values
+fo those sliders."
+
+Root cause 1/2 (decimals + jitter): `syncCameraPanelFromLive()` runs
+every single frame (called from `animate()`, right after
+`controls.update()`), feeding the camera's own raw floating-point
+position straight into `syncValue()` -- which displayed the FULL
+unrounded float (e.g. `"3.598517809628556"`) and unconditionally
+overwrote `slider.value` even while a slider was being actively
+dragged by the user, fighting their own input every frame. Fixed by
+(a) rounding only the DISPLAYED text to 2 decimals in `syncValue()`
+(the underlying slider `.value`/`cfg` stays full precision, unaffected
+-- purely cosmetic) and (b) skipping the resync entirely for whichever
+slider currently has focus (`document.activeElement === el`), so the
+live-camera resync never fights an in-progress drag -- it resumes the
+instant focus leaves the slider.
+
+Root cause 3 (click-to-type): devPanel.js's own click-to-edit
+infrastructure (workspace CLAUDE.md Section 12h) was already partially
+present in HANDYSET's copy, but had fallen behind 2 real upstream
+fixes already landed in the canonical `.claude/TEMPLATE_DEV_PANEL.html`
+(both dated 2026-09-24 there, confirmed by direct comparison against
+the real template file rather than assumed): `buildSliderRow()` wasn't
+adding the `dev-value-editable` class at ROW-CREATION time (only via a
+one-time init-time `makeDevValuesEditable()` pass, which never reached
+any row built dynamically afterward) or wiring a live text update from
+the slider's own `'input'` event (leaving the readout stale during a
+drag whenever a project's own onInput handler didn't separately
+refresh it); and the click-to-edit popup's own `<input>` never
+inherited the source slider's `step`/`min`/`max` at all, so a
+decimal-step slider's popup (e.g. Camera X/Y/Z, step=0.5) silently
+defaulted to whole-number-only typing. Re-synced both fixes verbatim
+from the canonical template into HANDYSET's own copy.
+
+Live-verified: Camera X/Y/Z/Yaw/Pitch/FOV/Zoom now display at 2
+decimals; holding a slider via `focus()` and pumping a real
+`animate()` frame (a screenshot) confirmed the dragged value (`100`)
+survived instead of snapping back to the live camera position, and
+correctly resumed live-syncing (`100.00`) the instant `blur()` was
+called; clicking a value opened a working edit box with `step=0.5`/
+`min=-500`/`max=500` correctly inherited, and typing `42.5` correctly
+updated both `cfg.cameraX` and the live `camera.position.x`. Also
+confirmed no regression on a normal (non-camera) slider's own display
+update (a Pose group finger-curl slider).
+
+`index.html`'s own `main.js` cache-buster bumped `?v=97` -> `?v=98`;
+`devPanel.js` cache-buster bumped `?v=4` -> `?v=5` (its first bump this
+project, since this is the first time this file itself has changed).
+
+Commit: `eb6f9a4`. Pushed to `https://github.com/LeisHo/Handy-Set`;
+Vercel auto-deployed.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

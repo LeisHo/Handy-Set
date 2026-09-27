@@ -8,22 +8,34 @@ append-only history.
 ## Currently working on
 
 Nothing in progress — the 6-part Palm Rotation/Responsive-features
-request (2026-09-27) is fully complete, plus 7 interjected fixes from
+request (2026-09-27) is fully complete, plus 8 interjected fixes from
 the same session (Saved Cameras/list-picker persistence; Palm Rotation
 height/distance independence + forearm-base marker; a hand-disappears
 clash between Pose Tween and Base Arm Rotation; `armBaseDistanceT`
 freezing at a stale value in the ground-raycast dead zone; Pose Tween
 applying the live Whole-Hand Rotation / Base Rotation sliders to
 whatever pose is showing; a follow-on fix for fingers freezing while
-the wrist kept responding; and Save/Sync never persisting ANY curve/
-range text control project-wide). See Recently completed below for
-the full account.
+the wrist kept responding; Save/Sync never persisting ANY curve/range
+text control project-wide; and Camera slider decimals/jitter/click-to-
+type). See Recently completed below for the full account.
 
 Pushed to `https://github.com/LeisHo/Handy-Set`
 (deployed via the Vercel project at `https://vercel.com/lpeis/handy-set`).
 
 ## Recently completed
 
+- **RESOLVED (2026-09-27): Camera dev-panel sliders showed ~16-digit
+  floats, felt jittery while dragging, and had no click-to-type.**
+  Root cause of decimals/jitter: `syncCameraPanelFromLive()` runs every
+  animate() frame, feeding the camera's raw float position into
+  `syncValue()`, which displayed it unrounded and unconditionally
+  overwrote `slider.value` even mid-drag. Fixed by rounding the display
+  to 2 decimals and skipping the resync for a currently-focused slider.
+  Click-to-type was found to already be PARTIALLY implemented in
+  HANDYSET's own `devPanel.js`, but 2 versions behind the canonical
+  `.claude/TEMPLATE_DEV_PANEL.html` (both real upstream fixes dated
+  2026-09-24 there) — re-synced verbatim. Live-verified all 3. See
+  `docs/CHANGELOG.txt`'s matching 2026-09-27 (21st) entry.
 - **RESOLVED (2026-09-27): Save/Sync never persisted any curve/range
   text control in the ENTIRE project (Reactive Arm Length, Responsive
   Wrist Splay, the 3 wrist-axis clamps, Responsive Arm Rotation at
