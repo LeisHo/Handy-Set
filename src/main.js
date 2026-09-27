@@ -1300,8 +1300,42 @@ const UP = new THREE.Vector3(0, 1, 0)
 // DANDIES' own reasoning (see its own source comment): the world-space
 // XY plane is what "left/right/above/below the cursor" means here too.
 function computeRadialRollDeg(handPos, targetPos) {
-  const dx = handPos.x - targetPos.x, dy = handPos.y - targetPos.y
+  // dx negated 2026-09-27, direct report: "When my cursor moves more to
+  // the left, the hand rotates to the right" (the opposite of intended).
+  // Flips left/right response only -- dy (the other axis) untouched.
+  const dx = -(handPos.x - targetPos.x), dy = handPos.y - targetPos.y
   return THREE.MathUtils.radToDeg(Math.atan2(dx, -dy))
+}
+// Angle-domain smoothing, applied to Palm Rotation's own baseDeg BEFORE
+// it becomes a quaternion -- separate from (and in addition to)
+// cfg.trackingDamping's own quaternion-level slerp. Added 2026-09-27,
+// direct report: "when i move the cursor fully around the hand... the
+// hand suddenly jumps to rotate in the other direction... Make it
+// smooth." Investigated first, not guessed: a synthetic sweep of
+// computeRadialRollDeg() through its own atan2 wrap (+180/-180) proved
+// the raw angle-to-quaternion-to-slerp pipeline is ALREADY correctly
+// continuous there (THREE.Quaternion.slerp takes the shortest path
+// through the double-cover regardless of the numeric jump in the
+// input degrees, confirmed at both damping=1 and damping=0.15 via
+// direct angleTo() measurement -- no spike). The real source is almost
+// certainly the dead-zone freeze (see updateTiltTarget()'s own
+// comment): tiltTargetValid can hold the angle frozen for a while, and
+// resuming from a frozen state straight into cfg.trackingDamping (1 by
+// default -- an instant, unsmoothed snap) produces a real, visible
+// jump the moment the raycast starts hitting again, especially since a
+// user's own circular cursor sweep crosses the dead-zone boundary
+// twice. This smooths the ANGLE itself (not just the quaternion) via
+// exponential interpolation that always takes the shortest wrapped
+// path (never sweeping the "long way around" through 180°), so a
+// resume-from-frozen eases in over a few frames instead of teleporting
+// -- independent of whatever cfg.trackingDamping is set to.
+let smoothedBaseDeg = null // null = "not yet initialized", snaps once on first real value
+function smoothAngleDeg(targetDeg, rateDeg = 18) {
+  if (smoothedBaseDeg === null) { smoothedBaseDeg = targetDeg; return smoothedBaseDeg }
+  let delta = ((targetDeg - smoothedBaseDeg + 180) % 360 + 360) % 360 - 180 // shortest signed delta, wrapped to (-180, 180]
+  const step = THREE.MathUtils.clamp(delta, -rateDeg, rateDeg) // fixed max degrees/frame, not a percentage -- so a huge post-freeze jump eases in over several frames instead of one damping-scaled (but still instant-feeling) leap
+  smoothedBaseDeg += step
+  return smoothedBaseDeg
 }
 // See this section's own top comment: mouse input raycasts the true
 // cursor position (ported from Handy Dandies' real updateCursorTarget()),
@@ -2020,9 +2054,16 @@ function animate() {
       // orientation is unaffected (tiltTargetValid is always true there).
       if (!(lastInputSource === 'mouse' && cfg.palmFacesCursor && !tiltTargetValid)) {
         hands.forEach((h) => {
+          // Smoothing (smoothAngleDeg(), wrap-aware) applies to the mouse
+          // path's own raw compass angle ONLY -- see that function's own
+          // comment for why. tiltMagnitude scaling happens AFTER
+          // smoothing (a continuous distance ratio, not itself a source
+          // of angle-wrap jumps). Device-orientation keeps its own
+          // original, unsmoothed computation -- it has no dead-zone/
+          // raycast-miss concept to resume from.
           const baseDeg = cfg.palmFacesCursor
             ? (lastInputSource === 'mouse'
-                ? computeRadialRollDeg(_originXZ, _targetXZ)
+                ? smoothAngleDeg(computeRadialRollDeg(_originXZ, _targetXZ))
                 : computeRadialRollDeg(h.wrapper.position, tiltTarget)) * tiltMagnitude
             : 0
           const totalRad = THREE.MathUtils.degToRad(baseDeg + (cfg.palmFaceRotationOffset || 0))
