@@ -1128,6 +1128,23 @@ targetMarkerMesh.renderOrder = 999
 targetMarkerMesh.visible = cfg.showTargetMarker
 scene.add(targetMarkerMesh)
 
+// Forearm Base Marker -- direct request 2026-09-27, same checkbox as the
+// target marker above ("when i turn on show target marker, also show a
+// marker for where the forearm base point is which we are using to
+// measure the degree of rotation"): a 2nd marker, distinct color, showing
+// tiltOriginGround (Point A of the Palm Rotation angle measurement --
+// see updateTiltTarget()'s own comment for Point A/Point B). Shares
+// checkboxShowTargetMarker's visibility with targetMarkerMesh rather than
+// getting its own control, since the user asked for it as an addition to
+// that existing checkbox, not a separate toggle.
+const forearmBaseMarkerMesh = new THREE.Mesh(
+  new THREE.SphereGeometry(2, 16, 16),
+  new THREE.MeshBasicMaterial({ color: '#00ffff', depthTest: false, transparent: true, opacity: 0.85 })
+)
+forearmBaseMarkerMesh.renderOrder = 999
+forearmBaseMarkerMesh.visible = cfg.showTargetMarker
+scene.add(forearmBaseMarkerMesh)
+
 // Ground Plane -- a real, visible slab (not the invisible math plane Palm
 // Rotation's own cursor-tracking raycasts onto -- see updateTiltTarget()'s
 // own comment; unrelated, this one is purely a scene decoration). Fixed,
@@ -1260,7 +1277,6 @@ const raycaster = new THREE.Raycaster()
 // at all, it only ever used a synthesized tiltTarget).
 const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0)
 const _forearmWorldPos = new THREE.Vector3()
-const _cameraForwardVec = new THREE.Vector3()
 const tiltOriginGround = new THREE.Vector3()
 let latestOrientation = null
 const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0
@@ -1447,24 +1463,26 @@ function updateTiltTarget() {
     // Point A (tiltOriginGround): the rForearmBend bone's own LIVE world
     // position (already kept fixed/anchored by the pivot math in
     // animate() -- see that block's own comment -- so this is stable
-    // frame to frame regardless of the rotation being computed from it),
-    // projected onto the world Y=0 ground plane by sliding it along the
-    // CAMERA's own forward direction (not straight down) -- "project that
-    // perpendicular to the camera," i.e. along the camera's optical axis,
-    // which is perpendicular to the camera's own image plane.
+    // frame to frame regardless of the rotation being computed from it).
+    //
+    // CORRECTED 2026-09-27 (7th round) -- direct instruction: "Height
+    // should not matter to responsive palm rotation since its purely an
+    // XZ plane angle measurement." The 6th round's own camera-forward
+    // ray-slide (sliding the forearm's world position along the CAMERA's
+    // optical axis until it reached Y=0) made the resulting X/Z landing
+    // point depend on the forearm's height AND the camera's own
+    // pitch/yaw -- exactly the height-coupling this instruction rules
+    // out, since a taller/shorter forearm position (or a repositioned
+    // camera) would slide the point sideways before the angle was ever
+    // computed. This is now a plain drop of the Y coordinate -- the
+    // forearm's own X/Z, unchanged by height or by the camera -- matching
+    // computeRadialRollDeg()'s own {x, y-aliased-to-z} shape, which
+    // already only ever reads X/Z from both points (see that function's
+    // own comment). No camera-ray math needed at all.
     const forearmBone = hand.skinnedMesh.skeleton.getBoneByName('rForearmBend')
     if (forearmBone) {
       forearmBone.getWorldPosition(_forearmWorldPos)
-      camera.getWorldDirection(_cameraForwardVec)
-      if (Math.abs(_cameraForwardVec.y) > 1e-6) {
-        const t = -_forearmWorldPos.y / _cameraForwardVec.y
-        tiltOriginGround.copy(_forearmWorldPos).addScaledVector(_cameraForwardVec, t)
-      } else {
-        // Degenerate case: camera looking perfectly horizontally, its
-        // forward direction never reaches Y=0 -- fall back to a straight
-        // vertical drop instead of leaving a stale value.
-        tiltOriginGround.set(_forearmWorldPos.x, 0, _forearmWorldPos.z)
-      }
+      tiltOriginGround.set(_forearmWorldPos.x, 0, _forearmWorldPos.z)
     }
     // Point B (tiltTarget, reused): the cursor's own raycast through the
     // camera, hitting that SAME ground plane -- the existing, already-
@@ -2026,7 +2044,7 @@ function animate() {
       // they're unaffected either way; this only refreshes tiltTarget,
       // which nothing needs before Palm Faces Cursor's own angle below.
       if (latestOrientation !== null || lastInputSource === 'mouse') updateTiltTarget()
-      if (cfg.showTargetMarker) targetMarkerMesh.position.copy(tiltTarget)
+      if (cfg.showTargetMarker) { targetMarkerMesh.position.copy(tiltTarget); forearmBaseMarkerMesh.position.copy(tiltOriginGround) }
       // REWRITTEN 2026-09-27 (3rd round), direct correction: "i said palm
       // face rotation cursor tracking should be rotating the entire arm by
       // the Y axis of the forearm bone. the rotation should be anchored to
@@ -2069,19 +2087,18 @@ function animate() {
       //               added back in since this now overwrites
       //               h.wrapper.position outright rather than leaving it
       //               untouched.
-      // Scaled by tiltMagnitude (2026-09-27, direct correction/request):
-      // computeRadialRollDeg() is a pure atan2 -- direction only, blind to
-      // HOW FAR the cursor/tilt is from center. Any nonzero offset used to
-      // produce the SAME full rotation as a huge one, which is both what
-      // made mouse tracking feel disconnected/twitchy near screen-center
-      // (a tiny, noisy offset near (0,0) still snapped to a full-strength
-      // angle) and, on mobile, meant any small tilt immediately rotated
-      // the hand all the way to face that direction instead of easing in
-      // -- "the more i tilt the more the hand rotates to face that
-      // direction" was not actually true before this. tiltMagnitude (0-1,
-      // already computed for both input paths) now scales the angle
-      // itself, so the rotation smoothly grows from 0 at dead-center/no-
-      // tilt up to the full computed direction at max offset/tilt.
+      // REMOVED 2026-09-27 (7th round), direct instruction: "the distance
+      // of the cursor to the hand should also have no effect on the
+      // responsive palm rotation." The 5th round (see the removed
+      // tiltMagnitude-scaling code this comment replaces) had scaled
+      // baseDeg by tiltMagnitude specifically to fix "any nonzero offset
+      // snaps to full rotation" -- but per this direct correction, Palm
+      // Rotation is meant to be a pure direction/angle measurement with
+      // no distance/magnitude component at all, full stop. baseDeg is now
+      // exactly computeRadialRollDeg()'s own output (plus smoothing on
+      // the mouse path), unscaled. Reactive Arm Length and Responsive
+      // Wrist Splay still read tiltMagnitude directly for their own
+      // curves -- this change is scoped to Palm Rotation's baseDeg only.
       // Mouse's own baseDeg reads the X/Z ground-plane points
       // (tiltOriginGround/tiltTarget, both on Y=0 -- see
       // updateTiltTarget()'s own comment) via computeRadialRollDeg()'s
@@ -2105,15 +2122,15 @@ function animate() {
         hands.forEach((h) => {
           // Smoothing (smoothAngleDeg(), wrap-aware) applies to the mouse
           // path's own raw compass angle ONLY -- see that function's own
-          // comment for why. tiltMagnitude scaling happens AFTER
-          // smoothing (a continuous distance ratio, not itself a source
-          // of angle-wrap jumps). Device-orientation keeps its own
-          // original, unsmoothed computation -- it has no dead-zone/
-          // raycast-miss concept to resume from.
+          // comment for why. Device-orientation keeps its own original,
+          // unsmoothed computation -- it has no dead-zone/raycast-miss
+          // concept to resume from. No tiltMagnitude scaling on either
+          // path (removed 2026-09-27, 7th round -- see this block's own
+          // comment above).
           const baseDeg = cfg.palmFacesCursor
             ? (lastInputSource === 'mouse'
                 ? smoothAngleDeg(computeRadialRollDeg(_originXZ, _targetXZ))
-                : computeRadialRollDeg(h.wrapper.position, tiltTarget)) * tiltMagnitude
+                : computeRadialRollDeg(h.wrapper.position, tiltTarget))
             : 0
           const totalRad = THREE.MathUtils.degToRad(baseDeg + (cfg.palmFaceRotationOffset || 0))
           const axis = UP
@@ -2888,7 +2905,7 @@ function renderPhoneTiltGroup(content) {
   wireSlider('sliderTargetDepthFactor', (v) => { cfg.targetDepthFactor = v })
   addRow(subTarget, { id: 'checkboxShowTargetMarker', label: 'Show Target Marker', type: 'checkbox' })
   document.getElementById('checkboxShowTargetMarker').checked = cfg.showTargetMarker
-  wireCheckbox('checkboxShowTargetMarker', (v) => { cfg.showTargetMarker = v; targetMarkerMesh.visible = v })
+  wireCheckbox('checkboxShowTargetMarker', (v) => { cfg.showTargetMarker = v; targetMarkerMesh.visible = v; forearmBaseMarkerMesh.visible = v })
 
   const subPalm = addSubgroup(content, 'Palm Facing')
   addRow(subPalm, { id: 'checkboxPalmFacesCursor', label: 'Palm Faces Cursor', type: 'checkbox' })
