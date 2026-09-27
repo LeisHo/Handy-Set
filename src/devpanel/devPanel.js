@@ -2351,10 +2351,27 @@
         input.value = ctrl.value;
         row.appendChild(input);
         const value = document.createElement('span');
-        value.className = 'dev-value';
+        // CORRECTED 2026-09-27 -- re-synced from the canonical
+        // .claude/TEMPLATE_DEV_PANEL.html (this project's own copy had
+        // fallen behind 2 real upstream fixes, both dated 2026-09-24 in
+        // the template's own comments): (1) `dev-value-editable` is now
+        // added HERE, at row-creation time, not only by a one-time
+        // makeDevValuesEditable() pass at panel-init -- the old
+        // init-only pass never reached rows built dynamically
+        // afterward, silently leaving click-to-type non-functional for
+        // them; (2) a live `input` listener repaints the readout from
+        // the slider's OWN raw value on every tick, instead of relying
+        // on a project's own onInput handler to keep it in sync -- the
+        // old version left the readout showing a STALE value for the
+        // whole drag whenever a project's own wiring didn't explicitly
+        // refresh it. Direct report that surfaced this on HANDYSET
+        // specifically: "why is it showing like 10 decimal points? ...
+        // it is jittery ... allow me to click and type."
+        value.className = 'dev-value dev-value-editable';
         value.id = ctrl.id.replace(/^slider/, 'value');
         value.textContent = ctrl.value;
         row.appendChild(value);
+        input.addEventListener('input', () => { value.textContent = input.value; });
         return row;
     }
     // {id, label, value, note?} — note is an optional small descriptive
@@ -2888,6 +2905,15 @@
             const input = document.createElement('input');
             input.type = 'number';
             input.className = 'dev-value-edit-input';
+            // CORRECTED 2026-09-27, re-synced from the canonical
+            // TEMPLATE_DEV_PANEL.html (dated 2026-09-24 there): a plain
+            // <input type=number> with no step attribute defaults to
+            // step=1 -- meaning a decimal-step slider's click-to-type
+            // box (e.g. Camera X/Y/Z, step=0.5) wouldn't respect its
+            // own slider's actual precision. Inherit it directly.
+            input.step = slider.step || 'any'
+            input.min = slider.min;
+            input.max = slider.max;
             input.value = slider.value;
             valueEl.textContent = '';
             valueEl.appendChild(input);

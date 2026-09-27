@@ -2077,12 +2077,27 @@ const CAMERA_SYNC_PAIRS = [['sliderCameraX', 'cameraX'], ['sliderCameraY', 'came
 const LIGHTING_SYNC_PAIRS = [['sliderKeyAzimuth', 'keyAzimuth'], ['sliderKeyElevation', 'keyElevation'], ['sliderKeyTargetHeight', 'keyTargetHeight'], ['sliderKeyIntensity', 'keyIntensity'], ['colorKeyColor', 'keyColor'], ['sliderAmbientIntensity', 'ambientIntensity'], ['colorAmbientSkyColor', 'ambientSkyColor'], ['colorAmbientGroundColor', 'ambientGroundColor']]
 const TOON_SYNC_PAIRS = [['sliderToonSteps', 'toonSteps'], ['sliderToonStepThreshold', 'toonStepThreshold'], ['sliderToonShadowFloor', 'toonShadowFloor'], ['sliderToonLightCeiling', 'toonLightCeiling'], ['colorToonBaseTint', 'toonBaseTint'], ['sliderTextureInfluence', 'textureInfluence'], ['colorToonTint', 'toonTint'], ['sliderRimIntensity', 'rimIntensity'], ['sliderRimPower', 'rimPower'], ['colorRimColor', 'rimColor']]
 function syncPairsFromCfg(pairs) { pairs.forEach(([id, key]) => syncControlDom(id, cfg[key])) }
-function syncValue(id, value) {
+// `decimals` (default 2) -- direct report 2026-09-27 on the Camera
+// group's sliders specifically: "why is it showing like 10 decimal
+// points? ... it is jittery." Root cause of both: this function is
+// called every single frame (via syncCameraPanelFromLive(), called
+// from animate()) with the camera's own raw floating-point position --
+// `vEl.textContent = value` displayed that full, unrounded float
+// (e.g. "3.598517809628556"), and setting `el.value` on an ACTIVELY-
+// DRAGGED slider every frame fights the user's own drag input,
+// producing the reported jitter. Fixed 2 ways: (1) round the DISPLAYED
+// text only (the underlying `el.value`/cfg value stays full-precision,
+// unaffected -- this is purely cosmetic); (2) skip resyncing a slider
+// the user is CURRENTLY interacting with (`document.activeElement`),
+// so the per-frame live-camera resync never overwrites an in-progress
+// drag -- it resumes the instant the user releases/moves focus away.
+function syncValue(id, value, decimals = 2) {
   const el = document.getElementById(id)
   if (el) {
+    if (document.activeElement === el) return
     el.value = value
     const vEl = document.getElementById(id.replace(/^slider/, 'value'))
-    if (vEl) vEl.textContent = value
+    if (vEl) vEl.textContent = (typeof value === 'number' ? value.toFixed(decimals) : value)
   }
 }
 function syncCameraPanelFromLive() {
