@@ -2009,12 +2009,20 @@ function buildListPicker(content, opts) {
       items.push(Object.assign({ name }, data))
     }
     render()
+    // Persist the updated items array to localStorage + git via Sync
+    if (typeof saveDevPanelSettings === 'function') {
+      saveDevPanelSettings()
+    }
   })
   overwriteBtn.addEventListener('click', () => {
     if (!state.selected) return
     const data = opts.captureCurrent ? opts.captureCurrent() : {}
     Object.assign(state.selected, data, { name: state.selected.name })
     render()
+    // Persist the updated items array to localStorage + git via Sync
+    if (typeof saveDevPanelSettings === 'function') {
+      saveDevPanelSettings()
+    }
   })
   useBtn.addEventListener('click', () => { if (state.selected && opts.onUse) opts.onUse(state.selected) })
   renameBtn.addEventListener('click', () => {
@@ -2023,6 +2031,7 @@ function buildListPicker(content, opts) {
     if (!name || name === state.selected.name) return
     state.selected.name = name
     render()
+    if (typeof saveDevPanelSettings === 'function') saveDevPanelSettings()
   })
   deleteBtn.addEventListener('click', () => {
     if (!state.selected) return
@@ -2030,6 +2039,7 @@ function buildListPicker(content, opts) {
     if (idx >= 0) items.splice(idx, 1)
     state.selected = null
     render()
+    if (typeof saveDevPanelSettings === 'function') saveDevPanelSettings()
   })
   groupBtn.addEventListener('click', () => {
     if (!state.selected) { alert('Select an item first, then + Group.'); return }
@@ -2037,6 +2047,7 @@ function buildListPicker(content, opts) {
     if (!gname) return
     state.selected.group = gname
     render()
+    if (typeof saveDevPanelSettings === 'function') saveDevPanelSettings()
   })
   if (exportBtn) exportBtn.addEventListener('click', () => {
     const chosen = items.filter((it) => state.exportChecked.has(it))
@@ -2054,6 +2065,7 @@ function buildListPicker(content, opts) {
         else items.push(item)
       })
       render()
+      if (typeof saveDevPanelSettings === 'function') saveDevPanelSettings()
     } catch (e) { alert('Import failed: ' + e.message) }
   })
   return state
