@@ -54,18 +54,11 @@ const cfg = {
   cameraYaw: 0, cameraPitch: 0, cameraMaxExtentsEnabled: false,
   cropWristEnabled: true,
   // Phone Tilt (renamed from Cursor Tracking)
-  // trackingEnabled defaults true (corrected 2026-09-21, was false) --
-  // this is the app's own headline mechanic ("rotates in response to the
-  // phone's own gyroscope tilt"); defaulting its master gate off meant a
-  // fresh visitor with no prior Sync saw nothing happen at all, on
-  // Vercel or locally, matching 2 separate direct reports ("phone
-  // tilting does nothing" and the Palm Facing rotation slider having no
-  // effect -- both symptoms of the SAME gate, confirmed via
-  // animate()'s own `if (cfg.trackingEnabled && hands.length) {...}`
-  // block, which is the only place either mechanism's per-frame code
-  // runs at all).
+  // trackingEnabled is now a pure on/off gate for motion input; doesn't itself cause rotation
   trackingEnabled: true, trackingDamping: 1, targetDepthFactor: 0.6,
-  showTargetMarker: false, palmFacesCursor: false, palmFaceRotationOffset: 0,
+  showTargetMarker: false, palmFacesCursor: false,
+  // Whole-Hand Rotation at Base (anchored at rForearmBend, using its own axes)
+  baseRotationX: 0, baseRotationY: 0, baseRotationZ: 0,
   // Reactive Arm Length — ported from HANDY DANDIES (see docs/CHANGELOG.txt
   // for the porting account). HANDY DANDIES normalizes "distance" against
   // the live min/max distance across a whole FIELD of hands each frame —
@@ -205,6 +198,7 @@ FINGER_NAMES.forEach((f) => {
 })
 Object.assign(POSE_KEY_DEFAULTS, {
   wristBend: 0, wristSplay: 0, wristRotation: 0, modelRotX: 0, modelRotY: 0, modelRotZ: 0,
+  baseRotationX: 0, baseRotationY: 0, baseRotationZ: 0,
   hideWrist: 0, poseOffsetX: 0, poseOffsetY: 0, poseOffsetZ: 0, poseScale: 1
 })
 const POSE_PRESET_KEYS = Object.keys(POSE_KEY_DEFAULTS)
@@ -735,6 +729,40 @@ function applyReactiveWristSplayFrame() {
     // h.currentBaseQuat + curlExcludeQuatForHand(h) — see applyCurl()'s
     // own comment (2026-09-26, 3rd round) for why alignQuat was wrong here.
     FINGER_NAMES.forEach((name) => applyCurlToSkeleton(name, h.skinnedMesh.skeleton, h.currentBaseQuat, curlExcludeQuatForHand(h), cfg))
+  })
+}
+
+// Base arm rotation — applied separately from pose data, stacks with it.
+// Rotates the whole hand around rForearmBend (first arm bone) using that
+// bone's own local axes, pivoting at the bone's position.
+function applyBaseArmRotation() {
+  hands.forEach((h) => {
+    if (cfg.baseRotationX === 0 && cfg.baseRotationY === 0 && cfg.baseRotationZ === 0) return
+
+    const baseBone = h.skinnedMesh.skeleton.getBoneByName('rForearmBend')
+    if (!baseBone) return
+
+    const baseWorldPos = new THREE.Vector3()
+    const baseWorldQuat = new THREE.Quaternion()
+    baseBone.getWorldPosition(baseWorldPos)
+    baseBone.getWorldQuaternion(baseWorldQuat)
+
+    // Create rotation in the base bone's local axes
+    const rotX = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0).applyQuaternion(baseWorldQuat), cfg.baseRotationX * Math.PI / 180)
+    const rotY = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0).applyQuaternion(baseWorldQuat), cfg.baseRotationY * Math.PI / 180)
+    const rotZ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1).applyQuaternion(baseWorldQuat), cfg.baseRotationZ * Math.PI / 180)
+
+    const baseRotQuat = new THREE.Quaternion()
+    baseRotQuat.multiplyQuaternions(rotX, rotY).multiply(rotZ)
+
+    // Apply rotation: position = basePos - rotation*(scale*basePos)
+    const newPos = h.wrapper.position.clone()
+    newPos.sub(baseWorldPos)
+    newPos.applyQuaternion(baseRotQuat)
+    newPos.add(baseWorldPos)
+    h.wrapper.position.copy(newPos)
+
+    h.wrapper.quaternion.multiplyQuaternions(baseRotQuat, h.wrapper.quaternion)
   })
 }
 
@@ -1616,14 +1644,32 @@ function animate() {
   if (!isPaused) {
     if (cfg.trackingEnabled && hands.length) {
       updateTiltTarget()
+    }
+    // Phone Tilt rotation (only when tracking is enabled AND we have input)
+    if (cfg.trackingEnabled && hands.length && (latestOrientation !== null || lastInputSource === 'mouse')) {
       hands.forEach((h) => {
         const m = new THREE.Matrix4().lookAt(h.wrapper.position, tiltTarget, UP)
-        const desired = new THREE.Quaternion().setFromRotationMatrix(m)
-        const baseDeg = cfg.palmFacesCursor ? computeRadialRollDeg(h.wrapper.position, tiltTarget) : 0
-        desired.multiply(computeRollQuat(baseDeg))
+        let desired = new THREE.Quaternion().setFromRotationMatrix(m)
+
+        // Palm Faces Cursor: rotate only around base arm's Y axis
+        if (cfg.palmFacesCursor) {
+          const baseBone = h.skinnedMesh.skeleton.getBoneByName('rForearmBend')
+          if (baseBone) {
+            const rollDeg = computeRadialRollDeg(h.wrapper.position, tiltTarget)
+            const baseWorldQuat = new THREE.Quaternion()
+            baseBone.getWorldQuaternion(baseWorldQuat)
+            // Y-axis rotation in the base bone's local frame
+            const yAxis = new THREE.Vector3(0, 1, 0).applyQuaternion(baseWorldQuat)
+            const rollQuat = new THREE.Quaternion().setFromAxisAngle(yAxis, rollDeg * Math.PI / 180)
+            desired.multiplyQuaternions(rollQuat, desired)
+          }
+        }
+
         h.wrapper.quaternion.slerp(desired, cfg.trackingDamping)
       })
     }
+    // Apply base arm rotation separately
+    applyBaseArmRotation()
     applyReactiveWristSplayFrame()
   }
   curveWidgetResyncs.forEach((fn) => fn())
@@ -2127,6 +2173,12 @@ function renderPoseGroup(content) {
     wireSlider('slider' + k, (v) => { cfg[k] = v; applyPoseValuesToHand(cfg) })
   })
 
+  const subBaseRotation = addSubgroup(content, 'Whole-Hand Rotation at Base')
+  ;[['baseRotationX', -180, 180, 'Base Rotation X (Deg)'], ['baseRotationY', -180, 180, 'Base Rotation Y (Deg)'], ['baseRotationZ', -180, 180, 'Base Rotation Z (Deg)']].forEach(([k, mn, mx, label]) => {
+    addRow(subBaseRotation, { id: 'slider' + k, label, type: 'slider', min: mn, max: mx, step: 1, value: cfg[k] })
+    wireSlider('slider' + k, (v) => { cfg[k] = v })
+  })
+
   const subThumb = addSubgroup(content, 'THUMB')
   addFingerSliders(subThumb, 'thumb')
 
@@ -2313,8 +2365,6 @@ function renderPhoneTiltGroup(content) {
   addRow(subPalm, { id: 'checkboxPalmFacesCursor', label: 'Palm Faces Cursor', type: 'checkbox' })
   document.getElementById('checkboxPalmFacesCursor').checked = cfg.palmFacesCursor
   wireCheckbox('checkboxPalmFacesCursor', (v) => { cfg.palmFacesCursor = v })
-  addRow(subPalm, { id: 'sliderPalmFaceRotationOffset', label: 'Palm Face Rotation (Deg)', type: 'slider', min: -180, max: 180, step: 1, value: cfg.palmFaceRotationOffset })
-  wireSlider('sliderPalmFaceRotationOffset', (v) => { cfg.palmFaceRotationOffset = v })
 }
 
 function renderLightingGroup(content) {
