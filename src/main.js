@@ -1023,9 +1023,9 @@ function applyReactiveWristSplayFrame() {
 // call cheap/safe on its own (a no-op once desiredQuat stops changing
 // frame to frame), so this is just "always pass the current reactive
 // amount" rather than a full re-bake.
-function applyResponsiveBaseArmRotationFrame() {
+function applyResponsiveBaseArmRotationFrame(poseValues = cfg) {
   if (!cfg.trackingEnabled || !cfg.baseArmRotationResponsiveEnabled) return
-  applyBaseArmRotation(computeResponsiveBaseArmRotationDeg(armBaseDistanceT))
+  applyBaseArmRotation(computeResponsiveBaseArmRotationDeg(armBaseDistanceT), poseValues)
 }
 // Per-frame refresh for Responsive Pose Tween -- blends EVERY numeric
 // pose field between the Default pose (DEFAULT_POSE_NAME) and the
@@ -1075,12 +1075,19 @@ function applyResponsivePoseTweenFrame() {
   // PLAIN (non-reactive) Base Rotation sliders' effect applied each
   // frame, since nothing was re-triggering applyBaseArmRotation() after
   // the reset in that case. Re-apply here so it stays live throughout
-  // the tween. When Base Rotation IS reactive, skip this call --
-  // animate()'s own unconditional applyResponsiveBaseArmRotationFrame()
-  // (called right after this function returns) already re-applies the
-  // correct reactive amount; calling it here too would just be a
-  // redundant, harmless extra delta-tracker round-trip.
-  if (!cfg.baseArmRotationResponsiveEnabled) applyBaseArmRotation()
+  // the tween -- passing `blended`, NOT the default `cfg`, so its own
+  // internal finger re-bake (see applyBaseArmRotation()'s own comment,
+  // 2026-09-27, 2nd correction) doesn't silently overwrite the finger
+  // blend this function just applied above. Handles BOTH the plain and
+  // reactive Base Rotation cases itself now -- animate() no longer
+  // calls applyResponsiveBaseArmRotationFrame() a 2nd time when Pose
+  // Tween is active (see that call site's own comment), since it would
+  // only ever have used `cfg` too.
+  if (cfg.baseArmRotationResponsiveEnabled) {
+    applyResponsiveBaseArmRotationFrame(blended)
+  } else {
+    applyBaseArmRotation(0, blended)
+  }
 }
 
 // Base arm rotation — applied at h.clone level when slider changes, not every frame.
@@ -1119,7 +1126,23 @@ function applyResponsivePoseTweenFrame() {
 // own already-curl-axis-safe delta-tracking rather than a 2nd rotation
 // system. A plain slider drag (wireSlider below) calls this with no
 // extraX, exactly as before.
-function applyBaseArmRotation(extraX = 0) {
+// `poseValues` (default `cfg`) -- added 2026-09-27, direct report: "the
+// responsive pose tween doesnt dissappera anhymore. but the pose isnt
+// chanigng. the wrist data does. but fingers odnt." Root cause: this
+// function's own finger re-bake (below) was HARDCODED to `cfg` --
+// correct for its normal call sites (a plain slider touch, or the
+// reactive-per-frame call, both of which genuinely want the LIVE
+// slider/cfg values) but wrong when called from WITHIN Responsive Pose
+// Tween's own per-frame apply: that context already computed a
+// BLENDED pose-values object and applied it correctly via
+// applyPoseValuesToHand() -- calling this function right after,
+// re-baking every finger from `cfg` instead of that same blended
+// object, silently overwrote the just-applied finger blend back to
+// whatever cfg's own (unrelated, un-tweened) slider values happened to
+// be. Wrist bone rotation is untouched by this function (only
+// finger curl/splay lives here), which is exactly why wrist visibly
+// responded to the tween while fingers stayed frozen.
+function applyBaseArmRotation(extraX = 0, poseValues = cfg) {
   hands.forEach((h) => {
     const baseBone = h.skinnedMesh.skeleton.getBoneByName('rForearmBend')
     if (!baseBone) return
@@ -1154,7 +1177,7 @@ function applyBaseArmRotation(extraX = 0) {
     // splay frame, or the next finger-curl slider touch), leaving a
     // visibly wrong pose in the meantime. Matches the exact call
     // pattern applyReactiveWristSplayFrame() already uses.
-    FINGER_NAMES.forEach((name) => applyCurlToSkeleton(name, h.skinnedMesh.skeleton, h.currentBaseQuat, curlExcludeQuatForHand(h), cfg))
+    FINGER_NAMES.forEach((name) => applyCurlToSkeleton(name, h.skinnedMesh.skeleton, h.currentBaseQuat, curlExcludeQuatForHand(h), poseValues))
   })
 }
 
@@ -2408,15 +2431,25 @@ function animate() {
     // top of it in the same frame would immediately overwrite that
     // blended wrist value with cfg.wristSplay (the Pose group's own
     // slider, untouched by the tween), undoing part of what the tween
-    // just applied. Mutually exclusive per frame; Responsive Arm
-    // Rotation at Base is a separate bone/axis (rForearmBend's own
-    // rotation) and is safe to run alongside either.
+    // just applied. Mutually exclusive per frame.
+    //
+    // applyResponsiveBaseArmRotationFrame() is now called from INSIDE
+    // applyResponsivePoseTweenFrame() when Pose Tween is active (2026-
+    // 09-27 -- see that function's own comment) rather than
+    // unconditionally out here, so it can pass the tween's own blended
+    // pose-values object through to applyBaseArmRotation()'s finger
+    // re-bake instead of the default `cfg` -- calling it out here too
+    // in that case would re-bake every finger from `cfg` a 2nd time,
+    // right after the tween just correctly set them, silently
+    // overwriting the blend back to the live (un-tweened) slider
+    // values. Base Arm Rotation is a separate bone/axis from Wrist
+    // Splay either way, so it's still safe alongside that branch.
     if (cfg.poseTweenResponsiveEnabled) {
       applyResponsivePoseTweenFrame()
     } else {
       applyReactiveWristSplayFrame()
+      applyResponsiveBaseArmRotationFrame()
     }
-    applyResponsiveBaseArmRotationFrame()
     updateAllFingerGizmos()
   }
   curveWidgetResyncs.forEach((fn) => fn())
