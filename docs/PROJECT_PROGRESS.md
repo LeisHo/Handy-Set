@@ -12,27 +12,28 @@ Nothing in progress. Pushed to `https://github.com/LeisHo/Handy-Set`
 
 ## Recently completed
 
-- **RESOLVED (2026-09-27, 3rd pass — supersedes the 2nd pass below):
-  Palm Faces Cursor and Palm Face Rotation are ONE combined, LOCAL,
-  single-axis rotation around the forearm bone's own Y axis
-  (`armYAxisAligned`), anchored at the forearm bone's own base
-  position — not a full 3D lookAt (the 2nd pass's own approach) and
-  not world UP (also the 2nd pass — wrongly avoided using the real
-  bone-local-Y axis just because it happens to numerically coincide
-  with Handy Dandies' own `wristCropNormalAligned` on this rig).**
-  `baseDeg` (Palm Faces Cursor's own dynamic angle, from
-  `computeRadialRollDeg()`) plus the Palm Face Rotation slider's offset
-  are added together and applied as one rotation, matching HANDY
-  DANDIES' own composition pattern. The anchor is new: the rotation
-  pivots at the forearm base (recomputed from `h.clone`'s live
-  transform every frame, same `pivot - rotation*pivot` technique
-  `applyModelRootTransform()` already uses for `modelRotationPivot`,
-  one level up). Live-verified precisely: the forearm bone's real world
-  position is unchanged (~2e-15 floating-point noise) across a 60deg
-  rotation, and the applied quaternion matches an independently
-  computed one exactly (`angleTo` 0deg), for both the slider and
-  cursor-tracking's own dynamic angle. See `docs/CHANGELOG.txt`'s
-  matching 2026-09-27 (3rd) entry.
+- **RESOLVED (2026-09-27, 4th pass — supersedes the 3rd pass's own axis
+  choice below, anchor logic unchanged): Palm Faces Cursor and Palm
+  Face Rotation rotate around plain canonical UP (0,1,0), not a
+  bone-measured "local Y" axis.** The 3rd pass's `armYAxisAligned`
+  (the bone's raw local Y, transformed through its own quaternion then
+  `alignQuat`) turned out to be a correct reading of the WRONG thing:
+  direct measurement showed `rForearmBend`'s local AND world quaternion
+  are both identity (~1e-8) — this rig keeps bones fully unrotated at
+  bind pose, orientation baked into geometry instead — so "the bone's
+  raw local Y" reduces to just `alignQuat` applied to canonical Y,
+  which lands near ALIGNED -Z (confirmed identical to
+  `wristCropNormalAligned`), not anywhere near Y in the aligned/
+  rendering frame the rest of this file already uses. Fixed by using
+  plain UP directly; `armYAxisAligned`'s measurement is removed. The
+  forearm-base anchor/pivot logic (3rd pass) is untouched — this was
+  purely an axis bug. Live-verified via direct quaternion/position
+  comparison (a 90deg rotation matched an independently-computed
+  quaternion exactly, forearm world position unchanged to ~1e-14) — a
+  visual screenshot check was inconclusive due to this sandbox's own
+  documented WebGL-canvas-readback unreliability, confirmed via direct
+  pixel sampling rather than dismissed. See `docs/CHANGELOG.txt`'s
+  matching 2026-09-27 (4th) entry.
 
 - **RESOLVED (2026-09-27): Tracking Enabled itself caused the whole arm
   to rotate, even with Palm Rotation/Responsive Wrist Splay/Wrist Crop

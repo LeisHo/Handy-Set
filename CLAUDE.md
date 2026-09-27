@@ -992,3 +992,58 @@ wiring, and are still open:
   scratch — the axis and composition pattern are now directly
   user-confirmed, not a guess.** See `docs/CHANGELOG.txt`'s matching
   2026-09-27 (3rd) entry for the full account.
+- **CORRECTED, same day (4th pass) — the 3rd pass's own axis choice
+  (`armYAxisAligned`, the bone's raw local Y transformed by its own
+  world quaternion then `alignQuat`) was itself wrong.** Direct
+  correction: "you are rotating the hand around x or z axis. I want
+  the Forearms Y axis to be the axis of rotation. So it should be
+  rotating parallel to the XZ plane of the forearm bone." Measured
+  `rForearmBend`'s own local AND world quaternion directly (exposed
+  temporarily via `window.__armAxisDebug`) and found BOTH are identity
+  to ~1e-8 — **this rig keeps every bone completely UNROTATED at bind
+  pose; visual orientation is baked into the mesh/vertex geometry
+  instead of bone transforms** (a real, common glTF export convention
+  for this kind of rig, not a bug in the asset). This means "the
+  bone's raw local Y axis" reduces to nothing more than `alignQuat`
+  applied to canonical raw Y — which this particular alignment happens
+  to send to roughly ALIGNED -Z (confirmed: numerically identical to
+  `wristCropNormalAligned`, the bone's own LENGTH direction — so the
+  3rd pass's own "coincidence" finding was real, not a measurement
+  bug). Measured raw local X and Z the same way too, for completeness:
+  raw X aligns to roughly `[0.999, -0.03, -0.03]` (≈ aligned +X, mostly
+  unchanged — makes sense, alignQuat's own rotation axis is roughly
+  X-ish), raw Z aligns to roughly `[0.03, 0.999, -0.015]` (≈ aligned
+  +Y!). So `alignQuat` effectively SWAPS which raw axis maps to which
+  aligned axis — raw Y → aligned -Z, raw Z → aligned +Y — and "the
+  bone's local Y," read literally, was never going to match "Y" in the
+  aligned/rendering frame this whole file already uses for camera
+  position, `modelRotY`, etc. **The general lesson: on a rig where a
+  bone's own local rotation is identity, "the bone's local axis" is a
+  meaningless/circular concept — it can only sensibly mean the axis in
+  whatever OUTER frame (here, the aligned/render frame) the rest of the
+  system already uses.** Fixed by using plain canonical `UP` (0,1,0)
+  directly — removed the `armYAxisAligned` bind-pose measurement
+  entirely (kept a detailed comment at the removal site in `main.js`,
+  so a 5th round doesn't have to re-derive this from scratch). The
+  anchor/pivot logic from the 3rd pass is untouched — confirmed this
+  was purely an axis bug.
+  Live-verified via direct state comparison: with a 90deg slider
+  value, `wrapper.quaternion` matched
+  `Quaternion.setFromAxisAngle((0,1,0), 90deg)` exactly (`angleTo`
+  0deg), and the forearm bone's real world position was unchanged to
+  floating-point noise (~1e-14) across the rotation. **A visual
+  screenshot check at nonzero angles appeared to show the hand vanish
+  entirely — investigated rather than dismissed, since it directly
+  contradicted the precise numeric check.** Direct pixel sampling of
+  the actual canvas (`drawImage` to an offscreen canvas +
+  `getImageData`) showed literally every pixel reading as "non-white"
+  uniformly, at BOTH the 0deg baseline AND the "vanished" angles alike
+  — the exact signature of this sandbox's own already-documented
+  WebGL-canvas-readback gotcha (stale/blank buffer when read outside
+  the render loop, since this canvas has no `preserveDrawingBuffer`),
+  not a real rendering difference. **If a future visual check in this
+  sandbox seems to contradict a precise numeric/state-based check on
+  this project, suspect the canvas read first (per this same gotcha,
+  already documented elsewhere in this file) rather than assuming the
+  numeric check or the code is wrong.** See `docs/CHANGELOG.txt`'s
+  matching 2026-09-27 (4th) entry for the full account.

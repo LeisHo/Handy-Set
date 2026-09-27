@@ -2039,6 +2039,78 @@ Commit: `eaa726c`. Pushed to `https://github.com/LeisHo/Handy-Set`;
 Vercel auto-deployed.
 
 --------------------------------------------------------------------------------
+2026-09-27  -  (4th, same day)
+
+Direct correction of the 3rd-round fix above: "bro you are rotating
+the hand around x or z axis. I want the Forearms Y axis to be the
+axis of rotation. So it should be rotating parallel to the XZ plane
+of the forearm bone."
+
+Rather than re-deriving from first principles a 4th time, measured
+`rForearmBend`'s actual local AND world quaternion directly and
+exposed them (a temporary `window.__armAxisDebug`, removed once the
+question was answered). Both are identity to ~1e-8 -- this rig keeps
+every bone completely UNROTATED at bind pose; visual bone orientation
+is baked into the mesh/vertex geometry instead, not into bone
+transforms (a real, common glTF export convention, not a bug in the
+asset). This means "the bone's raw local Y axis" -- what the 3rd
+round's `armYAxisAligned` measured -- reduces to "canonical raw
+(0,1,0) rotated by `alignQuat` alone" (since the bone's own
+world-quaternion contribution is a no-op). Measured all 3 raw local
+axes (X/Y/Z) the same way and compared against `wristCropNormalAligned`
+(the bone's own known LENGTH direction): raw Y, once aligned, lands at
+`[-0.030, -0.014, -0.999]` -- numerically identical to
+`wristCropNormalAligned` (confirming the 3rd round's own "coincidence"
+finding was real, not a measurement error) -- while raw Z, once
+aligned, lands at `[0.030, 0.999, -0.015]`, i.e. roughly ALIGNED +Y.
+So the 3rd round's axis was a mathematically correct reading of the
+bone's RAW-space Y -- it just isn't the same vector as Y in the
+ALIGNED/rendering frame this whole file already uses for X/Y/Z
+(camera position, `modelRotY`, etc.), which is what "the forearm's Y
+axis" actually has to mean once the bone's own (nonexistent) local
+rotation is factored out.
+
+Fixed by using plain canonical `UP` (0,1,0) directly as the rotation
+axis -- removed `armYAxisAligned`'s bind-pose bone measurement
+entirely (a detailed comment at the removal site in `main.js`
+preserves the reasoning above for a future round, so it isn't
+re-derived from scratch again). The anchor/pivot logic from the 3rd
+round is untouched -- this was purely an axis bug, not a pivot bug.
+
+Live-verified via direct state comparison (not a screenshot -- see
+below for why): with `palmFaceRotationOffset = 90`,
+`hands[0].wrapper.quaternion` matched
+`Quaternion.setFromAxisAngle((0,1,0), 90deg)` exactly (`angleTo`
+0deg), and the `rForearmBend` bone's real world position (read via
+`getWorldPosition()`) was unchanged to floating-point noise (~1e-14)
+across the rotation -- confirming both the axis and the anchor
+simultaneously.
+
+**A visual screenshot check at 30deg/90deg appeared to show the hand
+vanish entirely** -- investigated rather than dismissed, since this
+directly contradicted the precise numeric verification above. Direct
+pixel sampling of the actual canvas (`drawImage` onto an offscreen
+canvas + `getImageData`) showed EVERY pixel reading as "non-white"
+uniformly across the whole canvas, at both 0deg and the "vanished"
+angles alike -- the exact signature of this sandbox's own
+already-documented WebGL-canvas-readback gotcha (`canvas.toDataURL()`/
+`drawImage` returning a stale or blank buffer when read outside the
+render loop, since this canvas has no `preserveDrawingBuffer`) rather
+than a real rendering difference. Screenshot-tool captures showed the
+same pattern. Concluded the numeric verification (which reads live
+Three.js object state directly, not the canvas) is the reliable check
+here, not the screenshot/pixel read -- consistent with this
+project's own prior documented findings about this exact sandbox's
+canvas-readback limitations.
+
+`index.html`'s own `main.js` cache-buster bumped `?v=74` -> `?v=76`
+(an intermediate `?v=75`, used only for the temporary debug build
+above, was never deployed).
+
+Commit: `15dafb3`. Pushed to `https://github.com/LeisHo/Handy-Set`;
+Vercel auto-deployed.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
