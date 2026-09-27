@@ -5111,7 +5111,7 @@
     "wristBend": 0,
     "wristSplay": 0,
     "wristRotation": 0,
-    "modelRotX": 0,
+    "modelRotX": 90,
     "modelRotY": 0,
     "modelRotZ": 0,
     "hideWrist": 78,
