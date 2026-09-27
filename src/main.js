@@ -1053,7 +1053,34 @@ function applyResponsivePoseTweenFrame() {
     const a = defaultPose[k], b = targetPose[k]
     blended[k] = (typeof a === 'number' && typeof b === 'number') ? THREE.MathUtils.lerp(a, b, curveY) : (curveY < 0.5 ? a : b)
   })
+  // Whole-Hand Rotation X/Y/Z -- direct request 2026-09-27: "for the
+  // settings i set in Whole hand rotation at base, and rotation, apply
+  // those to whatever pose i set as the target pose." Use the LIVE
+  // slider values (cfg.modelRotX/Y/Z), not whatever's baked into the 2
+  // named poses' own saved fields -- every SAVED_POSES entry has these
+  // at 0, so blending them would always discard the user's own live
+  // rotation tuning back to 0, every frame, for as long as Pose Tween
+  // stays on.
+  blended.modelRotX = cfg.modelRotX
+  blended.modelRotY = cfg.modelRotY
+  blended.modelRotZ = cfg.modelRotZ
   applyPoseValuesToHand(blended)
+  // Base Rotation X/Y/Z (applied via a SEPARATE function/pivot --
+  // rForearmBend, not modelRotationPivot -- so it can't just be folded
+  // into `blended` above the way modelRotX/Y/Z was). The call just
+  // above (applyPoseValuesToHand -> applyModelRootTransform) already
+  // invalidates applyBaseArmRotation()'s own delta-tracker every time
+  // it runs (see that function's own comment, 2026-09-27) -- which
+  // stops the 2 systems from fighting, but does NOT by itself keep the
+  // PLAIN (non-reactive) Base Rotation sliders' effect applied each
+  // frame, since nothing was re-triggering applyBaseArmRotation() after
+  // the reset in that case. Re-apply here so it stays live throughout
+  // the tween. When Base Rotation IS reactive, skip this call --
+  // animate()'s own unconditional applyResponsiveBaseArmRotationFrame()
+  // (called right after this function returns) already re-applies the
+  // correct reactive amount; calling it here too would just be a
+  // redundant, harmless extra delta-tracker round-trip.
+  if (!cfg.baseArmRotationResponsiveEnabled) applyBaseArmRotation()
 }
 
 // Base arm rotation — applied at h.clone level when slider changes, not every frame.
