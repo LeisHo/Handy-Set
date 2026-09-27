@@ -67,18 +67,17 @@
     "checkboxWristSplayResponsiveEnabled": false,
     "sliderWristSplayDefault": -74,
     "checkboxWristSplayReactiveEnabled": false,
-    "sliderCameraX": 1,
-    "sliderCameraY": 130,
-    "sliderCameraZ": 5,
-    "sliderCameraFov": 15,
-    "sliderCameraZoom": 99.5,
-    "checkboxLockCameraPan": true,
-    "checkboxLockCameraZoom": true,
-    "checkboxLockCameraRotate": true,
-    "sliderCameraRotX": 0,
-    "sliderCameraRotY": 0,
-    "sliderCameraRotZ": 0,
-    "checkboxCameraMaxExtentsEnabled": true,
+    "sliderCameraX": 3.5,
+    "sliderCameraY": 31.5,
+    "sliderCameraZ": 60.5,
+    "sliderCameraFov": 77,
+    "sliderCameraZoom": 62,
+    "checkboxLockCameraPan": false,
+    "checkboxLockCameraZoom": false,
+    "checkboxLockCameraRotate": false,
+    "sliderCameraYaw": 24,
+    "sliderCameraPitch": -2,
+    "checkboxCameraMaxExtentsEnabled": false,
     "checkboxTrackingEnabled": false,
     "sliderTrackingDamping": 0.2,
     "sliderTargetDepthFactor": 2,
@@ -2521,6 +2520,14 @@
         "items": [
           {
             "type": "row",
+            "key": "sliderCameraYaw"
+          },
+          {
+            "type": "row",
+            "key": "sliderCameraPitch"
+          },
+          {
+            "type": "row",
             "key": "checkboxLockCameraRotate"
           },
           {
@@ -2534,18 +2541,6 @@
           {
             "type": "row",
             "key": "checkboxCameraMaxExtentsEnabled"
-          },
-          {
-            "type": "row",
-            "key": "sliderCameraRotX"
-          },
-          {
-            "type": "row",
-            "key": "sliderCameraRotY"
-          },
-          {
-            "type": "row",
-            "key": "sliderCameraRotZ"
           },
           {
             "type": "row",
@@ -2578,13 +2573,12 @@
           }
         ],
         "rowKeys": [
+          "sliderCameraYaw",
+          "sliderCameraPitch",
           "checkboxLockCameraRotate",
           "checkboxLockCameraPan",
           "checkboxLockCameraZoom",
           "checkboxCameraMaxExtentsEnabled",
-          "sliderCameraRotX",
-          "sliderCameraRotY",
-          "sliderCameraRotZ",
           "sliderCameraX",
           "sliderCameraY",
           "sliderCameraZ",
