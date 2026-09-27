@@ -1393,3 +1393,19 @@ wiring, and are still open:
   bit-identical bone-quaternion read minutes apart, with real
   interaction in between, is what actually proved the freeze — a
   screenshot alone did not).
+- **`applyResponsivePoseTweenFrame()` overrides the blended pose's
+  `modelRotX/Y/Z` with the LIVE `cfg` values (not the 2 named poses'
+  own saved fields, both 0 for every seeded pose) — added 2026-09-27,
+  direct request: "for the settings i set in Whole hand rotation at
+  base, and rotation, apply those to whatever pose i set as the target
+  pose."** It also re-applies Base Rotation X/Y/Z's current slider
+  value every frame, but ONLY when that feature isn't already reactive
+  (the reactive case is already covered by `animate()`'s own
+  unconditional `applyResponsiveBaseArmRotationFrame()` call right
+  after this function returns — check for that call before assuming a
+  future change needs to duplicate it here too). **If a future SAVED
+  pose is ever given a genuinely non-zero `modelRotX/Y/Z` (none
+  currently are), this override means Pose Tween will NEVER blend
+  toward that pose's own rotation — it always uses the live slider
+  instead, by design, matching this direct request.** See
+  `docs/CHANGELOG.txt`'s matching 2026-09-27 (18th) entry.

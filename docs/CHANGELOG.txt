@@ -2805,6 +2805,51 @@ Commit: `d3b294a`. Pushed to `https://github.com/LeisHo/Handy-Set`;
 Vercel auto-deployed.
 
 --------------------------------------------------------------------------------
+2026-09-27  -  (18th, same day)
+
+Direct request, same day as the 16th/17th entries: "for the settings i
+set in Whole hand rotation at base, and rotation, apply those to
+whatever pose i set as the target pose."
+
+Gap: Pose Tween's per-frame blend read `modelRotX/Y/Z` straight from
+the 2 named poses' own saved fields -- every seeded SAVED_POSES entry
+has these at 0, so the blend silently discarded whatever the user had
+live-tuned on the "Whole-Hand Rotation X/Y/Z" sliders, every single
+frame, for as long as the feature stayed on. "Base Rotation X/Y/Z"
+(applied via a separate function/pivot, `applyBaseArmRotation()`/
+`rForearmBend`) had a related but distinct gap: the 16th entry's fix
+stopped the 2 systems from fighting/scattering, but didn't make the
+PLAIN (non-reactive) slider's own effect stay applied each frame --
+nothing was re-triggering `applyBaseArmRotation()` after Pose Tween's
+own per-frame transform reset invalidated its delta-tracker, unless
+Base Rotation was ALSO set to reactive.
+
+Fixed in `applyResponsivePoseTweenFrame()`: after building the
+blended pose-values object, override its `modelRotX/Y/Z` with the
+live `cfg` values before handing it to `applyPoseValuesToHand()`; and
+re-apply Base Rotation's current slider value every frame via a plain
+`applyBaseArmRotation()` call, but ONLY when it isn't already reactive
+(the reactive case is already covered by `animate()`'s own
+unconditional `applyResponsiveBaseArmRotationFrame()` call right
+after -- calling both would just be a redundant, harmless extra
+delta-tracker round-trip, so it's skipped).
+
+Live-verified: set Whole-Hand Rotation Y and Base Rotation X/Z to
+distinctive nonzero values (45deg, 20deg, 30deg across 2 rounds),
+enabled Pose Tween with a target pose, confirmed `h.clone.quaternion`
+matches the slider-driven rotation exactly (bit-for-bit identical) at
+BOTH ends of the tween (screen center and a far cursor position) --
+the rotation never drifts as the pose blend itself changes. Re-ran the
+16th entry's own disappearing-hand repro with Responsive Arm Rotation
+at Base ALSO reactive at the same time -- still resolved, no
+regression from this additional change.
+
+`index.html`'s own `main.js` cache-buster bumped `?v=94` -> `?v=95`.
+
+Commit: `a4de3bd`. Pushed to `https://github.com/LeisHo/Handy-Set`;
+Vercel auto-deployed.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

@@ -8,18 +8,30 @@ append-only history.
 ## Currently working on
 
 Nothing in progress — the 6-part Palm Rotation/Responsive-features
-request (2026-09-27) is fully complete, plus 4 interjected fixes from
+request (2026-09-27) is fully complete, plus 5 interjected fixes from
 the same session (Saved Cameras/list-picker persistence; Palm Rotation
 height/distance independence + forearm-base marker; a hand-disappears
 clash between Pose Tween and Base Arm Rotation; `armBaseDistanceT`
-freezing at a stale value in the ground-raycast dead zone, which made
-Pose Tween look broken/stuck from the dev panel). See Recently
+freezing at a stale value in the ground-raycast dead zone; Pose Tween
+now applies the live Whole-Hand Rotation / Base Rotation sliders to
+whatever pose is showing, instead of discarding them). See Recently
 completed below for the full account.
 
 Pushed to `https://github.com/LeisHo/Handy-Set`
 (deployed via the Vercel project at `https://vercel.com/lpeis/handy-set`).
 
 ## Recently completed
+
+- **DONE (2026-09-27): Pose Tween now applies the live Whole-Hand
+  Rotation X/Y/Z and Base Rotation X/Y/Z slider values to whatever
+  pose is currently showing, instead of silently resetting them to
+  the named poses' own saved fields (0 for every seeded pose) every
+  frame.** Fixed in `applyResponsivePoseTweenFrame()` — overrides the
+  blended pose's `modelRotX/Y/Z` with the live `cfg` values, and
+  re-applies Base Rotation's current slider each frame when it isn't
+  already reactive. Live-verified: rotation stays bit-for-bit
+  identical across both ends of the tween. See `docs/CHANGELOG.txt`'s
+  matching 2026-09-27 (18th) entry.
 
 - **RESOLVED (2026-09-27): `armBaseDistanceT` (Wrist Splay/Base Arm
   Rotation/Pose Tween's shared distance metric) froze at a stale,
