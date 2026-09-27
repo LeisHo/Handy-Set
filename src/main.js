@@ -57,6 +57,13 @@ const cfg = {
   // trackingEnabled is now a pure on/off gate for motion input; doesn't itself cause rotation
   trackingEnabled: true, trackingDamping: 1, targetDepthFactor: 0.6,
   showTargetMarker: false, palmFacesCursor: false,
+  // Palm Face Rotation -- unlike HANDY DANDIES' own slider (which rolls
+  // around wristCropNormalAligned, roughly the forearm's OWN long axis, in
+  // object space before the lookAt), this rolls around world UP in world
+  // space, AFTER the lookAt -- see animate()'s own comment for why. Direct
+  // instruction: "around the Y axis of the arm, which may be different
+  // from Handy Dandies."
+  palmFaceRotationOffset: 0,
   // Whole-Hand Rotation at Base (anchored at rForearmBend, using its own axes)
   baseRotationX: 0, baseRotationY: 0, baseRotationZ: 0,
   // Reactive Arm Length — ported from HANDY DANDIES (see docs/CHANGELOG.txt
@@ -1089,14 +1096,14 @@ function initMotionInput() {
 
 const tiltTarget = new THREE.Vector3()
 const UP = new THREE.Vector3(0, 1, 0)
-function computeRadialRollDeg(handPos, targetPos) {
-  const dx = handPos.x - targetPos.x, dy = handPos.y - targetPos.y
-  return THREE.MathUtils.radToDeg(Math.atan2(dx, -dy))
-}
-function computeRollQuat(baseDeg) {
-  const axis = wristCropNormalAligned || new THREE.Vector3(0, 0, -1)
-  return new THREE.Quaternion().setFromAxisAngle(axis, THREE.MathUtils.degToRad(baseDeg || 0) + THREE.MathUtils.degToRad(cfg.palmFaceRotationOffset || 0))
-}
+// (An earlier, never-wired-up port of HANDY DANDIES' own
+// computeRadialRollDeg()/computeRollQuat() -- a dynamic compass-needle
+// roll around wristCropNormalAligned -- used to live here. Removed
+// 2026-09-27: never called from animate() (a separate, ad-hoc, buggy roll
+// was live there instead), and the user's actual spec for Palm Face
+// Rotation is a plain static slider around a different, fixed axis
+// world UP, not HANDY DANDIES' dynamic cursor-relative angle -- see
+// animate()'s own comment for the real, current mechanism.)
 // See this section's own top comment: mouse input raycasts the true
 // cursor position (ported from Handy Dandies' real updateCursorTarget()),
 // device-orientation input keeps the normalized magnitude/angle circular
@@ -1622,6 +1629,7 @@ window.__debug = {
   get hand() { return hand }, get hands() { return hands }, get sceneState() { return sceneState },
   get wristPosRaw() { return wristPosRaw }, get forearmPosRaw() { return forearmPosRaw },
   get wristCropNormalAligned() { return wristCropNormalAligned }, get alignQuat() { return alignQuat },
+  get tiltTarget() { return tiltTarget },
   get handLengthRaw() { return handLengthRaw }, get handCenterLocal() { return handCenterLocal },
   getHandCenterWorld, updateWristCrop, computeBaseScale
 }
@@ -1650,44 +1658,49 @@ function animate() {
   controls.update()
   syncCameraPanelFromLive()
   if (!isPaused) {
-    // Phone Tilt rotation (only when tracking is enabled AND we have input)
-    if (cfg.trackingEnabled && hands.length && (latestOrientation !== null || lastInputSource === 'mouse')) {
-      // updateTiltTarget() must still run unconditionally here -- it (and
-      // the mousemove/deviceorientation handlers) are what keep
-      // tiltMagnitude/tiltTarget live, which Responsive Wrist Splay and
-      // Wrist Crop read every frame regardless of Palm Faces Cursor.
-      updateTiltTarget()
-      // The actual arm reorientation (this whole hands.forEach body) IS
-      // "Palm Rotation" (the dev panel's "Palm Faces Cursor" checkbox) --
-      // it must NOT run just because Tracking Enabled is on. Found live
-      // 2026-09-27: this used to run unconditionally whenever tracking was
-      // on, so enabling Tracking Enabled alone (with Palm Faces Cursor,
-      // Responsive Wrist Splay, and Wrist Crop all off) still slerped the
-      // whole wrapper toward tiltTarget -- a visible "arm swings toward an
-      // origin outside the arm" effect with no checkbox actually asking
-      // for it. Tracking Enabled is meant to be a pure data-gate (feeds
-      // tiltMagnitude/tiltTarget to whichever of the 3 features below are
-      // individually on) and never itself a visible effect.
-      if (cfg.palmFacesCursor) {
-        hands.forEach((h) => {
-          const m = new THREE.Matrix4().lookAt(h.wrapper.position, tiltTarget, UP)
-          let desired = new THREE.Quaternion().setFromRotationMatrix(m)
-
-          // Palm Faces Cursor: rotate only around base arm's Y axis
-          const baseBone = h.skinnedMesh.skeleton.getBoneByName('rForearmBend')
-          if (baseBone) {
-            const rollDeg = computeRadialRollDeg(h.wrapper.position, tiltTarget)
-            const baseWorldQuat = new THREE.Quaternion()
-            baseBone.getWorldQuaternion(baseWorldQuat)
-            // Y-axis rotation in the base bone's local frame
-            const yAxis = new THREE.Vector3(0, 1, 0).applyQuaternion(baseWorldQuat)
-            const rollQuat = new THREE.Quaternion().setFromAxisAngle(yAxis, rollDeg * Math.PI / 180)
-            desired.multiplyQuaternions(rollQuat, desired)
-          }
-
-          h.wrapper.quaternion.slerp(desired, cfg.trackingDamping)
-        })
-      }
+    // Phone Tilt rotation (only when tracking is enabled)
+    if (cfg.trackingEnabled && hands.length) {
+      // updateTiltTarget() only needs to run once real input exists --
+      // Responsive Wrist Splay/Wrist Crop read tiltMagnitude (set directly
+      // by the mousemove/deviceorientation handlers, not by this call) so
+      // they're unaffected either way; this only refreshes tiltTarget,
+      // which nothing needs before Palm Faces Cursor's lookAt uses it.
+      if (latestOrientation !== null || lastInputSource === 'mouse') updateTiltTarget()
+      // REWRITTEN 2026-09-27, direct report ("Palm faces cursor doesnt
+      // work correctly. It should just be rotating to follow the cursor"):
+      // the previous version computed an EXTRA roll on top of the lookAt,
+      // around a Y axis read from the bone's own LIVE (previous-frame)
+      // world quaternion -- a moving reference frame that compounds with
+      // itself frame to frame, and a redundant second cursor-relative
+      // rotation stacked on top of what the lookAt already does. Palm
+      // Faces Cursor now does exactly what it says: `desired` is nothing
+      // but the lookAt toward tiltTarget when the checkbox is on, identity
+      // otherwise -- "just rotating to follow the cursor."
+      //
+      // The separate, deliberate Palm Face Rotation slider composes its
+      // own roll on top, around world UP (0,1,0) -- the SAME axis the
+      // lookAt's own `UP` parameter uses -- applied via `premultiply`
+      // (world-space, AFTER the lookAt) so it's a true "spin around
+      // vertical" regardless of which way the arm currently faces, not a
+      // roll relative to the model's own bind-pose frame. Deliberately NOT
+      // HANDY DANDIES' own axis (wristCropNormalAligned, composed in
+      // OBJECT space via `desired.multiply(...)`, roughly the forearm's
+      // own length direction) -- direct instruction: "around the Y axis of
+      // the arm, which may be different from Handy Dandies." (An earlier
+      // draft of this fix measured the rForearmBend bone's own local Y at
+      // bind pose for this -- found live to numerically coincide with
+      // wristCropNormalAligned to 6 decimal places, since this rig's bones
+      // are authored with local Y running along their own length. World UP
+      // avoids that degenerate overlap entirely and is simpler besides.)
+      hands.forEach((h) => {
+        const desired = cfg.palmFacesCursor
+          ? new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().lookAt(h.wrapper.position, tiltTarget, UP))
+          : new THREE.Quaternion()
+        if (cfg.palmFaceRotationOffset) {
+          desired.premultiply(new THREE.Quaternion().setFromAxisAngle(UP, THREE.MathUtils.degToRad(cfg.palmFaceRotationOffset)))
+        }
+        h.wrapper.quaternion.slerp(desired, cfg.trackingDamping)
+      })
     }
     applyReactiveWristSplayFrame()
   }
@@ -2380,6 +2393,12 @@ function renderPhoneTiltGroup(content) {
   addRow(subPalm, { id: 'checkboxPalmFacesCursor', label: 'Palm Faces Cursor', type: 'checkbox' })
   document.getElementById('checkboxPalmFacesCursor').checked = cfg.palmFacesCursor
   wireCheckbox('checkboxPalmFacesCursor', (v) => { cfg.palmFacesCursor = v })
+  // Rolls around world UP (the arm's own Y axis), NOT HANDY DANDIES' own
+  // wristCropNormalAligned axis -- see animate()'s own comment. Always
+  // composes onto `desired` (independent of Palm Faces Cursor), matching
+  // HANDY DANDIES' own always-additive slider behavior.
+  addRow(subPalm, { id: 'sliderPalmFaceRotationOffset', label: 'Palm Face Rotation (Deg)', type: 'slider', min: -180, max: 180, step: 1, value: cfg.palmFaceRotationOffset })
+  wireSlider('sliderPalmFaceRotationOffset', (v) => { cfg.palmFaceRotationOffset = v })
 }
 
 function renderLightingGroup(content) {
