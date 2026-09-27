@@ -893,6 +893,32 @@ function applyReactiveWristSplayFrame() {
 // Base arm rotation — applied at h.clone level when slider changes, not every frame.
 // Rotates around rForearmBend using its own axes. Stores last applied state to
 // avoid accumulation: only applies the DELTA since last call.
+//
+// FIXED 2026-09-27, direct report: "The whole hand rotation at base is
+// suffering the same rotatin axis messing with Fiigner poses as before."
+// Root cause, same bug class as the 3 earlier curl-axis fixes documented
+// below in this file (Whole-Hand Rotation modelRotX/Y/Z, wrist bend/
+// splay/rotation): this function mutates `h.clone.quaternion` DIRECTLY
+// via its own delta-tracking, completely bypassing `h.currentBaseQuat`
+// (the `baseQuat` every applyCurlToSkeleton() call actually uses as its
+// finger-curl axis reference). The two silently diverged the moment a
+// Base Rotation slider was touched -- `h.clone.quaternion` included it,
+// `h.currentBaseQuat` never did, so every finger's curl/splay axis kept
+// being computed as if the arm hadn't rotated at all. Fixed by applying
+// the EXACT SAME deltaQuat to `h.currentBaseQuat` that gets applied to
+// `h.clone.quaternion`, keeping them permanently in sync regardless of
+// call order -- matching the established "baseQuat must bake in every
+// whole-hand-level rotation" rule this file has already learned 3 times.
+// Disclosed, not silently ignored: this does NOT unify Base Rotation's
+// own pivot (rForearmBend's world position, re-read live each call) with
+// Whole-Hand Rotation's own pivot (modelRotationPivot, the palm center)
+// into one combined formula -- if `applyModelRootTransform()` runs AFTER
+// this function (e.g. a modelRot/pose slider touched after Base
+// Rotation), it recomputes `h.clone.position` from ONLY the palm-center
+// pivot, which can visually shift where Base Rotation's own pivot ends
+// up. Not the bug that was reported (curl axis, now fixed); flagged as
+// a known follow-up if position drift is ever reported when BOTH
+// rotation systems are combined.
 function applyBaseArmRotation() {
   hands.forEach((h) => {
     const baseBone = h.skinnedMesh.skeleton.getBoneByName('rForearmBend')
@@ -919,7 +945,16 @@ function applyBaseArmRotation() {
     h.clone.position.copy(baseWorldPos).add(offset)
 
     h.clone.quaternion.multiplyQuaternions(deltaQuat, h.clone.quaternion)
+    h.currentBaseQuat.multiplyQuaternions(deltaQuat, h.currentBaseQuat) // keep the curl-axis reference in sync -- see this function's own comment above
     h.lastBaseArmQuat.copy(desiredQuat)
+    // Re-bake finger curl/splay immediately using the now-updated
+    // baseQuat -- otherwise the actual bone quaternions stay stale
+    // (computed from the OLD axis reference) until something ELSE
+    // happens to re-trigger applyCurlToSkeleton (e.g. a reactive wrist
+    // splay frame, or the next finger-curl slider touch), leaving a
+    // visibly wrong pose in the meantime. Matches the exact call
+    // pattern applyReactiveWristSplayFrame() already uses.
+    FINGER_NAMES.forEach((name) => applyCurlToSkeleton(name, h.skinnedMesh.skeleton, h.currentBaseQuat, curlExcludeQuatForHand(h), cfg))
   })
 }
 
