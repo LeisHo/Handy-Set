@@ -1371,10 +1371,28 @@ function syncControlDom(id, value) {
 // calls line-by-line before finalizing this list.
 const POSE_ID_CASE_EXCEPTIONS = { hideWrist: 'sliderHideWrist', poseScale: 'sliderPoseScale' }
 const POSE_SYNC_PAIRS = POSE_PRESET_KEYS.map((k) => [POSE_ID_CASE_EXCEPTIONS[k] || ('slider' + k), k])
-const CAMERA_SYNC_PAIRS = [['sliderCameraX', 'cameraX'], ['sliderCameraY', 'cameraY'], ['sliderCameraZ', 'cameraZ'], ['sliderCameraFov', 'cameraFov'], ['sliderCameraZoom', 'cameraZoom']]
+const CAMERA_SYNC_PAIRS = [['sliderCameraX', 'cameraX'], ['sliderCameraY', 'cameraY'], ['sliderCameraZ', 'cameraZ'], ['sliderCameraFov', 'cameraFov'], ['sliderCameraZoom', 'cameraZoom'], ['sliderCameraYaw', 'cameraYaw'], ['sliderCameraPitch', 'cameraPitch']]
 const LIGHTING_SYNC_PAIRS = [['sliderKeyAzimuth', 'keyAzimuth'], ['sliderKeyElevation', 'keyElevation'], ['sliderKeyTargetHeight', 'keyTargetHeight'], ['sliderKeyIntensity', 'keyIntensity'], ['colorKeyColor', 'keyColor'], ['sliderAmbientIntensity', 'ambientIntensity'], ['colorAmbientSkyColor', 'ambientSkyColor'], ['colorAmbientGroundColor', 'ambientGroundColor']]
 const TOON_SYNC_PAIRS = [['sliderToonSteps', 'toonSteps'], ['sliderToonStepThreshold', 'toonStepThreshold'], ['sliderToonShadowFloor', 'toonShadowFloor'], ['sliderToonLightCeiling', 'toonLightCeiling'], ['colorToonBaseTint', 'toonBaseTint'], ['sliderTextureInfluence', 'textureInfluence'], ['colorToonTint', 'toonTint'], ['sliderRimIntensity', 'rimIntensity'], ['sliderRimPower', 'rimPower'], ['colorRimColor', 'rimColor']]
 function syncPairsFromCfg(pairs) { pairs.forEach(([id, key]) => syncControlDom(id, cfg[key])) }
+function syncValue(id, value) {
+  const el = document.getElementById(id)
+  if (el) {
+    el.value = value
+    const vEl = document.getElementById(id.replace(/^slider/, 'value'))
+    if (vEl) vEl.textContent = value
+  }
+}
+function syncCameraPanelFromLive() {
+  const yp = getCameraYawPitch()
+  syncValue('sliderCameraX', camera.position.x)
+  syncValue('sliderCameraY', camera.position.y)
+  syncValue('sliderCameraZ', camera.position.z)
+  syncValue('sliderCameraYaw', yp.yaw)
+  syncValue('sliderCameraPitch', yp.pitch)
+  syncValue('sliderCameraFov', camera.fov)
+  syncValue('sliderCameraZoom', camera.position.distanceTo(controls.target))
+}
 
 // Ported from HANDY DANDIES' own real applyCameraPreset() (verified by
 // direct source read, not reconstructed) after a real, reproduced bug:
@@ -1394,9 +1412,8 @@ function applyCameraPreset(item) {
   camera.updateProjectionMatrix()
   controls.update()
   cfg.cameraZoom = item.zoom !== undefined ? item.zoom : camera.position.distanceTo(controls.target)
-  cfg.cameraYaw = item.cameraYaw !== undefined ? item.cameraYaw : 0
-  cfg.cameraPitch = item.cameraPitch !== undefined ? item.cameraPitch : 0
   Object.assign(cfg, { cameraX: camera.position.x, cameraY: camera.position.y, cameraZ: camera.position.z, cameraFov: camera.fov, targetX: controls.target.x, targetY: controls.target.y, targetZ: controls.target.z })
+  syncCameraPanelFromLive()
   syncPairsFromCfg(CAMERA_SYNC_PAIRS)
 }
 function applyLightingPreset(item) {
@@ -1595,6 +1612,7 @@ function animate() {
     applyRendererSize(window.innerWidth, window.innerHeight)
   }
   controls.update()
+  syncCameraPanelFromLive()
   if (!isPaused) {
     if (cfg.trackingEnabled && hands.length) {
       updateTiltTarget()
@@ -1925,7 +1943,7 @@ function addFingerSliders(content, finger) {
 }
 
 function capturePoseFromCfg() { const o = {}; POSE_PRESET_KEYS.forEach((k) => { o[k] = cfg[k] }); return o }
-function captureCameraFromLive() { return { x: camera.position.x, y: camera.position.y, z: camera.position.z, fov: camera.fov, tx: controls.target.x, ty: controls.target.y, tz: controls.target.z, zoom: cfg.cameraZoom, cameraYaw: cfg.cameraYaw, cameraPitch: cfg.cameraPitch } }
+function captureCameraFromLive() { return { x: camera.position.x, y: camera.position.y, z: camera.position.z, fov: camera.fov, tx: controls.target.x, ty: controls.target.y, tz: controls.target.z, zoom: cfg.cameraZoom } }
 function captureLightingFromLive() { const o = {}; LIGHTING_PRESET_KEYS.forEach((k) => { o[k] = cfg[k] }); return o }
 
 // Full list-picker widget, ported to match HANDY DANDIES' own
