@@ -1145,3 +1145,22 @@ wiring, and are still open:
   reference Y, a fallback for the no-hit case, or reconsidering camera
   framing) before this is closed out. See `docs/CHANGELOG.txt`'s
   matching 2026-09-27 (8th) entry.
+- **RESOLVED, same day (9th entry) — direct answer to the question
+  above: "When the raycasting never hits the Y=0, just let the
+  rotation not trigger. this is only a desktop issue since mobile uses
+  tilt."** Kept the Y=0 plane as-is; added `tiltTargetValid` (from the
+  mouse path's own `haveHit`, always `true` for device-orientation) and
+  skip `animate()`'s WHOLE per-hand rotation block (quaternion AND
+  anchor/position) on a miss, rather than just freezing `tiltTarget`
+  while still recomputing an angle from it (which would mix a stale
+  `tiltTarget` with a fresh `tiltOriginGround` into a meaningless
+  result — a true freeze needs to skip the computation entirely, not
+  just one of its two inputs). Live-verified: `wrapper.quaternion`
+  read byte-identical across 2 reads while the cursor stayed in the
+  dead zone; a valid-zone position afterward produced a different
+  quaternion, confirming normal resume. **If a future report says Palm
+  Rotation "does nothing" in part of the screen, this is EXPECTED,
+  working-as-specified behavior for the dead zone, not a bug — check
+  whether the cursor is in the bottom ~third of the screen before
+  investigating further.** See `docs/CHANGELOG.txt`'s matching
+  2026-09-27 (9th) entry for the full account.

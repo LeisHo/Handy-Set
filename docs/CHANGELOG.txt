@@ -2298,6 +2298,37 @@ Commit: `3efa8a0`. Pushed to `https://github.com/LeisHo/Handy-Set`;
 Vercel auto-deployed.
 
 --------------------------------------------------------------------------------
+2026-09-27  -  (9th, same day)
+
+Direct instruction, given the Y=0 ground-plane dead-zone finding above
+(the raycast only hits the bottom ~third of the screen with this
+project's default camera framing): "When the raycasting never hits the
+Y=0, just let the rotation not trigger. this is only a desktop issue
+since mobile uses tilt."
+
+Added `tiltTargetValid` (set from the mouse path's own `haveHit`
+result every frame; always `true` for device-orientation, which never
+raycasts at all). `animate()`'s per-hand rotation block -- both the
+quaternion slerp AND the anchor/position recompute -- is now skipped
+ENTIRELY for a frame where the mouse raycast missed, rather than just
+leaving `tiltTarget` frozen while still recomputing an angle from it
+(which would have mixed a stale `tiltTarget` with a freshly-recomputed
+`tiltOriginGround`, producing a meaningless intermediate result rather
+than a true freeze).
+
+Live-verified: with Palm Faces Cursor on, `hands[0].wrapper.quaternion`
+read byte-identical across 2 separate reads while the cursor stayed in
+the dead zone -- a genuine freeze, not drift. Moving to a valid
+(bottom-third) cursor position produced a different quaternion,
+confirming normal response resumes correctly the moment the ray hits
+again.
+
+`index.html`'s own `main.js` cache-buster bumped `?v=81` -> `?v=82`.
+
+Commit: `7e08da9`. Pushed to `https://github.com/LeisHo/Handy-Set`;
+Vercel auto-deployed.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

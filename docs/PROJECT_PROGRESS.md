@@ -7,12 +7,6 @@ append-only history.
 
 ## Currently working on
 
-- **Open question for the user: Palm Rotation's Y=0 ground-plane raycast
-  only hits the plane in the bottom ~third of the screen** (camera looks
-  level-to-slightly-upward from Y~31.4, never down toward Y=0) — the
-  rest of the screen leaves `tiltTarget` frozen. Needs a decision: a
-  different reference Y, a different approach for the no-hit case, or
-  a camera-framing change. Not yet fixed.
 - **Finger Gizmos** (visual-only, confirmed with the user — no
   TransformControls/IK): markers + 3 colored axis lines at every finger
   joint, with Size/Color/Axis Length/Axis Thickness controls and an
@@ -26,6 +20,13 @@ Vercel project at `https://vercel.com/lpeis/handy-set`).
 
 ## Recently completed
 
+- **RESOLVED (2026-09-27): the Y=0 ground-plane dead-zone (raycast only
+  hit the bottom ~third of the screen) — per direct instruction, a
+  missed raycast now skips Palm Rotation's per-hand update entirely
+  instead of computing a bogus angle from a stale point.** Live-
+  verified: quaternion reads byte-identical while frozen in the dead
+  zone, resumes correctly once back in the valid zone. See
+  `docs/CHANGELOG.txt`'s matching 2026-09-27 (9th) entry.
 - **RESOLVED (2026-09-27): Show Target Marker checkbox had no actual
   mesh behind it since Phone Tilt was first built.** Added a small
   magenta sphere synced to `tiltTarget` every frame when enabled. See
