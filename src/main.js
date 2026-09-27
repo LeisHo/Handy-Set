@@ -107,6 +107,42 @@ const cfg = {
   wristRotationClampRange: '{"min":-360,"max":360}',
   wristBendClampRange: '{"min":-90,"max":90}',
   wristSplayClampRange: '{"min":-180,"max":180}',
+  // Responsive Arm Rotation at Base -- direct request 2026-09-27: "add a
+  // RESPONSIE ARM ROTATION AT BASE. The closer the cursor to the
+  // hand/arm base point on the XZ plane, the further the whole arm
+  // model will rotate on the arm's base x axis... On mobile, the
+  // further the phone tilt, the further the arm rotates." A single
+  // On/Off checkbox gates the WHOLE feature (no separate "reactive"
+  // sub-toggle, unlike Reactive Arm Length/Responsive Wrist Splay
+  // above -- the request's own control list is just checkbox + fine-
+  // tune + range + curve). Reuses applyBaseArmRotation()'s own already
+  // curl-axis-safe delta-tracking (baseRotationX above) -- the
+  // reactive amount is added ON TOP of that slider's value every
+  // frame, not a separate rotation system. Distance input is
+  // armBaseDistanceT (see updateTiltTarget()'s own comment), NOT
+  // tiltMagnitude -- a deliberately different metric per this same
+  // request: cursor-to-arm-base distance on desktop (normalized
+  // against the farthest reachable point in the browser), phone-tilt
+  // percentage on mobile (identical to tiltMagnitude there already).
+  baseArmRotationResponsiveEnabled: false, baseArmRotationFineTune: 0,
+  baseArmRotationRange: '{"min":0,"max":30}',
+  baseArmRotationCurve: '[{"x":0,"y":1},{"x":1,"y":0}]',
+  // Responsive Pose Tween -- direct request 2026-09-27: "add a
+  // 'Responsive Pose Tween' subgroup... As the cursor moves/ phone is
+  // tilted, the hand will tween between the default pose and the
+  // target pose." "Default pose" is read as DEFAULT_POSE_NAME (a
+  // named pose, parallel to Target Pose also being a named pose,
+  // rather than a live snapshot of whatever's currently posed) --
+  // disclosed interpretation, see findSavedPoseByName()'s own comment.
+  // Curve X is the SAME armBaseDistanceT/tiltMagnitude distance/tilt
+  // metric as the 2 features above (0=near/no-tilt, 1=far/full-tilt),
+  // Y is tween progress (0=Default pose, 1=Target pose) -- matching
+  // every other curve widget in this file's own X=input/Y=output
+  // convention; see applyResponsivePoseTweenFrame()'s own comment for
+  // why this reading was chosen over the request's own literal "target
+  // pose is 100 on the x axis" wording.
+  poseTweenResponsiveEnabled: false, poseTweenTargetPoseName: '',
+  poseTweenCurve: '[{"x":0,"y":0},{"x":1,"y":1}]',
   // Lighting
   keyAzimuth: 117, keyElevation: 56, keyTargetHeight: 71, keyIntensity: 6, keyColor: '#ffffff',
   ambientIntensity: 0, ambientSkyColor: '#ffffff', ambientGroundColor: '#3a2f2a',
@@ -524,6 +560,44 @@ function computeResponsiveWristSplayDeg(distanceT) {
   const { min, max } = wristSplayRangeParsed
   return min + (max - min) * curveY
 }
+// Responsive Arm Rotation at Base -- see cfg's own declaration comment.
+let baseArmRotationRangeParsed = { min: 0, max: 30 }
+let baseArmRotationCurveParsed = [{ x: 0, y: 1 }, { x: 1, y: 0 }]
+function parseBaseArmRotationConfig() {
+  try { baseArmRotationRangeParsed = JSON.parse(cfg.baseArmRotationRange) } catch (e) { /* keep last-good value */ }
+  try { baseArmRotationCurveParsed = JSON.parse(cfg.baseArmRotationCurve).sort((a, b) => a.x - b.x) } catch (e) { /* keep last-good value */ }
+}
+// Returns the EXTRA rotation (degrees) to add onto cfg.baseRotationX --
+// unlike computeArmLengthT/computeResponsiveWristSplayDeg above, a
+// single On/Off checkbox gates the WHOLE feature here (no separate
+// "reactive" sub-toggle or "default value when not reactive" -- see
+// cfg's own comment for why), so baseArmRotationFineTune only has any
+// effect while the feature itself is on.
+function computeResponsiveBaseArmRotationDeg(distanceT) {
+  if (!cfg.trackingEnabled) return 0
+  if (!cfg.baseArmRotationResponsiveEnabled) return 0
+  const curveY = THREE.MathUtils.clamp(evaluateReactiveCurve(baseArmRotationCurveParsed, distanceT), 0, 1)
+  const { min, max } = baseArmRotationRangeParsed
+  return min + (max - min) * curveY + (cfg.baseArmRotationFineTune || 0)
+}
+// Responsive Pose Tween -- see cfg's own declaration comment.
+let poseTweenCurveParsed = [{ x: 0, y: 0 }, { x: 1, y: 1 }]
+function parsePoseTweenConfig() {
+  try { poseTweenCurveParsed = JSON.parse(cfg.poseTweenCurve).sort((a, b) => a.x - b.x) } catch (e) { /* keep last-good value */ }
+}
+// Looks up a SAVED_POSES entry by name -- used by Responsive Pose
+// Tween's Default (DEFAULT_POSE_NAME) and Target (cfg.poseTweenTargetPoseName)
+// endpoints. "Default pose" reads as a NAMED pose (DEFAULT_POSE_NAME,
+// parallel to Target Pose also being named) rather than a live snapshot
+// of whatever's currently posed when the feature is turned on -- a
+// disclosed interpretation choice: the request's own wording ("tween
+// between the default pose and the target pose... the target pose is
+// 100, and default is 0") reads naturally as 2 named endpoints, and a
+// named default avoids needing a separate "snapshot captured at some
+// arbitrary moment" mechanism this file doesn't otherwise have.
+function findSavedPoseByName(name) {
+  return SAVED_POSES.find((p) => p.name === name) || null
+}
 
 // Combined exclude-quaternion for applyCurlToSkeleton()'s own
 // rotateOnTrueWorldAxis() calls — found live 2026-09-21, same round as
@@ -870,7 +944,13 @@ function applyModelRootTransform(h, poseValues) {
 // Tween — same cfg applied uniformly to all hands (matching HANDY
 // DANDIES' own design: one shared pose, N independent field positions).
 function applyPoseValuesToHand(poseValues) {
-  const extraSplay = computeResponsiveWristSplayDeg(tiltMagnitude)
+  // armBaseDistanceT, not tiltMagnitude -- direct request 2026-09-27 to
+  // unify Responsive Wrist Splay's own distance input with the new
+  // Responsive Arm Rotation at Base feature (cursor-to-arm-base
+  // distance on desktop, phone-tilt percentage on mobile -- see
+  // armBaseDistanceT's own top-of-file comment). Reactive Arm Length
+  // (computeArmLengthT) is untouched, it still reads tiltMagnitude.
+  const extraSplay = computeResponsiveWristSplayDeg(armBaseDistanceT)
   hands.forEach((h) => {
     h.currentBaseQuat.copy(computeBaseQuatFromValues(poseValues))
     applyModelRootTransform(h, poseValues)
@@ -895,13 +975,52 @@ function applyPoseValuesToHand(poseValues) {
 // reapplication, it's already baked in by the call above.
 function applyReactiveWristSplayFrame() {
   if (!cfg.wristSplayResponsiveEnabled || !cfg.wristSplayReactiveEnabled) return
-  const extraSplay = computeResponsiveWristSplayDeg(tiltMagnitude)
+  // armBaseDistanceT -- see applyPoseValuesToHand()'s own comment above.
+  const extraSplay = computeResponsiveWristSplayDeg(armBaseDistanceT)
   hands.forEach((h) => {
     applyWristPoseToSkeleton(h.skinnedMesh.skeleton, cfg, extraSplay)
     // h.currentBaseQuat + curlExcludeQuatForHand(h) — see applyCurl()'s
     // own comment (2026-09-26, 3rd round) for why alignQuat was wrong here.
     FINGER_NAMES.forEach((name) => applyCurlToSkeleton(name, h.skinnedMesh.skeleton, h.currentBaseQuat, curlExcludeQuatForHand(h), cfg))
   })
+}
+// Per-frame refresh for Responsive Arm Rotation at Base -- same
+// reasoning as applyReactiveWristSplayFrame() above, except
+// applyBaseArmRotation()'s OWN delta-tracking already makes a per-frame
+// call cheap/safe on its own (a no-op once desiredQuat stops changing
+// frame to frame), so this is just "always pass the current reactive
+// amount" rather than a full re-bake.
+function applyResponsiveBaseArmRotationFrame() {
+  if (!cfg.trackingEnabled || !cfg.baseArmRotationResponsiveEnabled) return
+  applyBaseArmRotation(computeResponsiveBaseArmRotationDeg(armBaseDistanceT))
+}
+// Per-frame refresh for Responsive Pose Tween -- blends EVERY numeric
+// pose field between the Default pose (DEFAULT_POSE_NAME) and the
+// user-chosen Target pose (cfg.poseTweenTargetPoseName), by the
+// curve's own Y output (0=Default, 1=Target) driven by the same
+// armBaseDistanceT/tiltMagnitude distance metric as the 2 features
+// above. This function's ONLY job is producing a lerped pose-values
+// object -- the actual application goes through the EXISTING
+// applyPoseValuesToHand() pipeline (the same one sliders/Saved-Poses-
+// Use/Tween-playback already use), specifically so it inherits that
+// pipeline's already-correct baseQuat/curl-exclude-quat pairing rather
+// than risking a 5th instance of this file's own recurring curl-axis
+// bug class by writing new bone-rotation code. Non-numeric/absent
+// fields (e.g. a field only one of the 2 poses happens to define) fall
+// back to whichever endpoint is closer, never NaN.
+function applyResponsivePoseTweenFrame() {
+  if (!cfg.trackingEnabled || !cfg.poseTweenResponsiveEnabled) return
+  const defaultPose = findSavedPoseByName(DEFAULT_POSE_NAME)
+  const targetPose = findSavedPoseByName(cfg.poseTweenTargetPoseName)
+  if (!defaultPose || !targetPose) return
+  const curveY = THREE.MathUtils.clamp(evaluateReactiveCurve(poseTweenCurveParsed, armBaseDistanceT), 0, 1)
+  const blended = {}
+  Object.keys(defaultPose).forEach((k) => {
+    if (k === 'name' || k === 'group') return
+    const a = defaultPose[k], b = targetPose[k]
+    blended[k] = (typeof a === 'number' && typeof b === 'number') ? THREE.MathUtils.lerp(a, b, curveY) : (curveY < 0.5 ? a : b)
+  })
+  applyPoseValuesToHand(blended)
 }
 
 // Base arm rotation — applied at h.clone level when slider changes, not every frame.
@@ -933,7 +1052,14 @@ function applyReactiveWristSplayFrame() {
 // up. Not the bug that was reported (curl axis, now fixed); flagged as
 // a known follow-up if position drift is ever reported when BOTH
 // rotation systems are combined.
-function applyBaseArmRotation() {
+// `extraX` (default 0, degrees) -- added 2026-09-27 for Responsive Arm
+// Rotation at Base: the reactive contribution is added onto
+// cfg.baseRotationX every frame while that feature is on (see
+// applyResponsiveBaseArmRotationFrame() below), reusing this function's
+// own already-curl-axis-safe delta-tracking rather than a 2nd rotation
+// system. A plain slider drag (wireSlider below) calls this with no
+// extraX, exactly as before.
+function applyBaseArmRotation(extraX = 0) {
   hands.forEach((h) => {
     const baseBone = h.skinnedMesh.skeleton.getBoneByName('rForearmBend')
     if (!baseBone) return
@@ -942,7 +1068,7 @@ function applyBaseArmRotation() {
     baseBone.getWorldPosition(baseWorldPos)
 
     // Desired rotation from current slider values, in the bone's LOCAL axes
-    const rotX = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), cfg.baseRotationX * Math.PI / 180)
+    const rotX = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), (cfg.baseRotationX + extraX) * Math.PI / 180)
     const rotY = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), cfg.baseRotationY * Math.PI / 180)
     const rotZ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), cfg.baseRotationZ * Math.PI / 180)
 
@@ -1278,6 +1404,37 @@ const raycaster = new THREE.Raycaster()
 const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0)
 const _forearmWorldPos = new THREE.Vector3()
 const tiltOriginGround = new THREE.Vector3()
+// Responsive Arm Rotation at Base / Responsive Wrist Splay's own shared
+// distance metric -- direct request 2026-09-27, deliberately DIFFERENT
+// from tiltMagnitude (screen-distance-from-CENTER): "The closer the
+// cursor to the hand/arm base point on the XZ plane... For mobile, the
+// further the phone tilt, the further the arm rotates... make the right
+// side of the X axis (max distance) be set as the farthest distance from
+// the arm base point to the edge of browser." On the mouse path this is
+// the real world-space XZ distance from tiltOriginGround (the forearm
+// base's own ground point, Point A) to tiltTarget (the cursor's own
+// ground hit, Point B), normalized 0-1 against the farthest such
+// distance reachable by ANY point in the browser window (the 4 screen
+// corners' own ground hits -- computeMaxArmBaseGroundDistance() below).
+// On the device-orientation path there's no cursor/ground geometry at
+// all, so this is just tiltMagnitude directly, unchanged -- "the further
+// the phone tilt" already IS what tiltMagnitude measures for that path.
+let armBaseDistanceT = 0
+const _cornerNDC = new THREE.Vector2()
+const _cornerHit = new THREE.Vector3()
+function computeMaxArmBaseGroundDistance() {
+  const w = window.innerWidth, h = window.innerHeight
+  let maxDist = 0
+  ;[[0, 0], [w, 0], [0, h], [w, h]].forEach(([px, py]) => {
+    _cornerNDC.set((px / w) * 2 - 1, -(py / h) * 2 + 1)
+    raycaster.setFromCamera(_cornerNDC, camera)
+    if (raycaster.ray.intersectPlane(groundPlane, _cornerHit)) {
+      const d = Math.hypot(_cornerHit.x - tiltOriginGround.x, _cornerHit.z - tiltOriginGround.z)
+      if (d > maxDist) maxDist = d
+    }
+  })
+  return maxDist
+}
 let latestOrientation = null
 const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0
 
@@ -1491,11 +1648,21 @@ function updateTiltTarget() {
     raycaster.setFromCamera(cursorNDC, camera)
     const haveHit = raycaster.ray.intersectPlane(groundPlane, _tiltRaycastHit)
     tiltTargetValid = haveHit
-    if (haveHit) tiltTarget.copy(_tiltRaycastHit)
+    if (haveHit) {
+      tiltTarget.copy(_tiltRaycastHit)
+      // armBaseDistanceT -- see this variable's own top-of-file comment.
+      // Only refreshed on a genuine hit (matching tiltTarget itself,
+      // which also only updates on a hit) so a dead-zone freeze holds
+      // this steady too, rather than snapping to a stale ratio.
+      const distRaw = Math.hypot(tiltTarget.x - tiltOriginGround.x, tiltTarget.z - tiltOriginGround.z)
+      const maxDist = computeMaxArmBaseGroundDistance()
+      armBaseDistanceT = maxDist > 1e-6 ? THREE.MathUtils.clamp(distRaw / maxDist, 0, 1) : 0
+    }
   } else {
     tiltTargetValid = true // device-orientation always has real input, never raycast-gated
     const maxOffset = sceneState.fieldRadius * 1.2
     tiltTarget.set(tiltMagnitude * maxOffset * Math.cos(tiltAngle), tiltMagnitude * maxOffset * Math.sin(tiltAngle), sceneState.fieldRadius * cfg.targetDepthFactor)
+    armBaseDistanceT = tiltMagnitude
   }
 }
 
@@ -2144,7 +2311,21 @@ function animate() {
         })
       }
     }
-    applyReactiveWristSplayFrame()
+    // Responsive Pose Tween fully re-bakes EVERY pose field each frame
+    // (it's a whole-pose blend, not a single-field modifier), including
+    // its own wristSplay -- running applyReactiveWristSplayFrame() on
+    // top of it in the same frame would immediately overwrite that
+    // blended wrist value with cfg.wristSplay (the Pose group's own
+    // slider, untouched by the tween), undoing part of what the tween
+    // just applied. Mutually exclusive per frame; Responsive Arm
+    // Rotation at Base is a separate bone/axis (rForearmBend's own
+    // rotation) and is safe to run alongside either.
+    if (cfg.poseTweenResponsiveEnabled) {
+      applyResponsivePoseTweenFrame()
+    } else {
+      applyReactiveWristSplayFrame()
+    }
+    applyResponsiveBaseArmRotationFrame()
     updateAllFingerGizmos()
   }
   curveWidgetResyncs.forEach((fn) => fn())
@@ -2239,6 +2420,7 @@ function wireSlider(id, onInput) {
 function wireCheckbox(id, onChange) { const el = document.getElementById(id); if (el) el.addEventListener('change', (e) => onChange(e.target.checked)) }
 function wireColor(id, onChange) { const el = document.getElementById(id); if (el) el.addEventListener('input', (e) => onChange(e.target.value)) }
 function wireTextInput(id, onChange) { const el = document.getElementById(id); if (el) el.addEventListener('input', (e) => onChange(e.target.value)) }
+function wireSelect(id, onChange) { const el = document.getElementById(id); if (el) el.addEventListener('change', (e) => onChange(e.target.value)) }
 
 // =======================================================================
 // Reactive Arm Length — custom curve-editor and dual-handle range
@@ -2808,10 +2990,10 @@ function renderResponsiveWristSplayGroup(content) {
   wireCheckbox('checkboxWristSplayReactiveEnabled', (v) => { cfg.wristSplayReactiveEnabled = v; applyPoseValuesToHand(cfg) })
   const splayRangeRow = addRow(content, { id: 'textWristSplayRange', label: 'Min / Max Wrist Splay (Deg)', type: 'text', inputType: 'text', value: cfg.wristSplayRange })
   wireTextInput('textWristSplayRange', (v) => { cfg.wristSplayRange = v; parseWristSplayConfig() })
-  buildReactiveRangeWidget(splayRangeRow, { trackMin: -180, trackMax: 180, isPercent: false, crossClamp: false, minLabel: 'Min (Center)', maxLabel: 'Max (Full Tilt)', unit: '°', onExternalChange: (v) => { cfg.wristSplayRange = v; parseWristSplayConfig() } })
+  buildReactiveRangeWidget(splayRangeRow, { trackMin: -180, trackMax: 180, isPercent: false, crossClamp: false, minLabel: 'Min (Near Arm Base)', maxLabel: 'Max (Far / Full Tilt)', unit: '°', onExternalChange: (v) => { cfg.wristSplayRange = v; parseWristSplayConfig() } })
   const splayCurveRow = addRow(content, { id: 'textWristSplayCurve', label: 'Splay Scaling Curve (Distance -> Splay)', type: 'text', inputType: 'text', value: cfg.wristSplayCurve })
   wireTextInput('textWristSplayCurve', (v) => { cfg.wristSplayCurve = v; parseWristSplayConfig() })
-  buildReactiveCurveWidget(splayCurveRow, { caption: 'X: Tilt/Cursor Distance From Center (0-1)  ·  Y: Splay Fraction (0=Min End, 1=Max End)', onExternalChange: (v) => { cfg.wristSplayCurve = v; parseWristSplayConfig() } })
+  buildReactiveCurveWidget(splayCurveRow, { caption: 'X: Cursor Distance From Arm Base / Phone Tilt (0-1)  ·  Y: Splay Fraction (0=Min End, 1=Max End)', onExternalChange: (v) => { cfg.wristSplayCurve = v; parseWristSplayConfig() } })
 }
 
 function renderCameraGroup(content) {
@@ -2917,6 +3099,37 @@ function renderPhoneTiltGroup(content) {
   // (though not its axis).
   addRow(subPalm, { id: 'sliderPalmFaceRotationOffset', label: 'Palm Face Rotation (Deg)', type: 'slider', min: -180, max: 180, step: 1, value: cfg.palmFaceRotationOffset })
   wireSlider('sliderPalmFaceRotationOffset', (v) => { cfg.palmFaceRotationOffset = v })
+
+  // Responsive Arm Rotation at Base -- direct request 2026-09-27, see
+  // cfg's own declaration comment. Control order matches the request's
+  // own list exactly: On/Off, fine-tune, min/max range, curve.
+  const subBaseArmRotation = addSubgroup(content, 'Responsive Arm Rotation at Base')
+  addRow(subBaseArmRotation, { id: 'checkboxBaseArmRotationResponsiveEnabled', label: 'Responsive Arm Rotation at Base (On/Off)', type: 'checkbox' })
+  document.getElementById('checkboxBaseArmRotationResponsiveEnabled').checked = cfg.baseArmRotationResponsiveEnabled
+  wireCheckbox('checkboxBaseArmRotationResponsiveEnabled', (v) => { cfg.baseArmRotationResponsiveEnabled = v; applyBaseArmRotation(computeResponsiveBaseArmRotationDeg(armBaseDistanceT)) })
+  addRow(subBaseArmRotation, { id: 'sliderBaseArmRotationFineTune', label: 'Rotation Fine-Tune (Deg)', type: 'slider', min: -90, max: 90, step: 1, value: cfg.baseArmRotationFineTune })
+  wireSlider('sliderBaseArmRotationFineTune', (v) => { cfg.baseArmRotationFineTune = v; applyBaseArmRotation(computeResponsiveBaseArmRotationDeg(armBaseDistanceT)) })
+  const baseArmRangeRow = addRow(subBaseArmRotation, { id: 'textBaseArmRotationRange', label: 'Min / Max Rotation (Deg)', type: 'text', inputType: 'text', value: cfg.baseArmRotationRange })
+  wireTextInput('textBaseArmRotationRange', (v) => { cfg.baseArmRotationRange = v; parseBaseArmRotationConfig() })
+  buildReactiveRangeWidget(baseArmRangeRow, { trackMin: -180, trackMax: 180, isPercent: false, crossClamp: false, minLabel: 'Min', maxLabel: 'Max', unit: '°', onExternalChange: (v) => { cfg.baseArmRotationRange = v; parseBaseArmRotationConfig() } })
+  const baseArmCurveRow = addRow(subBaseArmRotation, { id: 'textBaseArmRotationCurve', label: 'Rotation Curve (Distance -> Rotation)', type: 'text', inputType: 'text', value: cfg.baseArmRotationCurve })
+  wireTextInput('textBaseArmRotationCurve', (v) => { cfg.baseArmRotationCurve = v; parseBaseArmRotationConfig() })
+  buildReactiveCurveWidget(baseArmCurveRow, { caption: 'X: Cursor Distance From Arm Base / Phone Tilt (0-1)  ·  Y: Rotation Fraction (0=Min, 1=Max)', onExternalChange: (v) => { cfg.baseArmRotationCurve = v; parseBaseArmRotationConfig() } })
+
+  // Responsive Pose Tween -- direct request 2026-09-27, see cfg's own
+  // declaration comment (Default pose = DEFAULT_POSE_NAME, Target pose
+  // = a picker over SAVED_POSES).
+  const subPoseTween = addSubgroup(content, 'Responsive Pose Tween')
+  addRow(subPoseTween, { id: 'checkboxPoseTweenResponsiveEnabled', label: 'Responsive Pose Tween (On/Off)', type: 'checkbox' })
+  document.getElementById('checkboxPoseTweenResponsiveEnabled').checked = cfg.poseTweenResponsiveEnabled
+  wireCheckbox('checkboxPoseTweenResponsiveEnabled', (v) => { cfg.poseTweenResponsiveEnabled = v; if (!v) applyPoseValuesToHand(cfg) })
+  const poseTweenOptions = [{ value: '', text: '(choose a target pose)' }].concat(SAVED_POSES.map((p) => ({ value: p.name, text: p.name })))
+  addRow(subPoseTween, { id: 'selectPoseTweenTargetPoseName', label: 'Target Pose', type: 'select', options: poseTweenOptions, value: cfg.poseTweenTargetPoseName })
+  document.getElementById('selectPoseTweenTargetPoseName').value = cfg.poseTweenTargetPoseName
+  wireSelect('selectPoseTweenTargetPoseName', (v) => { cfg.poseTweenTargetPoseName = v })
+  const poseTweenCurveRow = addRow(subPoseTween, { id: 'textPoseTweenCurve', label: 'Tween Curve (Distance -> Tween Progress)', type: 'text', inputType: 'text', value: cfg.poseTweenCurve })
+  wireTextInput('textPoseTweenCurve', (v) => { cfg.poseTweenCurve = v; parsePoseTweenConfig() })
+  buildReactiveCurveWidget(poseTweenCurveRow, { caption: 'X: Cursor Distance From Arm Base / Phone Tilt (0-1)  ·  Y: Tween Progress (0=Default Pose, 1=Target Pose)', onExternalChange: (v) => { cfg.poseTweenCurve = v; parsePoseTweenConfig() } })
 }
 
 function renderLightingGroup(content) {
