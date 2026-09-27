@@ -937,6 +937,39 @@ function applyModelRootTransform(h, poseValues) {
   h.clone.position.x += poseValues.poseOffsetX || 0
   h.clone.position.y += poseValues.poseOffsetY || 0
   h.clone.position.z += poseValues.poseOffsetZ || 0
+  // Invalidate applyBaseArmRotation()'s own delta-tracker -- FIXED
+  // 2026-09-27, direct report: "when i set responsive pose tween, the
+  // hand disappears. im pretty sure its some bug clash with... whole
+  // hand rotation at base." Root cause: this function unconditionally
+  // OVERWRITES h.clone.quaternion/position from h.currentBaseQuat
+  // every time it runs -- including every frame while Responsive Pose
+  // Tween is active (via applyPoseValuesToHand()). It never told
+  // applyBaseArmRotation() this happened, so that function's own
+  // `h.lastBaseArmQuat` (its "what I last applied" delta-tracking
+  // reference) went stale the instant this function ran again --
+  // computing a DELTA relative to a rotation that no longer actually
+  // exists in h.clone.quaternion. With Responsive Arm Rotation at Base
+  // ALSO reactive (running every frame right after this one), the 2
+  // systems fought over the same transform every single frame: this
+  // function resets to the plain pose baseline, the other applies only
+  // the (now-meaningless) incremental delta on top -- live-confirmed
+  // via a screen-space bounding-box projection that the hand's actual
+  // rendered position scattered far outside the viewport (the camera
+  // ending up effectively inside/beside the misplaced geometry), not a
+  // NaN/zero-scale case -- explaining "disappears" without any single
+  // number (scale, position, individual bone quaternions) looking
+  // obviously wrong in isolation. Fixed by resetting
+  // `h.lastBaseArmQuat` to null here, so the NEXT applyBaseArmRotation()
+  // call (same frame, since animate() runs it right after the Pose
+  // Tween/Wrist Splay branch) treats the just-reset transform as its
+  // new baseline and applies its full rotation as ONE clean delta from
+  // identity, instead of a stale, no-longer-meaningful one. This also
+  // fixes the same latent clash for the non-reactive case (a plain
+  // Pose slider touch, or a saved-pose "Use") after Base Rotation X/Y/Z
+  // had been set -- that combination silently discarded the base
+  // rotation too, just without the frame-repeated compounding that
+  // made the reactive case visually catastrophic.
+  h.lastBaseArmQuat = null
 }
 
 // Single entry point: apply a full pose-values object to every hand in
