@@ -174,6 +174,20 @@ const DEFAULT_POSE_NAME = 'Fist'
 const DEFAULT_CAMERA_NAME = 'FRONTOS'
 const DEFAULT_LIGHTING_NAME = 'FLABOVE'
 
+// Restore any locally-saved list-picker edits (Saved Poses/Cameras/
+// Lighting/Toon Shading/Tween Sequences) over the hardcoded seed data
+// above, synchronously, before anything else in this module reads these
+// arrays -- see persistListPickerItems()/loadListPickerItemsFromLocalStorage()
+// (defined further down, but function declarations are hoisted within
+// this module's scope so calling them here is safe) for the full account
+// of the bug this fixes. Remote (git-synced) restore happens separately,
+// asynchronously, alongside the other loadFieldDefaultIfSaved() calls.
+loadListPickerItemsFromLocalStorage('poses', SAVED_POSES)
+loadListPickerItemsFromLocalStorage('cameras', SAVED_CAMERAS)
+loadListPickerItemsFromLocalStorage('lighting', SAVED_LIGHTING)
+loadListPickerItemsFromLocalStorage('toon', SAVED_TOON)
+loadListPickerItemsFromLocalStorage('tweenSequences', SAVED_TWEEN_SEQUENCES)
+
 // ---------------------------------------------------------------------
 // Finger rig constants — ported verbatim from HANDY DANDIES (same GLB
 // asset/rig; see that project's CLAUDE.md for the sign/axis history).
@@ -2436,6 +2450,75 @@ function capturePoseFromCfg() { const o = {}; POSE_PRESET_KEYS.forEach((k) => { 
 function captureCameraFromLive() { return { x: camera.position.x, y: camera.position.y, z: camera.position.z, fov: camera.fov, tx: controls.target.x, ty: controls.target.y, tz: controls.target.z, zoom: cfg.cameraZoom } }
 function captureLightingFromLive() { const o = {}; LIGHTING_PRESET_KEYS.forEach((k) => { o[k] = cfg[k] }); return o }
 
+// FIXED 2026-09-27, direct report: "double check the saed cameras. it
+// doesnt seem to save still." Root cause, confirmed by directly
+// inspecting localStorage after a real Save click: `buildListPicker()`
+// only ever mutated its own `items` array IN MEMORY, then called
+// `saveDevPanelSettings()` hoping it would persist -- but that
+// (devPanel.js-owned) function only ever captures state from
+// REGISTERED dev-panel controls (hidden inputs, sliders, etc.). A raw
+// JS array like SAVED_CAMERAS has no such registration, so it was
+// COMPLETELY INVISIBLE to Sync -- confirmed live: `devPanelSettings` in
+// localStorage has no field for it at all, only the standard
+// controls/layout/style keys. This silently affected ALL FIVE
+// list-pickers built by this function (Saved Tween Sequences, Poses,
+// Cameras, Lighting, Toon Shading), not just Cameras -- every
+// Save/Overwrite/Rename/Delete/+Group/Import ever appeared to work
+// (the in-memory array and its DOM list both updated) but reset back
+// to the hardcoded seed data on every reload.
+//
+// Fixed with a dedicated persistence layer per list-picker, keyed by
+// the new required `opts.storageKey`, following the EXACT pattern
+// already proven for defaultPose/defaultCamera/defaultLighting/
+// defaultToon (saveFieldAsDefault()/loadFieldDefaultIfSaved(), below):
+// localStorage (always-on baseline, per CLAUDE.md §12l) plus an async
+// GET-merge-POST to the same git-tracked settings endpoint when it's
+// configured/reachable. persistListPickerItems() is called after every
+// mutation (in addition to, not instead of, the existing
+// saveDevPanelSettings() call); loadListPickerItemsFromLocalStorage()
+// runs synchronously at module load (mirroring the schema-version
+// guard at the top of this file) so every reference to the array
+// (Tween's own SAVED_POSES read included) sees the restored data
+// before anything else runs; loadListPickerItemsFromRemoteData() is
+// called from loadRemoteSettingsOnStartup() (this file's own single
+// shared startup GET), alongside the other loadFieldDefaultIfSaved()
+// logic.
+function persistListPickerItems(storageKey, items) {
+  try { localStorage.setItem('handyset_listPicker_' + storageKey, JSON.stringify(items)) } catch (e) { /* localStorage unavailable -- remote save below is the fallback */ }
+  ;(async () => {
+    try {
+      const getResp = await fetch(SAVE_SETTINGS_ENDPOINT, { cache: 'no-store' })
+      const getBody = await getResp.json().catch(() => ({}))
+      const base = (getResp.ok && getBody.ok === true && getBody.settings && typeof getBody.settings === 'object') ? getBody.settings : {}
+      const merged = Object.assign({}, base, { ['listPicker_' + storageKey]: items })
+      await fetch(SAVE_SETTINGS_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Dev-Panel-Secret': DEV_PANEL_SAVE_SECRET },
+        body: JSON.stringify(merged)
+      })
+    } catch (e) { /* offline/unreachable/not-yet-deployed -- localStorage above already covers the same-browser case */ }
+  })()
+}
+// Synchronous, local-only restore -- called once per array, at module
+// scope, so it runs before ANYTHING (including other code that captured
+// a reference to the same array) reads it.
+function loadListPickerItemsFromLocalStorage(storageKey, items) {
+  try {
+    const raw = localStorage.getItem('handyset_listPicker_' + storageKey)
+    if (!raw) return
+    const parsed = JSON.parse(raw)
+    if (Array.isArray(parsed) && parsed.length) { items.length = 0; items.push(...parsed) }
+  } catch (e) { /* corrupt/unavailable -- keep the hardcoded seed data */ }
+}
+// Synchronous merge of an already-fetched remote list-picker array into
+// the live `items` array -- called from loadRemoteSettingsOnStartup()
+// (below), which does the single shared GET for every remote-restorable
+// field (defaultPose/Camera/Lighting/Toon and now these 5 arrays) rather
+// than this function performing its own separate fetch per list -- 5
+// extra round-trips at startup for no benefit over the 1 already made.
+function loadListPickerItemsFromRemoteData(remoteArr, items) {
+  if (Array.isArray(remoteArr) && remoteArr.length) { items.length = 0; items.push(...remoteArr) }
+}
 // Full list-picker widget, ported to match HANDY DANDIES' own
 // buildListPickerRow()/renderListPickerRows() (src/devpanel/devPanel.js
 // there) as closely as practical in the time available: Save/Overwrite/
@@ -2523,6 +2606,7 @@ function buildListPicker(content, opts) {
     if (typeof saveDevPanelSettings === 'function') {
       saveDevPanelSettings()
     }
+    if (opts.storageKey) persistListPickerItems(opts.storageKey, items)
   })
   overwriteBtn.addEventListener('click', () => {
     if (!state.selected) return
@@ -2533,6 +2617,7 @@ function buildListPicker(content, opts) {
     if (typeof saveDevPanelSettings === 'function') {
       saveDevPanelSettings()
     }
+    if (opts.storageKey) persistListPickerItems(opts.storageKey, items)
   })
   useBtn.addEventListener('click', () => { if (state.selected && opts.onUse) opts.onUse(state.selected) })
   renameBtn.addEventListener('click', () => {
@@ -2542,6 +2627,7 @@ function buildListPicker(content, opts) {
     state.selected.name = name
     render()
     if (typeof saveDevPanelSettings === 'function') saveDevPanelSettings()
+    if (opts.storageKey) persistListPickerItems(opts.storageKey, items)
   })
   deleteBtn.addEventListener('click', () => {
     if (!state.selected) return
@@ -2550,6 +2636,7 @@ function buildListPicker(content, opts) {
     state.selected = null
     render()
     if (typeof saveDevPanelSettings === 'function') saveDevPanelSettings()
+    if (opts.storageKey) persistListPickerItems(opts.storageKey, items)
   })
   groupBtn.addEventListener('click', () => {
     if (!state.selected) { alert('Select an item first, then + Group.'); return }
@@ -2558,6 +2645,7 @@ function buildListPicker(content, opts) {
     state.selected.group = gname
     render()
     if (typeof saveDevPanelSettings === 'function') saveDevPanelSettings()
+    if (opts.storageKey) persistListPickerItems(opts.storageKey, items)
   })
   if (exportBtn) exportBtn.addEventListener('click', () => {
     const chosen = items.filter((it) => state.exportChecked.has(it))
@@ -2576,6 +2664,7 @@ function buildListPicker(content, opts) {
       })
       render()
       if (typeof saveDevPanelSettings === 'function') saveDevPanelSettings()
+      if (opts.storageKey) persistListPickerItems(opts.storageKey, items)
     } catch (e) { alert('Import failed: ' + e.message) }
   })
   return state
@@ -2681,7 +2770,7 @@ function renderPoseGroup(content) {
   addRow(subOffset, { id: 'sliderPoseScale', label: 'Pose Scale (x)', type: 'slider', min: 0.1, max: 3, step: 0.05, value: cfg.poseScale })
   wireSlider('sliderPoseScale', (v) => { cfg.poseScale = v; applyPoseValuesToHand(cfg) })
 
-  renderPresetPicker(content, 'Saved Poses', SAVED_POSES, DEFAULT_POSE_NAME, applyPosePreset, capturePoseFromCfg, { exportable: true, importable: true, defaultFieldKey: 'defaultPose' })
+  renderPresetPicker(content, 'Saved Poses', SAVED_POSES, DEFAULT_POSE_NAME, applyPosePreset, capturePoseFromCfg, { exportable: true, importable: true, defaultFieldKey: 'defaultPose', storageKey: 'poses' })
 }
 
 // Ported from HANDY DANDIES (its own top-level "Responsive Wrist Splay"
@@ -2735,7 +2824,7 @@ function renderCameraGroup(content) {
   addRow(content, { id: 'checkboxCameraMaxExtentsEnabled', label: 'Set Default Camera As Max Extents', type: 'checkbox' })
   document.getElementById('checkboxCameraMaxExtentsEnabled').checked = cfg.cameraMaxExtentsEnabled
   wireCheckbox('checkboxCameraMaxExtentsEnabled', (v) => { cfg.cameraMaxExtentsEnabled = v; updateCameraMaxExtentsBound() })
-  renderPresetPicker(content, 'Saved Cameras', SAVED_CAMERAS, DEFAULT_CAMERA_NAME, applyCameraPreset, captureCameraFromLive, { defaultFieldKey: 'defaultCamera' })
+  renderPresetPicker(content, 'Saved Cameras', SAVED_CAMERAS, DEFAULT_CAMERA_NAME, applyCameraPreset, captureCameraFromLive, { defaultFieldKey: 'defaultCamera', storageKey: 'cameras' })
 }
 // Moves the camera along the existing camera->target line to a new
 // distance, preserving viewing direction (ported concept from Handy
@@ -2830,7 +2919,7 @@ function renderLightingGroup(content) {
   wireColor('colorAmbientSkyColor', (v) => { cfg.ambientSkyColor = v; hemiLight.color.set(v) })
   addRow(content, { id: 'colorAmbientGroundColor', label: 'Ambient Ground Color', type: 'color', value: cfg.ambientGroundColor })
   wireColor('colorAmbientGroundColor', (v) => { cfg.ambientGroundColor = v; hemiLight.groundColor.set(v) })
-  renderPresetPicker(content, 'Saved Lighting', SAVED_LIGHTING, DEFAULT_LIGHTING_NAME, applyLightingPreset, captureLightingFromLive, { defaultFieldKey: 'defaultLighting' })
+  renderPresetPicker(content, 'Saved Lighting', SAVED_LIGHTING, DEFAULT_LIGHTING_NAME, applyLightingPreset, captureLightingFromLive, { defaultFieldKey: 'defaultLighting', storageKey: 'lighting' })
 }
 
 function renderToonGroup(content) {
@@ -2864,7 +2953,7 @@ function renderToonGroup(content) {
   // anything now) rather than removing the composer pass entirely, so
   // removing this is a pure UI/config change, not a rendering-pipeline one.
 
-  renderPresetPicker(content, 'Saved Toon Shading', SAVED_TOON, null, applyToonPreset, captureToonFromCfg, { exportable: true, importable: true, defaultFieldKey: 'defaultToon' })
+  renderPresetPicker(content, 'Saved Toon Shading', SAVED_TOON, null, applyToonPreset, captureToonFromCfg, { exportable: true, importable: true, defaultFieldKey: 'defaultToon', storageKey: 'toon' })
 }
 
 // Ordered multi-select widget — ported concept from Hando's own
@@ -2988,7 +3077,8 @@ function renderTweenGroup(content) {
 
   renderPresetPicker(content, 'Saved Tween Sequences', SAVED_TWEEN_SEQUENCES, null,
     (item) => { cfg.tweenPoses = (item.tweenPoses || []).slice(); applyTweenAtT(cfg.tweenT) },
-    () => ({ tweenPoses: cfg.tweenPoses.slice() }))
+    () => ({ tweenPoses: cfg.tweenPoses.slice() }),
+    { storageKey: 'tweenSequences' })
 
   const exportBtnRow = document.createElement('div'); exportBtnRow.className = 'dev-buttons'
   const exportBtn = document.createElement('button'); exportBtn.type = 'button'; exportBtn.textContent = 'Export Tween PNG Sequence'
@@ -3330,6 +3420,23 @@ async function loadRemoteSettingsOnStartup() {
     // needs regardless of dev-mode, while the panel itself stays hidden
     // for a normal visitor exactly as before (visibility is a separate,
     // pure-CSS `.dev-mode` gate untouched by this).
+    // Merge any remote (git-synced) list-picker items -- Saved Poses/
+    // Cameras/Lighting/Toon Shading/Tween Sequences -- BEFORE the dev
+    // panel gets built below, so a fresh visit whose panel hasn't been
+    // eagerly built yet (the normal production/no-?dev=1 case, since
+    // ensureDevPanelBuilt() below is exactly what builds it) renders the
+    // list-picker widgets already showing the remote data, not just the
+    // localStorage-restored snapshot from this same browser. When the
+    // panel WAS already eagerly built (dev-mode auto-open, which runs
+    // synchronously before this fetch can resolve), the arrays are still
+    // updated correctly here -- only that one picker's already-rendered
+    // list won't visually refresh until next reload, a minor, disclosed
+    // gap given each mutation's own Save/Overwrite reads the live array.
+    if (data.settings.listPicker_poses) loadListPickerItemsFromRemoteData(data.settings.listPicker_poses, SAVED_POSES)
+    if (data.settings.listPicker_cameras) loadListPickerItemsFromRemoteData(data.settings.listPicker_cameras, SAVED_CAMERAS)
+    if (data.settings.listPicker_lighting) loadListPickerItemsFromRemoteData(data.settings.listPicker_lighting, SAVED_LIGHTING)
+    if (data.settings.listPicker_toon) loadListPickerItemsFromRemoteData(data.settings.listPicker_toon, SAVED_TOON)
+    if (data.settings.listPicker_tweenSequences) loadListPickerItemsFromRemoteData(data.settings.listPicker_tweenSequences, SAVED_TWEEN_SEQUENCES)
     if (typeof window.ensureDevPanelBuilt === 'function') window.ensureDevPanelBuilt()
     apply(data.settings)
   } catch (err) {
