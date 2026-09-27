@@ -338,6 +338,10 @@ function clampToRange(value, range) {
 // Returns a 0-1 crop fraction (0 = full arm, 1 = fully cropped at wrist).
 // `distanceT` is `tiltMagnitude` (0-1) — see cfg's own comment.
 function computeArmLengthT(distanceT) {
+  // Tracking Enabled is a master gate for this feature too (see the
+  // matching note in animate()) -- Wrist Crop's own reactive amount must
+  // not respond to tiltMagnitude when tracking itself is off.
+  if (!cfg.trackingEnabled) return 0
   if (!cfg.cropWristEnabled) return 0
   if (!cfg.reactiveArmLengthEnabled) return cfg.hideWrist / 100
   const curveY = THREE.MathUtils.clamp(evaluateReactiveCurve(armLengthCurveParsed, distanceT), 0, 1)
@@ -346,6 +350,11 @@ function computeArmLengthT(distanceT) {
 }
 // Returns the EXTRA wrist-splay rotation (degrees) on top of cfg.wristSplay.
 function computeResponsiveWristSplayDeg(distanceT) {
+  // Tracking Enabled is a master gate for this feature too (see the
+  // matching note in animate()) -- Responsive Wrist Splay's own extra
+  // splay must not respond to (or hold a stale) tiltMagnitude-driven
+  // value when tracking itself is off.
+  if (!cfg.trackingEnabled) return 0
   if (!cfg.wristSplayResponsiveEnabled) return 0
   if (!cfg.wristSplayReactiveEnabled) return cfg.wristSplayDefault
   const curveY = THREE.MathUtils.clamp(evaluateReactiveCurve(wristSplayCurveParsed, distanceT), 0, 1)
@@ -1643,13 +1652,28 @@ function animate() {
   if (!isPaused) {
     // Phone Tilt rotation (only when tracking is enabled AND we have input)
     if (cfg.trackingEnabled && hands.length && (latestOrientation !== null || lastInputSource === 'mouse')) {
+      // updateTiltTarget() must still run unconditionally here -- it (and
+      // the mousemove/deviceorientation handlers) are what keep
+      // tiltMagnitude/tiltTarget live, which Responsive Wrist Splay and
+      // Wrist Crop read every frame regardless of Palm Faces Cursor.
       updateTiltTarget()
-      hands.forEach((h) => {
-        const m = new THREE.Matrix4().lookAt(h.wrapper.position, tiltTarget, UP)
-        let desired = new THREE.Quaternion().setFromRotationMatrix(m)
+      // The actual arm reorientation (this whole hands.forEach body) IS
+      // "Palm Rotation" (the dev panel's "Palm Faces Cursor" checkbox) --
+      // it must NOT run just because Tracking Enabled is on. Found live
+      // 2026-09-27: this used to run unconditionally whenever tracking was
+      // on, so enabling Tracking Enabled alone (with Palm Faces Cursor,
+      // Responsive Wrist Splay, and Wrist Crop all off) still slerped the
+      // whole wrapper toward tiltTarget -- a visible "arm swings toward an
+      // origin outside the arm" effect with no checkbox actually asking
+      // for it. Tracking Enabled is meant to be a pure data-gate (feeds
+      // tiltMagnitude/tiltTarget to whichever of the 3 features below are
+      // individually on) and never itself a visible effect.
+      if (cfg.palmFacesCursor) {
+        hands.forEach((h) => {
+          const m = new THREE.Matrix4().lookAt(h.wrapper.position, tiltTarget, UP)
+          let desired = new THREE.Quaternion().setFromRotationMatrix(m)
 
-        // Palm Faces Cursor: rotate only around base arm's Y axis
-        if (cfg.palmFacesCursor) {
+          // Palm Faces Cursor: rotate only around base arm's Y axis
           const baseBone = h.skinnedMesh.skeleton.getBoneByName('rForearmBend')
           if (baseBone) {
             const rollDeg = computeRadialRollDeg(h.wrapper.position, tiltTarget)
@@ -1660,10 +1684,10 @@ function animate() {
             const rollQuat = new THREE.Quaternion().setFromAxisAngle(yAxis, rollDeg * Math.PI / 180)
             desired.multiplyQuaternions(rollQuat, desired)
           }
-        }
 
-        h.wrapper.quaternion.slerp(desired, cfg.trackingDamping)
-      })
+          h.wrapper.quaternion.slerp(desired, cfg.trackingDamping)
+        })
+      }
     }
     applyReactiveWristSplayFrame()
   }
