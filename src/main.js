@@ -2168,7 +2168,7 @@ function integratePhoneGyroRotation(e) {
     // affected sign before) and may need one more round if reported
     // backwards.
     const dRoleXDeg = (cfg.phoneAxisXEnabled ? (rr.alpha || 0) * cfg.phoneRotationScaleX : 0) * dt
-    const dRoleYDeg = (cfg.phoneAxisYEnabled ? (rr.beta || 0) * cfg.phoneRotationScaleY : 0) * dt
+    const dRoleYDeg = (cfg.phoneAxisYEnabled ? -(rr.beta || 0) * cfg.phoneRotationScaleY : 0) * dt // negated 2026-09-28 (11th round) -- direct report: Y was inverted; letter/slot already confirmed correct via isolated testing, so only the sign needed fixing
     const dRoleZDeg = (cfg.phoneAxisZEnabled ? (rr.gamma || 0) * cfg.phoneRotationScaleZ : 0) * dt
     const combinedTiltDeg = Math.hypot(dRoleXDeg, dRoleZDeg)
     if (combinedTiltDeg > 1e-8) {
