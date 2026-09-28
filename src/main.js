@@ -1972,6 +1972,21 @@ function computePhoneResponsiveAxisDeg(rawComponent) {
 const _phoneCombinedQuat = new THREE.Quaternion()
 const _phoneManualQuat = new THREE.Quaternion()
 const _phoneResponsiveQuat = new THREE.Quaternion()
+// 8th-round fix (2026-09-28) -- direct report: "REAL XYZ is translated
+// to MODEL YZX" for the 7th round's shipped code (real X->model Y, real
+// Y->model Z, real Z->model X, a 3-cycle). Applied as a DIRECT
+// CONJUGATION of the fully-accumulated phoneGyroQuat at its READ site
+// (computePhoneCombinedQuat()), not by re-permuting integratePhoneGyroRotation()'s
+// own input axis vectors -- that per-increment-input approach was tried
+// twice already (5th/7th rounds) and both times still didn't match the
+// real device, despite being mathematically equivalent to conjugation
+// in isolation; conjugating the OUTPUT quaternion directly removes any
+// dependency on assumptions about how the input pipeline composes.
+// PHONE_GYRO_OUTPUT_FIX_QUAT is the INVERSE of the reported 3-cycle
+// (undoes X->Y->Z->X by relabeling Y->X, Z->Y, X->Z), a 120deg rotation
+// around (1,1,1)/sqrt(3): Q' = P * Q * P^-1.
+const PHONE_GYRO_OUTPUT_FIX_QUAT = new THREE.Quaternion(-0.5, -0.5, -0.5, 0.5)
+const PHONE_GYRO_OUTPUT_FIX_QUAT_INV = PHONE_GYRO_OUTPUT_FIX_QUAT.clone().invert()
 const _phoneTiltAxis = new THREE.Vector3()
 const _phoneTiltQuat = new THREE.Quaternion()
 // CORRECTED 2026-09-28, direct report after real-device testing: "when i
@@ -2048,8 +2063,11 @@ function computePhoneCombinedQuat() {
   if (lastInputSource === 'device' && latestOrientation) {
     // MOBILE: phoneGyroQuat is already the fully-integrated, unbounded
     // responsive rotation (see integratePhoneGyroRotation(), which runs
-    // per devicemotion tick, not per render frame) -- just read it.
+    // per devicemotion tick, not per render frame) -- read it, then
+    // apply the 8th-round output-permutation correction (see
+    // PHONE_GYRO_OUTPUT_FIX_QUAT's own comment above).
     _phoneResponsiveQuat.copy(phoneGyroQuat)
+    _phoneResponsiveQuat.premultiply(PHONE_GYRO_OUTPUT_FIX_QUAT).multiply(PHONE_GYRO_OUTPUT_FIX_QUAT_INV)
   } else if (cfg.trackingEnabled && cfg.phoneResponsiveRotationEnabled) {
     // DESKTOP: cursor-distance-driven, through the curve/range system.
     const rawNx = tiltMagnitude * Math.cos(tiltAngle) // gamma-analog (left-right)
