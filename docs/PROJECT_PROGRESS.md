@@ -9,16 +9,28 @@ append-only history.
 
 Nothing in progress — the 6-part Palm Rotation/Responsive-features
 request (2026-09-27) is fully complete, plus 9 interjected fixes and a
-new Phone Model feature (with a same-day follow-up round: a new model,
-a ROTATION name-collision bugfix, a rotation-anchor correction, and a
-HAND MODEL convenience checkbox) from the same session. See Recently
-completed below for the full account.
+new Phone Model feature (with 2 same-day follow-up rounds: a new
+model + ROTATION name-collision bugfix + rotation-anchor correction +
+HAND MODEL convenience checkbox, then a Model Scale default/range
+correction after the user re-exported all 3 models ~18-20x smaller)
+from the same session. See Recently completed below for the full
+account.
 
 Pushed to `https://github.com/LeisHo/Handy-Set`
 (deployed via the Vercel project at `https://vercel.com/lpeis/handy-set`).
 
 ## Recently completed
 
+- **FOLLOW-UP (2026-09-27, same day, 2nd round): Model Scale
+  correction.** The user re-exported all 3 phone models ~18-20x
+  smaller (live-measured: ~0.07-0.16 world units at scale 1, down from
+  ~1.3-2.65) — the old default (`phoneModelScale: 1`) and slider max
+  (`5`) could no longer reach a visible size at all. Raised the
+  default to `300` (measured live result: ~21x3x43 world units, a
+  sensible fraction of the hand's own ~115x80x35) and the slider max
+  to `2000`. Live-verified the phone now renders at a clearly visible,
+  correctly-textured size by default. See `docs/CHANGELOG.txt`'s
+  matching 2026-09-27 (25th) entry.
 - **FOLLOW-UP (2026-09-27, same day): Phone Model corrections.** Added
   a 3rd model (`Iphone17MaxPro.glb`) and synced `PHONE_MODEL_OPTIONS`
   to the folder's real current contents (the user deleted 6 of the

@@ -1665,3 +1665,23 @@ wiring, and are still open:
   between `applyFullDevPanelState()`'s synchronous control-restore
   loop and the hand's own asynchronous model load is the first thing
   to check.
+- **`cfg.phoneModelScale`'s default/range is tied to the ACTUAL current
+  export of the 3 models in `data/processed/SMARTPHONE MODELS/`, not a
+  fixed constant — it changed once already (2026-09-27, default `1`
+  → `300`, slider max `5` → `2000`) when the user re-exported all 3
+  models ~18-20x smaller.** If the user re-scales/re-exports these
+  models again in the future, live-measure the new bounding box
+  (`new THREE.Box3().setFromObject(phoneModelRaw).getSize(...)` via
+  `window.__debug`) before assuming the current default/range still
+  makes sense — don't guess a round number.
+- **Testing pitfall, this file specifically: never trust a
+  fixed-`setTimeout` wait when verifying a Phone Model load — poll for
+  `phoneModelRaw`'s own object identity to actually change instead.**
+  Found 2026-09-27: cycling through all 3 dropdown options with a
+  fixed wait produced IDENTICAL bounding-box numbers for 2 genuinely
+  different models, which looked exactly like a real caching bug —
+  the 3rd model's fetch had hit this sandbox's own documented
+  flaky-large-file-delivery gotcha and never actually finished
+  loading within the fixed wait, so the previous model's object was
+  measured again by mistake. Re-verified by polling for the reference
+  to change (or watching network completion) instead of a flat delay.
