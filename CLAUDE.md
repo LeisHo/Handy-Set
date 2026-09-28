@@ -2167,3 +2167,63 @@ wiring, and are still open:
   being "disabled" sets its degree value to exactly `0` (not just a
   `0`-scale multiply) so it can never contribute even a tiny
   floating-point residual to the combined rotation.
+- **SUPERSEDED 2026-09-28, same day as it shipped: Phone Model's mobile
+  rotation is NO LONGER driven by `deviceorientation`'s beta/gamma/alpha
+  at all — it's driven by `devicemotion.rotationRate` (gyroscope
+  integration) instead.** The unwrap-tracking approach (`phoneUnwrappedBeta/
+  Gamma/Alpha`, `unwrapDelta360()` — see the entries directly above this
+  one) fixed the RAW READING'S wraparound jump, but not a deeper,
+  UNFIXABLE limitation: beta/gamma/alpha are absolute orientation angles
+  derived via Euler decomposition, and Euler angles have a hard
+  representational limit — gamma physically cannot exceed ±90° (past
+  that point the SAME real orientation re-expresses through different
+  beta/alpha values instead — gimbal lock). No amount of patching the
+  angle math fixes this, because the limitation is in the SIGNAL itself.
+  Direct report that surfaced it: "when i tilt far... it jumps then
+  rotates 180... i cant really describe it as its different for each
+  axis... i want the rotation to continue forever." **If ANY future
+  feature in this project needs continuous, unbounded rotation tracking
+  from a real device (not just a bounded tilt), use gyroscope
+  (`rotationRate`) integration from the start — do NOT reach for
+  `deviceorientation`'s absolute angles, no matter how tempting the
+  "just read the angle directly" approach looks. It will hit this exact
+  wall the moment someone spins the device more than ~90-180° in one
+  motion.**
+- **`phoneGyroQuat` (Phone Model's mobile responsive rotation) is a
+  PERSISTENT, ACCUMULATING quaternion, updated via
+  `integratePhoneGyroRotation(e)` — called once per REAL `devicemotion`
+  tick (inside `handleDeviceMotion`), NOT once per render frame.** This
+  matters because the integration needs the ACTUAL elapsed time `dt`
+  between real gyroscope samples (`rotationRate` is in deg/SECOND) —
+  computing it per render frame instead would tie the integration rate
+  to the display's frame rate rather than the sensor's real sample
+  rate, subtly corrupting the integrated total on any device/browser
+  where those rates don't match. `computePhoneCombinedQuat()` (called
+  every render frame, for the actual quaternion COMPOSITION with the
+  manual sliders) just READS `phoneGyroQuat` — it never integrates
+  anything itself. **If a future change needs to read or reset this
+  value, do it by reading/setting `phoneGyroQuat` directly (e.g.
+  `resetPhoneModelRotationBaseline()`'s own `phoneGyroQuat.identity()`)
+  — never try to recompute it from a snapshot of `rotationRate`, since
+  that's an instantaneous velocity, not a position.**
+- **Gyroscope integration composes each tiny per-tick rotation via
+  RIGHT-multiply (`phoneGyroQuat.multiply(increment)`), never
+  premultiply — this is what makes body-frame integration (and "spin
+  around MY OWN current axis, not a fixed world axis") work at all.**
+  Quaternion right-multiplication (`A.multiply(B)`) applies `B` in `A`'s
+  own CURRENT LOCAL frame — exactly the semantic needed for "the next
+  tiny rotation happens relative to wherever the device's local axes
+  currently point, after all previous rotation." Using premultiply
+  instead would apply each increment in a FIXED WORLD frame regardless
+  of accumulated rotation, which is a materially different (and for
+  this feature, wrong) result. Verified numerically (not just assumed
+  correct): a synthetic constant 90°/s spin around local X, integrated
+  at a realistic ~60Hz tick rate for 8 seconds (720° of physical
+  rotation), tracked correctly with zero discontinuity at every 90°
+  checkpoint, and the spin axis itself drifted by only ~5.5e-16
+  (floating-point noise, not a real error) over 4 continuous seconds of
+  spinning. **If this function is ever refactored, re-run an equivalent
+  synthetic multi-second continuous-spin test before shipping — this is
+  exactly the kind of bug (correct-looking for a moment, then subtly
+  wrong once real accumulated rotation gets large) that a quick,
+  small-angle-only test would miss.**

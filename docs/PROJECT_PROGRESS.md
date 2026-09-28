@@ -7,26 +7,46 @@ append-only history.
 
 ## Currently working on
 
-Nothing in progress — a Rotation Reset baseline bug fix plus 6 new
-per-axis enable/scale controls (2026-09-28) are pushed, on top of 3
-more real-device-testing fixes (also 2026-09-28: touch/mouse conflict,
-camera-lock/slider sync, Y/Z world-axis swap), the mobile-vs-desktop
-rotation redesign (also 2026-09-28), the Rotation Reset feature (also
-2026-09-28), the curve-inversion fix (also 2026-09-28), the rotation-
-node/damping/log follow-up (also 2026-09-28), the dev panel template
-re-sync (also 2026-09-28), and the 6-part Palm Rotation/Responsive-
-features request (2026-09-27). See Recently completed below for the
-full account. **Still needs real device re-verification** — the user's
-next real test is what will actually confirm this whole line of fixes
-worked; several of these (synthetic touch events, OrbitControls event
-conflicts) are standard browser/library behaviors that can't be
-meaningfully simulated without a real touch device.
+Nothing in progress — mobile's Phone Model rotation now uses gyroscope
+integration instead of absolute orientation angles (2026-09-28,
+"I want the rotation to continue forever"), on top of a Rotation Reset
+baseline bug fix plus 6 per-axis enable/scale controls (also
+2026-09-28), 3 more real-device-testing fixes (also 2026-09-28:
+touch/mouse conflict, camera-lock/slider sync, Y/Z world-axis swap),
+the mobile-vs-desktop rotation redesign (also 2026-09-28), the
+Rotation Reset feature (also 2026-09-28), the curve-inversion fix
+(also 2026-09-28), the rotation-node/damping/log follow-up (also
+2026-09-28), the dev panel template re-sync (also 2026-09-28), and the
+6-part Palm Rotation/Responsive-features request (2026-09-27). See
+Recently completed below for the full account. **Still needs real
+device re-verification** — the gyro-integration switch was verified
+via a standalone numeric script simulating multiple seconds of
+continuous real-time rotation, which is a stronger test of "handles
+unbounded spin" than a quick live check could easily reproduce, but a
+real device is still the final word.
 
 Pushed to `https://github.com/LeisHo/Handy-Set`
 (deployed via the Vercel project at `https://vercel.com/lpeis/handy-set`).
 
 ## Recently completed
 
+- **RESOLVED (2026-09-28): Phone Model's mobile rotation now uses
+  gyroscope integration — "jumps then rotates 180" at ~180° was a
+  fundamental limit of the previous design, not a patchable bug.**
+  `deviceorientation`'s beta/gamma/alpha are absolute angles derived via
+  Euler decomposition, which has a hard representational limit (gamma
+  physically can't exceed ±90° — past that, the same real orientation
+  gets re-expressed through different beta/alpha values instead, i.e.
+  gimbal lock). No amount of angle-unwrapping could fix this. Replaced
+  entirely with `devicemotion.rotationRate` (true gyroscope angular
+  velocity) integrated onto a persistent, accumulating quaternion —
+  the same technique real AR/IMU tracking uses, with no representational
+  limit and no gimbal lock at any accumulated rotation. Verified with a
+  standalone script simulating a continuous 90°/s spin through 720°
+  (2 full rotations): tracked correctly at every checkpoint, with the
+  spin axis itself drifting by only ~5.5e-16 (floating-point noise)
+  over 4 seconds of continuous spinning. Desktop (mouse) is unchanged.
+  See `docs/CHANGELOG.txt`'s matching 2026-09-28 (35th) entry.
 - **RESOLVED (2026-09-28): Rotation Reset's real bug found — "double tap
   works but rotation is wrong afterward, still using axes prior to
   realignment."** Root cause: the reset only updated ONE of the 2

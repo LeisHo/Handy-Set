@@ -4017,6 +4017,89 @@ axis-angle combine step from the 33rd entry).
 `index.html`'s cache-buster bumped `?v=117` -> `?v=118`.
 
 --------------------------------------------------------------------------------
+2026-09-28  -  (35th)
+
+Direct report: "when i tilt far, when the phone model reaches some
+rotational threshold like 180 degrees i think, it jumps then rotates
+180. I cant really describe it as its diffretn for each axis. But
+asically i want the rotation to cotinue forever. like if i spun my
+phone continnually around its x axis, the phone model would show that."
+
+Diagnosed this as a FUNDAMENTAL limitation of the previous design, not
+a patchable bug: mobile's rotation was driven by `deviceorientation`'s
+beta/gamma/alpha, which are absolute orientation angles derived via
+Euler decomposition. Euler angles have a hard representational limit --
+gamma physically CANNOT exceed +-90 degrees, because past that point
+the SAME real 3D orientation gets re-expressed through a DIFFERENT
+combination of beta/alpha instead (gimbal lock) -- which is exactly why
+the symptom looked "different for each axis": beta spans -180..180,
+gamma only -90..90, alpha wraps at 360, each hitting its own
+representational boundary differently. The previous session's
+"unwrapping" fix (30th/33rd entries) only solved the RAW READING'S own
+wraparound jump -- it did nothing for the deeper issue that a FRESH
+axis-angle quaternion reconstructed from an ever-growing angle, once
+slerp-damped toward from the previous frame's displayed orientation,
+effectively reverses direction past 180 degrees (quaternion double-
+cover: the shortest path back toward a "191 degrees" target is actually
+via an equivalent "-169 degrees" representation) -- the reported "jump
+then rotates 180."
+
+No incremental patch to the existing angle-based math can fix this,
+because the limitation is in the SIGNAL itself (deviceorientation's
+absolute, Euler-decomposed angles), not in how it was being processed.
+
+Replaced mobile's rotation source entirely with GYROSCOPE integration:
+`devicemotion.rotationRate` (already visible in this project's own
+Sensors log as "Gyro a/b/y") gives TRUE, instantaneous angular velocity
+around the device's own CURRENT local X/Y/Z axes -- a fundamentally
+different kind of signal than an absolute orientation angle, with no
+representational range limit and no gimbal lock. New
+`integratePhoneGyroRotation(e)`, called once per REAL `devicemotion`
+tick (not per render frame, since it needs the actual elapsed time `dt`
+between samples to integrate `deg/second` correctly): computes a tiny
+incremental rotation for that one tick (beta+gamma combined into one
+axis-angle rotation, same Euler-decoupling technique as the existing
+tilt logic, just now in the LOCAL/body frame; alpha composed separately
+around local Y) and composes it onto a PERSISTENT quaternion
+(`phoneGyroQuat`) via RIGHT-multiply -- the standard way real IMU/AHRS
+orientation tracking integrates body-frame angular velocity over time.
+Because this never reconstructs an absolute angle from scratch --
+only ever composes a tiny, always-valid increment onto whatever the
+current accumulated orientation already is -- there is no
+representational limit at any accumulated total, at any axis.
+
+Verified numerically before shipping (no physical device in this
+sandbox): simulated a constant 90deg/s spin around local X at a
+realistic ~60Hz tick rate for 8 seconds (720 degrees of physical
+rotation, 2 full spins) -- the resulting quaternion tracked correctly
+at every 90-degree checkpoint with no discontinuity, and a separate
+4-second pure-spin test showed the spin axis itself drifting by only
+~5.5e-16 (floating-point noise, not a real error) the entire time.
+
+Desktop (mouse) is UNCHANGED -- a cursor position has no physical "spin
+past 180 degrees" concept, so the existing curve/range-driven system
+(confirmed desktop-only in the 33rd entry) still applies there
+unmodified. Rotation Reset simplifies dramatically for mobile: it's now
+just `phoneGyroQuat.identity()`, since there's no separate baseline to
+manage any more. The per-axis enable/scale controls (34th entry) now
+gate the raw gyro RATE before integration on mobile, or the raw tilt
+DEGREES on desktop -- same 6 controls, same user-facing effect either
+way. Removed the now-fully-dead unwrap-tracking state
+(`phoneUnwrappedBeta/Gamma/Alpha`, `phoneBetaBaseline/Gamma/AlphaBaseline`,
+`unwrapDelta360()`) rather than leaving it unused -- it was built and
+shipped just this same day (30th/33rd entries) before this deeper
+limitation was found.
+
+Not independently browser/device-verified this round (same standing
+instruction) -- verified instead via a standalone numeric integration
+script simulating multiple seconds of continuous real-time gyroscope
+samples, which is a stronger test of "does this handle unbounded
+continuous rotation correctly" than a live device session could easily
+reproduce on demand anyway.
+
+`index.html`'s cache-buster bumped `?v=118` -> `?v=119`.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
