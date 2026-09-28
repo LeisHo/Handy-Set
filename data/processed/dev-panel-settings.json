@@ -98,11 +98,11 @@
     "checkboxPhoneResponsiveRotationEnabled": true,
     "checkboxPhoneRotationResetEnabled": true,
     "checkboxPhoneAxisXEnabled": true,
-    "sliderPhoneRotationScaleX": 0.8,
+    "sliderPhoneRotationScaleX": 0.9,
     "checkboxPhoneAxisYEnabled": true,
     "sliderPhoneRotationScaleY": 0.8,
     "checkboxPhoneAxisZEnabled": true,
-    "sliderPhoneRotationScaleZ": 0.8,
+    "sliderPhoneRotationScaleZ": 0.5,
     "sliderPhoneResponsiveRotationFineTune": 0,
     "sliderPhoneRotationDamping": 1,
     "textPhoneResponsiveRotationRange": "{\"min\":-57,\"max\":45}",
@@ -171,7 +171,7 @@
     "left": 35,
     "top": 108,
     "width": 350,
-    "height": 671
+    "height": 76
   },
   "devPanelStyle": {
     "titleFontSize": 17,
