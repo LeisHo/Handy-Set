@@ -2121,51 +2121,23 @@ function integratePhoneGyroRotation(e) {
   if (phoneGyroLastTimestamp !== null) {
     const dt = Math.min((now - phoneGyroLastTimestamp) / 1000, 0.1) // seconds; capped so a backgrounded tab can't integrate one huge jump on resume
     const rr = e.rotationRate
-    // CORRECTED 2026-09-28 (6th round on this feature, same day) -- ROOT
-    // CAUSE OF THE REPEATED FAILURES FOUND: every prior round's own
-    // verification (including this session's 4th/5th-round "conjugate the
-    // axis vector" fixes) tested this function's output using AXIS
-    // INVARIANCE ("which world axis stays fixed under the rotation") --
-    // but the report this feature is actually judged against comes from
-    // the Phone Model Log's `Rot x/y/z` fields, which are an EULER-ANGLE
-    // ('XYZ' order) DECOMPOSITION of the quaternion (see
-    // `restartPhoneModelLogTimer()`'s `_phoneLogEuler.setFromQuaternion(
-    // phoneModelWrapper.quaternion, 'XYZ')`). Those are NOT the same
-    // measurement -- axis-invariance is a clean geometric property that
-    // permutes exactly under a change of basis; Euler-XYZ decomposition
-    // does not obey the same permutation algebra, especially for a large,
-    // accumulated body-frame-integrated rotation. This is why 2 different
-    // "conjugate by a 3-cycle permutation" fixes (4th and 5th CHANGELOG
-    // rounds), each algebraically sound for axis-invariance, both still
-    // measured as wrong once actually read off Rot x/y/z.
-    //
-    // Verified via a standalone script replicating THREE.js's own
-    // quaternion->Euler('XYZ') extraction exactly (not reconstructed from
-    // memory of the formula alone -- cross-checked against the matrix
-    // form Matrix4.makeRotationFromQuaternion + Euler.setFromRotationMatrix
-    // use): the 5th round's shipped code (combined tilt on Y/Z, spin on
-    // local X) reproduces the reported "123 -> YZX" (pitch->Rot.y,
-    // roll->Rot.z, spin->Rot.x) EXACTLY, confirming this measurement
-    // finally matches the real device's own numbers. A brute-force search
-    // of all 6 possible (pitch-axis, roll-axis) placements against this
-    // SAME Euler-XYZ measurement found exactly one that reduces cleanly
-    // to Rot.x/y/z = pitch/roll/spin degrees respectively (the plain,
-    // un-permuted arrangement): combined tilt on X/Y (pitch, roll, 0),
-    // spin separate on local Z (0,0,1) -- i.e. the ORIGINAL, pre-any-
-    // permutation-fix slot structure from when gyro integration first
-    // shipped. Also reverted the "alpha/gamma crossed" raw-property
-    // theory (3rd/37th round) back to the W3C-spec-standard reading
-    // (rr.beta=pitch rate, rr.gamma=roll rate, rr.alpha=spin rate) --
-    // that theory was built entirely on the same now-discredited
-    // axis-invariance measurement, so it has no remaining support. The
-    // gamma inversion is kept (matches the sign convention already
-    // established for gamma in the old absolute-angle system).
+    // CORRECTED 2026-09-28 (7th round on this feature, same day) --
+    // direct, literal, precisely-specified report using the real phone's
+    // OWN axes vs. the model's OWN Blender-authored axes (both defined
+    // the same way: Z = back-to-face, Y = charging-port-to-top, X =
+    // left-to-right facing the screen): "REAL PHONE: XYZ is currently
+    // mapped to MODEL PHONE: YXZ. SWITCH X AND Y, then invert Z." Applied
+    // exactly as stated, no re-derivation: dPitchDeg (real X) and
+    // dRollDeg (real Y) now swap which combined-axis-angle component they
+    // feed (dRollDeg->x-component, dPitchDeg->y-component -- the reverse
+    // of the 6th round's assignment), and dSpinDeg (real Z) is now
+    // negated.
     const dPitchDeg = (cfg.phoneAxisXEnabled ? (rr.beta || 0) * cfg.phoneRotationScaleX : 0) * dt
     const dRollDeg = (cfg.phoneAxisYEnabled ? -(rr.gamma || 0) * cfg.phoneRotationScaleY : 0) * dt
-    const dSpinDeg = (cfg.phoneAxisZEnabled ? (rr.alpha || 0) * cfg.phoneRotationScaleZ : 0) * dt
+    const dSpinDeg = (cfg.phoneAxisZEnabled ? -(rr.alpha || 0) * cfg.phoneRotationScaleZ : 0) * dt
     const combinedTiltDeg = Math.hypot(dPitchDeg, dRollDeg)
     if (combinedTiltDeg > 1e-8) {
-      _phoneGyroTiltAxis.set(dPitchDeg, dRollDeg, 0).normalize()
+      _phoneGyroTiltAxis.set(dRollDeg, dPitchDeg, 0).normalize()
       _phoneGyroTiltQuat.setFromAxisAngle(_phoneGyroTiltAxis, THREE.MathUtils.degToRad(combinedTiltDeg))
       phoneGyroQuat.multiply(_phoneGyroTiltQuat)
     }
