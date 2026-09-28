@@ -1603,6 +1603,31 @@
         "key": "desktop:Phone Tilt",
         "items": [
           {
+            "type": "row",
+            "key": "checkboxTrackingEnabled"
+          },
+          {
+            "type": "group",
+            "section": {
+              "key": "desktop:Target",
+              "items": [
+                {
+                  "type": "row",
+                  "key": "sliderTargetDepthFactor"
+                },
+                {
+                  "type": "row",
+                  "key": "checkboxShowTargetMarker"
+                }
+              ],
+              "rowKeys": [
+                "sliderTargetDepthFactor",
+                "checkboxShowTargetMarker"
+              ],
+              "subgroups": []
+            }
+          },
+          {
             "type": "group",
             "section": {
               "key": "desktop:Responsive Arm Rotation at Base",
@@ -1655,31 +1680,6 @@
                 "checkboxPoseTweenResponsiveEnabled",
                 "selectPoseTweenTargetPoseName",
                 "textPoseTweenCurve"
-              ],
-              "subgroups": []
-            }
-          },
-          {
-            "type": "row",
-            "key": "checkboxTrackingEnabled"
-          },
-          {
-            "type": "group",
-            "section": {
-              "key": "desktop:Target",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "sliderTargetDepthFactor"
-                },
-                {
-                  "type": "row",
-                  "key": "checkboxShowTargetMarker"
-                }
-              ],
-              "rowKeys": [
-                "sliderTargetDepthFactor",
-                "checkboxShowTargetMarker"
               ],
               "subgroups": []
             }
@@ -1783,6 +1783,24 @@
         ],
         "subgroups": [
           {
+            "key": "desktop:Target",
+            "items": [
+              {
+                "type": "row",
+                "key": "sliderTargetDepthFactor"
+              },
+              {
+                "type": "row",
+                "key": "checkboxShowTargetMarker"
+              }
+            ],
+            "rowKeys": [
+              "sliderTargetDepthFactor",
+              "checkboxShowTargetMarker"
+            ],
+            "subgroups": []
+          },
+          {
             "key": "desktop:Responsive Arm Rotation at Base",
             "items": [
               {
@@ -1830,24 +1848,6 @@
               "checkboxPoseTweenResponsiveEnabled",
               "selectPoseTweenTargetPoseName",
               "textPoseTweenCurve"
-            ],
-            "subgroups": []
-          },
-          {
-            "key": "desktop:Target",
-            "items": [
-              {
-                "type": "row",
-                "key": "sliderTargetDepthFactor"
-              },
-              {
-                "type": "row",
-                "key": "checkboxShowTargetMarker"
-              }
-            ],
-            "rowKeys": [
-              "sliderTargetDepthFactor",
-              "checkboxShowTargetMarker"
             ],
             "subgroups": []
           },
@@ -4994,9 +4994,9 @@
     "desktop:Saved Tween Sequences": true,
     "desktop:Field Layout": true,
     "desktop:Phone Tilt": false,
-    "desktop:Responsive Arm Rotation at Base": false,
-    "desktop:Responsive Pose Tween": true,
     "desktop:Target": true,
+    "desktop:Responsive Arm Rotation at Base": true,
+    "desktop:Responsive Pose Tween": true,
     "desktop:Responsive Wrist Splay": true,
     "desktop:New Group": true,
     "desktop:Palm Facing": true,
@@ -5011,7 +5011,7 @@
     "desktop:Pinky": true,
     "desktop:Pose Offset": true,
     "desktop:Saved Poses": true,
-    "desktop:Camera": false,
+    "desktop:Camera": true,
     "desktop:Saved Cameras": true,
     "desktop:Lighting": true,
     "desktop:Saved Lighting": true,
