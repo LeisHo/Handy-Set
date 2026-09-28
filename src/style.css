@@ -897,6 +897,15 @@ html, body {
     .dev-row-hidden-by-checkbox {
         display: none !important;
     }
+    /* HANDYSET-specific, not from the template: Camera group's Lock
+       Pan/Zoom/Rotate checkboxes also disable their own matching sliders
+       (setSliderLocked(), main.js) -- direct request 2026-09-28. */
+    .dev-row-locked {
+        opacity: 0.4;
+    }
+    .dev-row-locked .dev-slider {
+        cursor: not-allowed;
+    }
     .dev-section-hidden-empty {
         display: none !important;
     }

@@ -1632,7 +1632,26 @@ function handleDeviceOrientation(e) {
     else { phoneUnwrappedAlpha += unwrapDelta360(e.alpha, phoneLastRawAlpha); phoneLastRawAlpha = e.alpha }
   }
 }
+// GUARD added 2026-09-28, direct report: "I tap, and for a split second
+// i see the phone model out of orientation, then it flashes back...
+// maybe its the phone tilt cursor tracking bugging it up... using both
+// the phone tilt and the cursor tracking." Root cause: many mobile
+// browsers fire a SYNTHETIC 'mousemove' (and click) as a touch-
+// compatibility shim after a real touch event. Without this guard, a
+// single tap briefly flipped lastInputSource to 'mouse' and computed
+// Phone Model's rotation from the TAP'S SCREEN POSITION (via
+// tiltMagnitude/tiltAngle) instead of the real device orientation --
+// until the next real deviceorientation event reverted it a frame or
+// two later, exactly matching the "flash then revert" symptom. This
+// also explains the position-dependence ("tap right = clockwise, tap
+// left = anticlockwise" -- that's literally Phone Model's desktop/
+// cursor-distance formula reacting to the tap's own X position).
+// MouseEvent.sourceCapabilities.firesTouchEvents (Chrome/Android --
+// this project's actual target) is true ONLY for a synthetic mouse
+// event generated from a touch interaction, never for a real mouse/
+// trackpad move, even on a touch-capable laptop.
 function handleMouseMoveFallback(e) {
+  if (e.sourceCapabilities && e.sourceCapabilities.firesTouchEvents) return
   lastInputSource = 'mouse'
   cursorNDC.set((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1)
   // tiltMagnitude/tiltAngle are ALSO still needed here — Reactive Arm
@@ -1712,11 +1731,24 @@ let lastTapY = 0
 function isInsideDevPanel(target) {
   return !!(target && target.closest && (target.closest('#devPanel') || target.closest('.dev-toggle-btn')))
 }
+// CORRECTED 2026-09-28, direct report ("I think the 3js pan and zoom
+// controls may be interfering" -- confirmed as a real, separate
+// contributing cause alongside the synthetic-mousemove bug above):
+// both listeners now use the CAPTURE phase. OrbitControls attaches its
+// own pointer/touch handlers directly to the canvas and commonly calls
+// stopPropagation() on them (standard practice, to stop the browser's
+// own default touch/scroll gestures from also firing) -- a BUBBLE-phase
+// listener on `window` (the original version) never sees an event once
+// a descendant's bubble-phase handler stops it. A CAPTURE-phase listener
+// on `window` always runs FIRST, top-down, strictly before the event
+// even reaches the canvas or OrbitControls' own bubble-phase handler --
+// so it can no longer be swallowed regardless of what OrbitControls
+// does afterward.
 function setupPhoneRotationResetGesture() {
   window.addEventListener('dblclick', (e) => {
     if (!cfg.phoneRotationResetEnabled || isInsideDevPanel(e.target)) return
     resetPhoneModelRotationBaseline()
-  })
+  }, { capture: true })
   window.addEventListener('touchend', (e) => {
     if (!cfg.phoneRotationResetEnabled || isInsideDevPanel(e.target)) return
     const touch = e.changedTouches && e.changedTouches[0]
@@ -1731,7 +1763,7 @@ function setupPhoneRotationResetGesture() {
       lastTapX = touch.clientX
       lastTapY = touch.clientY
     }
-  })
+  }, { capture: true })
 }
 
 // =======================================================================
@@ -1926,23 +1958,40 @@ function computePhoneResponsiveAxisDeg(rawComponent) {
 const _phoneCombinedQuat = new THREE.Quaternion()
 const _phoneManualQuat = new THREE.Quaternion()
 const _phoneResponsiveQuat = new THREE.Quaternion()
-const _phoneXYAxis = new THREE.Vector3()
-const _phoneXYQuat = new THREE.Quaternion()
-const _phoneZQuat = new THREE.Quaternion()
-const PHONE_Z_AXIS = new THREE.Vector3(0, 0, 1)
-// REMAPPED 2026-09-28, direct correction after checking the real Blender
-// model's own local axes: "+y is the top of the phone (direction of the
-// camera), +x is right... Z axis [is] perpendicular to the true phone
-// screen... when the phone is tilting up and down, it should be around
-// its own X axis, when it tilts left and right, it should be around its
-// own y axis." This SUPERSEDES the earlier (pre-Blender-check) spec that
-// had left/right on Z:
-// - X <- beta (up/down tilt), NOT inverted.
-// - Y <- gamma (left/right tilt), INVERTED (tilt left = positive, tilt
-//   right = negative -- the same inversion the old Z assignment carried).
-// - Z <- compass heading delta (the "leftover axis" -- spinning the
-//   phone flat on its own face, the one motion beta/gamma can't
-//   represent).
+const _phoneTiltAxis = new THREE.Vector3()
+const _phoneTiltQuat = new THREE.Quaternion()
+const _phoneSpinQuat = new THREE.Quaternion()
+// CORRECTED 2026-09-28, direct report after real-device testing: "when i
+// rotate my real phone around the Y axis, the phone model on screen
+// rotates around the z axis. And vice versa as well" (with beta/up-down
+// confirmed working correctly). Root cause: the real Blender model is
+// authored Z-up (Z = sky when flat), but glTF/three.js is Y-up -- glTF
+// exporters standardly bake in a Z-up -> Y-up conversion on export
+// (a fixed rotation that leaves X alone but swaps Blender's Y and Z),
+// so world-Y and world-Z in this file were ALREADY swapped relative to
+// the Blender-described axes the 29th CHANGELOG entry's mapping assumed
+// -- independent of anything in the rotation formula itself, which is why
+// the sign/direction logic (verified against 4 real test movements in
+// that same entry) was right but the WORLD AXIS each one landed on was
+// not. Fixed by swapping which world axis gamma and alpha target: gamma
+// (left-right tilt) now composes into the SAME combined axis-angle as
+// beta (both are simultaneous "tilt" motions), on world Z instead of Y;
+// alpha (compass/spin) now gets its own separate rotation around world Y
+// instead of Z. Beta stays on world X, unchanged (confirmed working).
+const PHONE_SPIN_AXIS = new THREE.Vector3(0, 1, 0)
+// SUPERSEDED 2026-09-28 (later same day) by the Blender-Z-up/glTF-Y-up
+// world-axis swap described in the comment directly above this one --
+// the paragraph below still correctly describes the SIGNAL-level mapping
+// (which real-world motion means what, and each one's sign/inversion),
+// just NOT which literal world-axis letter (X/Y/Z in this file's own
+// code) each one currently lands on any more. Kept for the sign/
+// direction reasoning, which is still accurate:
+// - beta (up/down tilt), NOT inverted -- world X, unchanged.
+// - gamma (left/right tilt), INVERTED (tilt left = positive, tilt
+//   right = negative) -- world Z now (was Y before the swap above).
+// - compass heading delta (the "leftover axis" -- spinning the phone
+//   flat on its own face, the one motion beta/gamma can't represent) --
+//   world Y now (was Z before the swap above).
 //
 // MOBILE vs DESKTOP are 2 genuinely different pipelines now, direct
 // request 2026-09-28 -- "there shouldnt be any rotational thresholds on
@@ -1962,27 +2011,29 @@ const PHONE_Z_AXIS = new THREE.Vector3(0, 0, 1)
 //   below), since there's no physical orientation to
 //   mirror 1:1 and a designed mapping genuinely makes sense for a mouse.
 //
-// Both paths produce a signed (xDeg, yDeg) pair in DEGREES, then compose
-// exactly the same way: as ONE combined axis-angle rotation, NOT a
-// sequential Euler X-then-Y -- direct report 2026-09-28: "double tap or
-// tap orients the phone differently each time... rarely the orientation
-// i want." A sequential Euler composition rotates around the ORIGINAL X
-// first, then around the ALREADY-TILTED frame's Y -- for a compound tilt
-// this introduces real, visible cross-axis error (roughly the product of
-// the 2 angles in radians -- ~16deg of distortion for two simultaneous
-// 30deg tilts, not negligible). A single axis-angle rotation, with the
-// axis built from (xDeg, yDeg, 0) and the angle from their combined
-// magnitude, reduces to EXACTLY a pure X or pure Y rotation in each pure
+// Both paths produce a signed (betaDeg, gammaDeg) pair in DEGREES, then
+// compose exactly the same way: as ONE combined axis-angle rotation for
+// beta+gamma (world X/Z), NOT a sequential Euler X-then-Z -- direct
+// report 2026-09-28: "double tap or tap orients the phone differently
+// each time... rarely the orientation i want." A sequential Euler
+// composition rotates around the ORIGINAL X first, then around the
+// ALREADY-TILTED frame's other axis -- for a compound tilt this
+// introduces real, visible cross-axis error (roughly the product of the
+// 2 angles in radians -- ~16deg of distortion for two simultaneous 30deg
+// tilts, not negligible). A single axis-angle rotation, with the axis
+// built from (betaDeg, 0, gammaDeg) and the angle from their combined
+// magnitude, reduces to EXACTLY a pure X or pure Z rotation in each pure
 // case (verified algebraically and via a standalone script) while
 // smoothly blending compound tilts with no Euler cross-coupling, for ANY
 // magnitude (not just curve-bounded ones -- this is why mobile's
 // unbounded direct passthrough can reuse the exact same combine step).
+// alpha/compass composes separately on top, around world Y.
 //
 // NOT verified against a real device this session (no physical phone
 // available in this sandbox) -- if any ONE axis's DIRECTION still comes
 // out backwards, flip that axis's own sign at its own site (negate the
-// beta-delta for X, negate the gamma-delta for Y, negate the alpha-delta
-// for Z) rather than re-deriving the whole mapping.
+// beta-delta for X, negate the gamma-delta for Z, negate the alpha-delta
+// for Y) rather than re-deriving the whole mapping.
 //
 // Rotation Reset -- direct correction 2026-09-28, before this ever
 // shipped: "if im lying in bed and i hit reset, you will have to adjust
@@ -1999,12 +2050,12 @@ function computePhoneCombinedQuat() {
   _phoneManualQuat.setFromEuler(new THREE.Euler(
     THREE.MathUtils.degToRad(cfg.phoneModelRotX), THREE.MathUtils.degToRad(cfg.phoneModelRotY), THREE.MathUtils.degToRad(cfg.phoneModelRotZ), 'XYZ'
   ))
-  let xDeg = 0, yDeg = 0, zDeg = 0
+  let betaDeg = 0, gammaDeg = 0, alphaDeg = 0
   if (lastInputSource === 'device' && latestOrientation) {
     // MOBILE: direct, unwrapped, unthresholded passthrough.
-    xDeg = (phoneUnwrappedBeta ?? 0) - phoneBetaBaseline
-    yDeg = -((phoneUnwrappedGamma ?? 0) - phoneGammaBaseline)
-    zDeg = (phoneUnwrappedAlpha ?? 0) - (phoneAlphaBaseline ?? 0)
+    betaDeg = (phoneUnwrappedBeta ?? 0) - phoneBetaBaseline
+    gammaDeg = -((phoneUnwrappedGamma ?? 0) - phoneGammaBaseline)
+    alphaDeg = (phoneUnwrappedAlpha ?? 0) - (phoneAlphaBaseline ?? 0)
   } else if (cfg.trackingEnabled && cfg.phoneResponsiveRotationEnabled) {
     // DESKTOP: cursor-distance-driven, through the curve/range system.
     const rawNx = tiltMagnitude * Math.cos(tiltAngle) // gamma-analog (left-right)
@@ -2014,20 +2065,23 @@ function computePhoneCombinedQuat() {
     const combinedT = THREE.MathUtils.clamp(Math.hypot(ny, nx), 0, 1)
     const combinedDeg = computePhoneResponsiveAxisDeg(combinedT) // always >= 0
     if (combinedT > 1e-6) {
-      xDeg = (ny / combinedT) * combinedDeg
-      yDeg = (-nx / combinedT) * combinedDeg
+      betaDeg = (ny / combinedT) * combinedDeg
+      gammaDeg = (-nx / combinedT) * combinedDeg
     }
-    // zDeg stays 0 on desktop -- no compass equivalent for a mouse.
+    // alphaDeg stays 0 on desktop -- no compass equivalent for a mouse.
   }
-  const combinedXYDeg = Math.hypot(xDeg, yDeg)
-  if (combinedXYDeg > 1e-6) {
-    _phoneXYAxis.set(xDeg, yDeg, 0).normalize()
-    _phoneXYQuat.setFromAxisAngle(_phoneXYAxis, THREE.MathUtils.degToRad(combinedXYDeg))
+  // beta -> world X, gamma -> world Z (combined, avoids Euler coupling --
+  // see this function group's own comment above for the full derivation).
+  const combinedTiltDeg = Math.hypot(betaDeg, gammaDeg)
+  if (combinedTiltDeg > 1e-6) {
+    _phoneTiltAxis.set(betaDeg, 0, gammaDeg).normalize()
+    _phoneTiltQuat.setFromAxisAngle(_phoneTiltAxis, THREE.MathUtils.degToRad(combinedTiltDeg))
   } else {
-    _phoneXYQuat.identity()
+    _phoneTiltQuat.identity()
   }
-  _phoneZQuat.setFromAxisAngle(PHONE_Z_AXIS, THREE.MathUtils.degToRad(zDeg))
-  _phoneResponsiveQuat.copy(_phoneZQuat).multiply(_phoneXYQuat)
+  // alpha (compass/spin) -> world Y, composed separately on top.
+  _phoneSpinQuat.setFromAxisAngle(PHONE_SPIN_AXIS, THREE.MathUtils.degToRad(alphaDeg))
+  _phoneResponsiveQuat.copy(_phoneSpinQuat).multiply(_phoneTiltQuat)
   return _phoneCombinedQuat.copy(_phoneManualQuat).multiply(_phoneResponsiveQuat)
 }
 // Rotation Reset -- direct request 2026-09-28: a double-tap(mobile)/
@@ -3816,6 +3870,11 @@ function renderCameraGroup(content) {
   document.getElementById('checkboxCameraMaxExtentsEnabled').checked = cfg.cameraMaxExtentsEnabled
   wireCheckbox('checkboxCameraMaxExtentsEnabled', (v) => { cfg.cameraMaxExtentsEnabled = v; updateCameraMaxExtentsBound() })
   renderPresetPicker(content, 'Saved Cameras', SAVED_CAMERAS, DEFAULT_CAMERA_NAME, applyCameraPreset, captureCameraFromLive, { defaultFieldKey: 'defaultCamera', storageKey: 'cameras' })
+  // Apply once at build time too -- previously only ran from the 3 lock
+  // checkboxes' own wireCheckbox callbacks, so a RESTORED "locked" state
+  // (e.g. from Sync) never actually disabled OrbitControls or the
+  // sliders until the user re-toggled the checkbox.
+  applyCameraLockState()
 }
 // Moves the camera along the existing camera->target line to a new
 // distance, preserving viewing direction (ported concept from Handy
@@ -3828,10 +3887,26 @@ function setCameraDistance(distance) {
   camera.position.copy(controls.target).add(dir)
   controls.update()
 }
+// Direct request 2026-09-28: "When I lock pan, zoom, or rotate, lock
+// the relevant sliders as well. Those 2 should be in sync. I guess FOV
+// can just not be locked ever." Maps each OrbitControls lock to the
+// sliders that control the same motion by another means: Pan -> the 3
+// camera position sliders (X/Y/Z); Zoom -> the Zoom slider; Rotate ->
+// Yaw/Pitch. FOV is deliberately never touched.
+function setSliderLocked(id, locked) {
+  const input = document.getElementById(id)
+  if (!input) return
+  input.disabled = locked
+  const row = input.closest('.dev-row')
+  if (row) row.classList.toggle('dev-row-locked', locked)
+}
 function applyCameraLockState() {
   controls.enablePan = !cfg.lockCameraPan
   controls.enableZoom = !cfg.lockCameraZoom
   controls.enableRotate = !cfg.lockCameraRotate
+  ;['sliderCameraX', 'sliderCameraY', 'sliderCameraZ'].forEach((id) => setSliderLocked(id, cfg.lockCameraPan))
+  setSliderLocked('sliderCameraZoom', cfg.lockCameraZoom)
+  ;['sliderCameraYaw', 'sliderCameraPitch'].forEach((id) => setSliderLocked(id, cfg.lockCameraRotate))
 }
 // Extract yaw and pitch from camera direction (ported from HANDO)
 // Yaw: rotation around Y axis, Pitch: rotation around X axis
