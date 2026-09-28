@@ -205,6 +205,12 @@ const cfg = {
   // 2026-09-28, default off (opt-in, matches Responsive Rotation's own
   // default-off convention).
   phoneRotationResetEnabled: false,
+  // Per-axis on/off + scale -- direct request 2026-09-28. Axis letters
+  // match the WORLD axis each real motion drives (see
+  // computePhoneCombinedQuat()'s own comment): X <- beta (up/down),
+  // Y <- alpha/compass (spin), Z <- gamma (left/right).
+  phoneAxisXEnabled: true, phoneAxisYEnabled: true, phoneAxisZEnabled: true,
+  phoneRotationScaleX: 1, phoneRotationScaleY: 1, phoneRotationScaleZ: 1,
   // Smooths the FINAL combined rotation quaternion toward its per-frame
   // target via slerp -- same semantic as cfg.trackingDamping (1=instant
   // snap, lower=smoother/slower) -- added 2026-09-28, direct report:
@@ -2070,6 +2076,15 @@ function computePhoneCombinedQuat() {
     }
     // alphaDeg stays 0 on desktop -- no compass equivalent for a mouse.
   }
+  // Per-axis on/off + scale -- direct request 2026-09-28. Applied AFTER
+  // either branch above, in one shared place, so both mobile and
+  // desktop respect the same 3 checkboxes/sliders without duplicating
+  // this logic per-branch. Disabling an axis zeroes it outright (not
+  // just scale=0) so a disabled axis can't contribute even a tiny
+  // residual from floating-point noise.
+  betaDeg = cfg.phoneAxisXEnabled ? betaDeg * cfg.phoneRotationScaleX : 0
+  alphaDeg = cfg.phoneAxisYEnabled ? alphaDeg * cfg.phoneRotationScaleY : 0
+  gammaDeg = cfg.phoneAxisZEnabled ? gammaDeg * cfg.phoneRotationScaleZ : 0
   // beta -> world X, gamma -> world Z (combined, avoids Euler coupling --
   // see this function group's own comment above for the full derivation).
   const combinedTiltDeg = Math.hypot(betaDeg, gammaDeg)
@@ -2091,19 +2106,33 @@ function computePhoneCombinedQuat() {
 // XYZ axis matches world XYZ" from then on. Does NOT touch the manual
 // phoneModelRotX/Y/Z sliders -- those are a deliberate, separate offset
 // on top, not part of "my real phone's orientation."
+// CORRECTED 2026-09-28, direct report: "double tap works. BUT. after
+// the realignment, the rotation becomes wrong. I think its still using
+// the rotation axes prior to the realignment." Root cause: this used to
+// branch on `lastInputSource` and update ONLY the mobile (beta/gamma/
+// alpha) OR ONLY the desktop (nx/ny) baseline, never both -- if
+// `lastInputSource` read wrong for even one frame at the exact tap
+// instant (a real risk given everything else found this session about
+// synthetic touch-sourced events), the reset silently re-baselined the
+// INACTIVE pipeline while leaving the REAL (mobile) one completely
+// untouched at whatever it was before -- exactly "still using the axes
+// prior to realignment." Fixed by updating BOTH baselines
+// UNCONDITIONALLY on every reset, regardless of which input source
+// happens to be flagged active at that instant -- whichever pipeline
+// turns out to actually be driving the rotation afterward is
+// guaranteed to have a freshly-captured baseline either way, so this
+// no longer depends on `lastInputSource` being exactly right at the
+// one instant a reset fires.
 function resetPhoneModelRotationBaseline() {
-  if (lastInputSource === 'device' && latestOrientation) {
-    phoneBetaBaseline = phoneUnwrappedBeta ?? 0
-    phoneGammaBaseline = phoneUnwrappedGamma ?? 0
-    phoneAlphaBaseline = phoneUnwrappedAlpha ?? phoneAlphaBaseline
-  } else {
-    // Desktop: baseline captured in the RAW (pre-final-clamp) domain --
-    // a post-clamp baseline would saturate near the cursor-distance
-    // ceiling the same way the old mobile path once did near a physical
-    // clamp boundary.
-    phoneNxBaseline = tiltMagnitude * Math.cos(tiltAngle)
-    phoneNyBaseline = tiltMagnitude * Math.sin(tiltAngle)
-  }
+  phoneBetaBaseline = phoneUnwrappedBeta ?? 0
+  phoneGammaBaseline = phoneUnwrappedGamma ?? 0
+  phoneAlphaBaseline = phoneUnwrappedAlpha ?? phoneAlphaBaseline
+  // Desktop: baseline captured in the RAW (pre-final-clamp) domain -- a
+  // post-clamp baseline would saturate near the cursor-distance ceiling
+  // the same way the old mobile path once did near a physical clamp
+  // boundary.
+  phoneNxBaseline = tiltMagnitude * Math.cos(tiltAngle)
+  phoneNyBaseline = tiltMagnitude * Math.sin(tiltAngle)
 }
 // CORRECTED 2026-09-27, direct report: "responsive phone rotation
 // should be anchored by the phone models OWN geoemtr origin... its
@@ -4091,6 +4120,24 @@ function renderPhoneModelGroup(content) {
   addRow(subResponsiveRotation, { id: 'checkboxPhoneRotationResetEnabled', label: 'Rotation Reset On/Off', type: 'checkbox' })
   document.getElementById('checkboxPhoneRotationResetEnabled').checked = cfg.phoneRotationResetEnabled
   wireCheckbox('checkboxPhoneRotationResetEnabled', (v) => { cfg.phoneRotationResetEnabled = v })
+  // Per-axis on/off + scale -- direct request 2026-09-28. X=beta
+  // (up/down), Y=alpha/compass (spin), Z=gamma (left/right) -- matches
+  // computePhoneCombinedQuat()'s own world-axis assignment.
+  addRow(subResponsiveRotation, { id: 'checkboxPhoneAxisXEnabled', label: 'X Axis Rotation On/Off', type: 'checkbox' })
+  document.getElementById('checkboxPhoneAxisXEnabled').checked = cfg.phoneAxisXEnabled
+  wireCheckbox('checkboxPhoneAxisXEnabled', (v) => { cfg.phoneAxisXEnabled = v })
+  addRow(subResponsiveRotation, { id: 'sliderPhoneRotationScaleX', label: 'X Axis Rotation Scale (x)', type: 'slider', min: 0, max: 3, step: 0.05, value: cfg.phoneRotationScaleX })
+  wireSlider('sliderPhoneRotationScaleX', (v) => { cfg.phoneRotationScaleX = v })
+  addRow(subResponsiveRotation, { id: 'checkboxPhoneAxisYEnabled', label: 'Y Axis Rotation On/Off', type: 'checkbox' })
+  document.getElementById('checkboxPhoneAxisYEnabled').checked = cfg.phoneAxisYEnabled
+  wireCheckbox('checkboxPhoneAxisYEnabled', (v) => { cfg.phoneAxisYEnabled = v })
+  addRow(subResponsiveRotation, { id: 'sliderPhoneRotationScaleY', label: 'Y Axis Rotation Scale (x)', type: 'slider', min: 0, max: 3, step: 0.05, value: cfg.phoneRotationScaleY })
+  wireSlider('sliderPhoneRotationScaleY', (v) => { cfg.phoneRotationScaleY = v })
+  addRow(subResponsiveRotation, { id: 'checkboxPhoneAxisZEnabled', label: 'Z Axis Rotation On/Off', type: 'checkbox' })
+  document.getElementById('checkboxPhoneAxisZEnabled').checked = cfg.phoneAxisZEnabled
+  wireCheckbox('checkboxPhoneAxisZEnabled', (v) => { cfg.phoneAxisZEnabled = v })
+  addRow(subResponsiveRotation, { id: 'sliderPhoneRotationScaleZ', label: 'Z Axis Rotation Scale (x)', type: 'slider', min: 0, max: 3, step: 0.05, value: cfg.phoneRotationScaleZ })
+  wireSlider('sliderPhoneRotationScaleZ', (v) => { cfg.phoneRotationScaleZ = v })
   addRow(subResponsiveRotation, { id: 'sliderPhoneResponsiveRotationFineTune', label: 'Rotation Fine-Tune (Deg)', type: 'slider', min: -90, max: 90, step: 1, value: cfg.phoneResponsiveRotationFineTune })
   wireSlider('sliderPhoneResponsiveRotationFineTune', (v) => { cfg.phoneResponsiveRotationFineTune = v })
   // Added 2026-09-28, direct report: "the rotation motion is jittery and
