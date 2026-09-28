@@ -18,6 +18,9 @@
     // that could plausibly be clicked, closes that gap by construction.
     let devPanelBuilt = false;
 
+    // Timestamp helper for debug logs
+    function ts() { return '[' + new Date().toISOString() + ']' }
+
     // isDevAllowed gates both the panel's CSS visibility (the early
     // <head> script above sets html.dev-mode from this SAME condition,
     // kept in sync manually - see its own comment for why it can't
@@ -44,6 +47,13 @@
     // ================================================================
     const DEV_PANEL_TABS = ['desktop', 'mobile', 'landscape'];
 
+    // Host extension point (re-synced 2026-09-28 from the canonical
+    // template) -- switchDevPanelTab() is the only place the active tab
+    // changes; a host with its own tab-dependent logic can hook into it
+    // here instead of wiring a separate listener on all 3 tab buttons.
+    // No-op by default.
+    let devOnTabChanged = function (tab) {};
+
     function isNarrowViewport() { return window.innerWidth < 768; }
 
     // ================================================================
@@ -58,10 +68,15 @@
     // (no checkbox) just runs `fn` directly, unaffected either way. See
     // buildGroupCascadeCheckbox()'s own comment ([JS-4b0] above).
     function withPreservedTitleCheckbox(titleEl, fn) {
-        const cb = titleEl.querySelector(':scope > .dev-group-cascade-checkbox');
-        if (cb) cb.remove();
+        // Generalized 2026-09-28 (re-synced from the canonical template)
+        // to preserve EVERY direct-child checkbox (was hardcoded to just
+        // .dev-group-cascade-checkbox) — the Toggleable Settings Group
+        // checkbox (makeDevGroupToggleable()) also lives as a title
+        // child and needs the exact same rename/collapse protection.
+        const cbs = Array.from(titleEl.querySelectorAll(':scope > input[type="checkbox"]'));
+        cbs.forEach(cb => cb.remove());
         fn();
-        if (cb) titleEl.appendChild(cb);
+        cbs.forEach(cb => titleEl.appendChild(cb));
     }
     // Group collapse/toggle, custom group creation
     function toggleSection(titleEl) {
@@ -87,7 +102,14 @@
         title.className = 'dev-section-title';
         title.setAttribute('onclick', 'toggleSection(this)');
         title.dataset.sid = name;
-        title.textContent = '▼ ' + name;
+        // Re-synced 2026-09-28 from the canonical template: checks
+        // devTextOverrides at creation time instead of only setting the
+        // literal name -- any code path that rebuilds a group's DOM
+        // after its first creation used to silently lose the rename
+        // until the next full applyDevTextOverrides() sweep.
+        const sectionKey = (tab || 'desktop') + ':' + name;
+        devTextOriginalFor(sectionKey, name);
+        title.textContent = '▼ ' + (devTextOverrides[sectionKey] != null ? devTextOverrides[sectionKey] : name);
         title.appendChild(buildGroupCascadeCheckbox(section, (tab || 'desktop') === 'desktop' ? 'visibility' : 'independence'));
         const content = document.createElement('div');
         content.className = 'dev-section-content';
@@ -483,7 +505,7 @@
             e.stopPropagation();
             const reason = findDevDeleteProtectionReason(target);
             if (reason) {
-                console.warn('Delete: refused - ' + reason);
+                console.warn(ts() + ' Delete: refused - ' + reason);
                 disarmDevDeleteGroup();
                 return;
             }
@@ -540,6 +562,22 @@
     // pointerdown.
     let devUndoStack = [];
     let devUndoGestureActive = false;
+    // Extension point for state Undo can't see on its own (re-synced
+    // 2026-09-28 from the canonical template). This panel's own undo
+    // snapshot only ever captures captureFullDevPanelState() -- the dev
+    // panel's OWN controls. A project with host state living OUTSIDE
+    // those controls (e.g. a draggable 3D gizmo mutating a bone's
+    // rotation directly, never through a slider) sets these 2 (both
+    // optional, default no-op):
+    //   devUndoCaptureExtra = () => ({ ... });
+    //   devUndoApplyExtra = (extra) => { ... };
+    let devUndoCaptureExtra = null;
+    let devUndoApplyExtra = null;
+    // Save/Load's own equivalent of the pair directly above -- same
+    // reasoning, different pipeline, so host state outside the dev panel
+    // survives Save/reload too, not just Undo/Redo.
+    let devSaveCaptureExtra = null;
+    let devSaveApplyExtra = null;
     function pushDevPanelUndoSnapshot() {
         // Deep-cloned (JSON round-trip - every field captureFullDevPanelState()
         // returns is already plain JSON-safe data) - REQUIRED, not a
@@ -552,8 +590,13 @@
         // already on the stack silently changed underneath Undo the
         // moment ANY later edit touched the same underlying state
         // object, since they were never actually 2 separate objects to
-        // begin with.
-        devUndoStack.push({ kind: 'snapshot', data: JSON.parse(JSON.stringify(captureFullDevPanelState())) });
+        // begin with. Same reasoning applies to `extra` below.
+        const extra = devUndoCaptureExtra ? devUndoCaptureExtra() : undefined;
+        devUndoStack.push({
+            kind: 'snapshot',
+            data: JSON.parse(JSON.stringify(captureFullDevPanelState())),
+            extra: extra !== undefined ? JSON.parse(JSON.stringify(extra)) : undefined
+        });
     }
     // A SEPARATE undo-entry kind, specifically for deleting a group or
     // setting (called from setupDevDeleteGroup()'s own click handler) -
@@ -566,18 +609,44 @@
     // single setting row alike.
     function pushDevDeleteUndoEntry(node, parent, nextSibling) {
         devUndoStack.push({ kind: 'delete', node, parent, nextSibling });
+        devRedoStack = []; // a genuine new edit invalidates any pending redo history
     }
+    // Redo (re-synced 2026-09-28). A separate LIFO stack, populated only
+    // by undoDevPanelChange()/redoDevPanelChange() themselves (never by a
+    // real edit directly -- see setupDevPanelUndo()'s own pointerdown
+    // listener, which clears it instead).
+    let devRedoStack = [];
     function undoDevPanelChange() {
         if (!devUndoStack.length) return;
         const entry = devUndoStack.pop();
         if (entry.kind === 'delete') {
+            devRedoStack.push(entry); // redoing = deleting this same node again
             if (entry.nextSibling && entry.nextSibling.parentNode === entry.parent) {
                 entry.parent.insertBefore(entry.node, entry.nextSibling);
             } else {
                 entry.parent.appendChild(entry.node);
             }
         } else {
+            const extra = devUndoCaptureExtra ? devUndoCaptureExtra() : undefined;
+            devRedoStack.push({
+                kind: 'snapshot',
+                data: JSON.parse(JSON.stringify(captureFullDevPanelState())),
+                extra: extra !== undefined ? JSON.parse(JSON.stringify(extra)) : undefined
+            });
             applyFullDevPanelState(entry.data);
+            if (entry.extra !== undefined && devUndoApplyExtra) devUndoApplyExtra(entry.extra);
+        }
+    }
+    function redoDevPanelChange() {
+        if (!devRedoStack.length) return;
+        const entry = devRedoStack.pop();
+        if (entry.kind === 'delete') {
+            devUndoStack.push(entry); // undoing the redo = re-inserting it again
+            entry.node.remove();
+        } else {
+            pushDevPanelUndoSnapshot();
+            applyFullDevPanelState(entry.data);
+            if (entry.extra !== undefined && devUndoApplyExtra) devUndoApplyExtra(entry.extra);
         }
     }
     // How long a "gesture" is allowed to hold the undo-push gate open with
@@ -624,9 +693,14 @@
             // never showed up in testing despite extensive verification;
             // only a REAL mouse click (or a synthetic pointerdown+click
             // pair) exposes it.
-            if (e.target.closest('#devUndoBtn')) return;
+            // Redo button needs the exact same self-push guard as Undo,
+            // for the identical reason (it's also inside devPanel).
+            if (e.target.closest('#devUndoBtn') || e.target.closest('#devRedoBtn')) return;
             devUndoGestureActive = true;
             pushDevPanelUndoSnapshot();
+            // A genuine new edit invalidates any pending redo history —
+            // standard undo/redo semantics.
+            devRedoStack = [];
             // Belt-and-suspenders reset, on top of the real pointerup/
             // pointercancel/focus listeners below - if NONE of those ever
             // fire for some reason this hasn't been discovered yet, the
@@ -643,25 +717,31 @@
         window.addEventListener('focus', resetDevUndoGesture);
         const undoBtn = document.getElementById('devUndoBtn');
         if (undoBtn) undoBtn.addEventListener('click', undoDevPanelChange);
+        const redoBtn = document.getElementById('devRedoBtn');
+        if (redoBtn) redoBtn.addEventListener('click', redoDevPanelChange);
         // Ctrl+Z - standard undo shortcut, matching the D/R single-key
-        // shortcuts this panel already has (Hide/Reset). Ignored while
-        // focus is in a genuine text-input context (a rename textarea,
-        // the search box) so it doesn't fight the browser/OS's own native
-        // text-field undo.
+        // shortcuts this panel already has (Hide/Reset). Ctrl+Shift+Z and
+        // Ctrl+Y (the 2 most common cross-platform Redo shortcuts).
+        // Ignored while focus is in a genuine text-input context (a
+        // rename textarea, the search box) so it doesn't fight the
+        // browser/OS's own native text-field undo/redo.
         document.addEventListener('keydown', (e) => {
-            if (!(e.key === 'z' || e.key === 'Z') || !(e.ctrlKey || e.metaKey)) return;
+            if (!(e.key === 'z' || e.key === 'Z' || e.key === 'y' || e.key === 'Y') || !(e.ctrlKey || e.metaKey)) return;
             const tag = document.activeElement ? document.activeElement.tagName : '';
             if (tag === 'TEXTAREA' || (tag === 'INPUT' && document.activeElement.type === 'text')) return;
             e.preventDefault();
-            undoDevPanelChange();
+            const isRedo = (e.key === 'y' || e.key === 'Y') || ((e.key === 'z' || e.key === 'Z') && e.shiftKey);
+            if (isRedo) redoDevPanelChange(); else undoDevPanelChange();
         });
     }
-    // Clears the undo stack - called from saveDevPanelSettings() itself
-    // (per the request's own explicit "until i click save, then it starts
-    // new again"), so a Sync draws a hard line under everything before
-    // it; nothing before a Sync is ever undoable after it.
+    // Clears the undo AND redo stacks - called from saveDevPanelSettings()
+    // itself (per the request's own explicit "until i click save, then it
+    // starts new again"), so a Sync draws a hard line under everything
+    // before it; nothing before a Sync is ever undoable OR redoable after
+    // it.
     function clearDevPanelUndoStack() {
         devUndoStack = [];
+        devRedoStack = [];
     }
 
     // Ctrl+F-style search for group/setting names, ported from
@@ -1149,6 +1229,29 @@
             // called 2 deep" claim here was stale documentation, not an
             // actual limit in the code (`placeSection(sub, content)` below
             // recurses exactly as deep as the saved data goes).
+            // Bug fixed (re-synced 2026-09-28 from the canonical
+            // template): appendChild on an element ALREADY in the DOM
+            // moves it to the end of its parent -- it does not insert in
+            // place. Every item this function processes gets progressively
+            // moved to the end, in saved order, which correctly
+            // reconstructs that order AMONG THEM. But a row or subgroup
+            // added to the real content AFTER this order was last saved
+            // (a new dev-panel control shipped in a later update) has no
+            // entry in savedSec.items/rowKeys/subgroups at all, so this
+            // function never touches it -- it simply stays wherever it
+            // already was. Since new content is appended at the END by
+            // the normal build process, and everything ELSE then gets
+            // moved past it one at a time, the untouched new content ends
+            // up FIRST instead of last. Fixed by explicitly appending
+            // every current child NOT referenced by the saved order, in
+            // their existing relative order, once the saved items are
+            // done being placed -- new content now always lands at the
+            // end, where it belongs, regardless of when it was added.
+            function appendUntouchedChildren(container, touched) {
+                Array.from(container.children).forEach(child => {
+                    if (!touched.has(child)) container.appendChild(child);
+                });
+            }
             function placeSection(savedSec, parentContainer) {
                 let sec = sectionsByKey[savedSec.key];
                 if (!sec) {
@@ -1161,6 +1264,7 @@
                 }
                 parentContainer.appendChild(sec);
                 const content = sec.querySelector(':scope > .dev-section-content');
+                const touched = new Set();
                 // Interleaved order (savedSec.items, see captureSection()'s
                 // own comment) - falls back to the OLD "all rows, then all
                 // subgroups" shape for a save made before this change, so
@@ -1171,20 +1275,33 @@
                     savedSec.items.forEach(item => {
                         if (item.type === 'row') {
                             const row = rowsByKey[item.key];
-                            if (row) content.appendChild(row);
+                            if (row) { content.appendChild(row); touched.add(row); }
                         } else {
                             placeSection(item.section, content);
+                            const sub = sectionsByKey[item.section.key];
+                            if (sub) touched.add(sub);
                         }
                     });
                 } else {
                     (savedSec.rowKeys || []).forEach(rowKey => {
                         const row = rowsByKey[rowKey];
-                        if (row) content.appendChild(row);
+                        if (row) { content.appendChild(row); touched.add(row); }
                     });
-                    (savedSec.subgroups || []).forEach(sub => placeSection(sub, content));
+                    (savedSec.subgroups || []).forEach(sub => {
+                        placeSection(sub, content);
+                        const subEl = sectionsByKey[sub.key];
+                        if (subEl) touched.add(subEl);
+                    });
                 }
+                appendUntouchedChildren(content, touched);
             }
-            savedSections.forEach(savedSec => placeSection(savedSec, tabEl));
+            const touchedTopLevel = new Set();
+            savedSections.forEach(savedSec => {
+                placeSection(savedSec, tabEl);
+                const sec = sectionsByKey[savedSec.key];
+                if (sec) touchedTopLevel.add(sec);
+            });
+            appendUntouchedChildren(tabEl, touchedTopLevel);
         });
     }
 
@@ -1699,7 +1816,14 @@
     // locked - satisfies both halves of the request at once, since a drag
     // that never starts can neither reorder in place nor be dropped into a
     // different group. Also refuses delete (findDevDeleteProtectionReason()).
-    let lockedGroups = new Set();
+    // Dev Panel and Debug start locked by default on every tab
+    // (re-synced 2026-09-28) -- these 2 are the template's own mandatory
+    // built-in groups, so locking them out of the box protects them from
+    // an accidental drag/delete; a project can still unlock either via
+    // its own lock icon.
+    let lockedGroups = new Set(
+        DEV_PANEL_TABS.flatMap(tab => [tab + ':Dev Panel', tab + ':Debug'])
+    );
     // { [cascadeKind + '|' + sectionKey]: { [rowId]: boolean } } — see
     // buildGroupCascadeCheckbox()'s own change handler above for the full
     // account. Runtime-only, never persisted.
@@ -2324,11 +2448,11 @@
     function findGroupContent(tabId, groupSid, callerName, ctrlId) {
         const matches = document.querySelectorAll('#' + tabId + 'TabContent > .dev-section > .dev-section-title[data-sid="' + groupSid.replace(/"/g, '\\"') + '"]');
         if (matches.length === 0) {
-            console.warn(callerName + ': group not found', groupSid, ctrlId);
+            console.warn(ts() + ' ' + callerName + ': group not found', groupSid, ctrlId);
             return null;
         }
         if (matches.length > 1) {
-            console.warn(callerName + ': ' + matches.length + ' groups share this data-sid (using the first) - a rename/duplication collision', groupSid, ctrlId);
+            console.warn(ts() + ' ' + callerName + ': ' + matches.length + ' groups share this data-sid (using the first) - a rename/duplication collision', groupSid, ctrlId);
         }
         return matches[0].nextElementSibling;
     }
@@ -2341,6 +2465,16 @@
         label.className = 'dev-label';
         label.textContent = ctrl.label;
         row.appendChild(label);
+        // Editable min/max bound labels at each end of the track
+        // (re-synced 2026-09-28) — same click-to-type interaction as the
+        // value readout below (makeDevSliderBoundsEditable()), but
+        // targets the slider's own min/max instead of its current value.
+        const minLabel = document.createElement('span');
+        minLabel.className = 'dev-slider-bound dev-slider-bound-editable';
+        minLabel.dataset.sliderId = ctrl.id;
+        minLabel.dataset.bound = 'min';
+        minLabel.textContent = ctrl.min;
+        row.appendChild(minLabel);
         const input = document.createElement('input');
         input.type = 'range';
         input.className = 'dev-slider';
@@ -2350,6 +2484,12 @@
         input.step = ctrl.step;
         input.value = ctrl.value;
         row.appendChild(input);
+        const maxLabel = document.createElement('span');
+        maxLabel.className = 'dev-slider-bound dev-slider-bound-editable';
+        maxLabel.dataset.sliderId = ctrl.id;
+        maxLabel.dataset.bound = 'max';
+        maxLabel.textContent = ctrl.max;
+        row.appendChild(maxLabel);
         const value = document.createElement('span');
         // CORRECTED 2026-09-27 -- re-synced from the canonical
         // .claude/TEMPLATE_DEV_PANEL.html (this project's own copy had
@@ -2464,7 +2604,7 @@
     function buildUniformControlRow(ctrl) {
         const builder = UNIFORM_ROW_BUILDERS[ctrl.type];
         if (!builder) {
-            console.error('buildUniformControlRow: unknown control type', ctrl.type, ctrl.id);
+            console.error(ts() + ' buildUniformControlRow: unknown control type', ctrl.type, ctrl.id);
             const row = document.createElement('div');
             row.className = 'dev-row';
             return row;
@@ -2578,12 +2718,12 @@
             array.forEach(ctrl => {
                 const result = devControlIdValidator(ctrl);
                 if (result !== true) {
-                    console.error('validateDevControlMappings: ' + (typeof result === 'string' ? result : 'unmapped id'), name, ctrl.id);
+                    console.error(ts() + ' validateDevControlMappings: ' + (typeof result === 'string' ? result : 'unmapped id'), name, ctrl.id);
                     badCount++;
                 }
             });
         });
-        if (badCount > 0) console.error('validateDevControlMappings: ' + badCount + ' control(s) failed validation - see errors above.');
+        if (badCount > 0) console.error(ts() + ' validateDevControlMappings: ' + badCount + ' control(s) failed validation - see errors above.');
         return badCount;
     }
 
@@ -2599,7 +2739,7 @@
             array.forEach(ctrl => { if (!document.getElementById(ctrl.id)) missing++; });
         });
         if (missing > 0) {
-            console.error('assertDevControlsRendered: ' + missing + ' generated control(s) missing from the DOM at setup time - a render call may be missing, misordered, or its group lookup failed (see findGroupContent warnings above).');
+            console.error(ts() + ' assertDevControlsRendered: ' + missing + ' generated control(s) missing from the DOM at setup time - a render call may be missing, misordered, or its group lookup failed (see findGroupContent warnings above).');
         }
         return missing;
     }
@@ -2927,8 +3067,16 @@
                 let val = parseFloat(input.value);
                 if (isNaN(val)) val = parseFloat(slider.value);
                 const min = parseFloat(slider.min), max = parseFloat(slider.max);
-                if (val > max) slider.max = String(val + Math.abs(val) * 0.2);
-                if (val < min) slider.min = String(val - Math.abs(val) * 0.2);
+                if (val > max) {
+                    slider.max = String(val + Math.abs(val) * 0.2);
+                    const maxLabelEl = document.querySelector('.dev-slider-bound-editable[data-slider-id="' + slider.id + '"][data-bound="max"]');
+                    if (maxLabelEl) maxLabelEl.textContent = slider.max;
+                }
+                if (val < min) {
+                    slider.min = String(val - Math.abs(val) * 0.2);
+                    const minLabelEl = document.querySelector('.dev-slider-bound-editable[data-slider-id="' + slider.id + '"][data-bound="min"]');
+                    if (minLabelEl) minLabelEl.textContent = slider.min;
+                }
                 slider.value = val;
                 // Remove the temporary <input> BEFORE dispatching -
                 // otherwise the value-readout update your own 'input'
@@ -2941,6 +3089,60 @@
                 if (settled) return;
                 settled = true;
                 valueEl.textContent = originalText;
+            }
+            input.addEventListener('blur', commit);
+            input.addEventListener('keydown', (ev) => {
+                if (ev.key === 'Enter') input.blur();
+                else if (ev.key === 'Escape') cancel();
+            });
+            input.addEventListener('click', (ev) => ev.stopPropagation());
+        });
+    }
+    // Click-to-type a slider's own MIN or MAX bound (as opposed to its
+    // current value, above) — the 2 small labels at each end of the
+    // track (re-synced 2026-09-28). Parallel structure to
+    // makeDevValuesEditable() but keyed by data-slider-id/data-bound
+    // rather than an id-prefix swap, since a bound label isn't itself
+    // "the value" of anything with its own id.
+    function makeDevSliderBoundsEditable() {
+        document.addEventListener('click', (e) => {
+            const boundEl = e.target.closest('.dev-slider-bound-editable');
+            if (!boundEl || boundEl.querySelector('input')) return;
+            const slider = document.getElementById(boundEl.dataset.sliderId);
+            if (!slider) return;
+            const kind = boundEl.dataset.bound;
+            const originalText = boundEl.textContent;
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.className = 'dev-value-edit-input';
+            input.step = slider.step || 'any';
+            input.value = kind === 'min' ? slider.min : slider.max;
+            boundEl.textContent = '';
+            boundEl.appendChild(input);
+            input.focus();
+            input.select();
+
+            let settled = false;
+            function commit() {
+                if (settled) return;
+                settled = true;
+                let val = parseFloat(input.value);
+                if (isNaN(val)) val = parseFloat(kind === 'min' ? slider.min : slider.max);
+                if (kind === 'min') slider.min = String(val); else slider.max = String(val);
+                // Clamp the current value into the new range, same as a
+                // direct value-edit's own overshoot handling.
+                const curVal = parseFloat(slider.value);
+                const newMin = parseFloat(slider.min), newMax = parseFloat(slider.max);
+                if (curVal < newMin) slider.value = slider.min;
+                if (curVal > newMax) slider.value = slider.max;
+                input.remove();
+                boundEl.textContent = val;
+                slider.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            function cancel() {
+                if (settled) return;
+                settled = true;
+                boundEl.textContent = originalText;
             }
             input.addEventListener('blur', commit);
             input.addEventListener('keydown', (ev) => {
@@ -3289,6 +3491,7 @@
         // tied to the real device viewport - re-apply whichever tab's
         // own saved look now that it's the one showing.
         applyDevPanelOwnStyling(tab);
+        devOnTabChanged(tab); // host extension point -- see its own declaration comment
     }
 
     // ================================================================
@@ -3338,6 +3541,15 @@
         buttonFontSize: 10,
         titleBold: true, tabBold: true, buttonBold: true, settingsBold: false, groupBold: true, titleCapitalize: false,
         groupTextColor: '#ffffff', buttonTextColor: '#ffffff', settingNumberColor: '#5cc9ff', tabTextColor: '#ffffff',
+        // Re-synced 2026-09-28: 3 new independently-tunable colors,
+        // decoupled from the general Accent Color -- accentColor2 is the
+        // Dev Panel Label's (outer panel header bar's) own background,
+        // previously just inheriting through from the panel body's own
+        // Background Color; buttonColor decouples every button's
+        // background from Accent Color; accentColor3 decouples checkbox
+        // accent-color (and the group undock arrow's own color) from
+        // Accent Color too.
+        accentColor2: '#26253a', buttonColor: '#3a3a4a', accentColor3: '#7ec8e3',
     };
     const mobileDevPanelStyle = { ...devPanelStyle };
     const landscapeDevPanelStyle = { ...devPanelStyle };
@@ -3358,6 +3570,7 @@
         buttonFontSize: '--dev-button-text-font-size-px',
         groupTextColor: '--dev-panel-group-text-color', buttonTextColor: '--dev-panel-button-text-color',
         settingNumberColor: '--dev-value-text-color', tabTextColor: '--dev-tab-text-color',
+        accentColor2: '--dev-accent-color-2', buttonColor: '--dev-button-color', accentColor3: '--dev-accent-color-3',
     };
     // Opacity/colors/font/caps toggles are desktop-only by default
     // (always resolve from devPanelStyle regardless of active tab) -
@@ -3372,7 +3585,7 @@
     // bucket as every other color here) and titleBold/tabBold/buttonBold/
     // settingsBold/groupBold/titleCapitalize (booleans - same bucket as the
     // 4 existing caps toggles). Matches Clicko's own current Dev Panel group.
-    const DEV_PANEL_STYLE_SHARED_KEYS = ['opacity', 'bgColor', 'titleTextColor', 'nonTitleTextColor', 'accentColor', 'sliderColor', 'fontFamily', 'capsButtonText', 'capsTabText', 'capsGroupNames', 'capsSettingsText', 'buttonTextLetterSpacing', 'tabTextLetterSpacing', 'groupTextLetterSpacing', 'settingsTextLetterSpacing', 'groupLabelBgColor', 'groupTextColor', 'buttonTextColor', 'settingNumberColor', 'tabTextColor', 'titleBold', 'tabBold', 'buttonBold', 'settingsBold', 'groupBold', 'titleCapitalize'];
+    const DEV_PANEL_STYLE_SHARED_KEYS = ['opacity', 'bgColor', 'titleTextColor', 'nonTitleTextColor', 'accentColor', 'sliderColor', 'fontFamily', 'capsButtonText', 'capsTabText', 'capsGroupNames', 'capsSettingsText', 'buttonTextLetterSpacing', 'tabTextLetterSpacing', 'groupTextLetterSpacing', 'settingsTextLetterSpacing', 'groupLabelBgColor', 'groupTextColor', 'buttonTextColor', 'settingNumberColor', 'tabTextColor', 'titleBold', 'tabBold', 'buttonBold', 'settingsBold', 'groupBold', 'titleCapitalize', 'accentColor2', 'buttonColor', 'accentColor3'];
     const DEV_PANEL_CAPS_CLASS_MAP = {
         capsButtonText: 'dev-caps-button-text', capsTabText: 'dev-caps-tab-text',
         capsGroupNames: 'dev-caps-group-names', capsSettingsText: 'dev-caps-settings-text',
@@ -3418,6 +3631,9 @@
                 { tab, group: 'Dev Panel', id: 'colorDevPanelTitleText', type: 'color', label: 'Title Text Color:', value: '#ffffff' },
                 { tab, group: 'Dev Panel', id: 'colorDevPanelNonTitleText', type: 'color', label: 'Settings Title Text Color:', value: '#ffffff' },
                 { tab, group: 'Dev Panel', id: 'colorDevPanelAccent', type: 'color', label: 'Accent Color (Buttons/UI):', value: '#005f8f' },
+                { tab, group: 'Dev Panel', id: 'colorDevPanelAccent2', type: 'color', label: 'Accent Color #2 (Dev Panel Label):', value: '#26253a' },
+                { tab, group: 'Dev Panel', id: 'colorDevPanelAccent3', type: 'color', label: 'Accent Color #3 (Checkboxes):', value: '#7ec8e3' },
+                { tab, group: 'Dev Panel', id: 'colorDevPanelButtonColor', type: 'color', label: 'Button Color:', value: '#3a3a4a' },
                 { tab, group: 'Dev Panel', id: 'colorDevPanelSliderColor', type: 'color', label: 'Slider Color:', value: '#ffffff' },
                 { tab, group: 'Dev Panel', id: 'colorDevPanelGroupLabelBg', type: 'color', label: 'Group Label Background Color:', value: '#005f8f' },
                 { tab, group: 'Dev Panel', id: 'selectDevPanelFontFamily', type: 'select', label: 'Font (All Text):', options: [
@@ -3501,6 +3717,7 @@
         ['accentColor', 'colorDevPanelAccent'], ['sliderColor', 'colorDevPanelSliderColor'], ['groupLabelBgColor', 'colorDevPanelGroupLabelBg'],
         ['groupTextColor', 'colorDevPanelGroupText'], ['buttonTextColor', 'colorDevPanelButtonText'],
         ['settingNumberColor', 'colorDevPanelSettingNumber'], ['tabTextColor', 'colorDevPanelTabText'],
+        ['accentColor2', 'colorDevPanelAccent2'], ['buttonColor', 'colorDevPanelButtonColor'], ['accentColor3', 'colorDevPanelAccent3'],
     ];
     // Restores every Dev-Panel-style control's own DOM state (slider
     // handle position + its .dev-value readout, color picker swatch,
@@ -3606,7 +3823,7 @@
         }
         const p = tab === 'desktop' ? 'sliderDevPanel' : tab === 'mobile' ? 'sliderMobileDevPanel' : 'sliderLandscapeDevPanel';
         makeGroup('MECHANICS', [p + 'ScrollStrength'], content);
-        makeGroup('PANEL UI', ['colorDevPanelBg', 'colorDevPanelAccent', 'colorDevPanelSliderColor', p + 'Opacity'], content);
+        makeGroup('PANEL UI', ['colorDevPanelBg', 'colorDevPanelAccent', 'colorDevPanelAccent2', 'colorDevPanelAccent3', 'colorDevPanelButtonColor', 'colorDevPanelSliderColor', p + 'Opacity'], content);
         const text = makeGroup('TEXT', ['selectDevPanelFontFamily'], content);
         const textContent = text.querySelector(':scope > .dev-section-content');
         makeGroup('Dev Panel Title', ['checkboxDevBoldTitle', 'checkboxDevCapsTitleText', p + 'TitleFontSize', p + 'TitleLetterSpacing', p + 'TitleLineHeight', p + 'ButtonTextBorder', 'colorDevPanelTitleText'], textContent);
@@ -3815,7 +4032,17 @@
     function saveDevPanelSettings() {
         const status = document.getElementById('devSaveSyncStatus');
         try {
-            localStorage.setItem(DEV_PANEL_LOCALSTORAGE_KEY, JSON.stringify(captureFullDevPanelState()));
+            const payload = captureFullDevPanelState();
+            // Folds in any host state OUTSIDE the dev panel's own
+            // registered controls (devSaveCaptureExtra, above) so Save
+            // captures it too, not just Undo/Redo.
+            if (devSaveCaptureExtra) payload.extra = devSaveCaptureExtra();
+            localStorage.setItem(DEV_PANEL_LOCALSTORAGE_KEY, JSON.stringify(payload));
+            // Re-synced 2026-09-28: this function was always meant to draw
+            // a hard undo/redo line at every Save, but nothing ever
+            // actually called clearDevPanelUndoStack() -- Save was, in
+            // practice, fully undoable the whole time.
+            clearDevPanelUndoStack();
             if (status) { status.textContent = 'saved'; setTimeout(() => { status.textContent = ''; }, 1500); }
             flashDevHeaderSyncStatus(true, 'Saved!');
         } catch (e) {
@@ -3831,8 +4058,15 @@
             return null;
         }
     }
+    // Single shared restore path for both the Reset button and the
+    // boot-time load below -- applies the panel's own state, then the
+    // host's own extra state (devSaveApplyExtra) if any was saved.
+    function applyDevPanelStateWithExtra(data) {
+        applyFullDevPanelState(data);
+        if (data && data.extra !== undefined && devSaveApplyExtra) devSaveApplyExtra(data.extra);
+    }
     function resetDevPanelSettings() {
-        applyFullDevPanelState(loadDevPanelSettings());
+        applyDevPanelStateWithExtra(loadDevPanelSettings());
     }
 
     // ================================================================
@@ -4427,6 +4661,7 @@
 
         setupDevPanelStyleControls();
         makeDevValuesEditable();
+        makeDevSliderBoundsEditable();
         setupDevPanelTextEdit();
         assertDevControlsRendered();
         validateDevControlMappings();
@@ -4533,7 +4768,7 @@
         syncSlidersFromState();
         syncColorPickersFromState();
 
-        applyFullDevPanelState(loadDevPanelSettings());
+        applyDevPanelStateWithExtra(loadDevPanelSettings());
 
         // Set LAST, not first - see this section's own top comment
         // (sharp edge #2) for why.

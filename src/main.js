@@ -11,6 +11,9 @@ import { LineGeometry } from 'three/addons/lines/LineGeometry.js'
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js'
 import { detectDeviceInfo } from './deviceInfo.js'
 
+// Timestamp helper for debug logs
+function ts() { return '[' + new Date().toISOString() + ']' }
+
 // Dev panel schema-version guard — runs synchronously, before devPanel.js
 // (main.js loads first, see index.html's own script-order comment) ever
 // reads its own localStorage. Bump HANDYSET_SETTINGS_SCHEMA_VERSION any
@@ -1905,7 +1908,7 @@ function loadPhoneModel(relativePath) {
     phoneModelRaw = gltf.scene
     phoneModelWrapper.add(phoneModelRaw)
     applyPhoneModelTransform()
-  }, undefined, (err) => { console.error('Phone model failed to load:', relativePath, err) })
+  }, undefined, (err) => { console.error(ts() + ' Phone model failed to load:', relativePath, err) })
 }
 function removePhoneModel() {
   phoneModelLoadToken++ // invalidate any in-flight load
@@ -2388,7 +2391,7 @@ new GLTFLoader().load(MODEL_URL, async (gltf) => {
   initMotionInput()
   animate()
 }, undefined, (err) => {
-  console.error('Failed to load hand model', err)
+  console.error(ts() + ' Failed to load hand model', err)
   loadingEl.textContent = 'Failed to load hand model — see console.'
 })
 
@@ -4402,7 +4405,7 @@ function wireRemoteSaveButtons() {
       remoteSaveCurrentSettings()
         .then(() => setSyncStatusText('synced to GitHub'))
         .catch((err) => {
-          console.error('Remote save failed', err)
+          console.error(ts() + ' Remote save failed', err)
           setSyncStatusText('GitHub save failed — ' + err.message)
         })
       setTimeout(() => setSyncStatusText(''), 3000)
@@ -4494,9 +4497,9 @@ async function loadRemoteSettingsOnStartup() {
     if (typeof window.ensureDevPanelBuilt === 'function') window.ensureDevPanelBuilt()
     apply(data.settings)
   } catch (err) {
-    console.warn('Remote dev panel settings unavailable (expected on a plain static server, e.g. local dev):', err.message)
+    console.warn(ts() + ' Remote dev panel settings unavailable (expected on a plain static server, e.g. local dev):', err.message)
   }
 }
 
-waitForDevPanelGlobal('saveDevPanelSettings').then(wireRemoteSaveButtons).catch((err) => console.warn(err.message))
+waitForDevPanelGlobal('saveDevPanelSettings').then(wireRemoteSaveButtons).catch((err) => console.warn(ts() + ' ' + err.message))
 loadRemoteSettingsOnStartup()
