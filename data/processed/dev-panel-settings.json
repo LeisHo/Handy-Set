@@ -4993,7 +4993,7 @@
     "desktop:Tween": true,
     "desktop:Saved Tween Sequences": true,
     "desktop:Field Layout": true,
-    "desktop:Phone Tilt": false,
+    "desktop:Phone Tilt": true,
     "desktop:Target": true,
     "desktop:Responsive Arm Rotation at Base": true,
     "desktop:Responsive Pose Tween": true,
