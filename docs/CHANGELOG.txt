@@ -3780,6 +3780,106 @@ live testing.
 `index.html`'s cache-buster bumped `?v=114` -> `?v=115`.
 
 --------------------------------------------------------------------------------
+2026-09-28  -  (32nd)
+
+Direct report after real device testing (phone lying flat/stationary,
+tested single taps, double taps, then physical tilts left/right/up/
+down): "No good... single tap causes changes in the phone which
+shouldnt be happening... double tap or tap orients the phone
+differently each time... rarely the orientation i want." Pasted a
+Phone Model Log + Sensor Log capture from the actual test.
+
+Cross-referenced the 2 logs by timestamp (same technique as the 30th
+entry): the Sensor Log's `Orient β/γ` held flat (~0.5°/-1.0°) for the
+ENTIRE 20+ second stationary test, yet the Phone Model Log showed the
+rotation swinging between values as large as +-57° with no correlation
+to any tap or real input. Checked the live git-tracked settings
+directly rather than guessing: `textPhoneResponsiveRotationRange` had
+drifted to `{"min":-57,"max":45}` (not this project's own `{0,30}`
+default) and `sliderPhoneRotationDamping` was `1` (instant -- the
+28th/29th entries' smoothing fix had zero live effect). Root cause of
+the swinging: `magnitude = min + (max-min)*curveY` means a NEGATIVE min
+produces a nonzero magnitude even at curveY=0 (near-zero tilt) --
+multiplied by `Math.sign(rawComponent)`, which flips unpredictably
+between +1/-1 from ordinary real sensor noise on a value that should be
+~0. This had nothing to do with tapping -- the model was jittering the
+whole time and the taps just coincided with what the user was watching.
+Direct follow-up confirmed setting the range to "unlimited" would make
+this WORSE (a wider range doesn't remove a negative min's nonzero
+baseline), and revealed the range was never meant to affect mobile at
+all: "i had it since on desktop, the phone model rotation was
+determined by distance of the cursor... in a no cursor scenario i have
+no use for it."
+
+Also flagged 2 more issues from the same test: (1) "when i rotate past
+180 degrees, i dont want it to suddenly flip to -180" and "there
+shouldnt be any rotational thresholds on mobile"; (2) after checking
+the real Blender model's own local axes directly ("+y is the top of
+the phone... +x is right... Z axis [is] perpendicular to the true phone
+screen"), the left/right<->axis mapping from the 29th entry was WRONG:
+gamma should drive Y, not Z (compass moves to Z instead).
+
+Fixed all of it as one redesign, verified via 2 standalone numeric
+scripts before shipping (no live device access from this sandbox):
+
+1. Added a small deadzone (`PHONE_RESPONSIVE_DEADZONE = 0.02`) to
+   `computePhoneResponsiveAxisDeg()` -- any sufficiently small
+   `rawComponent` now returns exactly 0 regardless of what min/max a
+   user sets, closing this bug class permanently rather than just
+   fixing today's specific bad value.
+2. Split Phone Model rotation into 2 genuinely different pipelines by
+   input source. MOBILE (`lastInputSource === 'device'`): direct,
+   UNWRAPPED, unthresholded passthrough of real beta/gamma/alpha
+   delta-from-baseline -- no curve, no range, no deadzone, no clamp.
+   New `phoneUnwrappedBeta/Gamma/Alpha` state (separate from the shared
+   `tiltMagnitude`/`tiltAngle` pipeline other features still use)
+   accumulates the SHORTEST delta between consecutive raw readings onto
+   a running total that can exceed +-180/+-360 arbitrarily, so a
+   continuous real rotation past the wrap boundary produces continuous
+   output with no snap -- verified with a synthetic reading sequence
+   (170->175->179->-179->-175->-170->-160) climbing smoothly through
+   180 to 200 instead of snapping. DESKTOP: unchanged cursor-distance-
+   driven curve/range/fineTune/deadzone system, confirmed as the right
+   scope by the user's own "no cursor scenario" statement above.
+3. Replaced a sequential Euler X-then-Y-then-Z composition with a
+   single combined axis-angle rotation for X/Y (Z composed separately
+   on top) -- a sequential Euler composition rotates around the Y axis
+   AFTER it's already been tilted by the X rotation, introducing real,
+   visible cross-axis distortion for any compound tilt (roughly the
+   product of the 2 angles in radians -- ~16deg at two simultaneous
+   30deg tilts). The combined approach (axis = normalize(xDeg,yDeg,0),
+   angle = hypot(xDeg,yDeg)) reduces to an exact pure-X or pure-Y
+   rotation in each single-axis case and works for unbounded magnitudes
+   (needed since mobile no longer clamps) -- verified via a standalone
+   script rotating world +Y/+Z test vectors through pure-X, pure-Y,
+   compound, and a large (120deg) unbounded case, confirming zero
+   leakage into the wrong axis in every case.
+4. Remapped the axis assignment: X <- beta (unchanged), Y <- gamma
+   (inverted, moved from Z), Z <- compass (moved from Y).
+5. `resetPhoneModelRotationBaseline()` updated to match: baselines
+   `phoneBeta/Gamma/AlphaBaseline` (mobile, against the new unwrapped
+   values) or `phoneNx/NyBaseline` (desktop, raw pre-clamp domain,
+   unchanged reasoning from the 31st entry) depending on the active
+   input source.
+
+Settings-file surgery: reset the live, drifted
+`textPhoneResponsiveRotationRange` from `{"min":-57,"max":45}` back to
+`{"min":0,"max":30}` -- explicit permission given ("you can set my min
+max to whatever you want"). Verified via a scoped `git diff` showing
+exactly the 1 line changed. `sliderPhoneRotationDamping` (currently `1`,
+instant) was left untouched -- not reported as a problem, and no longer
+relevant to the mobile bug now that mobile bypasses the whole
+curve/range/damping-adjacent pipeline this round didn't touch damping
+itself.
+
+Not independently browser/device-verified this round (same standing
+instruction) -- every fix in this entry was verified via a standalone
+numeric script with synthetic inputs, cross-checked against the user's
+own real device log data, not a live test.
+
+`index.html`'s cache-buster bumped `?v=115` -> `?v=116`.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

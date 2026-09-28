@@ -1964,3 +1964,95 @@ wiring, and are still open:
   matching the phone's real orientation, not clearing a separate
   manual offset the user set intentionally), not an oversight — don't
   "fix" this without being asked.
+- **Phone Model Responsive Rotation is 2 GENUINELY DIFFERENT pipelines
+  by input source, not one shared formula — a real regression found via
+  real device testing 2026-09-28, corrected the same day.** Mobile
+  (`lastInputSource === 'device'`) is a direct, UNWRAPPED, unthresholded
+  passthrough of real beta/gamma/alpha delta-from-baseline — NO curve,
+  NO range, NO deadzone, NO clamp (direct request: "there shouldnt be
+  any rotational thresholds on mobile"). Desktop (mouse) is unchanged:
+  cursor-DISTANCE-driven, through `computePhoneResponsiveAxisDeg()`'s
+  curve/range/fineTune system (direct confirmation: "on desktop, phone
+  model rotation was determined by distance of the cursor... in a no
+  cursor scenario i have no use for it"). **If a future change touches
+  this feature, check `computePhoneCombinedQuat()`'s own `if
+  (lastInputSource === 'device' && latestOrientation)` branch before
+  assuming a single formula drives both — applying the curve/range
+  system to mobile (or vice versa) is exactly the mistake that shipped
+  once already.**
+- **`computePhoneResponsiveAxisDeg()` has a mandatory deadzone
+  (`PHONE_RESPONSIVE_DEADZONE = 0.02`) — do not remove it, even though
+  mobile no longer calls this function at all.** Found from a REAL live
+  bug: the synced "Min/Max Rotation" range drifted to
+  `{min:-57,max:45}` — since `magnitude = min + (max-min)*curveY`, a
+  NEGATIVE min means even near-zero input computes a large nonzero
+  magnitude, multiplied by `Math.sign(rawComponent)` which flips
+  unpredictably from ordinary sensor/cursor noise on a value that
+  should read as ~0. Confirmed directly from a real device log: `Orient
+  β/γ` held flat for 20+ seconds while logged rotation swung between
+  +-57°, with zero correlation to any real input or user action (taps
+  the user made were coincidental, not causal). The deadzone makes this
+  bug class impossible regardless of what min/max is ever set to again
+  — this is now the ONLY thing still protecting desktop's own
+  cursor-distance path from the identical failure mode, since desktop
+  still goes through this exact function.
+- **Phone Model's axis mapping was corrected AGAIN 2026-09-28 (see the
+  29th CHANGELOG entry for the version this supersedes) after directly
+  checking the real Blender model's own local axes** ("+y is the top of
+  the phone, direction of the camera... +x is right... Z axis [is]
+  perpendicular to the true phone screen"): **X <- beta (up/down,
+  unchanged), Y <- gamma (left/right, MOVED from Z), Z <- compass
+  (MOVED from Y).** If this ever needs re-deriving, check the real
+  Blender/GLB model's own axis convention directly (as was done here)
+  rather than guessing from a verbal description alone — the previous,
+  now-wrong mapping was based on a verbal spec that turned out not to
+  match the actual model.
+- **X/Y are combined into ONE axis-angle rotation, never composed as
+  sequential Euler rotations, and this applies identically to BOTH the
+  mobile and desktop pipelines above (only Z composes separately, on
+  top).** A sequential Euler X-then-Y rotates the Y axis AFTER it's
+  already tilted by the X rotation, not around the original rest-frame
+  Y — for a compound tilt (e.g. up+left together) this produces real,
+  visible cross-axis distortion (roughly the product of the 2 angles in
+  radians — ~16° of error at two simultaneous 30° tilts, not
+  negligible), which is likely a real part of why "the orientation is
+  rarely what I want" even when each individual axis's sign/mapping is
+  correct. The fix: build ONE rotation with `axis =
+  normalize(xDeg, yDeg, 0)`, `angle = hypot(xDeg, yDeg)` (always
+  non-negative — direction lives in the axis vector, not in
+  `Math.sign()` of the angle). Verified algebraically and via a
+  standalone script (rotating world test vectors through pure-X,
+  pure-Y, a compound case, and a large 120° unbounded case) that this
+  reduces to an EXACT pure single-axis rotation whenever only one of
+  xDeg/yDeg is nonzero, with zero leakage into the other axis — this is
+  what makes it safe to reuse for mobile's now-unbounded (uncurved,
+  unclamped) degree values too, not just desktop's curve-bounded ones.
+  **If a FUTURE feature in this file needs to combine 2 independent
+  tilt/rotation axes, use this exact pattern, not a `THREE.Euler(x, y,
+  z, 'XYZ')` construction** — the Euler constructor is fine for a
+  single already-combined rotation or for axes that are never expected
+  to be simultaneously large, but wrong for 2 independently-specified
+  tilt axes meant to feel independent.
+- **Real device orientation angles (beta/gamma/alpha) need UNWRAPPING
+  for any feature that wants continuous rotation without a snap at the
+  wrap boundary.** `deviceorientation`'s beta (-180..180), gamma
+  (-90..90), and alpha (0..360) each wrap: a continuous physical
+  rotation crossing the boundary produces an instantaneous jump in the
+  RAW reading alone, even though the real motion was smooth (direct
+  report: "when i rotate past 180 degrees, i dont want it to suddenly
+  flip to -180"). `phoneUnwrappedBeta/Gamma/Alpha` (paired with
+  `phoneLastRawBeta/Gamma/Alpha`) solve this by accumulating the
+  SHORTEST delta between consecutive raw readings
+  (`unwrapDelta360(raw, lastRaw)`) onto a running total that can exceed
+  +-180/+-360 arbitrarily — verified with a synthetic sequence
+  (170->175->179->-179->...->-160) climbing smoothly through 180 to 200
+  instead of snapping back to -179. **This state is deliberately
+  SEPARATE from the shared `tiltMagnitude`/`tiltAngle` pipeline** other
+  features (Palm Rotation, Reactive Arm Length, Responsive Wrist Splay,
+  Base Arm Rotation, Pose Tween) depend on — those still use the
+  original wrapped/clamped beta/gamma inside `handleDeviceOrientation()`
+  unchanged. If a FUTURE feature also wants unwrapped, unbounded
+  rotation tracking from device orientation, reuse this exact
+  unwrap-and-accumulate pattern rather than re-deriving it, and keep it
+  in its own separate state (don't retrofit the shared pipeline, which
+  several other features rely on staying wrapped/clamped exactly as-is).

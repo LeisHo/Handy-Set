@@ -7,21 +7,43 @@ append-only history.
 
 ## Currently working on
 
-Nothing in progress — Phone Model's new Rotation Reset feature
-(2026-09-28) is pushed, on top of the Phone Responsive Rotation
-curve-inversion fix (also 2026-09-28), the rotation-node/damping/log
-follow-up (also 2026-09-28), the dev panel template re-sync (also
-2026-09-28), and the 6-part Palm Rotation/Responsive-features request
-(2026-09-27). See Recently completed below for the full account. Not
-independently browser/device-verified this round (per standing
-instruction) — 2 real design flaws in this feature were instead caught
-by a standalone numeric script before it ever shipped; see that entry.
+Nothing in progress — Phone Model Responsive Rotation's mobile-vs-
+desktop redesign (2026-09-28, from real device testing) is pushed, on
+top of the Rotation Reset feature (also 2026-09-28), the curve-inversion
+fix (also 2026-09-28), the rotation-node/damping/log follow-up (also
+2026-09-28), the dev panel template re-sync (also 2026-09-28), and the
+6-part Palm Rotation/Responsive-features request (2026-09-27). See
+Recently completed below for the full account. **Still needs real
+device re-verification** — every fix this round was checked via
+standalone numeric scripts against the user's own pasted device log
+data, not a live test on the actual phone; the user's next real test is
+what will actually confirm this round worked.
 
 Pushed to `https://github.com/LeisHo/Handy-Set`
 (deployed via the Vercel project at `https://vercel.com/lpeis/handy-set`).
 
 ## Recently completed
 
+- **RESOLVED (2026-09-28): Phone Model rotation was genuinely broken on
+  a real device — random-looking swings at rest, distorted compound
+  tilts, and a wrong axis mapping — all traced to real causes via the
+  user's own device logs and fixed.** (1) The live "Min/Max Rotation"
+  range had drifted to a negative min (`{-57,45}`), which combined with
+  ordinary sensor noise near rest to make the rotation randomly flip
+  between large values with zero correlation to real input — fixed with
+  a permanent deadzone plus resetting the drifted value. (2) Compound
+  tilts (tilting 2 directions at once) were visibly distorted by
+  sequential Euler-angle composition — replaced with a single combined
+  axis-angle rotation, verified to reduce to an exact pure-axis result
+  in isolation with zero cross-talk. (3) The left/right axis was wrong
+  (Z instead of Y) — corrected after checking the real Blender model's
+  own axes directly. Mobile and desktop are now 2 deliberately different
+  pipelines: mobile directly mirrors the real device's own orientation
+  with no artificial range or threshold (and no snap when rotating past
+  180°, via a new angle-unwrapping mechanism); desktop keeps its
+  original cursor-distance-driven curve/range system. See
+  `docs/CHANGELOG.txt`'s matching 2026-09-28 (32nd) entry for the full
+  diagnosis and numeric verification.
 - **NEW (2026-09-28): Phone Model Rotation Reset.** A new "Rotation
   Reset On/Off" checkbox (Responsive Rotation) — when on, a double-tap
   (mobile) or double-click (desktop) anywhere on screen (excluding the
