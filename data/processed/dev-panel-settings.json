@@ -99,7 +99,7 @@
     "checkboxPhoneRotationResetEnabled": true,
     "checkboxPhoneAxisXEnabled": true,
     "sliderPhoneRotationScaleX": 1,
-    "checkboxPhoneAxisYEnabled": false,
+    "checkboxPhoneAxisYEnabled": true,
     "sliderPhoneRotationScaleY": 1,
     "checkboxPhoneAxisZEnabled": true,
     "sliderPhoneRotationScaleZ": 1,
