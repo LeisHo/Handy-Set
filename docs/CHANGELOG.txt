@@ -3568,6 +3568,84 @@ pushed under someone else's commit message, which is why it wasn't
 mentioned there.
 
 --------------------------------------------------------------------------------
+2026-09-28  -  (29th)
+
+3 direct follow-up reports on the previous entry's Phone Model rotation
+remap: (1) "the rotation motion is jittery and not smooth"; (2) "the
+rotation of the phone model doesnt match what i requested. It looks
+like its missing an axis of rotation"; (3) request to add a "Phone
+Model Log" Debug subgroup. Mid-diagnosis of (2), a 4th message
+resolved it directly: "when the phone model rotates as i tilt my
+phone, it's object axes (turned on in debug group) does no rotate with
+it... The entire model instance should be rotating, not ust the
+geoemtr."
+
+Root cause of (2) and the Object Axes report, confirmed by reading
+`ensureObjectAxesFor()`: it parents the axes gizmo group directly onto
+`entry.object3d` and relies on ordinary THREE.js parent-child
+inheritance to follow that object's transform -- for Phone Model,
+`entry.object3d` is `phoneModelWrapper` (see `registerSceneObject`),
+but `applyPhoneModelTransform()` was writing the rotation quaternion to
+`phoneModelRaw` (the CHILD), never touching the wrapper itself. The
+gizmo -- parented to the wrapper -- never rotated at all, even though
+the actual mesh (a grandchild of the wrapper) rotated correctly on all
+3 axes the whole time. This also explains report (2): the user was
+almost certainly reading the frozen gizmo as "the model isn't really
+rotating." Fixed by moving the quaternion write to
+`phoneModelWrapper.quaternion`. No visual regression to the mesh's own
+rotation or pivot: `phoneModelRaw.position` stays `(0,0,0)` relative to
+the wrapper, so rotating the parent around its own origin produces an
+identical world-space result to rotating the child did. Scale
+deliberately stays on `phoneModelRaw`, not the wrapper, so the gizmo's
+own line length doesn't grow/shrink with Phone Model Scale (same
+reasoning as Finger Gizmos not scaling with the hand).
+
+Fixed (1) by adding `cfg.phoneRotationDamping` (default `0.25`, same
+1=instant/lower=smoother semantic as the existing `cfg.trackingDamping`)
+and slerping `phoneModelWrapper.quaternion` toward the freshly computed
+target each frame instead of copying it directly -- real device
+beta/gamma/alpha readings carry natural high-frequency sensor noise;
+this damps it out at the rotation level. New "Rotation Damping
+(1=Instant)" slider added to the Responsive Rotation subgroup.
+
+Built (3): a new "Phone Model Log" subgroup in the Debug group, logging
+the phone model's `Pos x/y/z` (`phoneModelWrapper.position`) and
+`Rot x/y/z` (`phoneModelWrapper.quaternion` decomposed to Euler XYZ
+degrees) once per tick, with Copy/Save/Clear buttons matching the
+Sensors log's own pattern exactly. "Same rate as the sensor log" is
+satisfied by reading the same `cfg.sensorIntervalMs` and starting/
+stopping from the same `Stream Sensor Data` checkbox (`checkboxSensorStream`)
+-- implemented as its OWN timer (`restartPhoneModelLogTimer()`) rather
+than folding into `restartSensorTimer()`'s existing interval, because
+that function's own outer guard bails entirely on non-touch devices
+(correct for accel/gyro/compass, which genuinely don't exist on
+Desktop) -- but Phone Model position/rotation is an ordinary scene-
+object property, updated from mouse input on Desktop too via the same
+`computePhoneCombinedQuat()` pipeline, so gating it identically would
+have silently disabled the new log in this sandbox (no real device
+available here at all).
+
+Also discovered while implementing "include timestamps like the sensor
+log": the Sensors log did NOT actually have per-line timestamps despite
+the wording implying it already did -- the earlier "Add timestamps to
+all debug logs" commit (`f3efd23`) only prefixed `console.error()`/
+`console.warn()` calls (browser DevTools console), never the on-panel
+Sensors log itself. Added a `ts()` prefix to `pushSensorLog()` too, so
+the request's own premise is now actually true going forward.
+
+Not independently browser-verified this round -- per direct
+instruction ("no needd ot verify anyting after"), only a syntax check
+(`node --check`) was run. The rotation-node fix, damping slerp, and
+Euler-decomposition-for-logging are all standard, well-established
+patterns already used correctly elsewhere in this file (e.g.
+`cfg.trackingDamping`'s own slerp, `computePhoneCombinedQuat()`'s own
+Euler->quaternion construction) rather than novel math, which is why
+this was judged safe to skip a live pass on -- but it is still
+genuinely unverified in a real browser or on a real device.
+
+`index.html`'s cache-buster bumped `?v=112` -> `?v=113`.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

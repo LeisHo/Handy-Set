@@ -7,16 +7,40 @@ append-only history.
 
 ## Currently working on
 
-Nothing in progress — the dev panel template re-sync (2026-09-28) is
-complete, on top of the 6-part Palm Rotation/Responsive-features
-request (2026-09-27) and its own 3 follow-up rounds. See Recently
-completed below for the full account.
+Nothing in progress — the Phone Model rotation node/damping/log
+follow-up (2026-09-28) is pushed, on top of the dev panel template
+re-sync (also 2026-09-28) and the 6-part Palm Rotation/Responsive-
+features request (2026-09-27). See Recently completed below for the
+full account. Not independently browser-verified this round (per
+direct instruction to skip it) — see What's Next.
 
 Pushed to `https://github.com/LeisHo/Handy-Set`
 (deployed via the Vercel project at `https://vercel.com/lpeis/handy-set`).
 
 ## Recently completed
 
+- **FOLLOW-UP (2026-09-28): Phone Model rotation-node fix, damping, and
+  a new Phone Model Log.** 3 direct reports on the previous round's
+  rotation remap — jittery motion, what looked like a missing rotation
+  axis, and a request for a position/rotation debug log — plus a
+  clarifying 4th message ("its object axes... does no rotate with it")
+  that pinpointed the real bug: Object Axes gizmos parent onto whatever
+  node is registered via `registerSceneObject()` (for Phone Model,
+  `phoneModelWrapper`), but the rotation quaternion was being written to
+  `phoneModelRaw` (a child) instead — the gizmo never rotated even
+  though the mesh itself always did, likely the actual source of the
+  "missing axis" read too. Fixed by moving the rotation write to the
+  wrapper (no pivot/visual change — the child sits at the wrapper's own
+  origin either way). Added `cfg.phoneRotationDamping` (a new slider,
+  same semantic as `cfg.trackingDamping`) to smooth out real sensor
+  jitter via slerp instead of a direct copy. Built a new "Phone Model
+  Log" Debug subgroup (position + rotation, same interval/checkbox as
+  the Sensors log, Copy/Save/Clear) — and discovered along the way that
+  the Sensors log itself never actually had per-line timestamps despite
+  an earlier commit's title claiming so (that commit only timestamped
+  `console.error`/`console.warn`); fixed to match. Not independently
+  browser-verified this round, per direct instruction. See
+  `docs/CHANGELOG.txt`'s matching 2026-09-28 (29th) entry.
 - **FOLLOW-UP (2026-09-28): Sensors log Beta/Gamma + Phone Model
   Responsive Rotation axis remap.** Added `Log Beta`/`Log Gamma`
   checkboxes to the Sensors log (Debug group), reading
@@ -548,7 +572,16 @@ Pushed to `https://github.com/LeisHo/Handy-Set`
 
 ## What's next
 
-1. **Verify the 2026-09-28 Phone Model Responsive Rotation axis remap
+1. **Verify the 2026-09-28 Phone Model rotation-node fix, damping, and
+   Phone Model Log on a real phone/browser.** None of this round's
+   changes were independently browser-verified (per direct instruction
+   to skip it) — confirm: the Object Axes gizmo now actually rotates
+   with the phone model; the rotation feels smooth rather than jittery
+   at the default `phoneRotationDamping` (`0.25`) — tune if it feels too
+   laggy or still too jittery; and the new "Phone Model Log" entries
+   look sensible (position/rotation values, correct interval, real
+   timestamps) both on Desktop (mouse-driven) and on the real device.
+2. **Verify the 2026-09-28 Phone Model Responsive Rotation axis remap
    on a real phone.** The mapping (forward tilt = +90 X, left tilt =
    +90 Z, compass turn = Y) was implemented per the W3C
    `deviceorientation` spec's beta/gamma sign convention, not measured
@@ -557,7 +590,7 @@ Pushed to `https://github.com/LeisHo/Handy-Set`
    not even a synthetic event reaches the handler. If any one axis
    looks backwards on a real device, that axis's sign needs flipping in
    `computePhoneCombinedQuat()` — see that function's own comment.
-2. **Live-verify the 2026-09-28 dev panel re-sync in a real browser** —
+3. **Live-verify the 2026-09-28 dev panel re-sync in a real browser** —
    this round's changes (Undo/Redo, the new Panel UI theme colors, all
    12 migrated curve/range fields, the header button reorganization)
    were pushed without a browser verification pass, per direct
@@ -565,38 +598,38 @@ Pushed to `https://github.com/LeisHo/Handy-Set`
    confirm the migrated curve-editor/range-bar widgets still drag/
    click-to-edit correctly and round-trip through Sync, and that
    nothing else regressed.
-3. **Test Device Information on a real Pixel 9a + Chrome** (and ideally a
+4. **Test Device Information on a real Pixel 9a + Chrome** (and ideally a
    real iPhone/Safari) — open `https://handy-set.vercel.app/?dev=1` ->
    DEV -> Debug -> Settings, check "Device Information". Confirm whether
    Chrome's `getHighEntropyValues()` actually returns `model: "Pixel 9a"`
    on real hardware (unverified — this environment has no physical
    device), and that the fallback path behaves sensibly on Safari.
-4. Decide whether a single master kill-switch for all gyro-driven
+5. Decide whether a single master kill-switch for all gyro-driven
    effects is wanted — Phone Tilt's own "Tracking Enabled" checkbox
    currently only gates whole-hand rotation, NOT Responsive Wrist Splay
    or Reactive Arm Length (each has its own separate toggle). Flagged to
    the user 2026-09-25, not yet built (not requested).
-5. Find "Responsive Palm Rotation" — the user says this group exists in
+6. Find "Responsive Palm Rotation" — the user says this group exists in
    their own app, but an exhaustive search of the git-tracked
    dev-panel-settings.json found no trace of it anywhere. Likely needs
    the user to hit Sync from whichever device/browser shows it (so its
    real state reaches git), or a screenshot/more specific description.
-6. Verify Phone Tilt gyroscope rotation specifically on the user's actual
+7. Verify Phone Tilt gyroscope rotation specifically on the user's actual
    Pixel 9a — still unverified, no physical device available here (can be
-   folded into the same real-device session as item 3 above).
-7. ~~Decide on a visible default color scheme~~ — now moot for production:
+   folded into the same real-device session as item 4 above).
+8. ~~Decide on a visible default color scheme~~ — now moot for production:
    the startup-sync fix above means production correctly picks up the
    git-tracked gray background (`#bfbfbf`) instead of the all-white
    hardcoded default. Revisit only if the *hardcoded* literal defaults
    in `main.js` (the fallback when no git settings are reachable, e.g.
    `file://` or an offline API) still need their own deliberate tuning.
-8. Port Pose Offset X/Y/Z to Handy Dandies' camera-relative resolution
+9. Port Pose Offset X/Y/Z to Handy Dandies' camera-relative resolution
    before any saved pose is given a nonzero offset value.
-9. Tune default Camera/Lighting/Toon values to taste, now that Camera
+10. Tune default Camera/Lighting/Toon values to taste, now that Camera
    restore, the color/rim controls, and Set-as-Default persistence all
    actually work.
 
 ## Open questions / blockers
 
-- **"Responsive Palm Rotation"** — see What's next #3. Not blocking other
+- **"Responsive Palm Rotation"** — see What's next #6. Not blocking other
   work, but unresolved.

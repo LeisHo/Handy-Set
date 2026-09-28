@@ -1814,3 +1814,65 @@ wiring, and are still open:
   separate commit once the other session went idle, specifically to
   avoid a lost-update collision from 2 sessions editing the same
   `CLAUDE.md`/`CHANGELOG.txt` concurrently.
+
+- **Phone Model's rotation quaternion MUST be written to
+  `phoneModelWrapper`, not `phoneModelRaw` — Object Axes (and anything
+  else that parents onto a registered scene object) only ever sees the
+  transform of whichever node was actually passed to
+  `registerSceneObject()`.** `registerSceneObject('phoneModel', ...,
+  phoneModelWrapper)` registers the WRAPPER; `ensureObjectAxesFor()`
+  parents its gizmo group directly onto `entry.object3d` and relies on
+  ordinary THREE.js parent-child inheritance — a gizmo attached to a
+  node whose own quaternion never changes will never rotate, even if a
+  child 2 levels down rotates correctly. This was the real cause of a
+  2026-09-28 report that read as "missing an axis of rotation": the
+  mesh itself (`phoneModelRaw`, a grandchild of the wrapper) was
+  rotating correctly on all 3 axes the whole time, but the Object Axes
+  gizmo the user was watching, parented to the wrapper, was frozen.
+  Fixed by moving the quaternion write from `phoneModelRaw` to
+  `phoneModelWrapper` in `applyPhoneModelTransform()` — safe with no
+  pivot/visual change since `phoneModelRaw.position` stays `(0,0,0)`
+  relative to the wrapper (rotating a parent around its own origin with
+  a zero-offset child produces the same world result as rotating the
+  child directly). **Scale deliberately stays on `phoneModelRaw`, not
+  the wrapper** — so Object Axes' gizmo lines keep a fixed visual size
+  regardless of Phone Model Scale, the same reasoning Finger Gizmos
+  already use for not scaling with the hand. If a FUTURE feature
+  registers a new scene object for Object Axes (or any other
+  gizmo/overlay that parents onto the registered node), whichever
+  transform that gizmo needs to track (position/rotation/scale) must
+  actually live on the exact node passed to `registerSceneObject()` —
+  check this explicitly rather than assuming "the object rotates
+  correctly" also means "whatever's registered for it will too."
+- **`cfg.phoneRotationDamping` (default `0.25`) smooths Phone Model's
+  responsive rotation — same 1=instant/lower=smoother slerp semantic as
+  `cfg.trackingDamping`.** Added 2026-09-28, direct report ("the
+  rotation motion is jittery and not smooth") — real device
+  beta/gamma/alpha readings carry natural high-frequency sensor noise,
+  undamped in the original implementation.
+  `phoneModelWrapper.quaternion.slerp(computePhoneCombinedQuat(),
+  cfg.phoneRotationDamping)` replaces a direct `.copy()`. Applies
+  uniformly to BOTH the responsive contribution and the manual
+  `phoneModelRotX/Y/Z` sliders (they're combined into one quaternion
+  before the slerp) — matching how `trackingDamping` already damps all
+  of a hand's rotation sources together, not just live sensor input.
+- **The Sensors log did NOT actually have per-line timestamps until
+  2026-09-28, despite a commit titled "Add timestamps to all debug
+  logs" existing before that.** That earlier commit (`f3efd23`) only
+  prefixed `console.error()`/`console.warn()` calls (browser DevTools
+  console output) — never the on-panel Sensors log UI itself. Fixed by
+  adding a `ts()` prefix inside `pushSensorLog()` directly, so every
+  future call site gets it automatically. If a future debug log in this
+  project is asked to have timestamps "like the sensor log," verify
+  that's actually true by reading `pushSensorLog()`/`pushPhoneModelLog()`
+  rather than trusting the commit history's own title.
+- **Phone Model Log (Debug group) is intentionally NOT gated to touch
+  devices the way the Sensors log is** — `restartPhoneModelLogTimer()`
+  is its own separate timer, not folded into `restartSensorTimer()`'s
+  interval, specifically so it (and its Desktop-mouse-driven testing
+  value) isn't lost to that function's `!isTouchDevice` bail-out, which
+  is correct for accel/gyro/compass (genuinely absent on Desktop) but
+  not for Phone Model position/rotation (an ordinary scene-object
+  property, updated from mouse input on Desktop too). It still logs
+  "at the same rate" by reading the same `cfg.sensorIntervalMs` and
+  starting/stopping from the same `Stream Sensor Data` checkbox.
