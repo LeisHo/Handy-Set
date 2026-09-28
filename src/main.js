@@ -201,6 +201,13 @@ const cfg = {
   // Min/Max Range, Curve), see computePhoneResponsiveAxisDeg()'s own
   // comment for how these drive multiple axes from one shared mapping.
   phoneResponsiveRotationEnabled: false, phoneResponsiveRotationFineTune: 0,
+  // Smooths the FINAL combined rotation quaternion toward its per-frame
+  // target via slerp -- same semantic as cfg.trackingDamping (1=instant
+  // snap, lower=smoother/slower) -- added 2026-09-28, direct report:
+  // "the rotation motion is jittery and not smooth." Real device
+  // beta/gamma/alpha readings carry natural high-frequency sensor noise;
+  // this damps that out at the rotation level rather than the raw input.
+  phoneRotationDamping: 0.25,
   phoneResponsiveRotationRange: '{"min":0,"max":30}',
   phoneResponsiveRotationCurve: '{"points": [{"x": 0, "y": 1}, {"x": 1, "y": 0}], "method": "catmullrom"}',
   // Debug > Object Axes -- ported from 3JS ENGINE's own feature (see that
@@ -1870,15 +1877,36 @@ function computePhoneCombinedQuat() {
 // point the artist chose, e.g. the back face or a corner -- it doesn't
 // have to coincide with the mesh's geometric bounding-box center at
 // all). Fixed by pivoting on the model's own true local origin instead
-// -- `phoneModelRaw.position` simply stays (0,0,0) always, so it
-// rotates purely in place around its own geometry origin, and
-// `phoneModelWrapper.position` (the Offset sliders) is what actually
-// moves it through world space.
+// -- `phoneModelRaw.position` stays (0,0,0) always, so the model rotates
+// purely around its own geometry origin.
+//
+// CORRECTED 2026-09-28, direct report: "it's object axes (turned on in
+// debug group) does no rotate with it... The entire model instance
+// should be rotating, not just the geometry." Object Axes
+// (ensureObjectAxesFor()) parents its gizmo group directly onto
+// `entry.object3d` -- which for Phone Model is `phoneModelWrapper` (see
+// registerSceneObject('phoneModel', ..., phoneModelWrapper) below) -- and
+// relies on ordinary THREE.js parent-child inheritance to follow the
+// object's own local transform. The rotation was being written to
+// `phoneModelRaw.quaternion` (the CHILD) while the wrapper's own
+// quaternion was never touched, so the gizmo -- parented to the wrapper --
+// never rotated at all, even though the visible mesh (a grandchild of the
+// wrapper) rotated correctly. Fixed by moving the quaternion write to
+// `phoneModelWrapper` itself. This does NOT change the pivot point or the
+// 2026-09-27 fix above: `phoneModelRaw.position` is still (0,0,0)
+// relative to the wrapper, so rotating the wrapper around its own origin
+// produces the exact same world-space rotation as rotating the child did
+// -- the mesh's own visible motion is unchanged, only the gizmo now
+// tracks it. Scale deliberately STAYS on `phoneModelRaw`, not the
+// wrapper, so Object Axes' gizmo lines keep a fixed visual size
+// regardless of Phone Model Scale (the same reason Finger Gizmos don't
+// scale with the hand).
 function applyPhoneModelTransform() {
   if (!phoneModelRaw || !phoneModelWrapper) return
   phoneModelWrapper.position.set(cfg.phoneModelOffsetX, cfg.phoneModelOffsetY, cfg.phoneModelOffsetZ)
+  phoneModelWrapper.quaternion.slerp(computePhoneCombinedQuat(), cfg.phoneRotationDamping)
   phoneModelRaw.scale.setScalar(cfg.phoneModelScale)
-  phoneModelRaw.quaternion.copy(computePhoneCombinedQuat())
+  phoneModelRaw.quaternion.identity()
   phoneModelRaw.position.set(0, 0, 0)
 }
 function ensurePhoneModelWrapper() {
@@ -2857,12 +2885,13 @@ let sensorTimer = null
 let sensorLog = []
 function fmt(n) { return (typeof n === 'number' && !Number.isNaN(n)) ? n.toFixed(2) : '--' }
 function pushSensorLog(text) {
-  sensorLog.push(text)
+  const line = ts() + ' ' + text
+  sensorLog.push(line)
   if (sensorLog.length > 200) sensorLog.shift()
   if (!sensorLogEl) return
-  const line = document.createElement('div')
-  line.textContent = text
-  sensorLogEl.appendChild(line)
+  const lineEl = document.createElement('div')
+  lineEl.textContent = line
+  sensorLogEl.appendChild(lineEl)
   while (sensorLogEl.children.length > 200) sensorLogEl.removeChild(sensorLogEl.firstChild)
   sensorLogEl.scrollTop = sensorLogEl.scrollHeight
 }
@@ -2935,6 +2964,77 @@ function saveSensorLog() {
 function clearSensorLog() {
   sensorLog = []
   if (sensorLogEl) sensorLogEl.innerHTML = ''
+}
+
+// =======================================================================
+// Phone Model Log (Debug group) -- direct request 2026-09-28: log the
+// Phone Model's own position/rotation, at the same rate as the Sensors
+// log, with timestamps. Own timer (restartPhoneModelLogTimer(), started/
+// stopped alongside the Sensors log's Stream checkbox and Interval
+// slider) rather than piggybacking on restartSensorTimer()'s own timer --
+// that function's outer guard bails entirely on non-touch devices (real
+// sensors genuinely don't exist there), but Phone Model position/rotation
+// is an ordinary scene-object property, not hardware-sensor data -- it
+// updates from mouse input on Desktop too, via the exact same
+// computePhoneCombinedQuat() pipeline, so gating it identically would
+// silently disable it in this sandbox with no real device available.
+// "Same rate" is satisfied by reading the same cfg.sensorIntervalMs and
+// starting/stopping from the same cfg.sensorStreamEnabled checkbox.
+// =======================================================================
+let phoneModelLogEl = null
+let phoneModelLogTimer = null
+let phoneModelLog = []
+function pushPhoneModelLog(text) {
+  const line = ts() + ' ' + text
+  phoneModelLog.push(line)
+  if (phoneModelLog.length > 200) phoneModelLog.shift()
+  if (!phoneModelLogEl) return
+  const div = document.createElement('div')
+  div.textContent = line
+  phoneModelLogEl.appendChild(div)
+  while (phoneModelLogEl.children.length > 200) phoneModelLogEl.removeChild(phoneModelLogEl.firstChild)
+  phoneModelLogEl.scrollTop = phoneModelLogEl.scrollHeight
+}
+const _phoneLogEuler = new THREE.Euler()
+function restartPhoneModelLogTimer() {
+  clearInterval(phoneModelLogTimer)
+  phoneModelLogTimer = null
+  if (!cfg.sensorStreamEnabled) return
+  phoneModelLogTimer = setInterval(() => {
+    if (!cfg.phoneModelEnabled || !phoneModelWrapper) return
+    const p = phoneModelWrapper.position
+    _phoneLogEuler.setFromQuaternion(phoneModelWrapper.quaternion, 'XYZ')
+    const rx = THREE.MathUtils.radToDeg(_phoneLogEuler.x)
+    const ry = THREE.MathUtils.radToDeg(_phoneLogEuler.y)
+    const rz = THREE.MathUtils.radToDeg(_phoneLogEuler.z)
+    pushPhoneModelLog(`Pos x:${fmt(p.x)} y:${fmt(p.y)} z:${fmt(p.z)}  |  Rot x:${fmt(rx)}° y:${fmt(ry)}° z:${fmt(rz)}°`)
+  }, cfg.sensorIntervalMs)
+}
+function copyPhoneModelLog(btn) {
+  const text = phoneModelLog.join('\n')
+  const flash = (msg) => { const orig = btn.textContent; btn.textContent = msg; setTimeout(() => { btn.textContent = orig }, 900) }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => flash('Copied!')).catch(() => flash('Copy failed'))
+  } else {
+    flash('Copy failed')
+  }
+}
+function savePhoneModelLog() {
+  const md = '# Phone Model Log\n\n' + phoneModelLog.map((line) => '- ' + line).join('\n') + '\n'
+  const blob = new Blob([md], { type: 'text/markdown' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-')
+  a.href = url
+  a.download = 'phone-model-log-' + stamp + '.md'
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}
+function clearPhoneModelLog() {
+  phoneModelLog = []
+  if (phoneModelLogEl) phoneModelLogEl.innerHTML = ''
 }
 
 // =======================================================================
@@ -3725,6 +3825,10 @@ function renderPhoneModelGroup(content) {
   wireCheckbox('checkboxPhoneResponsiveRotationEnabled', (v) => { cfg.phoneResponsiveRotationEnabled = v })
   addRow(subResponsiveRotation, { id: 'sliderPhoneResponsiveRotationFineTune', label: 'Rotation Fine-Tune (Deg)', type: 'slider', min: -90, max: 90, step: 1, value: cfg.phoneResponsiveRotationFineTune })
   wireSlider('sliderPhoneResponsiveRotationFineTune', (v) => { cfg.phoneResponsiveRotationFineTune = v })
+  // Added 2026-09-28, direct report: "the rotation motion is jittery and
+  // not smooth." Same 1=instant/lower=smoother semantic as cfg.trackingDamping.
+  addRow(subResponsiveRotation, { id: 'sliderPhoneRotationDamping', label: 'Rotation Damping (1=Instant)', type: 'slider', min: 0.05, max: 1, step: 0.01, value: cfg.phoneRotationDamping })
+  wireSlider('sliderPhoneRotationDamping', (v) => { cfg.phoneRotationDamping = v })
   // MIGRATED 2026-09-28 -- see Reactive Arm Length's own matching comment.
   {
     let rangeDefault = { min: 0, max: 30 }
@@ -4044,9 +4148,9 @@ function renderDebugExtras() {
     sensorSub.appendChild(note)
   }
   addRow(sensorSub, { id: 'checkboxSensorStream', label: 'Stream Sensor Data', type: 'checkbox' })
-  wireCheckbox('checkboxSensorStream', (v) => { cfg.sensorStreamEnabled = v; restartSensorTimer() })
+  wireCheckbox('checkboxSensorStream', (v) => { cfg.sensorStreamEnabled = v; restartSensorTimer(); restartPhoneModelLogTimer() })
   addRow(sensorSub, { id: 'sliderSensorInterval', label: 'Sample Interval (Ms)', type: 'slider', min: 50, max: 2000, step: 50, value: cfg.sensorIntervalMs })
-  wireSlider('sliderSensorInterval', (v) => { cfg.sensorIntervalMs = v; restartSensorTimer() })
+  wireSlider('sliderSensorInterval', (v) => { cfg.sensorIntervalMs = v; restartSensorTimer(); restartPhoneModelLogTimer() })
   // Per-sensor log toggles -- direct request 2026-09-28.
   addRow(sensorSub, { id: 'checkboxSensorLogAccel', label: 'Log Accelerometer', type: 'checkbox' })
   document.getElementById('checkboxSensorLogAccel').checked = cfg.sensorLogAccel
@@ -4085,6 +4189,32 @@ function renderDebugExtras() {
   sensorLogEl = document.createElement('div')
   sensorLogEl.className = 'dev-mouse-log'
   sensorSub.appendChild(sensorLogEl)
+
+  // Phone Model Log -- direct request 2026-09-28: logs the Phone Model's
+  // own position/rotation, at the same rate as the Sensors log above
+  // (shares cfg.sensorIntervalMs and the Stream Sensor Data checkbox),
+  // with timestamps. See restartPhoneModelLogTimer()'s own comment for
+  // why it's NOT gated to touch devices the way the Sensors log is.
+  const phoneModelLogSub = addSubgroup(debugContent, 'Phone Model Log')
+  const phoneModelLogBtnRow = document.createElement('div')
+  phoneModelLogBtnRow.className = 'dev-buttons'
+  const phoneModelLogCopyBtn = document.createElement('button')
+  phoneModelLogCopyBtn.type = 'button'
+  phoneModelLogCopyBtn.textContent = 'COPY'
+  const phoneModelLogSaveBtn = document.createElement('button')
+  phoneModelLogSaveBtn.type = 'button'
+  phoneModelLogSaveBtn.textContent = 'SAVE'
+  const phoneModelLogClearBtn = document.createElement('button')
+  phoneModelLogClearBtn.type = 'button'
+  phoneModelLogClearBtn.textContent = 'CLEAR'
+  phoneModelLogBtnRow.append(phoneModelLogCopyBtn, phoneModelLogSaveBtn, phoneModelLogClearBtn)
+  phoneModelLogSub.appendChild(phoneModelLogBtnRow)
+  phoneModelLogCopyBtn.addEventListener('click', () => copyPhoneModelLog(phoneModelLogCopyBtn))
+  phoneModelLogSaveBtn.addEventListener('click', savePhoneModelLog)
+  phoneModelLogClearBtn.addEventListener('click', clearPhoneModelLog)
+  phoneModelLogEl = document.createElement('div')
+  phoneModelLogEl.className = 'dev-mouse-log'
+  phoneModelLogSub.appendChild(phoneModelLogEl)
 
   // Object Axes -- ported from 3JS ENGINE's own Debug/Diagnostics
   // subgroup (its src/main.js), per direct request. World Axes wasn't
