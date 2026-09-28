@@ -2227,3 +2227,41 @@ wiring, and are still open:
   exactly the kind of bug (correct-looking for a moment, then subtly
   wrong once real accumulated rotation gets large) that a quick,
   small-angle-only test would miss.**
+- **`integratePhoneGyroRotation()`'s axis assignment (beta -> combined
+  tilt Y-slot, gamma -> tilt X-slot, alpha -> local Z) does NOT match
+  the world-frame mapping used everywhere else in this file (beta ->
+  X, gamma -> Z, alpha -> Y) — this is CORRECT and deliberate, not an
+  inconsistency to "fix."** Found 2026-09-28, the SAME day gyro
+  integration shipped: switching from world-frame absolute-angle
+  rotation to body-frame gyroscope integration produced a clean, 3-way
+  CYCLIC axis permutation (beta's motion visually landed on Z instead
+  of X, gamma's on Y instead of Z, alpha's on X instead of Y) — despite
+  the beta/gamma/alpha-to-physical-motion correspondence itself being
+  independently re-derived and confirmed consistent with the already-
+  verified world-frame mapping. The leading theory (not conclusively
+  confirmed — no real device instrumentation or authoritative spec
+  access was available to check directly) is that
+  `devicemotion.rotationRate`'s own alpha/beta/gamma axis
+  correspondence doesn't match `deviceorientation`'s the way naturally
+  assumed, even though both interfaces use the same 3 letters for what
+  looks like the same 3 physical axes. Rather than keep re-deriving the
+  spec from memory, the fix applied the user's own precise empirical
+  3-way-cyclic correction directly. **If a FUTURE feature also
+  integrates `rotationRate` (not just reads `deviceorientation`), do
+  NOT assume its axis letters map onto the same code-axis-letters as
+  this file's other, world-frame, `deviceorientation`-based code — 
+  verify empirically (a real device, one axis at a time) before
+  assuming the correspondence carries over.**
+- **If a FUTURE report about Phone Model's rotation describes a clean,
+  consistent axis relabeling (X shows as Y, Y shows as Z, etc. — a
+  permutation, not a random-looking error), the fastest fix is applying
+  the user's OWN literal report as a direct relabeling of which
+  signal/variable feeds which axis slot, not re-deriving the underlying
+  spec/geometry from scratch again.** This project has now hit this
+  exact shape of bug multiple times on this one feature (the 29th, 33rd,
+  and 36th CHANGELOG entries), and re-deriving from first principles or
+  memory of a spec has been unreliable each time (each "fix" held for
+  the case it was tested against but not the next one). A precise,
+  reproducible empirical report from actually testing on the real
+  device is stronger evidence than any amount of geometric reasoning
+  done without one.

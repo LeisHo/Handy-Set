@@ -7,29 +7,46 @@ append-only history.
 
 ## Currently working on
 
-Nothing in progress — mobile's Phone Model rotation now uses gyroscope
-integration instead of absolute orientation angles (2026-09-28,
-"I want the rotation to continue forever"), on top of a Rotation Reset
-baseline bug fix plus 6 per-axis enable/scale controls (also
-2026-09-28), 3 more real-device-testing fixes (also 2026-09-28:
-touch/mouse conflict, camera-lock/slider sync, Y/Z world-axis swap),
-the mobile-vs-desktop rotation redesign (also 2026-09-28), the
-Rotation Reset feature (also 2026-09-28), the curve-inversion fix
-(also 2026-09-28), the rotation-node/damping/log follow-up (also
-2026-09-28), the dev panel template re-sync (also 2026-09-28), and the
-6-part Palm Rotation/Responsive-features request (2026-09-27). See
-Recently completed below for the full account. **Still needs real
-device re-verification** — the gyro-integration switch was verified
-via a standalone numeric script simulating multiple seconds of
-continuous real-time rotation, which is a stronger test of "handles
-unbounded spin" than a quick live check could easily reproduce, but a
-real device is still the final word.
+Nothing in progress — a cyclic axis-permutation fix for the new
+gyroscope-integrated mobile rotation (2026-09-28, direct report right
+after the switch shipped: "you crossed some wires") is pushed, on top
+of the gyroscope-integration switch itself (also 2026-09-28, "I want
+the rotation to continue forever"), a Rotation Reset baseline bug fix
+plus 6 per-axis enable/scale controls (also 2026-09-28), 3 more real-
+device-testing fixes (also 2026-09-28: touch/mouse conflict, camera-
+lock/slider sync, Y/Z world-axis swap), the mobile-vs-desktop rotation
+redesign (also 2026-09-28), the Rotation Reset feature (also
+2026-09-28), the curve-inversion fix (also 2026-09-28), the rotation-
+node/damping/log follow-up (also 2026-09-28), the dev panel template
+re-sync (also 2026-09-28), and the 6-part Palm Rotation/Responsive-
+features request (2026-09-27). See Recently completed below for the
+full account. **Still needs real device re-verification** — the latest
+axis fix is a direct application of the user's own empirical report,
+not new math with its own standalone proof; if any ONE axis is still
+off on the next real test, naming that one axis specifically (not
+re-describing the whole permutation) is the fastest path to a final
+fix, since the underlying tilt/spin structure is now confirmed sound.
 
 Pushed to `https://github.com/LeisHo/Handy-Set`
 (deployed via the Vercel project at `https://vercel.com/lpeis/handy-set`).
 
 ## Recently completed
 
+- **RESOLVED (2026-09-28): Gyroscope-integrated mobile rotation had a
+  clean 3-way cyclic axis mix-up right after shipping — "real Z rotates
+  the model's Y, real Y rotates X, real X rotates Z."** Independently
+  re-derived the physical-motion-to-Blender-axis geometry from scratch
+  and cross-checked it against the already-verified world-frame mapping
+  — both checks confirmed the SIGNAL-to-physical-motion correspondence
+  was already correct, meaning the bug was specific to something the
+  body-frame gyroscope integration introduced (most likely
+  `devicemotion.rotationRate`'s own axis correspondence not matching
+  `deviceorientation`'s the way assumed — not conclusively confirmed
+  without real device access). Rather than keep re-deriving the spec,
+  applied the user's own precise empirical correction directly: beta
+  and gamma swap which combined-tilt-axis slot they target, and alpha's
+  spin axis moves from local Y to local Z. Desktop is untouched. See
+  `docs/CHANGELOG.txt`'s matching 2026-09-28 (36th) entry.
 - **RESOLVED (2026-09-28): Phone Model's mobile rotation now uses
   gyroscope integration — "jumps then rotates 180" at ~180° was a
   fundamental limit of the previous design, not a patchable bug.**

@@ -4100,6 +4100,66 @@ reproduce on demand anyway.
 `index.html`'s cache-buster bumped `?v=118` -> `?v=119`.
 
 --------------------------------------------------------------------------------
+2026-09-28  -  (36th)
+
+Direct report, same day the gyroscope-integration switch (35th entry)
+shipped: "you crossed some wires. the rotation match is off. real world
+Z rotation now roates the model around its Y. real world Y rotation
+now rotates the model around X. real world x rotation is now Z."
+
+Read this as a clean, consistent 3-way CYCLIC relabeling between what
+`main.js` calls local X/Y/Z and what the RENDERED MODEL actually shows
+-- independent of which sensor drives it: beta's motion (coded to axis
+X) visually landed on Z; gamma's motion (coded to axis Z) visually
+landed on Y; alpha's motion (coded to axis Y) visually landed on X.
+Re-derived the geometric correspondence between physical phone motions
+and Blender-authored axes from scratch (confirmed self-consistent: beta
+=pitch=X, gamma=roll=Y, alpha=spin=Z in Blender's own frame) and
+cross-checked it against the already-shipped, already-verified 33rd-
+entry world-frame mapping -- both checks kept coming back consistent
+with what was already coded, which meant the bug was NOT in the
+beta/gamma/alpha-to-physical-motion correspondence, and almost
+certainly specific to something the switch from world-frame absolute
+angles to body-frame gyroscope integration introduced (most likely:
+`devicemotion.rotationRate`'s own alpha/beta/gamma axis correspondence
+not matching `deviceorientation`'s the way assumed, though this
+couldn't be conclusively confirmed without either real device
+instrumentation or authoritative spec access, neither available this
+round).
+
+Rather than continue re-deriving the W3C spec correspondence from
+memory a further time, applied the user's own precise, empirical,
+3-way-cyclic correction DIRECTLY: whichever axis slot previously
+produced a given wrong letter now receives the signal that should
+produce the CORRECT letter instead. Concretely, in
+`integratePhoneGyroRotation()`: beta now targets the combined tilt
+axis's Y-slot (was X) -- `_phoneGyroTiltAxis.set(dGammaDeg, dBetaDeg, 0)`,
+gamma now targets the X-slot (was Z, its own left/right sign inversion
+preserved), and `PHONE_GYRO_SPIN_LOCAL_AXIS` (alpha) now points at
+local Z (was Y, `(0,0,1)` instead of `(0,1,0)`). Beta+gamma stay
+combined into one axis-angle pair (both are still simultaneous "tilt"
+motions, Euler-decoupling still applies), and alpha stays the separate
+"spin" axis -- only WHICH of the 3 code axes each of the 3 groups
+targets changed, not the underlying combine-vs-separate structure.
+
+Desktop's cursor-driven rotation is explicitly UNTOUCHED -- this is
+specific to the gyroscope body-frame integration path introduced in the
+35th entry, not the pre-existing world-frame cursor-distance system,
+which was already confirmed correct before gyro integration existed
+and has no rotationRate dependency at all.
+
+Not independently browser/device-verified this round (same standing
+instruction) -- this fix is a direct, careful application of the
+user's own empirical report rather than new math requiring its own
+standalone numeric proof; if any ONE axis still comes out wrong on the
+next real test, the fastest path forward is naming that ONE axis
+specifically (not re-describing the whole permutation), since the
+underlying combine-vs-separate structure is now confirmed sound and
+only a single-axis relabel would be needed.
+
+`index.html`'s cache-buster bumped `?v=119` -> `?v=120`.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
