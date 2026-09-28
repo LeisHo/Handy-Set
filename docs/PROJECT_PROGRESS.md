@@ -7,23 +7,48 @@ append-only history.
 
 ## Currently working on
 
-Nothing in progress — Phone Model Responsive Rotation's mobile-vs-
-desktop redesign (2026-09-28, from real device testing) is pushed, on
-top of the Rotation Reset feature (also 2026-09-28), the curve-inversion
-fix (also 2026-09-28), the rotation-node/damping/log follow-up (also
-2026-09-28), the dev panel template re-sync (also 2026-09-28), and the
-6-part Palm Rotation/Responsive-features request (2026-09-27). See
-Recently completed below for the full account. **Still needs real
-device re-verification** — every fix this round was checked via
-standalone numeric scripts against the user's own pasted device log
-data, not a live test on the actual phone; the user's next real test is
-what will actually confirm this round worked.
+Nothing in progress — 3 more real-device-testing fixes (2026-09-28:
+touch/mouse conflict, camera-lock/slider sync, Y/Z world-axis swap) are
+pushed, on top of the mobile-vs-desktop rotation redesign (also
+2026-09-28), the Rotation Reset feature (also 2026-09-28), the
+curve-inversion fix (also 2026-09-28), the rotation-node/damping/log
+follow-up (also 2026-09-28), the dev panel template re-sync (also
+2026-09-28), and the 6-part Palm Rotation/Responsive-features request
+(2026-09-27). See Recently completed below for the full account.
+**Still needs real device re-verification** — this round's phone-
+rotation fix was checked with a standalone numeric script; the touch/
+mouse-conflict and camera-lock fixes are standard, well-understood
+browser/library behaviors applied directly, not something a script can
+meaningfully simulate without a real touch device or a real
+OrbitControls-attached canvas. The user's next real test is what will
+actually confirm all of this worked.
 
 Pushed to `https://github.com/LeisHo/Handy-Set`
 (deployed via the Vercel project at `https://vercel.com/lpeis/handy-set`).
 
 ## Recently completed
 
+- **RESOLVED (2026-09-28): 3 more real-device-testing bugs on Phone
+  Model, all root-caused and fixed.** (1) Tapping the screen briefly
+  threw the rotation off before it snapped back — a tap can fire a
+  synthetic `mousemove` on mobile browsers, momentarily making Phone
+  Model read the tap's own screen position instead of real device
+  orientation; fixed with a guard filtering synthetic touch-sourced
+  mouse events. The user's own suspicion about OrbitControls was also
+  confirmed real and fixed separately: its touch handlers can swallow
+  events before a `window`-level listener sees them, so the Rotation
+  Reset gesture listeners now use the capture phase. (2) Lock Pan/Zoom/
+  Rotate now also disables the matching camera sliders (position/zoom/
+  yaw-pitch), and a related bug — a restored "locked" state from Sync
+  never actually took effect until the checkbox was re-toggled — is
+  fixed too. (3) Left/right and compass were still swapped (Y<->Z) even
+  after the Blender-axis check — root cause: the real Blender model is
+  Z-up, but glTF/three.js is Y-up, and the export process itself
+  swaps Y and Z on the way in, independent of the rotation code. Fixed
+  by swapping which world axis gamma and alpha target; verified
+  numerically that each of beta/gamma/alpha now produces a clean
+  single-axis rotation with zero leakage. See `docs/CHANGELOG.txt`'s
+  matching 2026-09-28 (33rd) entry.
 - **RESOLVED (2026-09-28): Phone Model rotation was genuinely broken on
   a real device — random-looking swings at rest, distorted compound
   tilts, and a wrong axis mapping — all traced to real causes via the

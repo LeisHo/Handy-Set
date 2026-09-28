@@ -3880,6 +3880,96 @@ own real device log data, not a live test.
 `index.html`'s cache-buster bumped `?v=115` -> `?v=116`.
 
 --------------------------------------------------------------------------------
+2026-09-28  -  (33rd)
+
+Direct report after further real device testing: "better but not fully
+fixed." 3 distinct issues:
+
+1. "Double tap doesnt work. Its registering single tap, but its acting
+   buggy. I tap, and for a split second i see the phone model out of
+   orientation, then it flashes back... when i tap on the right of the
+   screen, the phone is tilted clockwise... if i tap on the left side,
+   its tilted anticlockwise. I think the 3js pan and zoom controls may
+   be interfering." Follow-up: "or maybe its the phone tilt cursor
+   tracking bugging it up... using both the phone tilt and the cursor
+   tracking."
+
+   Root cause, confirmed rather than guessed: many mobile browsers fire
+   a SYNTHETIC `mousemove` (a touch-compatibility shim) after a real
+   touch event. Without a guard, a single tap briefly flipped
+   `lastInputSource` to `'mouse'` and computed Phone Model's rotation
+   from the TAP'S OWN SCREEN POSITION via the desktop cursor-distance
+   path, until the next real `deviceorientation` event reverted it a
+   frame or two later -- exactly matching "flash then revert," and the
+   position-dependence (tap right/left) is literally that formula
+   reacting to the tap's own X position. Fixed by guarding
+   `handleMouseMoveFallback()` with
+   `MouseEvent.sourceCapabilities.firesTouchEvents` (true only for a
+   synthetic mouse event generated from touch, never a real mouse/
+   trackpad move). Separately, the user's own OrbitControls suspicion
+   was ALSO real: OrbitControls attaches its own touch handlers to the
+   canvas and commonly calls `stopPropagation()` (standard practice to
+   block the browser's own default touch/scroll gestures) -- a
+   BUBBLE-phase listener on `window` (the Rotation Reset gesture's
+   original implementation) could never see an event OrbitControls
+   stopped first. Fixed by switching both the `dblclick` and `touchend`
+   listeners to the CAPTURE phase, which always runs top-down before
+   the event reaches the canvas, regardless of what OrbitControls does
+   afterward.
+
+2. "When I lock pan, zoom, or rotate, lock the relevant sliders as
+   well. Those 2 should be in sync. I guess FOV can just not be locked
+   ever." Added `setSliderLocked()`, wired into `applyCameraLockState()`:
+   Lock Pan disables the 3 camera position sliders (X/Y/Z), Lock Zoom
+   disables the Zoom slider, Lock Rotate disables Yaw/Pitch; FOV is
+   never touched. New `.dev-row-locked` CSS class (style.css) greys out
+   a locked row. Also fixed a related latent bug found while touching
+   this function: `applyCameraLockState()` was only ever called from
+   the 3 lock checkboxes' own `wireCheckbox` callbacks, so a RESTORED
+   "locked" state from a Sync never actually disabled OrbitControls (or
+   now the sliders) until the checkbox was re-toggled by hand -- fixed
+   by also calling it once at Camera-group build time.
+
+3. "I am going to describe both the phone model and my real phone with
+   the same axes... Z is pointing to the sky, X is rightwards, y is
+   up... When I rotate my real phone around the Y axis, the phone model
+   on screen rotates around the Z axis. And vice versa as well. Tilting
+   the phone up and down seems to work good." A clean, reproducible,
+   BOTH-DIRECTIONS Y<->Z swap with X (beta) confirmed unaffected is the
+   signature of the standard Blender Z-up -> glTF Y-up axis conversion:
+   the real Blender model is authored Z-up (Z=sky when flat), but
+   glTF/three.js is Y-up, and glTF exporters standardly bake in a
+   fixed conversion rotation on export that swaps Y and Z while
+   leaving X alone. This means world-Y and world-Z in this file's own
+   code were ALREADY swapped relative to the Blender-described axes the
+   29th entry's mapping assumed -- independent of the rotation formula
+   itself, whose sign/direction logic (verified against 4 real test
+   movements in that same entry) was correct the whole time, just
+   landing on the wrong WORLD axis letter. Fixed by swapping which
+   world axis gamma and alpha target: gamma (left-right tilt) now
+   combines with beta's axis-angle rotation on world X/Z (was X/Y);
+   alpha (compass/spin) now gets its own separate rotation around world
+   Y (was Z). Renamed the supporting quaternion/axis variables
+   (`_phoneTiltAxis`/`_phoneTiltQuat`/`_phoneSpinQuat`/
+   `PHONE_SPIN_AXIS`, replacing the old `_phoneXYAxis`/`_phoneXYQuat`/
+   `_phoneZQuat`/`PHONE_Z_AXIS`) to match, rather than leaving
+   Y/Z-labeled names now pointing at the other axis. Verified
+   numerically: a pure beta, pure gamma, and pure alpha input each now
+   produce a rotation with the corresponding axis vector completely
+   unchanged and the other 2 axes correctly swinging -- zero leakage
+   in either direction.
+
+Not independently browser/device-verified this round (same standing
+instruction) -- fix #3 was verified via a standalone numeric script
+reproducing the exact quaternion composition; fixes #1 and #2 are
+standard, well-understood browser/library behaviors (synthetic touch-
+mouse events, event capture vs. bubble phase) applied directly, not
+something a script could meaningfully simulate without a real touch
+device or a real OrbitControls-attached canvas.
+
+`index.html`'s cache-buster bumped `?v=116` -> `?v=117`.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

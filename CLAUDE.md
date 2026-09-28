@@ -2056,3 +2056,83 @@ wiring, and are still open:
   unwrap-and-accumulate pattern rather than re-deriving it, and keep it
   in its own separate state (don't retrofit the shared pipeline, which
   several other features rely on staying wrapped/clamped exactly as-is).
+- **A tap/touch on this project's canvas can fire a SYNTHETIC
+  `mousemove` (a browser touch-compatibility shim) — any code reading
+  `lastInputSource`/mouse-driven state must guard against this or it
+  will misfire on mobile.** Found 2026-09-28: a single tap briefly
+  flipped `lastInputSource` to `'mouse'` (via `handleMouseMoveFallback`)
+  and computed Phone Model's rotation from the TAP'S OWN SCREEN
+  POSITION via the desktop cursor-distance path, until the next real
+  `deviceorientation` event reverted it — read by the user as "I tap,
+  and for a split second I see the phone out of orientation, then it
+  flashes back," with the direction depending on which side of the
+  screen was tapped (exactly what the cursor-distance formula would
+  produce for that tap position). Fixed with a guard at the top of
+  `handleMouseMoveFallback(e)`:
+  `if (e.sourceCapabilities && e.sourceCapabilities.firesTouchEvents) return`
+  — `firesTouchEvents` is `true` ONLY for a mouse event synthesized from
+  a touch interaction (Chrome/Android, this project's real target),
+  never for a genuine mouse/trackpad move, even on a touch-capable
+  laptop. **Any FUTURE feature that reads `lastInputSource`/mouse state
+  and could be affected by a momentary, incorrect flip to `'mouse'` on
+  a touch device should check whether this guard is still doing its job
+  before assuming a new bug is unrelated** — this is a real,
+  reproducible mobile-browser behavior, not a one-off.
+- **A `window`-level touch/click listener can be silently swallowed by
+  OrbitControls' own canvas-level touch handlers, which commonly call
+  `stopPropagation()` — use the CAPTURE phase for anything that must
+  fire regardless of what OrbitControls does.** Found 2026-09-28,
+  confirming the user's own suspicion ("I think the 3js pan and zoom
+  controls may be interfering"): the Rotation Reset gesture's
+  `dblclick`/`touchend` listeners were originally BUBBLE-phase on
+  `window` — if OrbitControls' own handler (attached to the canvas, a
+  descendant of `window`) calls `stopPropagation()`, a bubble-phase
+  ancestor listener never sees the event at all. Fixed by adding
+  `{ capture: true }` to both `addEventListener` calls in
+  `setupPhoneRotationResetGesture()` — a capture-phase listener on
+  `window` always runs FIRST, top-down, strictly before the event
+  reaches the canvas, so it can't be blocked by anything a descendant
+  does afterward. **Any FUTURE `window`-level gesture listener meant to
+  fire "no matter what" on a page that also uses OrbitControls (or any
+  other library that manages its own touch/pointer events) should
+  default to the capture phase, not bubble** — this is a real,
+  reproduced conflict on this exact canvas, not a hypothetical one.
+- **`applyCameraLockState()` must be called once at Camera-group BUILD
+  time, not only from the 3 lock checkboxes' own `wireCheckbox`
+  callbacks — otherwise a RESTORED "locked" state from Sync never
+  actually takes effect until the user re-toggles the checkbox by
+  hand.** Found while wiring Lock Pan/Zoom/Rotate to also disable their
+  matching sliders (`setSliderLocked()`) — the function itself was
+  correct, but a checked-on-restore checkbox never actually disabled
+  OrbitControls (or now the sliders) because nothing ever called the
+  apply function on load, only on a live user click. This is the SAME
+  class of bug as the dev-panel-wide "restored value never gets
+  applied" issue documented elsewhere in this file (e.g. the Phone
+  Model remote-Sync fix) — any future lock/gate-style checkbox in this
+  project should call its own apply function once at build time, not
+  rely solely on its own change handler.
+- **Phone Model's world-axis assignment required a 2nd correction the
+  SAME DAY the Blender-verified mapping (see the entry above this one)
+  shipped — the real GLB is Z-up (Blender), but glTF/three.js is Y-up,
+  and standard glTF export bakes in a fixed Z-up->Y-up conversion that
+  SWAPS Y and Z (X is untouched).** Found from real-device testing: "when
+  i rotate my real phone around the Y axis, the phone model on screen
+  rotates around the Z axis, and vice versa" (with beta/up-down
+  confirmed correct). This means the earlier Blender-axis-based mapping
+  was directionally/sign-correct (verified against 4 real movements)
+  but WORLD-axis-wrong, since the export process itself already
+  permutes Blender's authored Y/Z before the model ever reaches this
+  file's own rotation code. Current, correct assignment: beta (up/down)
+  -> world X; gamma (left/right, inverted) -> world Z, combined with
+  beta in ONE axis-angle rotation (`_phoneTiltAxis`/`_phoneTiltQuat` —
+  renamed from `_phoneXYAxis`/`_phoneXYQuat`, since the combined pair is
+  now X/Z, not X/Y); alpha (compass/spin) -> world Y, its own separate
+  rotation (`_phoneSpinQuat`/`PHONE_SPIN_AXIS` — renamed from
+  `_phoneZQuat`/`PHONE_Z_AXIS`). **If a future project or feature in
+  this file imports another Blender-authored GLB and maps its axes by
+  reading the Blender file directly (the right first step, and what was
+  done here), still expect a possible Y/Z swap once the asset is
+  actually loaded in three.js — verify against the LOADED, IN-ENGINE
+  model's actual behavior too, not just the source file's own stated
+  axes, since the export pipeline itself is a second place a coordinate
+  convention can change.**
