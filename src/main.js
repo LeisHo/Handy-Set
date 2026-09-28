@@ -169,6 +169,9 @@ const cfg = {
   fingerGizmosEnabled: false, fingerGizmoSize: 1, fingerGizmoColor: '#ffcc00',
   fingerGizmoAxisLength: 4, fingerGizmoAxisThickness: 0.3,
   sensorStreamEnabled: false, sensorIntervalMs: 200,
+  // Per-sensor log toggles -- direct request 2026-09-28. Default all on,
+  // matching the log line's pre-existing (always-all-3) behavior.
+  sensorLogAccel: true, sensorLogGyro: true, sensorLogCompass: true,
   deviceInfoEnabled: false,
   // Phone Model -- direct request 2026-09-27: a loadable smartphone GLB,
   // positioned/scaled/rotated independently of the hand, with its own
@@ -1913,17 +1916,6 @@ function removePhoneModel() {
     phoneModelWrapper = null
   }
 }
-// 2 checkboxes both drive this (the PHONE MODEL group's own, and a
-// convenience duplicate directly in HAND MODEL per direct request) --
-// both need to reflect cfg.phoneModelEnabled regardless of which one
-// was actually clicked, since checking one doesn't automatically
-// update the other DOM element on its own.
-function syncPhoneModelEnabledCheckboxes() {
-  const a = document.getElementById('checkboxPhoneModelEnabled')
-  const b = document.getElementById('checkboxPhoneModelEnabledHandModel')
-  if (a) a.checked = cfg.phoneModelEnabled
-  if (b) b.checked = cfg.phoneModelEnabled
-}
 function setPhoneModelEnabled(enabled) {
   cfg.phoneModelEnabled = enabled
   if (enabled) {
@@ -1931,7 +1923,20 @@ function setPhoneModelEnabled(enabled) {
   } else {
     removePhoneModel()
   }
-  syncPhoneModelEnabledCheckboxes()
+  const cb = document.getElementById('checkboxPhoneModelEnabled')
+  if (cb) cb.checked = cfg.phoneModelEnabled
+}
+// 2 checkboxes both drive cfg.hideHands, in OPPOSITE sense -- "Hide
+// Hands" (Field Layout) is checked when hidden; "Hand Model On/Off"
+// (directly in HAND MODEL, per direct request 2026-09-28 -- this row
+// used to be a Phone Model duplicate, repurposed) is checked when
+// VISIBLE. Both need to stay in sync regardless of which one was
+// actually clicked.
+function syncHandModelEnabledCheckboxes() {
+  const hideCb = document.getElementById('checkboxHideHands')
+  const enabledCb = document.getElementById('checkboxHandModelEnabled')
+  if (hideCb) hideCb.checked = cfg.hideHands
+  if (enabledCb) enabledCb.checked = !cfg.hideHands
 }
 // Called every animate() frame (unconditionally within !isPaused, same as
 // updateAllFingerGizmos()) -- Responsive Rotation depends on live
@@ -2661,7 +2666,8 @@ window.__debug = {
   get sceneObjectEntries() { return sceneObjectEntries },
   get tiltMagnitude() { return tiltMagnitude }, get tiltAngle() { return tiltAngle },
   get phoneTiltAxisXRaw() { return phoneTiltAxisXRaw }, get lastInputSource() { return lastInputSource },
-  getHandCenterWorld, updateWristCrop, computeBaseScale
+  get sensorLog() { return sensorLog },
+  getHandCenterWorld, updateWristCrop, computeBaseScale, pushSensorLog, restartSensorTimer
 }
 
 // window.innerWidth/innerHeight can read 0 at script-parse time in this
@@ -2837,8 +2843,15 @@ let latestMotion = null
 function handleDeviceMotion(e) { latestMotion = e }
 let sensorLogEl = null
 let sensorTimer = null
+// Plain array alongside the DOM (same convention as devPanel.js's own
+// Mouse Log: mouseLog[] + mouseLogEl) -- Copy/Save read from this, not
+// by scraping sensorLogEl.textContent, so a future format/DOM change
+// doesn't need to be mirrored in 2 places.
+let sensorLog = []
 function fmt(n) { return (typeof n === 'number' && !Number.isNaN(n)) ? n.toFixed(2) : '--' }
 function pushSensorLog(text) {
+  sensorLog.push(text)
+  if (sensorLog.length > 200) sensorLog.shift()
   if (!sensorLogEl) return
   const line = document.createElement('div')
   line.textContent = text
@@ -2846,16 +2859,65 @@ function pushSensorLog(text) {
   while (sensorLogEl.children.length > 200) sensorLogEl.removeChild(sensorLogEl.firstChild)
   sensorLogEl.scrollTop = sensorLogEl.scrollHeight
 }
+// CORRECTED 2026-09-28, direct report: "unchecking the Stream Sensor
+// Data checkbox should not erase the log." The old version wiped
+// sensorLogEl.innerHTML on every stop (including a plain uncheck) --
+// this now only ever stops the interval; the log survives until the
+// user explicitly hits Clear.
 function restartSensorTimer() {
   clearInterval(sensorTimer)
   sensorTimer = null
-  if (!cfg.sensorStreamEnabled || !isTouchDevice) { if (sensorLogEl) sensorLogEl.innerHTML = ''; return }
+  if (!cfg.sensorStreamEnabled || !isTouchDevice) return
   sensorTimer = setInterval(() => {
-    const accel = (latestMotion && latestMotion.accelerationIncludingGravity) || {}
-    const gyro = (latestMotion && latestMotion.rotationRate) || {}
-    const heading = latestOrientation ? latestOrientation.alpha : null
-    pushSensorLog(`Accel x:${fmt(accel.x)} y:${fmt(accel.y)} z:${fmt(accel.z)}  |  Gyro α:${fmt(gyro.alpha)} β:${fmt(gyro.beta)} γ:${fmt(gyro.gamma)}  |  Compass:${fmt(heading)}°`)
+    // Per-sensor toggles -- direct request 2026-09-28: only the
+    // checked sensors' own fields are included; if none are checked,
+    // skip the tick entirely (no empty/blank log lines).
+    const parts = []
+    if (cfg.sensorLogAccel) {
+      const accel = (latestMotion && latestMotion.accelerationIncludingGravity) || {}
+      parts.push(`Accel x:${fmt(accel.x)} y:${fmt(accel.y)} z:${fmt(accel.z)}`)
+    }
+    if (cfg.sensorLogGyro) {
+      const gyro = (latestMotion && latestMotion.rotationRate) || {}
+      parts.push(`Gyro α:${fmt(gyro.alpha)} β:${fmt(gyro.beta)} γ:${fmt(gyro.gamma)}`)
+    }
+    if (cfg.sensorLogCompass) {
+      const heading = latestOrientation ? latestOrientation.alpha : null
+      parts.push(`Compass:${fmt(heading)}°`)
+    }
+    if (parts.length) pushSensorLog(parts.join('  |  '))
   }, cfg.sensorIntervalMs)
+}
+// Copy/Save/Clear -- direct request 2026-09-28, same pattern as
+// devPanel.js's own Mouse Log (copyMouseLog/saveMouseLog/clearMouseLog):
+// a flash-the-button-text copy confirmation, a plain Blob+<a download>
+// .md export (works fine in a real dev session, not a sandboxed
+// Artifact context), and an explicit-only clear.
+function copySensorLog(btn) {
+  const text = sensorLog.join('\n')
+  const flash = (msg) => { const orig = btn.textContent; btn.textContent = msg; setTimeout(() => { btn.textContent = orig }, 900) }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => flash('Copied!')).catch(() => flash('Copy failed'))
+  } else {
+    flash('Copy failed')
+  }
+}
+function saveSensorLog() {
+  const md = '# Sensor Log\n\n' + sensorLog.map((line) => '- ' + line).join('\n') + '\n'
+  const blob = new Blob([md], { type: 'text/markdown' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-')
+  a.href = url
+  a.download = 'sensor-log-' + stamp + '.md'
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}
+function clearSensorLog() {
+  sensorLog = []
+  if (sensorLogEl) sensorLogEl.innerHTML = ''
 }
 
 // =======================================================================
@@ -4119,6 +4181,32 @@ function renderDebugExtras() {
   wireCheckbox('checkboxSensorStream', (v) => { cfg.sensorStreamEnabled = v; restartSensorTimer() })
   addRow(sensorSub, { id: 'sliderSensorInterval', label: 'Sample Interval (Ms)', type: 'slider', min: 50, max: 2000, step: 50, value: cfg.sensorIntervalMs })
   wireSlider('sliderSensorInterval', (v) => { cfg.sensorIntervalMs = v; restartSensorTimer() })
+  // Per-sensor log toggles -- direct request 2026-09-28.
+  addRow(sensorSub, { id: 'checkboxSensorLogAccel', label: 'Log Accelerometer', type: 'checkbox' })
+  document.getElementById('checkboxSensorLogAccel').checked = cfg.sensorLogAccel
+  wireCheckbox('checkboxSensorLogAccel', (v) => { cfg.sensorLogAccel = v })
+  addRow(sensorSub, { id: 'checkboxSensorLogGyro', label: 'Log Gyroscope', type: 'checkbox' })
+  document.getElementById('checkboxSensorLogGyro').checked = cfg.sensorLogGyro
+  wireCheckbox('checkboxSensorLogGyro', (v) => { cfg.sensorLogGyro = v })
+  addRow(sensorSub, { id: 'checkboxSensorLogCompass', label: 'Log Compass', type: 'checkbox' })
+  document.getElementById('checkboxSensorLogCompass').checked = cfg.sensorLogCompass
+  wireCheckbox('checkboxSensorLogCompass', (v) => { cfg.sensorLogCompass = v })
+  const sensorBtnRow = document.createElement('div')
+  sensorBtnRow.className = 'dev-buttons'
+  const sensorCopyBtn = document.createElement('button')
+  sensorCopyBtn.type = 'button'
+  sensorCopyBtn.textContent = 'COPY'
+  const sensorSaveBtn = document.createElement('button')
+  sensorSaveBtn.type = 'button'
+  sensorSaveBtn.textContent = 'SAVE'
+  const sensorClearBtn = document.createElement('button')
+  sensorClearBtn.type = 'button'
+  sensorClearBtn.textContent = 'CLEAR'
+  sensorBtnRow.append(sensorCopyBtn, sensorSaveBtn, sensorClearBtn)
+  sensorSub.appendChild(sensorBtnRow)
+  sensorCopyBtn.addEventListener('click', () => copySensorLog(sensorCopyBtn))
+  sensorSaveBtn.addEventListener('click', saveSensorLog)
+  sensorClearBtn.addEventListener('click', clearSensorLog)
   sensorLogEl = document.createElement('div')
   sensorLogEl.className = 'dev-mouse-log'
   sensorSub.appendChild(sensorLogEl)
@@ -4161,13 +4249,14 @@ function renderHandysetDevGroups() {
   // of a top-level group and titled differently.
   const handModelContent = addGroup('HAND MODEL')
 
-  // Convenience duplicate of the PHONE MODEL group's own On/Off
-  // checkbox, direct request 2026-09-27 -- both checkboxes drive the
-  // exact same cfg.phoneModelEnabled and stay in sync with each other
-  // (see setPhoneModelEnabled()/syncPhoneModelEnabledCheckboxes()).
-  addRow(handModelContent, { id: 'checkboxPhoneModelEnabledHandModel', label: 'Phone Model On/Off', type: 'checkbox' })
-  document.getElementById('checkboxPhoneModelEnabledHandModel').checked = cfg.phoneModelEnabled
-  wireCheckbox('checkboxPhoneModelEnabledHandModel', (v) => { setPhoneModelEnabled(v) })
+  // CORRECTED 2026-09-28, direct request: this row was originally a
+  // Phone Model On/Off duplicate (2026-09-27) -- repurposed into a
+  // Hand Model On/Off toggle instead (drives cfg.hideHands, inverted
+  // sense, kept in sync with Field Layout's own "Hide Hands" checkbox
+  // via syncHandModelEnabledCheckboxes()).
+  addRow(handModelContent, { id: 'checkboxHandModelEnabled', label: 'Hand Model On/Off', type: 'checkbox' })
+  document.getElementById('checkboxHandModelEnabled').checked = !cfg.hideHands
+  wireCheckbox('checkboxHandModelEnabled', (v) => { cfg.hideHands = !v; relayoutField(); syncHandModelEnabledCheckboxes() })
 
   const fieldContent = addSubgroup(handModelContent, 'Field Layout')
   addRow(fieldContent, { id: 'sliderFieldRows', label: 'Rows (Count)', type: 'slider', min: 1, max: 40, step: 1, value: cfg.fieldRows })
@@ -4189,7 +4278,7 @@ function renderHandysetDevGroups() {
   wireCheckbox('checkboxUseProgressiveOffset', (v) => { cfg.useProgressiveOffset = v; relayoutField() })
   addRow(fieldContent, { id: 'checkboxHideHands', label: 'Hide Hands', type: 'checkbox' })
   document.getElementById('checkboxHideHands').checked = cfg.hideHands
-  wireCheckbox('checkboxHideHands', (v) => { cfg.hideHands = v; relayoutField() })
+  wireCheckbox('checkboxHideHands', (v) => { cfg.hideHands = v; relayoutField(); syncHandModelEnabledCheckboxes() })
 
   renderPoseGroup(addSubgroup(handModelContent, 'Pose'))
   renderTweenGroup(addSubgroup(handModelContent, 'Tween'))

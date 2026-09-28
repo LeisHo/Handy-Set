@@ -1,6 +1,5 @@
 {
   "controls": {
-    "checkboxPhoneModelEnabledHandModel": true,
     "sliderFieldRows": 1,
     "sliderFieldCols": 1,
     "sliderRowSpacing": 9.5,
@@ -152,7 +151,8 @@
     "checkboxObjectAxesRenderInFront": false,
     "sliderObjectAxesThickness": 2,
     "sliderObjectAxesLength": 40,
-    "checkboxDeviceInfoEnabled": true
+    "checkboxDeviceInfoEnabled": true,
+    "checkboxHandModelEnabled": true
   },
   "layout": {
     "left": 79,
@@ -555,7 +555,7 @@
         "items": [
           {
             "type": "row",
-            "key": "checkboxPhoneModelEnabledHandModel"
+            "key": "checkboxHandModelEnabled"
           },
           {
             "type": "group",
