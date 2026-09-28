@@ -7,17 +7,33 @@ append-only history.
 
 ## Currently working on
 
-Nothing in progress — the Phone Model rotation node/damping/log
-follow-up (2026-09-28) is pushed, on top of the dev panel template
-re-sync (also 2026-09-28) and the 6-part Palm Rotation/Responsive-
-features request (2026-09-27). See Recently completed below for the
-full account. Not independently browser-verified this round (per
-direct instruction to skip it) — see What's Next.
+Nothing in progress — the Phone Responsive Rotation curve-inversion fix
+(2026-09-28) is pushed, on top of the rotation-node/damping/log
+follow-up (also 2026-09-28), the dev panel template re-sync (also
+2026-09-28), and the 6-part Palm Rotation/Responsive-features request
+(2026-09-27). See Recently completed below for the full account. Not
+independently browser/device-verified this round (per direct
+instruction) — this one was grounded directly in a real device's own
+pasted log data instead, see that entry for the full cross-check.
 
 Pushed to `https://github.com/LeisHo/Handy-Set`
 (deployed via the Vercel project at `https://vercel.com/lpeis/handy-set`).
 
 ## Recently completed
+
+- **RESOLVED (2026-09-28): Phone Responsive Rotation's default curve
+  was inverted — rest gave near-max rotation with an unstable sign
+  (the jitter), full tilt gave only a small rotation (the "missing
+  axis"/doesn't-match report).** Diagnosed from a real Phone Model Log
+  + Sensor Log capture covering 4 held test movements — cross-
+  referencing timestamps proved the axis MAPPING (which signal drives
+  X/Y/Z, each one's sign) was correct for all 4, and the real bug was
+  `cfg.phoneResponsiveRotationCurve`'s shape being backwards
+  (`{x:0,y:1}->{x:1,y:0}` instead of `{x:0,y:0}->{x:1,y:1}`). Fixed the
+  code default AND surgically patched the already-synced live value in
+  `dev-panel-settings.json` (verified via a before/after key-count diff
+  and a scoped `git diff` — exactly 1 line changed). See
+  `docs/CHANGELOG.txt`'s matching 2026-09-28 (30th) entry.
 
 - **FOLLOW-UP (2026-09-28): Phone Model rotation-node fix, damping, and
   a new Phone Model Log.** 3 direct reports on the previous round's

@@ -1876,3 +1876,43 @@ wiring, and are still open:
   property, updated from mouse input on Desktop too). It still logs
   "at the same rate" by reading the same `cfg.sensorIntervalMs` and
   starting/stopping from the same `Stream Sensor Data` checkbox.
+- **`cfg.phoneResponsiveRotationCurve`'s default was INVERTED
+  (`{x:0,y:1}` -> `{x:1,y:0}`, decreasing) until 2026-09-28 — the real
+  bug behind both "jittery" and "missing an axis"/doesn't-match reports
+  on Phone Model Responsive Rotation, found from a real device log, not
+  guessed.** Every axis mapping in `computePhoneCombinedQuat()`
+  (X<-beta, Z<-gamma inverted, Y<-compass) was independently confirmed
+  CORRECT against 4 real held test movements (Left/Right/Facing-Me/
+  Facing-Away) by cross-referencing the Phone Model Log's plateaus
+  against the Sensor Log's `Orient β/γ` at the same timestamps — sign
+  flips in beta/gamma matched sign flips in the output every time, no
+  exceptions. The actual bug was the CURVE that turns "how much tilt"
+  into "how much rotation magnitude": with the old default, near-zero
+  tilt (rest) produced near-MAXIMUM magnitude (with a noise-sensitive,
+  unstable SIGN, since `Math.sign()` of a near-zero raw value flips
+  unpredictably — this is the jitter), while a real, deliberate,
+  full-strength tilt produced only a SMALL magnitude — backwards from
+  "the phone rotates to match my tilt," and easy to misdiagnose as an
+  axis/mapping bug since the symptom ("doesn't match, looks wrong")
+  shows up at exactly the moments someone is actually testing it (a
+  real tilt), while the "at rest = near-max" half of the bug is easy to
+  miss unless you're staring at a rest-state log specifically. Fixed by
+  flipping the default to `{x:0,y:0} -> {x:1,y:1}` (increasing) AND
+  surgically patching the already-synced live value in
+  `dev-panel-settings.json` (a code-default fix alone does NOT touch
+  what a real device has already Synced — same discipline as every
+  other settings-file surgery in this file: verify with a before/after
+  key-count diff and a scoped `git diff`, check for newer remote
+  commits before AND after). **If a future report about ANY reactive
+  curve/range field in this file (Reactive Arm Length, Wrist Splay,
+  Base Arm Rotation, Pose Tween — they all share the same generic
+  `type:'curve-editor'` control and the same `min + (max-min)*curveY`
+  formula) describes "backwards," "inverted," "feels wrong at rest but
+  fine when I really push it" (or vice versa), check that field's own
+  actual saved curve shape directly — via the git-tracked settings file
+  or the dev panel's own curve-editor widget — before assuming the axis
+  mapping or sign logic is the problem.** A real device log with
+  BOTH a rest-state AND a full-range sample is what made this
+  diagnosable at all; a report or test that only covers "does it move
+  when I tilt" (not "what does it do when I DON'T") can hide this
+  exact bug shape.

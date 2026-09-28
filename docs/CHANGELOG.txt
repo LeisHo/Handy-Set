@@ -3646,6 +3646,75 @@ genuinely unverified in a real browser or on a real device.
 `index.html`'s cache-buster bumped `?v=112` -> `?v=113`.
 
 --------------------------------------------------------------------------------
+2026-09-28  -  (30th)
+
+Direct report after the previous entry's fix: "rotation still no good,"
+with a real Phone Model Log + Sensor Log capture pasted (4 held test
+movements: Left, Right, Facing Me, Facing Away/bottom-up) and a
+pointed question -- "why is this so difficult? isnt it just mapping 1
+to 1... i gave you sample data of my sensors and told you what phone
+tilt matches what model rotation."
+
+Cross-referenced the 2 logs by timestamp instead of guessing. Found
+several held plateaus in the Phone Model Log (each lasting multiple
+identical-looking ticks) and matched each to the Sensor Log's `Orient
+β/γ` at the same moments:
+
+- Plateau `x:7.50 y:0.00 z:-7.50` matched `β≈179° γ≈83°` (both axes
+  pinned near their max magnitude).
+- Plateau `x:-7.50 y:0.00 z:7.50` matched `β≈-178° γ≈-79°` (both
+  flipped sign from the above -- and the output flipped sign to match,
+  on both axes).
+- Plateau `x:7.50 y:0.00 z:7.50` matched `β≈+94° γ≈-60 to -88°` (β same
+  sign as the 1st case -> x sign matches; γ opposite sign from the 1st
+  case -> z sign matches).
+- The long final plateau `x:28.09 y:-28.94 z:-29.24` (held 41.9s-49.3s,
+  the recording's own tail) matched `β≈5° γ≈2°` -- i.e. the phone was
+  essentially FLAT/AT REST for over 7 seconds, yet the model held
+  near-MAXIMUM rotation on all 3 axes simultaneously.
+
+The 4-plateau cross-check proves the AXIS MAPPING itself (which raw
+signal drives X/Y/Z, and each one's sign) was correct for all 4 real
+test movements -- sign flips in beta/gamma correctly flipped the
+corresponding output's sign every time, with no exceptions. The 5th
+data point (the long rest-state plateau) is what actually broke the
+picture open: a magnitude near the configured MAX while genuinely at
+rest is the opposite of what "more tilt = more rotation" should give.
+
+Root cause: `cfg.phoneResponsiveRotationCurve`'s default was
+DECREASING -- `{x:0,y:1}` (t=0/no-tilt -> curveY=1/full magnitude) to
+`{x:1,y:0}` (t=1/full-tilt -> curveY=0/zero magnitude) -- backwards.
+This explains BOTH remaining reports at once: (1) jitter -- near rest,
+`sign(rawComponent)` on a near-zero, noisy value flips unpredictably
+between + and -, and since magnitude is near-MAX there at the same
+time, every sign flip is a huge, visible snap between +max and -max;
+(2) "missing an axis"/doesn't match -- a real, deliberate, full-strength
+tilt (the case someone would actually notice and judge against) produces
+LOW magnitude, while an accidental near-rest moment (holding the phone
+still between movements) produces the model's biggest, most visible
+rotation -- exactly backwards from what "the phone rotates to match my
+tilt" should feel like.
+
+Fixed the cfg default to `{x:0,y:0}` -> `{x:1,y:1}` (increasing). Also
+surgically patched the ALREADY-SYNCED live value in
+`data/processed/dev-panel-settings.json` to match (a code-default fix
+alone would not have changed what the real device is currently
+loading, since Sync had already persisted the inverted curve) --
+verified via a before/after key-count diff (159 -> 159) and a scoped
+`git diff` showing exactly the 1 line changed, nothing else. Checked
+for newer remote commits both before and after the surgery (`git
+fetch`) -- 1 found before (a routine Sync commit, unrelated file
+region), none after.
+
+Not independently browser/device-verified this round (same "no need to
+verify" instruction as the previous entry) -- this fix is grounded
+directly in the pasted real-device log data rather than a live test,
+which is what made it possible to diagnose with high confidence without
+one.
+
+`index.html`'s cache-buster bumped `?v=113` -> `?v=114`.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
