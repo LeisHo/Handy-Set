@@ -8,24 +8,50 @@ append-only history.
 ## Currently working on
 
 Nothing in progress — the 6-part Palm Rotation/Responsive-features
-request (2026-09-27) is fully complete, plus 9 interjected fixes from
-the same session (Saved Cameras/list-picker persistence; Palm Rotation
-height/distance independence + forearm-base marker; a hand-disappears
-clash between Pose Tween and Base Arm Rotation; `armBaseDistanceT`
-freezing at a stale value in the ground-raycast dead zone; Pose Tween
-applying the live Whole-Hand Rotation / Base Rotation sliders to
-whatever pose is showing; a follow-on fix for fingers freezing while
-the wrist kept responding; Save/Sync never persisting ANY curve/range
-text control project-wide; Camera slider decimals/jitter/click-to-
-type; and Phone Tilt's "Show in Mobile/Landscape" checkbox not
-mirroring its 3 curve/range widgets). See Recently completed below for
-the full account.
+request (2026-09-27) is fully complete, plus 9 interjected fixes and a
+new Phone Model feature from the same session (Saved Cameras/
+list-picker persistence; Palm Rotation height/distance independence +
+forearm-base marker; a hand-disappears clash between Pose Tween and
+Base Arm Rotation; `armBaseDistanceT` freezing at a stale value in the
+ground-raycast dead zone; Pose Tween applying the live Whole-Hand
+Rotation / Base Rotation sliders to whatever pose is showing; a
+follow-on fix for fingers freezing while the wrist kept responding;
+Save/Sync never persisting ANY curve/range text control project-wide;
+Camera slider decimals/jitter/click-to-type; Phone Tilt's "Show in
+Mobile/Landscape" checkbox not mirroring its 3 curve/range widgets;
+and a new PHONE MODEL group + Object Axes debug feature + HAND MODEL
+reorg). See Recently completed below for the full account.
 
 Pushed to `https://github.com/LeisHo/Handy-Set`
 (deployed via the Vercel project at `https://vercel.com/lpeis/handy-set`).
 
 ## Recently completed
 
+- **NEW (2026-09-27): Phone Model group** — loads any of 8 smartphone
+  GLBs (`data/processed/SMARTPHONE MODELS/`) with On/Off, a Model
+  picker, Scale, Offset (X/Y/Z), Rotation (X/Y/Z, pivoting on the
+  model's own geometry centroid), and its own Responsive Rotation
+  (RESPONSIVE BEHAVIOUR - PHONE > Responsive Rotation) driving 3 axes
+  from one shared curve/range — Y/Z on both desktop and mobile
+  (reusing `tiltMagnitude`/`tiltAngle`), X only on mobile (the device's
+  own compass heading, a signal that doesn't exist for a mouse). A
+  naming collision in the original spec (2 groups both wanting
+  "RESPONSIVE BEHAVIOUR - PHONE") was resolved via AskUserQuestion —
+  the hand's own responsive group is "RESPONSIVE BEHAVIOUR - HAND".
+  **Object Axes** (Debug group) ported from 3JS ENGINE — a
+  multi-select picker showing a fat-line axes gizmo on any registered
+  scene object (hands, the Phone Model). **HAND MODEL** — a new
+  top-level group nesting Field Layout/Pose/Tween/RESPONSIVE BEHAVIOUR
+  - HAND (renamed from Phone Tilt) in that order. The git-tracked
+  `dev-panel-settings.json` was surgically restructured (not reset) to
+  preserve every existing custom rename/reorder, verified via a
+  before/after key-diff (zero lost entries) and re-applied against 3
+  newer remote Sync commits that landed mid-session. Live-verified
+  end-to-end: all 8 models load, centroid pivot holds to ~1e-16 drift,
+  Responsive Rotation confirmed via a real mousemove, Object Axes
+  gizmo renders on both Hand 1 and Phone Model, Show-in-Mobile
+  mirroring works for the new controls. See `docs/CHANGELOG.txt`'s
+  matching 2026-09-27 (23rd) entry.
 - **RESOLVED (2026-09-27): Phone Tilt's "Show in Mobile/Landscape"
   checkbox did nothing for its 3 curve/range widgets (Min/Max Rotation,
   Rotation Curve, Tween Curve) — checking it silently had no effect.**

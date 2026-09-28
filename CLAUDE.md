@@ -44,6 +44,14 @@ generic engine capability it doesn't have yet; add project settings via
 - `data/processed/HAND3D/Hand2.glb` — the rigged hand asset, already
   present from before this project's reset (same asset HANDY DANDIES
   uses).
+- `data/processed/SMARTPHONE MODELS/*.glb` — 8 loadable smartphone
+  models for the Phone Model group (`PHONE_MODEL_OPTIONS`, `main.js`).
+  Only the top-level `.glb` files are tracked/loaded — the folder's own
+  `.zip`/`.blend`/`.blend1` files and 4 extracted source/textures
+  subfolders are raw provenance (~104MB), gitignored, not runtime
+  assets. Filenames contain literal spaces — `loadPhoneModel()` calls
+  `encodeURI()` at the fetch site; `cfg.phoneModelFile` itself stores
+  the raw, readable path.
 - `api/save-settings.js` — Vercel serverless function backing the dev
   panel's git-tracked Save (§12l upgrade), ported from HANDY DANDIES' own.
   Wired from `main.js`'s own `wireRemoteSaveButtons()`/
@@ -1499,3 +1507,92 @@ wiring, and are still open:
   `window.findGroupContent()` directly, unless the group is known to
   always be top-level.** See `docs/CHANGELOG.txt`'s matching 2026-09-27
   (22nd) entry.
+- **A structural dev-panel change (moving/renaming a group, per the
+  HAND MODEL reorg below) changes that group's own `data-sid` — which
+  silently orphans its entry in the git-tracked
+  `data/processed/dev-panel-settings.json` unless the JSON is
+  surgically updated too, not just `HANDYSET_SETTINGS_SCHEMA_VERSION`
+  bumped.** The schema-version bump (see the entry above it in this
+  file) only clears stale LOCAL `localStorage` — it never touches the
+  git file, and this project's own git file carries real, valuable user
+  customizations (renamed groups, reordered subgroups) that a blanket
+  reset would destroy. Fixed 2026-09-27 (HAND MODEL/Phone Tilt ->
+  RESPONSIVE BEHAVIOUR - HAND rename) via a small Python script that
+  relocates/renames the exact JSON subtree in place — verified
+  correct via a full before/after key-diff (every group/row key
+  present before must still be present after, modulo the deliberate
+  rename/addition) rather than trusting a visual read of the nested
+  JSON. **If a future structural change needs the same treatment: (1)
+  read the live `sectionOrder`/`devTextOverrides` tree first (per the
+  gotcha above these two), (2) write the transform as a script, not a
+  manual edit, (3) verify with a flattened key-diff before committing,
+  (4) if remote Sync commits land before you push, re-run the SAME
+  transform against the freshly-pulled remote state rather than
+  force-pushing your own older merge** — this exact sequence happened
+  live this session (3 remote `Update dev-panel-settings.json via Save
+  Settings` commits landed mid-task) and the re-run-against-fresh-pull
+  approach is what kept both the reorg AND the newer remote values
+  intact.
+- **Phone Model's Responsive Rotation drives 3 axes from ONE shared
+  4-control curve/range (On/Off, Fine-Tune, Min/Max Range, Curve) —
+  the same pattern as Responsive Arm Rotation at Base, generalized to
+  multiple axes via `computePhoneResponsiveAxisDeg(rawComponent)`:
+  `|rawComponent|` drives the curve for magnitude,
+  `Math.sign(rawComponent)` gives it a direction.** Y/Z axes reuse
+  `tiltMagnitude`/`tiltAngle` (reconstructed into `nx =
+  tiltMagnitude*cos(tiltAngle)`, `ny = tiltMagnitude*sin(tiltAngle)`),
+  identical on desktop and mobile since both input paths already
+  reduce to that same 2D representation. The X axis
+  (`phoneTiltAxisXRaw`) is ONLY ever written inside
+  `handleDeviceOrientation()`, from the device's own compass heading
+  (`e.alpha`, baselined on first reading via `phoneAlphaBaseline` then
+  read as a centered delta) — **this is what makes "desktop: Y/Z only,
+  mobile: all 3 axes" true without any explicit `isTouchDevice`
+  branch** in the responsive-rotation code itself; a mouse has no
+  compass-equivalent 3rd dimension, so the variable simply never gets
+  written there. If a future feature needs a similar
+  platform-conditional axis, check whether this same "let the signal's
+  own availability define the platform split" pattern applies before
+  reaching for an explicit device-detection branch.
+- **Phone Model's rotation pivots on its own geometry centroid using
+  the EXACT SAME formula as `applyModelRootTransform()`'s own
+  `modelRotationPivot`** (`position = pivot - rotation*(scale*pivot)`)
+  — reused verbatim, not re-derived, since this project has already
+  gotten this formula wrong from scratch multiple times for the hand
+  (see the Whole-Hand Rotation gotchas above). The centroid itself
+  (`phoneModelCentroidLocal`) is measured via `Box3().setFromObject()`
+  right after load, BEFORE any scale/rotation is applied — same
+  "measure at bind pose" discipline as `modelRotationPivot`'s own
+  comment documents. Live-verified: a 90° Y-rotation left the model's
+  world-space centroid unchanged to ~3.1e-16 (floating-point noise).
+- **A freshly-loaded Phone Model at `phoneModelScale: 1` is easy to
+  mistake for "not loading" — it's genuinely tiny relative to this
+  scene's own units** (a real GLB's native scale vs. the hand scene's
+  much larger arbitrary units: the phone's own world bounding box
+  measured ~1.3 x 0.19 x 2.65 units at scale 1, vs. the hand's own
+  ~115 x 80 x 36). It's also NOT necessarily inside the camera's
+  current frustum even after scaling up — "load model at world origin"
+  places it at world Y=0, well below this project's own camera framing
+  (centered around the hand's own ~Y33 position) — confirmed live via
+  `.project(camera)` NDC coordinates (Y ~-1.94, outside the visible
+  -1..1 range) before the Y Offset slider was used to bring it into
+  frame. **If a future report says the Phone Model "doesn't show up,"
+  check Scale and Y Offset before assuming a loading bug** — the GLB
+  fetch itself succeeding (confirm via Network tab / a
+  `console.error`'s absence) rules out the actual load path.
+- **This sandbox's own documented flaky-large-file-delivery gotcha
+  (`net::ERR_CONNECTION_RESET` on an otherwise-`200 OK` request) hit
+  the Phone Model's own GLB fetches AND `main.js` itself repeatedly
+  during this feature's live verification** — as `main.js` has grown
+  (now 4,373 lines), it's apparently large enough to trip this same
+  flakiness that previously only hit `devPanel.js`. A failed `main.js`
+  fetch leaves `window.__debug` (and everything else) undefined with
+  no clear synchronous error — check `read_network_requests` for a
+  `[FAILED: net::ERR_CONNECTION_RESET]` tag on `main.js`/a GLB before
+  assuming a real regression; a plain retry-by-navigating resolves it.
+- **`window.__debug` gained several new getters this session**
+  (`phoneModelRaw`, `phoneModelWrapper`, `phoneModelCentroidLocal`,
+  `sceneObjectEntries`, `tiltMagnitude`, `tiltAngle`,
+  `phoneTiltAxisXRaw`, `lastInputSource`) — kept permanently, matching
+  this file's own existing debug-exposure convention, not removed
+  after this session's own live verification ended.

@@ -3073,6 +3073,117 @@ localStorage per workspace CLAUDE.md §12l).
 `index.html`'s own `main.js` cache-buster bumped `?v=99` -> `?v=100`.
 
 --------------------------------------------------------------------------------
+2026-09-27  -  (23rd, same day)
+
+Direct request: load 8 smartphone GLBs (data/processed/SMARTPHONE
+MODELS/) into a new "PHONE MODEL" group (On/Off, Model picker, Scale,
+OFFSET subgroup, ROTATION subgroup, and a "RESPONSIVE BEHAVIOUR -
+PHONE" subgroup with its own "Responsive Rotation" sub-subgroup);
+"Object Axes" ported from 3JS ENGINE's own Debug group; a new "HAND
+MODEL" top-level group nesting Field Layout/Pose/Tween/a renamed Phone
+Tilt in that order.
+
+Resolved via AskUserQuestion before building, per workspace CLAUDE.md
+§0a: the spec's own "RESPONSIVE BEHAVIOUR - PHONE" (for the phone
+model) collided by name with renaming the hand's existing "Phone Tilt"
+group to the same string. Direct answer: the hand's group is
+"RESPONSIVE BEHAVIOUR - HAND"; "RESPONSIVE BEHAVIOUR - PHONE" is
+actually Level 2, nested inside PHONE MODEL (not top-level as the
+original shorthand implied).
+
+Phone Model mechanics: `loadPhoneModel()` (GLTFLoader, `encodeURI()`
+for the filenames' literal spaces) loads into `phoneModelWrapper`
+(position = Offset sliders, "world origin" when Offset is 0,0,0) ->
+`phoneModelRaw` (scale + rotation, pivot-compensated). "Anchor of
+rotation will be the centroid of the 3d geometry" -- measured once via
+`Box3().setFromObject()` right after load (before any scale/rotation),
+then kept fixed every frame via the EXACT `position = pivot -
+rotation*(scale*pivot)` formula `applyModelRootTransform()` already
+uses for the hand's own `modelRotationPivot` -- reused, not
+re-derived.
+
+Responsive Rotation: same 4-control pattern as Responsive Arm Rotation
+at Base (On/Off, Fine-Tune, Min/Max Range, Curve) -- direct request --
+but ONE shared curve/range now drives 3 INDEPENDENT axes
+(`computePhoneResponsiveAxisDeg(rawComponent)`, |component| through the
+curve for magnitude, `Math.sign(component)` for direction). "On
+Desktop, it will rotate around its local y and z axes only, but on
+mobile it will rotate on all axes" falls out of WHICH raw signals
+exist on which platform, not an explicit device branch: Y/Z reuse
+`tiltMagnitude`/`tiltAngle` (already computed identically for mouse
+and device orientation) reconstructed into nx/ny components; the 3rd
+(X) axis is `phoneTiltAxisXRaw`, sourced from the device's own compass
+heading (`e.alpha`, baselined on first reading then read as a centered
+delta) -- a signal that only ever exists for a real device, so it
+naturally stays 0 on desktop (mouse has no compass equivalent).
+
+Object Axes: ported fat Line2/LineMaterial axes visualization
+(`createFatAxesVisualization()` et al.) plus a minimal
+`registerSceneObject()`/`sceneObjectEntries` scene-object registry
+(scoped down from 3JS ENGINE's own version, which also backs a full
+property Inspector this project doesn't have) -- hands (one entry per
+`rebuildField()`-built hand) and the Phone Model (registered on load,
+unregistered on remove) both populate it. World Axes wasn't ported
+(not requested).
+
+HAND MODEL reorg: per direct instruction, checked the real git-tracked
+`data/processed/dev-panel-settings.json` (not just source code) before
+touching anything, per this project's own established "check current
+git save settings first" discipline -- found the live panel's actual
+current Phone Tilt subgroup order and 2 real custom renames
+(`New Group` -> "RESPONSIVE WRIST CROP", `Palm Facing` -> "RESPONSIVE
+PALM ROTATION") that source code alone would never have revealed.
+Restructuring the code (Field Layout/Pose/Tween/Phone Tilt now built
+via `addSubgroup(handModelContent, ...)` instead of `addGroup(...)`,
+and Phone Tilt itself renamed at the literal `addSubgroup()` call site)
+changes each group's own stable `data-sid`, which would have silently
+orphaned the corresponding entries in the git-tracked settings file
+(the same "structural change needs care" class as the
+`HANDYSET_SETTINGS_SCHEMA_VERSION` gotcha, bumped here too -- but that
+bump only clears stale LOCAL storage, never the git file). Fixed by
+surgically relocating/renaming the exact JSON subtree (a Python script,
+verified via a full before/after key-diff showing zero lost entries)
+rather than resetting the file -- the RESPONSIVE WRIST CROP/RESPONSIVE
+PALM ROTATION renames and every subgroup's own saved order survive
+intact. While preparing to commit, 3 newer remote Sync commits landed
+(a live session's own real settings changes, `controls`/
+`sectionCollapseState` only, confirmed via diff to not touch
+`sectionOrder` at all) -- re-ran the same transform against the fresh
+pulled state instead of force-pushing the earlier one, verified via
+the same zero-lost-keys check plus explicit confirmation that the
+remote's newer `controls`/`sectionCollapseState` values survived
+unchanged.
+
+Live-verified end-to-end (localhost, dev=1): all 8 GLBs load (one hit
+this sandbox's own documented flaky-large-file-delivery gotcha,
+resolved on retry, not a real bug); HAND MODEL/PHONE MODEL nest exactly
+per spec on a fresh load; centroid-pivot rotation confirmed via a 90°
+Y-rotation test (world-centroid drift ~3.1e-16, floating-point noise);
+Responsive Rotation confirmed via a real dispatched `mousemove` (
+non-identity quaternion, `phoneTiltAxisXRaw` exactly 0 throughout,
+confirming the desktop Y/Z-only invariant); Object Axes gizmo
+confirmed attached and visible on both "Hand 1" and "Phone Model" via
+the picker; Show-in-Mobile mirroring confirmed for the new
+`checkboxPhoneModelEnabled` control (`checkboxMobilePhoneModelEnabled`
+correctly created and checked on the Mobile tab). No new console
+errors beyond the pre-existing `/api/save-settings` 404s and the
+sandbox's own documented connection-reset flakiness.
+
+`index.html`'s own `main.js` cache-buster bumped `?v=100` -> `?v=103`
+(3 bumps during live debugging of a `window.__debug` exposure, kept
+permanently -- `phoneModelRaw`/`phoneModelWrapper`/
+`phoneModelCentroidLocal`/`sceneObjectEntries`/`tiltMagnitude`/
+`tiltAngle`/`phoneTiltAxisXRaw`/`lastInputSource` are now exposed
+there, matching this file's own existing debug-exposure convention).
+`.gitignore` gained an entry excluding SMARTPHONE MODELS/'s own raw
+source material (.zip/.blend/.blend1 files and 4 extracted source/
+textures subfolders, ~104MB) -- only the 8 top-level .glb files the
+app actually loads are tracked.
+
+Commit: `cb9cd84`. Pushed to `https://github.com/LeisHo/Handy-Set`;
+Vercel auto-deployed.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
