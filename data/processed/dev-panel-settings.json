@@ -99,7 +99,7 @@
     "sliderPhoneResponsiveRotationFineTune": 0,
     "sliderPhoneRotationDamping": 0.25,
     "textPhoneResponsiveRotationRange": "{\"min\":0,\"max\":30}",
-    "textPhoneResponsiveRotationCurve": "{\"points\": [{\"x\": 0, \"y\": 1}, {\"x\": 1, \"y\": 0}], \"method\": \"catmullrom\"}",
+    "textPhoneResponsiveRotationCurve": "{\"points\": [{\"x\": 0, \"y\": 0}, {\"x\": 1, \"y\": 1}], \"method\": \"catmullrom\"}",
     "checkboxWristSplayResponsiveEnabled": false,
     "sliderWristSplayDefault": -25,
     "checkboxWristSplayReactiveEnabled": true,

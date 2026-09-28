@@ -209,7 +209,18 @@ const cfg = {
   // this damps that out at the rotation level rather than the raw input.
   phoneRotationDamping: 0.25,
   phoneResponsiveRotationRange: '{"min":0,"max":30}',
-  phoneResponsiveRotationCurve: '{"points": [{"x": 0, "y": 1}, {"x": 1, "y": 0}], "method": "catmullrom"}',
+  // CORRECTED 2026-09-28, found via real device log data, not guessed:
+  // this default was DECREASING (t=0/no-tilt -> curveY=1/full magnitude,
+  // t=1/full-tilt -> curveY=0/zero magnitude) -- backwards for "more
+  // tilt = more rotation." Confirmed directly from a real Phone Model
+  // Log + Sensor Log capture: at rest (beta/gamma near 0) the model held
+  // near-MAX rotation on all 3 axes (and, since sign(rawComponent) near
+  // 0 is noise-sensitive, flickered unpredictably between + and -,
+  // explaining the reported jitter); at full tilt (beta/gamma pinned to
+  // +-45+) the model rotated only slightly. The axis MAPPING itself
+  // (which signal drives X/Y/Z, and each one's sign) was independently
+  // verified correct against all 4 test movements in that same capture.
+  phoneResponsiveRotationCurve: '{"points": [{"x": 0, "y": 0}, {"x": 1, "y": 1}], "method": "catmullrom"}',
   // Debug > Object Axes -- ported from 3JS ENGINE's own feature (see that
   // project's src/main.js, "World Axes / Object Axes visualization").
   objectAxesEnabled: false, objectAxesRenderInFront: false,
