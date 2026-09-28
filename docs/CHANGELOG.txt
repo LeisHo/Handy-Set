@@ -3312,6 +3312,68 @@ Commit: `e2a63af`. Pushed to `https://github.com/LeisHo/Handy-Set`;
 Vercel auto-deployed.
 
 --------------------------------------------------------------------------------
+2026-09-28  -  (26th)
+
+3 direct follow-ups: "The Phone Model On Off in the Hand Model group
+should actually be Hand Model On Off"; "for the SENSORS log in the
+debug group. provide a copy, save, and clear button" + "unchecking the
+Stream Sensor Data checkbox should not erase the log"; "in the sensor
+group, provide checkboxes to select what sensors i want logged."
+
+Repurposed the HAND MODEL group's own convenience checkbox (previously
+a Phone Model On/Off duplicate, added 2026-09-27) into a genuine "Hand
+Model On/Off" toggle -- drives `cfg.hideHands` in the OPPOSITE sense
+from Field Layout's own pre-existing "Hide Hands" checkbox (checked =
+visible, vs. Hide Hands' checked = hidden), kept in sync via a new
+`syncHandModelEnabledCheckboxes()` (same pattern as the phone model's
+own `setPhoneModelEnabled()` sync, just inverted). `setPhoneModelEnabled()`
+itself simplified back down to syncing only its own real checkbox now
+that the duplicate no longer plays that role. Live-verified both
+directions: toggling the new checkbox flips `cfg.hideHands` and the
+real hand's `wrapper.visible`, AND correctly re-syncs when "Hide
+Hands" itself is toggled instead. The git-tracked settings file's own
+row-level reference to the old id (`checkboxPhoneModelEnabledHandModel`,
+both in `sectionOrder` and the `controls` dict, value `true`) was
+renamed in place to the new id (`checkboxHandModelEnabled`) rather
+than left orphaned -- a smaller-scope version of the same surgery
+discipline as the 24th entry's group-level fix, verified the same way
+(full row-key diff, zero lost/extra, controls value carried over
+unchanged).
+
+Sensors log (Debug > Sensors): added COPY/SAVE/CLEAR buttons, ported
+from devPanel.js's own built-in Mouse Log implementation (same
+button-flash-on-copy, Blob+`<a download>` .md export, and explicit-
+only clear pattern -- read directly from that file's real
+`copyMouseLog`/`saveMouseLog`/`clearMouseLog`, not reconstructed). A
+new `sensorLog[]` array now sits alongside the existing `sensorLogEl`
+DOM element (mirroring `mouseLog[]`/`mouseLogEl`'s own split) so
+Copy/Save read structured data, not scraped DOM text. Fixed the
+`restartSensorTimer()` bug the 2nd report described: the OLD version
+unconditionally wiped `sensorLogEl.innerHTML` on EVERY stop, including
+a plain uncheck of "Stream Sensor Data" -- it now only ever clears the
+interval; the log survives until the user explicitly hits Clear.
+Live-verified (via 2 temporarily-exposed `window.__debug` helpers,
+`pushSensorLog`/`sensorLog`, needed since this sandbox's Desktop
+browser has no real sensors to stream): pushed 2 test entries, toggled
+Stream Sensor Data on then off, confirmed both the `sensorLog[]` array
+and the visible DOM lines survived the uncheck intact.
+
+Per-sensor log toggles: 3 new checkboxes (Log Accelerometer/Log
+Gyroscope/Log Compass, `cfg.sensorLogAccel/Gyro/Compass`, default all
+on -- matching the log line's own pre-existing always-all-3 behavior)
+gate which fields the interval tick actually includes; if none are
+checked, that tick is skipped entirely rather than pushing a blank
+line. Live-verified the 3 checkboxes render correctly-checked by
+default and correctly update `cfg` on toggle; the interval tick's own
+conditional-building logic was not exercised end-to-end (no real
+sensor events on this sandbox's Desktop browser, the same documented,
+repeated limitation as every other device-orientation feature in this
+file) -- low-risk given it's simple independent `if` blocks appending
+to an array, not new architecture.
+
+`index.html`'s own `main.js` cache-buster bumped `?v=106` -> `?v=109`.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

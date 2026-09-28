@@ -9,18 +9,30 @@ append-only history.
 
 Nothing in progress — the 6-part Palm Rotation/Responsive-features
 request (2026-09-27) is fully complete, plus 9 interjected fixes and a
-new Phone Model feature (with 2 same-day follow-up rounds: a new
-model + ROTATION name-collision bugfix + rotation-anchor correction +
-HAND MODEL convenience checkbox, then a Model Scale default/range
-correction after the user re-exported all 3 models ~18-20x smaller)
-from the same session. See Recently completed below for the full
-account.
+new Phone Model feature, plus 3 follow-up rounds (a new model +
+ROTATION name-collision bugfix + rotation-anchor correction + HAND
+MODEL convenience checkbox; a Model Scale default/range correction; a
+Hand Model On/Off checkbox repurpose + Sensors log Copy/Save/Clear +
+per-sensor log toggles) from the same overall session. See Recently
+completed below for the full account.
 
 Pushed to `https://github.com/LeisHo/Handy-Set`
 (deployed via the Vercel project at `https://vercel.com/lpeis/handy-set`).
 
 ## Recently completed
 
+- **FOLLOW-UP (2026-09-28): Hand Model checkbox repurpose + Sensors log
+  improvements.** The HAND MODEL group's own convenience checkbox
+  (previously a Phone Model On/Off duplicate) is now a genuine "Hand
+  Model On/Off" toggle, driving `cfg.hideHands` inverted and kept in
+  sync with Field Layout's own "Hide Hands" checkbox — the git-tracked
+  settings file's row-level reference to the old id was renamed in
+  place (verified via a row-key diff, zero lost). Sensors log (Debug)
+  gained COPY/SAVE/CLEAR buttons (ported from devPanel.js's own Mouse
+  Log pattern) and 3 per-sensor toggles (Log Accelerometer/Gyroscope/
+  Compass). Fixed a real bug along the way: unchecking "Stream Sensor
+  Data" used to wipe the whole log — it now only stops the interval.
+  See `docs/CHANGELOG.txt`'s matching 2026-09-28 (26th) entry.
 - **FOLLOW-UP (2026-09-27, same day, 2nd round): Model Scale
   correction.** The user re-exported all 3 phone models ~18-20x
   smaller (live-measured: ~0.07-0.16 world units at scale 1, down from

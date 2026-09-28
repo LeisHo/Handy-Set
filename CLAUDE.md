@@ -1685,3 +1685,40 @@ wiring, and are still open:
   loading within the fixed wait, so the previous model's object was
   measured again by mistake. Re-verified by polling for the reference
   to change (or watching network completion) instead of a flat delay.
+- **The HAND MODEL group's own top-level checkbox is "Hand Model
+  On/Off" (`checkboxHandModelEnabled`), NOT a Phone Model duplicate —
+  it drives `cfg.hideHands` in the OPPOSITE sense from Field Layout's
+  own "Hide Hands" checkbox** (checked = visible here, vs. checked =
+  hidden there), synced both ways via `syncHandModelEnabledCheckboxes()`.
+  Corrected 2026-09-28 — this row started life 2026-09-27 as a Phone
+  Model On/Off duplicate (see that entry above), then was directly
+  repurposed the very next day: "The Phone Model On Off in the Hand
+  Model group should actually be Hand Model On Off." If a future
+  feature needs another "genuine on/off for THIS group" convenience
+  checkbox (matching the pattern PHONE MODEL's own top-level checkbox
+  already has), check whether it should drive an EXISTING cfg boolean
+  (inverted or not) before inventing a new one — this group's own
+  history shows the "obvious" choice (duplicate an existing checkbox)
+  isn't always what's actually wanted.
+- **Sensors log (Debug > Sensors) now has its own `sensorLog[]` array
+  alongside `sensorLogEl` (the DOM element) — Copy/Save read from the
+  array, not by scraping DOM text — mirroring devPanel.js's own Mouse
+  Log split (`mouseLog[]`/`mouseLogEl`).** `restartSensorTimer()` no
+  longer clears the log on a plain stop/uncheck (fixed 2026-09-28,
+  direct report) — only `clearSensorLog()` (the explicit CLEAR button)
+  does. If a future change touches this function, preserve that
+  distinction — silently reintroducing an unconditional
+  `sensorLogEl.innerHTML = ''` on stop would reproduce the exact bug
+  just fixed.
+- **`cfg.sensorLogAccel/Gyro/Compass`'s own interval-tick conditional
+  logic (`restartSensorTimer()`) was NOT live-verified end-to-end** —
+  this sandbox's Desktop browser has no real accelerometer/gyroscope/
+  compass to stream, the same documented, repeated limitation as
+  every other device-orientation feature in this file (Phone Tilt,
+  the Sensors subgroup itself). Only the 3 checkboxes' own UI wiring
+  (render correctly-checked by default, correctly update `cfg` on
+  toggle) was verified live. If a future report says one of these 3
+  toggles "doesn't actually filter the log" on a real device, check
+  the interval callback's own per-sensor `if` blocks first — simple,
+  independent conditionals, low risk, but genuinely never exercised
+  with real sensor data.
