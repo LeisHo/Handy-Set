@@ -3374,6 +3374,135 @@ to an array, not new architecture.
 `index.html`'s own `main.js` cache-buster bumped `?v=106` -> `?v=109`.
 
 --------------------------------------------------------------------------------
+2026-09-28  -  (27th)
+
+Direct request: "check the dev panel template. Many cahnges have been
+made. Implement. If there is something you dont think is necessary to
+implement ask me."
+
+Full re-sync of `src/devpanel/devPanel.js`/`src/style.css` from the
+canonical `.claude/TEMPLATE_DEV_PANEL.html` (normalized CRLF-vs-LF
+before diffing -- a raw diff showed 100% of lines mismatched purely
+from line-ending differences, a false positive). Real changes ported:
+full Undo/Redo (`devUndoStack`/`devRedoStack`, extension points
+`devUndoCaptureExtra`/`devSaveCaptureExtra` etc., a new Redo header
+button); `lockedGroups` (Dev Panel/Debug locked by default, can't be
+deleted); 3 new Panel UI theme colors wired through
+`devPanelStyle`/`DEV_PANEL_STYLE_VAR_MAP`/control registration;
+click-to-edit slider min/max bounds (`makeDevSliderBoundsEditable()`);
+header buttons reorganized into `.dev-header-buttons-secondary`
+(Edit Text/Add Group/Delete/Collapse All/Undo/Redo) and
+`.dev-header-buttons-primary` (Copy/Reset/Sync/Collapse/Close),
+replacing the old standalone `.dev-buttons` COPY/RESET row entirely;
+`withPreservedTitleCheckbox()` generalized; `appendUntouchedChildren()`
+fix in `applySectionOrder()`; Mouse Log multi-click-hold detection;
+`makeDevGroupToggleable()` (new, unused by this project yet); and the
+full [JS-15]/[CSS-11]-13] Saved Presets UI engine (list-picker/
+curve-editor/range-bar control types) spliced in ahead of
+`UNIFORM_ROW_BUILDERS`.
+
+Confirmed via a follow-up direct message that the template's new
+control types were built referencing HANDYSET/HANDY DANDIES
+specifically for compatibility ("I asked the session who wrote that to
+reference HANDYSET and HANDY DANDIES so it should be comparable") --
+verified directly: the new `range-bar` control's `{min,max}` JSON
+value format is IDENTICAL to this project's own existing
+`buildReactiveRangeWidget()` format (zero transformation needed), and
+`curve-editor`'s points array is compatible once wrapped in
+`{points, method}`.
+
+Raised via AskUserQuestion whether to migrate this project's own 5
+curve/range widgets and 5 list-pickers onto the new generic control
+types, given the real risk of breaking live features with real user
+data. Answer: "migrate but be ready to fix or revert if it breaks."
+
+Migrated all 12 curve/range fields (Reactive Arm Length, Responsive
+Wrist Splay, the 3 wrist-axis clamps, Responsive Arm Rotation at Base,
+Responsive Pose Tween, Phone Responsive Rotation) from
+`type:'text'` + `buildReactiveRangeWidget()`/`buildReactiveCurveWidget()`
+to `type:'range-bar'`/`type:'curve-editor'`, each followed by a
+`curveWidgetResyncs.push()` entry polling the hidden input's value
+(the same pattern this file already used to detect a Reset/Sync/Undo
+restore that writes straight to `.value` with no clean event) and
+calling that field's own `parseXConfig()` on change. 5 cfg defaults
+(`armLengthCurve`/`wristSplayCurve`/`baseArmRotationCurve`/
+`poseTweenCurve`/`phoneResponsiveRotationCurve`) rewrapped from a bare
+points array into `{points, method:"catmullrom"}`; each field gained
+its own `XCurveMethod` variable and its `parseXConfig()` updated to
+read `parsed.points || parsed` (backward-compatible with the old bare-
+array shape) and `parsed.method || 'catmullrom'`. All 5 evaluation
+call sites switched from the old `evaluateReactiveCurve()` to
+`window.evaluateCurveEditorPoints(pointsVar, x, methodVar)` (devPanel.js's
+own evaluator, globally reachable since devPanel.js is a classic
+script). Syntax-verified (`node --check`) after each field.
+
+Removed the now-dead `PHONE_TILT_MIRROR_WIDGETS`/
+`findNestedGroupContent()`/`syncPhoneTiltWidgetMirrors()` mechanism --
+built earlier this session specifically to hand-roll Mobile/Landscape
+mirroring for `textBaseArmRotationRange`/`textBaseArmRotationCurve`/
+`textPoseTweenCurve` (plain `type:'text'` rows had no device-checkbox
+support of their own at the time). All 3 fields are now `range-bar`/
+`curve-editor` controls, which set `ctrl.skipDeviceCheckbox = true`
+internally -- desktop-only by design, the same precedent as Mouse Log
+(CLAUDE.md §12f-1). Disclosed trade-off: these 3 fields (and every
+other migrated curve/range field) lose Mobile/Landscape mirroring as a
+direct, deliberate consequence of the migration -- consistent with
+every other curve/range/list-picker control in the panel, none of
+which have ever had a device-specific variant.
+
+Removed the now-fully-dead old widget code: `elLocal`/
+`commitTextControl`/`buildReactiveRangeWidget()`/
+`buildReactiveCurveWidget()` and the curve math backing them
+(`catmullRomY`/`cubicBezier1D`/`bezierSegmentY`/`evaluateReactiveCurve`)
+-- confirmed via grep that nothing else in the file referenced them
+after the 12-field migration.
+
+Settings-file surgery: wrapped the 5 curve fields' SAVED values in
+`data/processed/dev-panel-settings.json` (`controls.textArmLengthCurve`/
+`textWristSplayCurve`/`textBaseArmRotationCurve`/`textPoseTweenCurve`/
+`textPhoneResponsiveRotationCurve`) from bare arrays into
+`{points, method:"catmullrom"}`, matching the new cfg-default format --
+verified via a full key-count diff (5040 keys before and after) and a
+scoped `git diff` showing exactly those 5 lines changed, nothing else.
+Checked for newer remote commits (`git fetch`) both before and after
+the surgery -- none found, no merge needed this round.
+
+Investigated migrating the 5 list-pickers (Saved Poses/Cameras/
+Lighting/Toon Shading/Tween Sequences) too, per the same AskUserQuestion
+approval. Found HANDYSET's own hand-built `buildListPicker()`/
+`renderPresetPicker()` already implements the template's full feature
+set (Save/Overwrite/Use/Rename/Delete/+Group/Export/Import, nested
+grouping) against real, populated saved data across all 5 lists, with
+its own working persistence pipeline (`persistListPickerItems()` +
+remote GET-merge-POST). The template's version adds drag-reorder and
+native Undo/Redo integration, but migrating would require: converting
+5 populated lists to a new `{items, groupOrder}` shape with real risk
+of data loss; untangling the custom persistence mechanism from the
+new standard Sync/Undo pipeline; and adding a sync layer so other code
+reading `SAVED_POSES` etc. directly (Tween playback, `findSavedPoseByName()`)
+still sees live updates, since the template's own `entry.items` becomes
+a separate array reference rather than the same one mutated in place.
+Surfaced this specific trade-off via AskUserQuestion rather than
+unilaterally deciding either way (per CLAUDE.md §0b/§0a). Direct
+answer: leave them as-is. No changes made to any of the 5 list-pickers
+or their data.
+
+`index.html`'s own `main.js` cache-buster bumped `?v=111` -> `?v=112`
+(`devPanel.js` stays `?v=7`, unchanged since the template re-sync
+edits earlier this session).
+
+Per direct instruction, skipped the usual browser live-verification
+pass before pushing ("dont need to verify de v panel stuff" / "im
+goign to trust it works") -- not independently verified in a browser
+this round; flagged here honestly rather than claimed as tested.
+
+Per a new direct standing instruction ("frm now on always push before
+updating docs"), pushed the code commit (`c69cb8a`) before writing
+this entry, rather than bundling docs into the same pre-push commit --
+generalizing CLAUDE.md §9a's existing "when a push is requested, push
+first" rule into a standing default for this project.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

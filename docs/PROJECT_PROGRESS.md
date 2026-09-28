@@ -7,13 +7,9 @@ append-only history.
 
 ## Currently working on
 
-Nothing in progress — the 6-part Palm Rotation/Responsive-features
-request (2026-09-27) is fully complete, plus 9 interjected fixes and a
-new Phone Model feature, plus 3 follow-up rounds (a new model +
-ROTATION name-collision bugfix + rotation-anchor correction + HAND
-MODEL convenience checkbox; a Model Scale default/range correction; a
-Hand Model On/Off checkbox repurpose + Sensors log Copy/Save/Clear +
-per-sensor log toggles) from the same overall session. See Recently
+Nothing in progress — the dev panel template re-sync (2026-09-28) is
+complete, on top of the 6-part Palm Rotation/Responsive-features
+request (2026-09-27) and its own 3 follow-up rounds. See Recently
 completed below for the full account.
 
 Pushed to `https://github.com/LeisHo/Handy-Set`
@@ -21,6 +17,31 @@ Pushed to `https://github.com/LeisHo/Handy-Set`
 
 ## Recently completed
 
+- **FOLLOW-UP (2026-09-28): Dev panel re-sync from the canonical
+  template + curve/range control migration.** Full re-sync of
+  `src/devpanel/devPanel.js`/`src/style.css` from
+  `.claude/TEMPLATE_DEV_PANEL.html` (Undo/Redo, locked groups, new
+  Panel UI theme colors, click-to-edit slider bounds, header button
+  reorganization, and the Saved Presets UI engine). Migrated all 12 of
+  this project's own curve/range dev-panel fields (Reactive Arm
+  Length, Responsive Wrist Splay, the 3 wrist-axis clamps, Responsive
+  Arm Rotation at Base, Responsive Pose Tween, Phone Responsive
+  Rotation) from HANDYSET's own hand-built widgets to the template's
+  generic `type:'range-bar'`/`type:'curve-editor'` controls, then
+  removed the now-dead widget code and the Mobile/Landscape mirroring
+  mechanism those 3 fields used to need. Settings-file surgery wrapped
+  the 5 saved curve values into the new `{points,method}` shape,
+  verified via a full key-count diff (zero lost/extra). Raised via
+  AskUserQuestion whether to also migrate the 5 list-pickers (Saved
+  Poses/Cameras/Lighting/Toon/Tween) — HANDYSET's own hand-built
+  versions already match the template's feature set against real
+  saved user data, and migrating risked data loss for a modest gain
+  (drag-reorder + native Undo/Redo); direct answer was to leave them
+  as-is. Browser live-verification was explicitly skipped this round
+  per direct instruction ("dont need to verify de v panel stuff" /
+  "im goign to trust it works") — not independently confirmed working
+  in a browser. See `docs/CHANGELOG.txt`'s matching 2026-09-28 (27th)
+  entry.
 - **FOLLOW-UP (2026-09-28): Hand Model checkbox repurpose + Sensors log
   improvements.** The HAND MODEL group's own convenience checkbox
   (previously a Phone Model On/Off duplicate) is now a genuine "Hand
@@ -510,34 +531,42 @@ Pushed to `https://github.com/LeisHo/Handy-Set`
 
 ## What's next
 
-1. **Test Device Information on a real Pixel 9a + Chrome** (and ideally a
+1. **Live-verify the 2026-09-28 dev panel re-sync in a real browser** —
+   this round's changes (Undo/Redo, the new Panel UI theme colors, all
+   12 migrated curve/range fields, the header button reorganization)
+   were pushed without a browser verification pass, per direct
+   instruction to skip it. Worth a pass next time the panel is opened:
+   confirm the migrated curve-editor/range-bar widgets still drag/
+   click-to-edit correctly and round-trip through Sync, and that
+   nothing else regressed.
+2. **Test Device Information on a real Pixel 9a + Chrome** (and ideally a
    real iPhone/Safari) — open `https://handy-set.vercel.app/?dev=1` ->
    DEV -> Debug -> Settings, check "Device Information". Confirm whether
    Chrome's `getHighEntropyValues()` actually returns `model: "Pixel 9a"`
    on real hardware (unverified — this environment has no physical
    device), and that the fallback path behaves sensibly on Safari.
-2. Decide whether a single master kill-switch for all gyro-driven
+3. Decide whether a single master kill-switch for all gyro-driven
    effects is wanted — Phone Tilt's own "Tracking Enabled" checkbox
    currently only gates whole-hand rotation, NOT Responsive Wrist Splay
    or Reactive Arm Length (each has its own separate toggle). Flagged to
    the user 2026-09-25, not yet built (not requested).
-3. Find "Responsive Palm Rotation" — the user says this group exists in
+4. Find "Responsive Palm Rotation" — the user says this group exists in
    their own app, but an exhaustive search of the git-tracked
    dev-panel-settings.json found no trace of it anywhere. Likely needs
    the user to hit Sync from whichever device/browser shows it (so its
    real state reaches git), or a screenshot/more specific description.
-4. Verify Phone Tilt gyroscope rotation specifically on the user's actual
+5. Verify Phone Tilt gyroscope rotation specifically on the user's actual
    Pixel 9a — still unverified, no physical device available here (can be
-   folded into the same real-device session as item 1 above).
-5. ~~Decide on a visible default color scheme~~ — now moot for production:
+   folded into the same real-device session as item 2 above).
+6. ~~Decide on a visible default color scheme~~ — now moot for production:
    the startup-sync fix above means production correctly picks up the
    git-tracked gray background (`#bfbfbf`) instead of the all-white
    hardcoded default. Revisit only if the *hardcoded* literal defaults
    in `main.js` (the fallback when no git settings are reachable, e.g.
    `file://` or an offline API) still need their own deliberate tuning.
-6. Port Pose Offset X/Y/Z to Handy Dandies' camera-relative resolution
+7. Port Pose Offset X/Y/Z to Handy Dandies' camera-relative resolution
    before any saved pose is given a nonzero offset value.
-7. Tune default Camera/Lighting/Toon values to taste, now that Camera
+8. Tune default Camera/Lighting/Toon values to taste, now that Camera
    restore, the color/rim controls, and Set-as-Default persistence all
    actually work.
 

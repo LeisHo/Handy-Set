@@ -1722,3 +1722,45 @@ wiring, and are still open:
   the interval callback's own per-sensor `if` blocks first — simple,
   independent conditionals, low risk, but genuinely never exercised
   with real sensor data.
+- **All 12 of this project's own curve/range dev-panel fields are now
+  on devPanel.js's own generic `type:'range-bar'`/`type:'curve-editor'`
+  controls (migrated 2026-09-28) — `elLocal`/`commitTextControl`/
+  `buildReactiveRangeWidget()`/`buildReactiveCurveWidget()` and the
+  curve math behind them (`catmullRomY`/`cubicBezier1D`/
+  `bezierSegmentY`/`evaluateReactiveCurve`) are REMOVED from
+  `main.js`, not just unused.** If a future feature needs a curve or
+  min/max-range control, register it via `addRow(group, {id,
+  type:'curve-editor', defaultPoints, defaultMethod, caption})` /
+  `{id, type:'range-bar', trackMin, trackMax, unit, defaultValue}`
+  (devPanel.js's own generic engine, CLAUDE.md §12r-adjacent — see any
+  of this file's own "MIGRATED 2026-09-28" comments, e.g. around
+  Reactive Arm Length, for the exact pattern including the
+  `curveWidgetResyncs.push()` polling entry each one needs), not by
+  reintroducing the old hand-built widgets. These control types set
+  `ctrl.skipDeviceCheckbox = true` internally — desktop-only by
+  design (same precedent as Mouse Log) — so none of the 12 fields
+  have a "Show in Mobile/Landscape" option any more; the
+  HANDYSET-owned `PHONE_TILT_MIRROR_WIDGETS` mechanism that used to
+  hand-roll this for 3 of them was removed in the same pass since it
+  can no longer find anything to mirror.
+- **The 5 list-pickers (Saved Poses/Cameras/Lighting/Toon Shading/
+  Tween Sequences) are DELIBERATELY still HANDYSET's own hand-built
+  `buildListPicker()`/`renderPresetPicker()` (main.js), not
+  devPanel.js's own generic `type:'list-picker'` control — a direct
+  decision (2026-09-28), not an oversight or a remaining migration
+  step.** Investigated migrating them during the same dev-panel
+  re-sync that moved the 12 curve/range fields above: the data shape
+  is compatible (a flat items array with `.name`/`.group`), but the
+  template's version stores state as `{items, groupOrder}` in a
+  hidden input whose value is a fresh array reference on every
+  restore — HANDYSET's own version deliberately mutates `SAVED_POSES`/
+  `SAVED_CAMERAS`/etc. IN PLACE so other code holding a direct
+  reference (Tween playback, `findSavedPoseByName()`) sees live
+  updates without its own refresh call; migrating would need a new
+  sync layer to preserve that, on top of real data-shape risk across
+  5 populated lists and untangling the existing
+  `persistListPickerItems()` custom persistence from the new standard
+  Sync/Undo pipeline. Surfaced via AskUserQuestion rather than decided
+  unilaterally; the user chose to leave them as-is. If a future
+  session considers this migration again, re-read this note first —
+  the trade-off has already been analyzed once.
