@@ -1514,52 +1514,50 @@ function createToonMaterial(map) {
 // normalized magnitude/angle -> circular-offset approach, which is the
 // correct abstraction for that fundamentally different kind of input.
 let tiltMagnitude = 0, tiltAngle = 0
-// Phone Model Responsive Rotation on MOBILE -- REDESIGNED 2026-09-28,
-// direct correction: "there shouldnt be any rotational thresholds on
-// mobile" + "when i rotate past 180 degrees, i dont want it to suddenly
-// flip to -180." Mobile now DIRECTLY mirrors the real device's own
-// beta/gamma/alpha delta-from-baseline, in degrees, with NO curve/range/
-// deadzone/clamp applied at all (that system stays DESKTOP-ONLY, driven
-// by cursor distance -- direct confirmation: "i had it [the range] since
-// on desktop, the phone model rotation was determined by distance of the
-// cursor... in a no cursor scenario i have no use for it").
+// Phone Model Responsive Rotation on MOBILE -- REPLACED 2026-09-28,
+// direct report: "when i tilt far... it jumps then rotates 180...
+// diffretn for each axis... i want the rotation to continue forever."
 //
-// phoneUnwrapped*/phoneLastRaw* track each signal's own UNWRAPPED
-// (never-resetting) total: real beta/gamma/alpha are each reported in a
-// WRAPPED range (beta -180..180, gamma -90..90, alpha 0..360), so a
-// continuous physical rotation crossing that boundary produces an
-// instantaneous jump in the RAW reading alone, even though the real
-// motion was smooth -- exactly the "sudden flip to -180" described.
-// Unwrapping accumulates the SHORTEST delta between consecutive raw
-// readings onto a running total that can exceed +-180 (or +-360)
-// arbitrarily, so a continuous real spin produces continuous,
-// never-snapping output. This state is SEPARATE from the shared
-// tiltMagnitude/tiltAngle pipeline other features (Palm Rotation,
-// Reactive Arm Length, etc.) depend on -- only Phone Model's own mobile
-// rotation reads it.
-let phoneUnwrappedBeta = null, phoneLastRawBeta = 0
-let phoneUnwrappedGamma = null, phoneLastRawGamma = 0
-let phoneUnwrappedAlpha = null, phoneLastRawAlpha = 0
-function unwrapDelta360(raw, lastRaw) {
-  const delta = raw - lastRaw
-  return ((delta + 180) % 360 + 360) % 360 - 180 // shortest signed delta, wrapped to (-180, 180]
-}
-// Phone Model Rotation Reset -- direct request 2026-09-28: a double-
-// tap(mobile)/double-click(desktop) anywhere on screen re-baselines the
-// phone model's responsive rotation to IDENTITY at that exact moment, so
-// "the phone model's own XYZ axis matches world XYZ" from then on.
-// phoneBeta/GammaBaseline (mobile, direct-passthrough X/Y) default 0 --
-// X/Y stay ABSOLUTE (flat-phone-relative) until an explicit Reset shifts
-// them, matching this project's own earlier answer on starting
-// orientation. phoneAlphaBaseline (mobile Z, compass) auto-captures on
-// the FIRST reading, same as before, just now tracking the UNWRAPPED
-// alpha rather than the raw wrapped one. phoneNx/NyBaseline (desktop
-// mouse path only) hold the baseline in the RAW (pre-final-clamp)
-// domain -- see resetPhoneModelRotationBaseline()'s own comment for why
-// a post-clamp baseline breaks down near a physical clamp boundary.
-let phoneBetaBaseline = 0
-let phoneGammaBaseline = 0
-let phoneAlphaBaseline = null
+// The PREVIOUS design (unwrapped beta/gamma/alpha ABSOLUTE angles,
+// reconstructed into a quaternion from scratch every frame) has a
+// fundamental, unfixable limitation for this exact ask: beta/gamma/
+// alpha are EULER-DECOMPOSED absolute orientation angles, and Euler
+// angles have a hard representational limit -- gamma physically CANNOT
+// exceed +-90 degrees, because past that point the SAME real 3D
+// orientation gets re-expressed through a DIFFERENT combination of
+// beta/alpha instead (this is gimbal lock, and it's exactly why the
+// symptom looked "different for each axis": beta spans -180..180,
+// gamma only -90..90, alpha wraps at 360, each hitting its own limit
+// differently). No amount of unwrapping fixes this, because the
+// unwrapped VALUE still gets fed through a fresh axis-angle
+// reconstruction every frame, and reconstructing "rotate 190 degrees
+// around a fixed axis" from scratch is NOT the same 3D orientation
+// path as "having genuinely rotated there via 190 degrees of
+// continuous motion" once slerp-damping (or even just quaternion
+// double-cover) gets involved -- past 180 degrees the shortest
+// quaternion path back toward a fresh target starts going the OTHER
+// way, producing the reported "jump then rotates 180."
+//
+// FIXED by integrating the RAW GYROSCOPE (devicemotion.rotationRate --
+// TRUE angular velocity around the phone's own current axes, already
+// visible in this project's own Sensors log as "Gyro a/b/y") onto a
+// PERSISTENT, ACCUMULATING quaternion (phoneGyroQuat), via body-frame
+// (right-multiply) composition each tick -- the same technique real
+// AR/IMU orientation tracking uses. This has NO representational
+// limit and NO gimbal lock, because it never reconstructs an absolute
+// angle from scratch -- it only ever composes a tiny, always-valid
+// incremental rotation onto whatever the current accumulated
+// orientation already is. See integratePhoneGyroRotation()'s own
+// comment for the full integration math. Desktop (mouse) is
+// UNCHANGED -- a cursor position has no physical "spin past 180"
+// concept, so the existing curve/range/fineTune system (driven by
+// cursor distance, confirmed as desktop-only) still applies there.
+let phoneGyroQuat = new THREE.Quaternion()
+let phoneGyroLastTimestamp = null
+const _phoneGyroTiltAxis = new THREE.Vector3()
+const _phoneGyroTiltQuat = new THREE.Quaternion()
+const _phoneGyroSpinQuat = new THREE.Quaternion()
+const PHONE_GYRO_SPIN_LOCAL_AXIS = new THREE.Vector3(0, 1, 0)
 let phoneNxBaseline = 0
 let phoneNyBaseline = 0
 let lastInputSource = 'device' // 'device' | 'mouse' — which path updateTiltTarget() should use this frame
@@ -1618,25 +1616,10 @@ function handleDeviceOrientation(e) {
   const ny = THREE.MathUtils.clamp(beta / maxTilt, -1, 1)
   tiltMagnitude = Math.min(Math.hypot(nx, ny), 1)
   tiltAngle = Math.atan2(ny, nx)
-  // Phone Model Responsive Rotation on MOBILE -- direct, UNWRAPPED
-  // tracking of beta/gamma/alpha, entirely separate from the shared
-  // beta/gamma/nx/ny/tiltMagnitude/tiltAngle above (which other features
-  // still depend on unchanged). See this file's own phoneUnwrappedBeta
-  // declaration comment for the full "no thresholds, no snap-at-180"
-  // rationale -- this is what computePhoneCombinedQuat() reads for the
-  // mobile path instead of the shared, clamped nx/ny.
-  if (typeof e.beta === 'number') {
-    if (phoneUnwrappedBeta === null) { phoneUnwrappedBeta = e.beta; phoneLastRawBeta = e.beta }
-    else { phoneUnwrappedBeta += unwrapDelta360(e.beta, phoneLastRawBeta); phoneLastRawBeta = e.beta }
-  }
-  if (typeof e.gamma === 'number') {
-    if (phoneUnwrappedGamma === null) { phoneUnwrappedGamma = e.gamma; phoneLastRawGamma = e.gamma }
-    else { phoneUnwrappedGamma += unwrapDelta360(e.gamma, phoneLastRawGamma); phoneLastRawGamma = e.gamma }
-  }
-  if (typeof e.alpha === 'number') {
-    if (phoneUnwrappedAlpha === null) { phoneUnwrappedAlpha = e.alpha; phoneLastRawAlpha = e.alpha; phoneAlphaBaseline = e.alpha }
-    else { phoneUnwrappedAlpha += unwrapDelta360(e.alpha, phoneLastRawAlpha); phoneLastRawAlpha = e.alpha }
-  }
+  // Phone Model Responsive Rotation on MOBILE no longer reads beta/gamma/
+  // alpha at all -- see integratePhoneGyroRotation() (driven by
+  // devicemotion.rotationRate instead) and phoneGyroQuat's own
+  // declaration comment for why.
 }
 // GUARD added 2026-09-28, direct report: "I tap, and for a split second
 // i see the phone model out of orientation, then it flashes back...
@@ -1966,7 +1949,6 @@ const _phoneManualQuat = new THREE.Quaternion()
 const _phoneResponsiveQuat = new THREE.Quaternion()
 const _phoneTiltAxis = new THREE.Vector3()
 const _phoneTiltQuat = new THREE.Quaternion()
-const _phoneSpinQuat = new THREE.Quaternion()
 // CORRECTED 2026-09-28, direct report after real-device testing: "when i
 // rotate my real phone around the Y axis, the phone model on screen
 // rotates around the z axis. And vice versa as well" (with beta/up-down
@@ -1984,7 +1966,11 @@ const _phoneSpinQuat = new THREE.Quaternion()
 // beta (both are simultaneous "tilt" motions), on world Z instead of Y;
 // alpha (compass/spin) now gets its own separate rotation around world Y
 // instead of Z. Beta stays on world X, unchanged (confirmed working).
-const PHONE_SPIN_AXIS = new THREE.Vector3(0, 1, 0)
+// (Desktop no longer has a compass/spin axis at all as of the gyro-
+// integration switch below -- a mouse has no alpha equivalent, so the
+// world-Y spin quaternion this note describes was removed along with
+// it; only mobile's LOCAL-frame spin axis, PHONE_GYRO_SPIN_LOCAL_AXIS,
+// remains.)
 // SUPERSEDED 2026-09-28 (later same day) by the Blender-Z-up/glTF-Y-up
 // world-axis swap described in the comment directly above this one --
 // the paragraph below still correctly describes the SIGNAL-level mapping
@@ -1999,69 +1985,46 @@ const PHONE_SPIN_AXIS = new THREE.Vector3(0, 1, 0)
 //   flat on its own face, the one motion beta/gamma can't represent) --
 //   world Y now (was Z before the swap above).
 //
-// MOBILE vs DESKTOP are 2 genuinely different pipelines now, direct
-// request 2026-09-28 -- "there shouldnt be any rotational thresholds on
-// mobile" + "when i rotate past 180 degrees, i dont want it to suddenly
-// flip to -180" + "on desktop, phone model rotation was determined by
-// distance of the cursor... in a no cursor scenario i have no use for
-// it":
-//
-// - MOBILE: direct 1:1 degrees passthrough of the real device's own
-//   UNWRAPPED beta/gamma/alpha delta-from-baseline (phoneUnwrappedBeta/
-//   Gamma/Alpha minus phoneBeta/Gamma/AlphaBaseline) -- NO curve, NO
-//   range, NO deadzone, NO clamp. A real, continuous physical rotation
-//   (even one spinning past 180/360+ degrees) produces continuous output
-//   with no artificial ceiling and no snap.
-// - DESKTOP: unchanged -- cursor-DISTANCE-driven, through the
-//   curve/range/fineTune/deadzone system above (nx/ny computed inline
-//   below), since there's no physical orientation to
-//   mirror 1:1 and a designed mapping genuinely makes sense for a mouse.
-//
-// Both paths produce a signed (betaDeg, gammaDeg) pair in DEGREES, then
-// compose exactly the same way: as ONE combined axis-angle rotation for
-// beta+gamma (world X/Z), NOT a sequential Euler X-then-Z -- direct
-// report 2026-09-28: "double tap or tap orients the phone differently
-// each time... rarely the orientation i want." A sequential Euler
-// composition rotates around the ORIGINAL X first, then around the
-// ALREADY-TILTED frame's other axis -- for a compound tilt this
-// introduces real, visible cross-axis error (roughly the product of the
-// 2 angles in radians -- ~16deg of distortion for two simultaneous 30deg
-// tilts, not negligible). A single axis-angle rotation, with the axis
-// built from (betaDeg, 0, gammaDeg) and the angle from their combined
-// magnitude, reduces to EXACTLY a pure X or pure Z rotation in each pure
-// case (verified algebraically and via a standalone script) while
-// smoothly blending compound tilts with no Euler cross-coupling, for ANY
-// magnitude (not just curve-bounded ones -- this is why mobile's
-// unbounded direct passthrough can reuse the exact same combine step).
-// alpha/compass composes separately on top, around world Y.
+// SUPERSEDED 2026-09-28 (later same day) -- MOBILE no longer uses
+// beta/gamma/alpha absolute-angle passthrough at all; see phoneGyroQuat's
+// own declaration comment for why (Euler/gimbal-lock representational
+// limit) and integratePhoneGyroRotation() below for the replacement.
+// DESKTOP is UNCHANGED and still described accurately below: cursor-
+// DISTANCE-driven, through the curve/range/fineTune/deadzone system,
+// confirmed desktop-only ("on desktop, phone model rotation was
+// determined by distance of the cursor... in a no cursor scenario i
+// have no use for it"). Both mobile (now gyro-integrated) and desktop
+// still produce a signed (betaDeg, gammaDeg) pair in DEGREES for the
+// tilt axes and compose them the same way: as ONE combined axis-angle
+// rotation for beta+gamma (world X/Z on desktop; LOCAL X/Z body-frame on
+// mobile -- see integratePhoneGyroRotation()), NOT a sequential Euler
+// X-then-Z -- direct report 2026-09-28: "double tap or tap orients the
+// phone differently each time... rarely the orientation i want." A
+// sequential Euler composition rotates around the ORIGINAL X first,
+// then around the ALREADY-TILTED frame's other axis -- for a compound
+// tilt this introduces real, visible cross-axis error (roughly the
+// product of the 2 angles in radians -- ~16deg of distortion for two
+// simultaneous 30deg tilts, not negligible). A single axis-angle
+// rotation, with the axis built from (betaDeg, 0, gammaDeg) and the
+// angle from their combined magnitude, reduces to EXACTLY a pure X or
+// pure Z rotation in each pure case (verified algebraically and via a
+// standalone script) while smoothly blending compound tilts with no
+// Euler cross-coupling, for ANY magnitude.
 //
 // NOT verified against a real device this session (no physical phone
 // available in this sandbox) -- if any ONE axis's DIRECTION still comes
 // out backwards, flip that axis's own sign at its own site (negate the
 // beta-delta for X, negate the gamma-delta for Z, negate the alpha-delta
 // for Y) rather than re-deriving the whole mapping.
-//
-// Rotation Reset -- direct correction 2026-09-28, before this ever
-// shipped: "if im lying in bed and i hit reset, you will have to adjust
-// the beta gamma accordingly so its not always reading real world up as
-// up." On mobile, resetPhoneModelRotationBaseline() simply sets
-// phoneBeta/Gamma/AlphaBaseline to the CURRENT unwrapped values -- since
-// mobile is now a direct, unclamped passthrough, there's no saturation
-// concern at all (the bug this comment originally described was specific
-// to the old post-clamp-nx/ny approach, since removed). Desktop's own
-// phoneNx/NyBaseline (mouse path) still needs the raw-domain-before-
-// clamp treatment described where it's used below, since it still goes
-// through the curve/range pipeline.
 function computePhoneCombinedQuat() {
   _phoneManualQuat.setFromEuler(new THREE.Euler(
     THREE.MathUtils.degToRad(cfg.phoneModelRotX), THREE.MathUtils.degToRad(cfg.phoneModelRotY), THREE.MathUtils.degToRad(cfg.phoneModelRotZ), 'XYZ'
   ))
-  let betaDeg = 0, gammaDeg = 0, alphaDeg = 0
   if (lastInputSource === 'device' && latestOrientation) {
-    // MOBILE: direct, unwrapped, unthresholded passthrough.
-    betaDeg = (phoneUnwrappedBeta ?? 0) - phoneBetaBaseline
-    gammaDeg = -((phoneUnwrappedGamma ?? 0) - phoneGammaBaseline)
-    alphaDeg = (phoneUnwrappedAlpha ?? 0) - (phoneAlphaBaseline ?? 0)
+    // MOBILE: phoneGyroQuat is already the fully-integrated, unbounded
+    // responsive rotation (see integratePhoneGyroRotation(), which runs
+    // per devicemotion tick, not per render frame) -- just read it.
+    _phoneResponsiveQuat.copy(phoneGyroQuat)
   } else if (cfg.trackingEnabled && cfg.phoneResponsiveRotationEnabled) {
     // DESKTOP: cursor-distance-driven, through the curve/range system.
     const rawNx = tiltMagnitude * Math.cos(tiltAngle) // gamma-analog (left-right)
@@ -2070,34 +2033,85 @@ function computePhoneCombinedQuat() {
     const ny = THREE.MathUtils.clamp(rawNy - phoneNyBaseline, -1, 1)
     const combinedT = THREE.MathUtils.clamp(Math.hypot(ny, nx), 0, 1)
     const combinedDeg = computePhoneResponsiveAxisDeg(combinedT) // always >= 0
+    let betaDeg = 0, gammaDeg = 0
     if (combinedT > 1e-6) {
       betaDeg = (ny / combinedT) * combinedDeg
       gammaDeg = (-nx / combinedT) * combinedDeg
     }
-    // alphaDeg stays 0 on desktop -- no compass equivalent for a mouse.
-  }
-  // Per-axis on/off + scale -- direct request 2026-09-28. Applied AFTER
-  // either branch above, in one shared place, so both mobile and
-  // desktop respect the same 3 checkboxes/sliders without duplicating
-  // this logic per-branch. Disabling an axis zeroes it outright (not
-  // just scale=0) so a disabled axis can't contribute even a tiny
-  // residual from floating-point noise.
-  betaDeg = cfg.phoneAxisXEnabled ? betaDeg * cfg.phoneRotationScaleX : 0
-  alphaDeg = cfg.phoneAxisYEnabled ? alphaDeg * cfg.phoneRotationScaleY : 0
-  gammaDeg = cfg.phoneAxisZEnabled ? gammaDeg * cfg.phoneRotationScaleZ : 0
-  // beta -> world X, gamma -> world Z (combined, avoids Euler coupling --
-  // see this function group's own comment above for the full derivation).
-  const combinedTiltDeg = Math.hypot(betaDeg, gammaDeg)
-  if (combinedTiltDeg > 1e-6) {
-    _phoneTiltAxis.set(betaDeg, 0, gammaDeg).normalize()
-    _phoneTiltQuat.setFromAxisAngle(_phoneTiltAxis, THREE.MathUtils.degToRad(combinedTiltDeg))
+    // Per-axis on/off + scale -- direct request 2026-09-28. Desktop has
+    // no compass equivalent (alphaDeg stays 0), so only X/Z apply here;
+    // mobile's own per-axis gating lives inside integratePhoneGyroRotation()
+    // instead, applied to the raw gyro rate before integration.
+    betaDeg = cfg.phoneAxisXEnabled ? betaDeg * cfg.phoneRotationScaleX : 0
+    gammaDeg = cfg.phoneAxisZEnabled ? gammaDeg * cfg.phoneRotationScaleZ : 0
+    const combinedTiltDeg = Math.hypot(betaDeg, gammaDeg)
+    if (combinedTiltDeg > 1e-6) {
+      _phoneTiltAxis.set(betaDeg, 0, gammaDeg).normalize()
+      _phoneTiltQuat.setFromAxisAngle(_phoneTiltAxis, THREE.MathUtils.degToRad(combinedTiltDeg))
+    } else {
+      _phoneTiltQuat.identity()
+    }
+    _phoneResponsiveQuat.copy(_phoneTiltQuat) // desktop has no spin/alpha axis
   } else {
-    _phoneTiltQuat.identity()
+    _phoneResponsiveQuat.identity()
   }
-  // alpha (compass/spin) -> world Y, composed separately on top.
-  _phoneSpinQuat.setFromAxisAngle(PHONE_SPIN_AXIS, THREE.MathUtils.degToRad(alphaDeg))
-  _phoneResponsiveQuat.copy(_phoneSpinQuat).multiply(_phoneTiltQuat)
   return _phoneCombinedQuat.copy(_phoneManualQuat).multiply(_phoneResponsiveQuat)
+}
+// Gyroscope integration for MOBILE Responsive Rotation -- direct report
+// 2026-09-28: "when i tilt far... it jumps then rotates 180... i want
+// the rotation to continue forever." Called once per REAL devicemotion
+// tick (not per render frame) from handleDeviceMotion(), since it needs
+// the ACTUAL time delta between real gyroscope samples to integrate
+// correctly (rotationRate is in deg/SECOND).
+//
+// rotationRate.beta/gamma/alpha are TRUE, INSTANTANEOUS angular
+// velocities around the device's OWN CURRENT local X/Y/Z axes
+// respectively (per the W3C spec -- same 3 physical axes
+// deviceorientation's beta/gamma/alpha name, just velocity instead of
+// absolute angle). Multiplying each by the elapsed time gives a TINY
+// incremental rotation for this one tick; composing that onto
+// phoneGyroQuat via RIGHT-multiply (`.multiply()`, not `.premultiply()`)
+// applies it in the quaternion's OWN CURRENT LOCAL FRAME -- the standard
+// way to integrate body-frame angular velocity into an accumulating
+// orientation (used universally in IMU/AHRS tracking). This is what
+// makes "spin continually around the phone's own X axis" work: each
+// tick's increment is expressed relative to wherever the phone's local
+// X axis CURRENTLY points (after all previous increments), not relative
+// to a fixed world axis or an absolute angle reconstructed from scratch
+// -- so there is no gimbal lock, no representational range limit, and
+// no "jump then rotate 180," at any accumulated total angle.
+//
+// beta/gamma's combine-into-one-axis-angle technique (and gamma's own
+// inversion) is reused verbatim from the tilt logic above, just in the
+// LOCAL/body frame (right-multiply) instead of the WORLD frame desktop
+// uses -- same reasoning, avoids Euler cross-coupling for a compound
+// tilt-while-spinning motion too. alpha (compass/spin) composes
+// separately on top, around the LOCAL Y axis.
+function integratePhoneGyroRotation(e) {
+  if (!cfg.trackingEnabled || !cfg.phoneResponsiveRotationEnabled || !e.rotationRate) {
+    phoneGyroLastTimestamp = null // clean restart, no big jump, whenever this resumes
+    return
+  }
+  const now = performance.now()
+  if (phoneGyroLastTimestamp !== null) {
+    const dt = Math.min((now - phoneGyroLastTimestamp) / 1000, 0.1) // seconds; capped so a backgrounded tab can't integrate one huge jump on resume
+    const rr = e.rotationRate
+    const dBetaDeg = (cfg.phoneAxisXEnabled ? (rr.beta || 0) * cfg.phoneRotationScaleX : 0) * dt
+    const dGammaDeg = (cfg.phoneAxisZEnabled ? -(rr.gamma || 0) * cfg.phoneRotationScaleZ : 0) * dt
+    const dAlphaDeg = (cfg.phoneAxisYEnabled ? (rr.alpha || 0) * cfg.phoneRotationScaleY : 0) * dt
+    const combinedTiltDeg = Math.hypot(dBetaDeg, dGammaDeg)
+    if (combinedTiltDeg > 1e-8) {
+      _phoneGyroTiltAxis.set(dBetaDeg, 0, dGammaDeg).normalize()
+      _phoneGyroTiltQuat.setFromAxisAngle(_phoneGyroTiltAxis, THREE.MathUtils.degToRad(combinedTiltDeg))
+      phoneGyroQuat.multiply(_phoneGyroTiltQuat)
+    }
+    if (Math.abs(dAlphaDeg) > 1e-8) {
+      _phoneGyroSpinQuat.setFromAxisAngle(PHONE_GYRO_SPIN_LOCAL_AXIS, THREE.MathUtils.degToRad(dAlphaDeg))
+      phoneGyroQuat.multiply(_phoneGyroSpinQuat)
+    }
+    phoneGyroQuat.normalize() // guard against floating-point drift accumulating over a long session
+  }
+  phoneGyroLastTimestamp = now
 }
 // Rotation Reset -- direct request 2026-09-28: a double-tap(mobile)/
 // double-click(desktop) anywhere on screen (gated by a new "Rotation
@@ -2105,28 +2119,12 @@ function computePhoneCombinedQuat() {
 // rotation to identity at that exact instant, so "the phone model's own
 // XYZ axis matches world XYZ" from then on. Does NOT touch the manual
 // phoneModelRotX/Y/Z sliders -- those are a deliberate, separate offset
-// on top, not part of "my real phone's orientation."
-// CORRECTED 2026-09-28, direct report: "double tap works. BUT. after
-// the realignment, the rotation becomes wrong. I think its still using
-// the rotation axes prior to the realignment." Root cause: this used to
-// branch on `lastInputSource` and update ONLY the mobile (beta/gamma/
-// alpha) OR ONLY the desktop (nx/ny) baseline, never both -- if
-// `lastInputSource` read wrong for even one frame at the exact tap
-// instant (a real risk given everything else found this session about
-// synthetic touch-sourced events), the reset silently re-baselined the
-// INACTIVE pipeline while leaving the REAL (mobile) one completely
-// untouched at whatever it was before -- exactly "still using the axes
-// prior to realignment." Fixed by updating BOTH baselines
-// UNCONDITIONALLY on every reset, regardless of which input source
-// happens to be flagged active at that instant -- whichever pipeline
-// turns out to actually be driving the rotation afterward is
-// guaranteed to have a freshly-captured baseline either way, so this
-// no longer depends on `lastInputSource` being exactly right at the
-// one instant a reset fires.
+// on top, not part of "my real phone's orientation." SIMPLIFIED
+// 2026-09-28 along with the gyro-integration switch -- mobile's own
+// reset is now just "zero the accumulator," since there's no separate
+// baseline to manage any more.
 function resetPhoneModelRotationBaseline() {
-  phoneBetaBaseline = phoneUnwrappedBeta ?? 0
-  phoneGammaBaseline = phoneUnwrappedGamma ?? 0
-  phoneAlphaBaseline = phoneUnwrappedAlpha ?? phoneAlphaBaseline
+  phoneGyroQuat.identity()
   // Desktop: baseline captured in the RAW (pre-final-clamp) domain -- a
   // post-clamp baseline would saturate near the cursor-distance ceiling
   // the same way the old mobile path once did near a physical clamp
@@ -2242,7 +2240,8 @@ function syncHandModelEnabledCheckboxes() {
 }
 // Called every animate() frame (unconditionally within !isPaused, same as
 // updateAllFingerGizmos()) -- Responsive Rotation depends on live
-// tiltMagnitude/tiltAngle/phoneUnwrappedBeta/Gamma/Alpha, so the transform needs
+// tiltMagnitude/tiltAngle (desktop) or phoneGyroQuat (mobile, updated
+// independently per real devicemotion tick), so the transform needs
 // recomputing every frame while the phone model is loaded, not just on a
 // dev-panel control's own input event.
 function updatePhoneModelFrame() {
@@ -2968,8 +2967,7 @@ window.__debug = {
   get phoneModelRaw() { return phoneModelRaw }, get phoneModelWrapper() { return phoneModelWrapper },
   get sceneObjectEntries() { return sceneObjectEntries },
   get tiltMagnitude() { return tiltMagnitude }, get tiltAngle() { return tiltAngle },
-  get phoneUnwrappedBeta() { return phoneUnwrappedBeta }, get phoneUnwrappedGamma() { return phoneUnwrappedGamma },
-  get phoneUnwrappedAlpha() { return phoneUnwrappedAlpha }, get lastInputSource() { return lastInputSource },
+  get phoneGyroQuat() { return phoneGyroQuat }, get lastInputSource() { return lastInputSource },
   get sensorLog() { return sensorLog },
   getHandCenterWorld, updateWristCrop, computeBaseScale, pushSensorLog, restartSensorTimer
 }
@@ -3144,7 +3142,7 @@ function animate() {
 // readout, opt-in streaming, silent on Desktop (no real sensors to show).
 // =======================================================================
 let latestMotion = null
-function handleDeviceMotion(e) { latestMotion = e }
+function handleDeviceMotion(e) { latestMotion = e; integratePhoneGyroRotation(e) }
 let sensorLogEl = null
 let sensorTimer = null
 // Plain array alongside the DOM (same convention as devPanel.js's own
