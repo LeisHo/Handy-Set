@@ -1972,21 +1972,11 @@ function computePhoneResponsiveAxisDeg(rawComponent) {
 const _phoneCombinedQuat = new THREE.Quaternion()
 const _phoneManualQuat = new THREE.Quaternion()
 const _phoneResponsiveQuat = new THREE.Quaternion()
-// 8th-round fix (2026-09-28) -- direct report: "REAL XYZ is translated
-// to MODEL YZX" for the 7th round's shipped code (real X->model Y, real
-// Y->model Z, real Z->model X, a 3-cycle). Applied as a DIRECT
-// CONJUGATION of the fully-accumulated phoneGyroQuat at its READ site
-// (computePhoneCombinedQuat()), not by re-permuting integratePhoneGyroRotation()'s
-// own input axis vectors -- that per-increment-input approach was tried
-// twice already (5th/7th rounds) and both times still didn't match the
-// real device, despite being mathematically equivalent to conjugation
-// in isolation; conjugating the OUTPUT quaternion directly removes any
-// dependency on assumptions about how the input pipeline composes.
-// PHONE_GYRO_OUTPUT_FIX_QUAT is the INVERSE of the reported 3-cycle
-// (undoes X->Y->Z->X by relabeling Y->X, Z->Y, X->Z), a 120deg rotation
-// around (1,1,1)/sqrt(3): Q' = P * Q * P^-1.
-const PHONE_GYRO_OUTPUT_FIX_QUAT = new THREE.Quaternion(-0.5, -0.5, -0.5, 0.5)
-const PHONE_GYRO_OUTPUT_FIX_QUAT_INV = PHONE_GYRO_OUTPUT_FIX_QUAT.clone().invert()
+// REMOVED 2026-09-28 (9th round) -- PHONE_GYRO_OUTPUT_FIX_QUAT, an 8th-
+// round output-conjugation constant. 3 rounds of reports (6th/7th/8th)
+// proved no fixed code-level permutation/conjugation explains all of
+// them together, so this was removed rather than replaced with a 4th
+// guess -- see integratePhoneGyroRotation()'s own comment.
 const _phoneTiltAxis = new THREE.Vector3()
 const _phoneTiltQuat = new THREE.Quaternion()
 // CORRECTED 2026-09-28, direct report after real-device testing: "when i
@@ -2063,11 +2053,13 @@ function computePhoneCombinedQuat() {
   if (lastInputSource === 'device' && latestOrientation) {
     // MOBILE: phoneGyroQuat is already the fully-integrated, unbounded
     // responsive rotation (see integratePhoneGyroRotation(), which runs
-    // per devicemotion tick, not per render frame) -- read it, then
-    // apply the 8th-round output-permutation correction (see
-    // PHONE_GYRO_OUTPUT_FIX_QUAT's own comment above).
+    // per devicemotion tick, not per render frame) -- just read it. The
+    // 8th round's output-permutation conjugation was REMOVED 2026-09-28
+    // (9th round) -- see integratePhoneGyroRotation()'s own comment for
+    // why (3 rounds of reports proved no fixed code-level mapping fits,
+    // pointing at inconsistent starting orientation between tests, not
+    // the axis wiring itself).
     _phoneResponsiveQuat.copy(phoneGyroQuat)
-    _phoneResponsiveQuat.premultiply(PHONE_GYRO_OUTPUT_FIX_QUAT).multiply(PHONE_GYRO_OUTPUT_FIX_QUAT_INV)
   } else if (cfg.trackingEnabled && cfg.phoneResponsiveRotationEnabled) {
     // DESKTOP: cursor-distance-driven, through the curve/range system.
     const rawNx = tiltMagnitude * Math.cos(tiltAngle) // gamma-analog (left-right)
@@ -2139,23 +2131,34 @@ function integratePhoneGyroRotation(e) {
   if (phoneGyroLastTimestamp !== null) {
     const dt = Math.min((now - phoneGyroLastTimestamp) / 1000, 0.1) // seconds; capped so a backgrounded tab can't integrate one huge jump on resume
     const rr = e.rotationRate
-    // CORRECTED 2026-09-28 (7th round on this feature, same day) --
-    // direct, literal, precisely-specified report using the real phone's
-    // OWN axes vs. the model's OWN Blender-authored axes (both defined
-    // the same way: Z = back-to-face, Y = charging-port-to-top, X =
-    // left-to-right facing the screen): "REAL PHONE: XYZ is currently
-    // mapped to MODEL PHONE: YXZ. SWITCH X AND Y, then invert Z." Applied
-    // exactly as stated, no re-derivation: dPitchDeg (real X) and
-    // dRollDeg (real Y) now swap which combined-axis-angle component they
-    // feed (dRollDeg->x-component, dPitchDeg->y-component -- the reverse
-    // of the 6th round's assignment), and dSpinDeg (real Z) is now
-    // negated.
+    // CORRECTED 2026-09-28 (9th round on this feature, same day) --
+    // 3 CONSECUTIVE reports (rounds 6/7/8) each gave a DIFFERENT clean
+    // permutation for the SAME kind of test, and algebraic cross-checking
+    // proved NO single fixed code-level mapping explains all 3 at once.
+    // That specific pattern (fix -> different-but-still-clean permutation,
+    // repeatedly, never converging) is the signature of something OTHER
+    // than the slot/sign wiring changing between tests -- most likely the
+    // phone's own STARTING accumulated rotation isn't identical at the
+    // start of each test (this integration is body-frame/relative to
+    // wherever the phone currently points, not a fixed reference), so
+    // re-testing from a different starting orientation can make the exact
+    // same code look like a different permutation. Reverted this
+    // function's own axis wiring to the plainest, most defensible,
+    // spec-standard mapping (no swaps, no extra negations beyond gamma's
+    // already-established inversion) -- pitch(beta)=x-component,
+    // roll(gamma, inverted)=y-component, spin(alpha)=separate local Z --
+    // and REMOVED the 8th round's output-conjugation layer entirely (see
+    // computePhoneCombinedQuat(), which no longer applies
+    // PHONE_GYRO_OUTPUT_FIX_QUAT). The real fix this round is forcing a
+    // GUARANTEED clean starting state for every test automatically (see
+    // the new auto-reset in the tracking-enabled checkbox handler) rather
+    // than another slot/sign guess.
     const dPitchDeg = (cfg.phoneAxisXEnabled ? (rr.beta || 0) * cfg.phoneRotationScaleX : 0) * dt
     const dRollDeg = (cfg.phoneAxisYEnabled ? -(rr.gamma || 0) * cfg.phoneRotationScaleY : 0) * dt
-    const dSpinDeg = (cfg.phoneAxisZEnabled ? -(rr.alpha || 0) * cfg.phoneRotationScaleZ : 0) * dt
+    const dSpinDeg = (cfg.phoneAxisZEnabled ? (rr.alpha || 0) * cfg.phoneRotationScaleZ : 0) * dt
     const combinedTiltDeg = Math.hypot(dPitchDeg, dRollDeg)
     if (combinedTiltDeg > 1e-8) {
-      _phoneGyroTiltAxis.set(dRollDeg, dPitchDeg, 0).normalize()
+      _phoneGyroTiltAxis.set(dPitchDeg, dRollDeg, 0).normalize()
       _phoneGyroTiltQuat.setFromAxisAngle(_phoneGyroTiltAxis, THREE.MathUtils.degToRad(combinedTiltDeg))
       phoneGyroQuat.multiply(_phoneGyroTiltQuat)
     }
@@ -4030,7 +4033,10 @@ function renderPhoneTiltGroup(content) {
   const subTarget = addSubgroup(content, 'Target')
   addRow(subTarget, { id: 'checkboxTrackingEnabled', label: 'Tracking Enabled', type: 'checkbox' })
   document.getElementById('checkboxTrackingEnabled').checked = cfg.trackingEnabled
-  wireCheckbox('checkboxTrackingEnabled', (v) => { cfg.trackingEnabled = v; if (v) requestMotionPermissionIfNeeded() })
+  // Added 2026-09-28 (9th round on the Phone Model axis-mapping feature)
+  // -- see checkboxPhoneResponsiveRotationEnabled's own comment; this is
+  // the broader gate and needs the same guaranteed-clean-start treatment.
+  wireCheckbox('checkboxTrackingEnabled', (v) => { cfg.trackingEnabled = v; if (v) { requestMotionPermissionIfNeeded(); resetPhoneModelRotationBaseline() } })
   addRow(subTarget, { id: 'sliderTargetDepthFactor', label: 'Cursor Target Depth (x Field Radius)', type: 'slider', min: -2, max: 2, step: 0.05, value: cfg.targetDepthFactor })
   wireSlider('sliderTargetDepthFactor', (v) => { cfg.targetDepthFactor = v })
   addRow(subTarget, { id: 'checkboxShowTargetMarker', label: 'Show Target Marker', type: 'checkbox' })
@@ -4164,7 +4170,15 @@ function renderPhoneModelGroup(content) {
   const subResponsiveRotation = addSubgroup(subResponsiveBehaviour, 'Responsive Rotation')
   addRow(subResponsiveRotation, { id: 'checkboxPhoneResponsiveRotationEnabled', label: 'Responsive Rotation (On/Off)', type: 'checkbox' })
   document.getElementById('checkboxPhoneResponsiveRotationEnabled').checked = cfg.phoneResponsiveRotationEnabled
-  wireCheckbox('checkboxPhoneResponsiveRotationEnabled', (v) => { cfg.phoneResponsiveRotationEnabled = v })
+  // Added 2026-09-28 (9th round on the axis-mapping feature) -- forces a
+  // known-clean starting orientation (phoneGyroQuat.identity()) every
+  // time this turns ON, so re-testing an axis after toggling this off
+  // and back on can't silently inherit leftover accumulated rotation
+  // from a previous test. See integratePhoneGyroRotation()'s own
+  // comment for why this matters (3 rounds of reports proved the SAME
+  // code can look like a different permutation depending on the
+  // phone's starting orientation).
+  wireCheckbox('checkboxPhoneResponsiveRotationEnabled', (v) => { cfg.phoneResponsiveRotationEnabled = v; if (v) resetPhoneModelRotationBaseline() })
   // Rotation Reset -- direct request 2026-09-28: double-tap(mobile)/
   // double-click(desktop) anywhere on screen re-baselines the responsive
   // rotation. See setupPhoneRotationResetGesture()'s own comment for the
