@@ -4409,6 +4409,55 @@ trying a 4th input-slot permutation.
 `index.html`'s cache-buster bumped `?v=124` -> `?v=125`.
 
 --------------------------------------------------------------------------------
+2026-09-28  -  (42nd)
+
+Direct follow-up, same day: the 41st entry's output-conjugation fix
+still didn't work -- reported as "real XYZ to model ZXY," which is
+the group-theoretic INVERSE of the 40th entry's own reported bug
+("YZX"). Rather than guess a 4th permutation, used all 3 recent reports
+(39th/40th/41st entries' code + their reported bugs) to algebraically
+check whether ANY single fixed code-level mapping could explain all 3
+simultaneously. It cannot -- there is no consistent function from "which
+code slot/sign a physical axis occupies" to "which label it's reported
+as" across all 3 rounds. That specific pattern (a fix producing a
+DIFFERENT but still clean permutation every time, never converging) is
+the signature of the measured behavior depending on something besides
+the code being tested -- most likely the phone's own accumulated
+starting orientation, since this rotation is integrated in BODY FRAME
+(relative to wherever the phone currently points), not reset to a fixed
+reference between tests.
+
+Reverted `integratePhoneGyroRotation()`'s axis wiring to the plainest,
+spec-standard mapping (pitch/beta on the combined axis-angle's
+x-component, roll/gamma-inverted on its y-component, spin/alpha on a
+separate local Z axis -- no swaps, no extra negations) and removed the
+41st entry's `PHONE_GYRO_OUTPUT_FIX_QUAT` conjugation entirely, rather
+than shipping a 4th variation of either approach.
+
+The actual fix this round: `resetPhoneModelRotationBaseline()` (which
+resets `phoneGyroQuat` to identity) now fires AUTOMATICALLY whenever
+"Tracking Enabled" or Phone Model's own "Responsive Rotation" checkbox
+is turned on (`checkboxTrackingEnabled`/
+`checkboxPhoneResponsiveRotationEnabled`'s wiring in `main.js`), instead
+of relying solely on the manual double-tap gesture. This guarantees
+every test starts from the exact same known orientation, removing the
+suspected confound directly rather than trying to reverse-engineer
+around it.
+
+Not independently browser/device-verified this round (same standing
+limitation). If the axis mapping is STILL wrong after this guaranteed-
+clean-start fix, that's a genuinely different, more informative signal
+than before: it would rule out the starting-orientation theory and
+confirm the axis wiring itself needs another look -- at that point,
+re-test the plain reverted mapping (this entry's own code) fresh, one
+axis at a time, immediately after toggling the checkbox on (never
+mid-session after other testing), and report using the same precise
+"real X maps to model ?" format that's worked best throughout this
+whole feature.
+
+`index.html`'s cache-buster bumped `?v=125` -> `?v=126`.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

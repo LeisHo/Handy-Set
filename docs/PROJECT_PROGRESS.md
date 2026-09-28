@@ -8,25 +8,28 @@ append-only history.
 ## Currently working on
 
 **Awaiting real-device re-test of Phone Model's gyroscope-integrated
-mobile rotation axis mapping — this single feature has now needed 8
-correction rounds in one session (2026-09-28).** Each round's own
-self-verification (axis-invariance, then Euler-XYZ decomposition, then
-literal application of the user's reported mapping) has independently
-turned out to still disagree with the real device at least once, so the
-8th round changed approach: instead of re-permuting
-`integratePhoneGyroRotation()`'s own input axis vectors (tried 3 times,
-still wrong every time), it applies a direct quaternion conjugation to
-the fully-accumulated `phoneGyroQuat` at its read site in
-`computePhoneCombinedQuat()` — a different layer of the pipeline. Full
-round-by-round history is in `docs/CHANGELOG.txt`'s 35th-41st entries
-and the matching CLAUDE.md gotcha (search "Phone Model's mobile
-rotation"). **If a 9th round is needed:** ask for the same precise
-"real axis currently maps to model axis" comparison that's worked best
-throughout this session, and if the input-slot and output-conjugation
-approaches have BOTH failed, audit the actual pipeline between
-`phoneGyroQuat` and the rendered rotation directly rather than trying a
-4th variation of either approach — something not currently understood
-may be happening there.
+mobile rotation axis mapping — this single feature has now needed 9
+correction rounds in one session (2026-09-28).** Rounds 6/7/8 each
+reported a DIFFERENT clean permutation for the same kind of test;
+cross-checking all 3 algebraically proved no fixed code-level mapping
+explains them together, which points at the phone's own accumulated
+starting orientation differing between tests (this rotation integrates
+in body frame, relative to wherever the phone currently points, not a
+fixed reference) rather than the axis wiring itself. Round 9 reverted
+`integratePhoneGyroRotation()` to the plainest, spec-standard axis
+mapping and removed the 8th round's output-conjugation layer entirely,
+then made `resetPhoneModelRotationBaseline()` fire AUTOMATICALLY
+whenever Tracking Enabled or Phone Model's Responsive Rotation checkbox
+turns on — guaranteeing every test starts from the same known
+orientation. Full round-by-round history is in `docs/CHANGELOG.txt`'s
+35th-42nd entries and the matching CLAUDE.md gotcha (search "Phone
+Model's mobile rotation"). **If a 10th round is needed:** re-test the
+current, reverted-to-plain mapping fresh (toggle the checkbox off then
+on immediately before testing each axis, never mid-session after other
+testing) and report using the same precise "real X maps to model ?"
+format. If it's STILL wrong even with a guaranteed clean start, that
+rules out the starting-orientation theory and means the axis wiring
+itself needs another look, informed by this new information.
 
 Pushed to `https://github.com/LeisHo/Handy-Set`
 (deployed via the Vercel project at `https://vercel.com/lpeis/handy-set`).
