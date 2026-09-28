@@ -1582,7 +1582,7 @@ const _phoneGyroSpinQuat = new THREE.Quaternion()
 // PHYSICAL role rather than their raw property name specifically
 // because the mismatch between "variable name" and "actual role" is
 // what made this bug hard to track across 3 rounds.
-const PHONE_GYRO_SPIN_LOCAL_AXIS = new THREE.Vector3(1, 0, 0)
+const PHONE_GYRO_SPIN_LOCAL_AXIS = new THREE.Vector3(0, 0, 1)
 let phoneNxBaseline = 0
 let phoneNyBaseline = 0
 let lastInputSource = 'device' // 'device' | 'mouse' — which path updateTiltTarget() should use this frame
@@ -2121,35 +2121,51 @@ function integratePhoneGyroRotation(e) {
   if (phoneGyroLastTimestamp !== null) {
     const dt = Math.min((now - phoneGyroLastTimestamp) / 1000, 0.1) // seconds; capped so a backgrounded tab can't integrate one huge jump on resume
     const rr = e.rotationRate
-    // CORRECTED 2026-09-28 (4th round on this feature, same day): the 3rd
-    // round's "identity, just alpha/gamma crossed" fix was itself still
-    // wrong -- direct follow-up report, again with an unambiguous physical
-    // description: spin(Z) was landing on visual Y, pitch(X) on visual Z,
-    // roll(Y) on visual X. Direct instruction this round: "just switch the
-    // outputs" -- apply that report as a literal output permutation, not a
-    // new theory. Every incremental rotation this function builds is an
-    // axis-angle; relabeling "whatever used to rotate around visual-A now
-    // rotates around visual-B" for EVERY case is exactly what conjugating
-    // the whole accumulated quaternion by a fixed permutation rotation P
-    // does (P*Q*P^-1 rotates around P(axis of Q), same angle) -- and since
-    // conjugation distributes over composition, that whole-quaternion
-    // conjugation is equivalent to just applying P to each individual
-    // increment's OWN axis vector before building it, which is far simpler
-    // than conjugating the accumulator every frame. The desired mapping
-    // (old-visual-Z->new-visual-X for pitch, old-X->new-Y for roll,
-    // old-Y->new-Z for spin) IS a 3-cycle, so P is the fixed permutation
-    // X->Y->Z->X: P*(x,y,z) = (z,x,y). Applying P to the 2 axis vectors
-    // this function already uses: the combined-tilt vector
-    // (dPitchDeg,dRollDeg,0) -> (0,dPitchDeg,dRollDeg); the separate-spin
-    // axis (0,0,1) -> (1,0,0). Implemented below exactly as that permuted
-    // pair -- no change to the alpha/gamma raw-property assignment, which
-    // is a separate question from this output relabeling.
+    // CORRECTED 2026-09-28 (6th round on this feature, same day) -- ROOT
+    // CAUSE OF THE REPEATED FAILURES FOUND: every prior round's own
+    // verification (including this session's 4th/5th-round "conjugate the
+    // axis vector" fixes) tested this function's output using AXIS
+    // INVARIANCE ("which world axis stays fixed under the rotation") --
+    // but the report this feature is actually judged against comes from
+    // the Phone Model Log's `Rot x/y/z` fields, which are an EULER-ANGLE
+    // ('XYZ' order) DECOMPOSITION of the quaternion (see
+    // `restartPhoneModelLogTimer()`'s `_phoneLogEuler.setFromQuaternion(
+    // phoneModelWrapper.quaternion, 'XYZ')`). Those are NOT the same
+    // measurement -- axis-invariance is a clean geometric property that
+    // permutes exactly under a change of basis; Euler-XYZ decomposition
+    // does not obey the same permutation algebra, especially for a large,
+    // accumulated body-frame-integrated rotation. This is why 2 different
+    // "conjugate by a 3-cycle permutation" fixes (4th and 5th CHANGELOG
+    // rounds), each algebraically sound for axis-invariance, both still
+    // measured as wrong once actually read off Rot x/y/z.
+    //
+    // Verified via a standalone script replicating THREE.js's own
+    // quaternion->Euler('XYZ') extraction exactly (not reconstructed from
+    // memory of the formula alone -- cross-checked against the matrix
+    // form Matrix4.makeRotationFromQuaternion + Euler.setFromRotationMatrix
+    // use): the 5th round's shipped code (combined tilt on Y/Z, spin on
+    // local X) reproduces the reported "123 -> YZX" (pitch->Rot.y,
+    // roll->Rot.z, spin->Rot.x) EXACTLY, confirming this measurement
+    // finally matches the real device's own numbers. A brute-force search
+    // of all 6 possible (pitch-axis, roll-axis) placements against this
+    // SAME Euler-XYZ measurement found exactly one that reduces cleanly
+    // to Rot.x/y/z = pitch/roll/spin degrees respectively (the plain,
+    // un-permuted arrangement): combined tilt on X/Y (pitch, roll, 0),
+    // spin separate on local Z (0,0,1) -- i.e. the ORIGINAL, pre-any-
+    // permutation-fix slot structure from when gyro integration first
+    // shipped. Also reverted the "alpha/gamma crossed" raw-property
+    // theory (3rd/37th round) back to the W3C-spec-standard reading
+    // (rr.beta=pitch rate, rr.gamma=roll rate, rr.alpha=spin rate) --
+    // that theory was built entirely on the same now-discredited
+    // axis-invariance measurement, so it has no remaining support. The
+    // gamma inversion is kept (matches the sign convention already
+    // established for gamma in the old absolute-angle system).
     const dPitchDeg = (cfg.phoneAxisXEnabled ? (rr.beta || 0) * cfg.phoneRotationScaleX : 0) * dt
-    const dRollDeg = (cfg.phoneAxisYEnabled ? -(rr.alpha || 0) * cfg.phoneRotationScaleY : 0) * dt
-    const dSpinDeg = (cfg.phoneAxisZEnabled ? (rr.gamma || 0) * cfg.phoneRotationScaleZ : 0) * dt
+    const dRollDeg = (cfg.phoneAxisYEnabled ? -(rr.gamma || 0) * cfg.phoneRotationScaleY : 0) * dt
+    const dSpinDeg = (cfg.phoneAxisZEnabled ? (rr.alpha || 0) * cfg.phoneRotationScaleZ : 0) * dt
     const combinedTiltDeg = Math.hypot(dPitchDeg, dRollDeg)
     if (combinedTiltDeg > 1e-8) {
-      _phoneGyroTiltAxis.set(0, dPitchDeg, dRollDeg).normalize()
+      _phoneGyroTiltAxis.set(dPitchDeg, dRollDeg, 0).normalize()
       _phoneGyroTiltQuat.setFromAxisAngle(_phoneGyroTiltAxis, THREE.MathUtils.degToRad(combinedTiltDeg))
       phoneGyroQuat.multiply(_phoneGyroTiltQuat)
     }
