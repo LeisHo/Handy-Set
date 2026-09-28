@@ -4340,6 +4340,75 @@ than reverting to axis-invariance reasoning.
 `index.html`'s cache-buster bumped `?v=122` -> `?v=123`.
 
 --------------------------------------------------------------------------------
+2026-09-28  -  (40th)
+
+Direct follow-up, same day: the 39th entry's Euler-verified fix was
+STILL wrong. The user then gave the most precise report of this entire
+feature, comparing the real phone's own axes against the model's own
+Blender-authored axes (both defined identically: Z = back-to-face, Y =
+charging-port-to-top, X = left-to-right facing the screen): "REAL
+PHONE: XYZ is currently mapped to MODEL PHONE: YXZ. SWITCH X AND Y,
+then invert Z."
+
+Applied exactly as stated, with no further re-derivation or
+verification attempt: `dPitchDeg` (real X) and `dRollDeg` (real Y) now
+swap which component of the combined tilt axis-angle they feed
+(`dRollDeg` -> x-component, `dPitchDeg` -> y-component -- the reverse
+of the 39th entry's assignment), and `dSpinDeg` (real Z) is negated.
+
+Not independently browser/device-verified this round (same standing
+limitation). Given this is the 7th correction round on one feature in
+one session, and every one of this session's own "verify it myself
+first" methodologies (axis-invariance, then Euler-XYZ decomposition)
+has turned out to still disagree with the real device at least once,
+this round deliberately did NOT attempt another independent
+verification pass -- it trusts the user's own precise, side-by-side
+real-vs-Blender-axis report directly. If this is somehow STILL wrong,
+the next round should ask for the SAME kind of precise "currently maps
+to / should map to" comparison (which is what finally worked here),
+not go back to a self-verification script.
+
+`index.html`'s cache-buster bumped `?v=123` -> `?v=124`.
+
+--------------------------------------------------------------------------------
+2026-09-28  -  (41st)
+
+Direct follow-up, same day: the 40th entry's literal swap+invert fix
+was STILL wrong -- reported as "REAL XYZ is translated to MODEL YZX"
+(real X->model Y, real Y->model Z, real Z->model X, a clean 3-cycle).
+
+Changed approach: rather than re-permuting `integratePhoneGyroRotation()`'s
+own input axis vectors (tried in the 39th/40th rounds, both still wrong
+despite being mathematically equivalent to a whole-quaternion
+conjugation in isolation), applied the fix as a DIRECT CONJUGATION of
+the fully-accumulated `phoneGyroQuat` at its read site in
+`computePhoneCombinedQuat()`. New constant `PHONE_GYRO_OUTPUT_FIX_QUAT`
+is the inverse of the reported 3-cycle (undoes X->Y->Z->X by relabeling
+Y->X, Z->Y, X->Z), a 120deg rotation around (1,1,1)/sqrt(3); applied as
+`Q' = P * Q * P^-1` via `premultiply()`/`multiply()`.
+
+Caught a real sign/direction error before shipping this time: the
+first candidate quaternion `(0.5,0.5,0.5,0.5)` numerically verified to
+rotate ex->ey->ez->ex, the OPPOSITE of the intended ex->ez->ey->ex --
+using it would have applied the 3-cycle a SECOND time instead of
+undoing it. Caught via a standalone script checking where the
+candidate quaternion actually sends each basis vector, not assumed
+correct from the construction alone. Corrected to `(-0.5,-0.5,-0.5,0.5)`
+(the inverse), re-verified to send ex->ez, ey->ex, ez->ey as intended.
+
+Not independently browser/device-verified this round (same standing
+limitation). This is the first round to apply the fix at a different
+LAYER of the pipeline (post-hoc output conjugation) rather than the
+input-slot layer that failed twice already -- if this is somehow still
+wrong, that's meaningful new evidence that something between
+`phoneGyroQuat` and the rendered result is not what this file's own
+code comments describe (a plain damped slerp, no other transform), and
+the next round should re-audit that pipeline directly rather than
+trying a 4th input-slot permutation.
+
+`index.html`'s cache-buster bumped `?v=124` -> `?v=125`.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
