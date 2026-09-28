@@ -201,6 +201,10 @@ const cfg = {
   // Min/Max Range, Curve), see computePhoneResponsiveAxisDeg()'s own
   // comment for how these drive multiple axes from one shared mapping.
   phoneResponsiveRotationEnabled: false, phoneResponsiveRotationFineTune: 0,
+  // Rotation Reset (double-tap/double-click anywhere) -- added
+  // 2026-09-28, default off (opt-in, matches Responsive Rotation's own
+  // default-off convention).
+  phoneRotationResetEnabled: false,
   // Smooths the FINAL combined rotation quaternion toward its per-frame
   // target via slerp -- same semantic as cfg.trackingDamping (1=instant
   // snap, lower=smoother/slower) -- added 2026-09-28, direct report:
@@ -1512,6 +1516,18 @@ let tiltMagnitude = 0, tiltAngle = 0
 // (see computePhoneCombinedQuat()'s own comment for the full remap).
 let phoneTiltAxisYRaw = 0
 let phoneAlphaBaseline = null
+// Phone Model Rotation Reset -- direct request 2026-09-28: a double-
+// tap(mobile)/double-click(desktop) anywhere on screen re-baselines the
+// phone model's responsive rotation to IDENTITY at that exact moment, so
+// "the phone model's own XYZ axis matches world XYZ" from then on. These
+// hold X/Z's own baseline in the RAW (pre-final-clamp) domain -- see
+// computePhoneRawNxNy()/resetPhoneModelRotationBaseline()'s own comment
+// for why a post-clamp baseline breaks down when reset happens near the
+// physical +-90 clamp boundary (e.g. lying in bed holding the phone
+// near-vertical). Both default 0 (matches pre-reset/current behavior
+// exactly until the user actually resets).
+let phoneNxBaseline = 0
+let phoneNyBaseline = 0
 let lastInputSource = 'device' // 'device' | 'mouse' — which path updateTiltTarget() should use this frame
 const cursorNDC = new THREE.Vector2(0, 0)
 const raycaster = new THREE.Raycaster()
@@ -1649,6 +1665,47 @@ function requestMotionPermissionIfNeeded() {
 function initMotionInput() {
   window.addEventListener('mousemove', handleMouseMoveFallback)
   if (cfg.trackingEnabled) requestMotionPermissionIfNeeded()
+}
+// Rotation Reset gesture -- direct request 2026-09-28: double-tap
+// (mobile)/double-click (desktop) ANYWHERE on screen re-baselines Phone
+// Model's responsive rotation (resetPhoneModelRotationBaseline()).
+// Gated by cfg.phoneRotationResetEnabled so it never fires unless the
+// user has explicitly turned it on. Excludes the dev panel itself (and
+// its floating DEV toggle button) so double-clicking a dev-panel control
+// doesn't also trigger a reset. Native `dblclick` covers Desktop; mobile
+// browsers generally don't fire `dblclick` from a tap gesture, so touch
+// double-taps are detected manually -- 2 touchend events within
+// DOUBLE_TAP_MS of each other and within DOUBLE_TAP_MAX_DIST_PX of the
+// same screen position (so 2 unrelated taps in different places never
+// count as one double-tap).
+const DOUBLE_TAP_MS = 350
+const DOUBLE_TAP_MAX_DIST_PX = 40
+let lastTapTime = 0
+let lastTapX = 0
+let lastTapY = 0
+function isInsideDevPanel(target) {
+  return !!(target && target.closest && (target.closest('#devPanel') || target.closest('.dev-toggle-btn')))
+}
+function setupPhoneRotationResetGesture() {
+  window.addEventListener('dblclick', (e) => {
+    if (!cfg.phoneRotationResetEnabled || isInsideDevPanel(e.target)) return
+    resetPhoneModelRotationBaseline()
+  })
+  window.addEventListener('touchend', (e) => {
+    if (!cfg.phoneRotationResetEnabled || isInsideDevPanel(e.target)) return
+    const touch = e.changedTouches && e.changedTouches[0]
+    if (!touch) return
+    const now = performance.now()
+    const dx = touch.clientX - lastTapX, dy = touch.clientY - lastTapY
+    if ((now - lastTapTime) < DOUBLE_TAP_MS && Math.hypot(dx, dy) < DOUBLE_TAP_MAX_DIST_PX) {
+      resetPhoneModelRotationBaseline()
+      lastTapTime = 0 // consume -- a 3rd quick tap starts a fresh pair, not another double-tap
+    } else {
+      lastTapTime = now
+      lastTapX = touch.clientX
+      lastTapY = touch.clientY
+    }
+  })
 }
 
 // =======================================================================
@@ -1864,12 +1921,53 @@ const _phoneResponsiveQuat = new THREE.Quaternion()
 // out backwards on a real phone, flip that axis's own sign here (negate
 // the rawComponent passed to computePhoneResponsiveAxisDeg) rather than
 // re-deriving the whole mapping.
+// Rotation Reset's raw nx/ny -- direct correction 2026-09-28, before this
+// ever shipped: "if im lying in bed and i hit reset, you will have to
+// adjust the beta gamma accordingly so its not always reading real world
+// up as up." The first version of this subtracted the baseline from the
+// shared, ALREADY-CLAMPED nx/ny (tiltMagnitude*cos/sin(tiltAngle), each
+// individually clamped to +-1 upstream in handleDeviceOrientation/
+// handleMouseMoveFallback). That breaks badly exactly in the case
+// described: lying in bed holding the phone near-vertical means real
+// beta is already near its own +-90 clamp boundary, so nx/ny are already
+// SATURATED at +-1 before the reset baseline is even subtracted --
+// subtracting a saturated value leaves almost no headroom in either
+// direction, so the model would barely respond to further real tilt
+// around that new "neutral" pose. Fixed by capturing/subtracting the
+// baseline on the RAW, UNCLAMPED-to-+-1 quantity instead (gamma/45,
+// beta/45 -- can reach magnitude 2 since beta/gamma are pre-clamped to
+// only +-90 upstream, not +-45) and clamping to +-1 only AFTER
+// subtracting -- exactly mirroring how phoneAlphaBaseline's own delta is
+// already computed BEFORE its final clamp. This restores a full +-1
+// (i.e. +-45deg-equivalent) response range around whatever orientation
+// was current at reset time, regardless of how close to the physical
+// clamp boundary that starting orientation was.
+//
+// beta is ALSO widened to its true physical range here (+-180, not the
+// +-90 the shared tiltMagnitude/tiltAngle pipeline uses) -- verified via
+// a standalone numeric sweep before shipping: with the shared +-90 clamp,
+// a reset captured AT exactly 90 deg (lying in bed, phone near-vertical)
+// still produces a fully one-sided, asymmetric response (0 for every
+// beta from 90 up to 135, since raw beta stays pinned at the +-90
+// ceiling the whole time) -- only widening beta's OWN raw clamp here
+// (not the shared one, which other features still rely on) restores a
+// symmetric +-1 sweep in BOTH directions around the reset point. gamma's
+// true physical range genuinely is +-90, so it needs no such widening.
+function computePhoneRawNxNy() {
+  if (lastInputSource === 'device' && latestOrientation) {
+    const beta = THREE.MathUtils.clamp(latestOrientation.beta || 0, -180, 180)
+    const gamma = THREE.MathUtils.clamp(latestOrientation.gamma || 0, -90, 90)
+    return { rawNx: gamma / 45, rawNy: beta / 45 }
+  }
+  return { rawNx: tiltMagnitude * Math.cos(tiltAngle), rawNy: tiltMagnitude * Math.sin(tiltAngle) }
+}
 function computePhoneCombinedQuat() {
   _phoneManualQuat.setFromEuler(new THREE.Euler(
     THREE.MathUtils.degToRad(cfg.phoneModelRotX), THREE.MathUtils.degToRad(cfg.phoneModelRotY), THREE.MathUtils.degToRad(cfg.phoneModelRotZ), 'XYZ'
   ))
-  const nx = tiltMagnitude * Math.cos(tiltAngle) // gamma-based (left-right)
-  const ny = tiltMagnitude * Math.sin(tiltAngle) // beta-based (front-back)
+  const { rawNx, rawNy } = computePhoneRawNxNy()
+  const nx = THREE.MathUtils.clamp(rawNx - phoneNxBaseline, -1, 1) // gamma-based (left-right)
+  const ny = THREE.MathUtils.clamp(rawNy - phoneNyBaseline, -1, 1) // beta-based (front-back)
   const respX = computePhoneResponsiveAxisDeg(ny)
   const respY = computePhoneResponsiveAxisDeg(phoneTiltAxisYRaw)
   const respZ = computePhoneResponsiveAxisDeg(-nx)
@@ -1877,6 +1975,23 @@ function computePhoneCombinedQuat() {
     THREE.MathUtils.degToRad(respX), THREE.MathUtils.degToRad(respY), THREE.MathUtils.degToRad(respZ), 'XYZ'
   ))
   return _phoneCombinedQuat.copy(_phoneManualQuat).multiply(_phoneResponsiveQuat)
+}
+// Rotation Reset -- direct request 2026-09-28: a double-tap(mobile)/
+// double-click(desktop) anywhere on screen (gated by a new "Rotation
+// Reset On/Off" checkbox) re-baselines the phone model's RESPONSIVE
+// rotation to identity at that exact instant, so "the phone model's own
+// XYZ axis matches world XYZ" from then on -- i.e. whatever the phone's
+// (or cursor's) CURRENT orientation is becomes the new zero-reference for
+// all 3 axes. Does NOT touch the manual phoneModelRotX/Y/Z sliders --
+// those are a deliberate, separate offset on top, not part of "my real
+// phone's orientation." Uses the exact same computePhoneRawNxNy() as the
+// live per-frame computation above -- see that function's own comment
+// for why the baseline is captured in the RAW (pre-final-clamp) domain.
+function resetPhoneModelRotationBaseline() {
+  const { rawNx, rawNy } = computePhoneRawNxNy()
+  phoneNxBaseline = rawNx
+  phoneNyBaseline = rawNy
+  if (latestOrientation && typeof latestOrientation.alpha === 'number') phoneAlphaBaseline = latestOrientation.alpha
 }
 // CORRECTED 2026-09-27, direct report: "responsive phone rotation
 // should be anchored by the phone models OWN geoemtr origin... its
@@ -2432,6 +2547,7 @@ new GLTFLoader().load(MODEL_URL, async (gltf) => {
   ])
   loadingEl.classList.add('hidden')
   initMotionInput()
+  setupPhoneRotationResetGesture()
   animate()
 }, undefined, (err) => {
   console.error(ts() + ' Failed to load hand model', err)
@@ -3834,6 +3950,13 @@ function renderPhoneModelGroup(content) {
   addRow(subResponsiveRotation, { id: 'checkboxPhoneResponsiveRotationEnabled', label: 'Responsive Rotation (On/Off)', type: 'checkbox' })
   document.getElementById('checkboxPhoneResponsiveRotationEnabled').checked = cfg.phoneResponsiveRotationEnabled
   wireCheckbox('checkboxPhoneResponsiveRotationEnabled', (v) => { cfg.phoneResponsiveRotationEnabled = v })
+  // Rotation Reset -- direct request 2026-09-28: double-tap(mobile)/
+  // double-click(desktop) anywhere on screen re-baselines the responsive
+  // rotation. See setupPhoneRotationResetGesture()'s own comment for the
+  // gesture-detection details.
+  addRow(subResponsiveRotation, { id: 'checkboxPhoneRotationResetEnabled', label: 'Rotation Reset On/Off', type: 'checkbox' })
+  document.getElementById('checkboxPhoneRotationResetEnabled').checked = cfg.phoneRotationResetEnabled
+  wireCheckbox('checkboxPhoneRotationResetEnabled', (v) => { cfg.phoneRotationResetEnabled = v })
   addRow(subResponsiveRotation, { id: 'sliderPhoneResponsiveRotationFineTune', label: 'Rotation Fine-Tune (Deg)', type: 'slider', min: -90, max: 90, step: 1, value: cfg.phoneResponsiveRotationFineTune })
   wireSlider('sliderPhoneResponsiveRotationFineTune', (v) => { cfg.phoneResponsiveRotationFineTune = v })
   // Added 2026-09-28, direct report: "the rotation motion is jittery and
