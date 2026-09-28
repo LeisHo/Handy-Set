@@ -1764,3 +1764,53 @@ wiring, and are still open:
   unilaterally; the user chose to leave them as-is. If a future
   session considers this migration again, re-read this note first —
   the trade-off has already been analyzed once.
+
+- **`phoneTiltAxisXRaw` was renamed to `phoneTiltAxisYRaw` 2026-09-28 —
+  it now drives the Y axis of Phone Model Responsive Rotation, not X.**
+  Direct spec: "tilted forwards (facing the user, top of phone pointing
+  up) = 90 X, tilting backwards = -90 X. Tilted left = 90 Z, tilted
+  right = -90 Z. Handle the leftover axis (Y)." `computePhoneCombinedQuat()`
+  now maps: **X <- beta** (front-back tilt), not inverted — W3C spec:
+  positive beta means the device's top tilts toward the user, matching
+  the "tilted forwards" example directly. **Z <- gamma** (left-right
+  tilt), INVERTED — W3C spec: positive gamma = right edge down/tilting
+  right, the opposite of this project's own left=+90/right=-90 spec, so
+  `-nx` is passed instead of `nx`. **Y <- compass heading delta**
+  (`phoneTiltAxisYRaw`, alpha-based) — the "leftover axis," previously
+  assigned to X before this rename. **NOT verified against a real
+  device** — no physical phone in this sandbox, and unusually,
+  `DeviceOrientationEvent.requestPermission()` here auto-denies with no
+  real gesture behind it, so not even a SYNTHETIC `deviceorientation`
+  event reaches `handleDeviceOrientation()` (stricter than the
+  already-documented "no real sensors on Desktop" limitation elsewhere
+  in this file — that one still allows a synthetic event through).
+  Verified instead via a standalone Node script replicating
+  `computePhoneCombinedQuat()`'s own arithmetic with synthetic
+  beta/gamma/alpha inputs — confirmed each axis responds independently
+  with the correct sign and zero cross-talk onto the other 2. If any
+  ONE axis comes out backwards on a real phone, flip that axis's own
+  sign in `computePhoneCombinedQuat()` (negate the `rawComponent`
+  passed to `computePhoneResponsiveAxisDeg()`) rather than re-deriving
+  the whole mapping.
+- **The Sensors log (Debug group) now has `Log Beta (Front/Back Tilt
+  Angle)` / `Log Gamma (Left/Right Tilt Angle)` checkboxes
+  (`cfg.sensorLogOrientBeta`/`sensorLogOrientGamma`, both default
+  true) alongside the pre-existing Accel/Gyro/Compass toggles.**
+  These read `deviceorientation.beta/gamma` (absolute tilt ANGLE,
+  degrees) — genuinely different numbers from `Gyro`'s own
+  `rotationRate.alpha/beta/gamma` (angular VELOCITY, deg/s) already
+  logged, despite sharing greek-letter names. Labeled `Orient β:_ γ:_`
+  in the log line specifically so the two are never mistaken for
+  duplicates.
+- **This session and the concurrent dev-panel-template re-sync session
+  (`c69cb8a`/`1ae1f95`) shared the same physical working directory, not
+  separate worktrees or clones.** The 2 changes above (both isolated to
+  `src/main.js`, no overlap with the other session's `devPanel.js`/
+  `style.css` work) rode along automatically inside that session's own
+  `c69cb8a` commit the moment it ran `git commit` against the shared
+  working tree — confirmed after the fact via `git show
+  c69cb8a:src/main.js | grep phoneTiltAxisYRaw`. No separate code
+  commit was made for them; this file's docs were added afterward in a
+  separate commit once the other session went idle, specifically to
+  avoid a lost-update collision from 2 sessions editing the same
+  `CLAUDE.md`/`CHANGELOG.txt` concurrently.

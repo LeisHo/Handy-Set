@@ -17,6 +17,23 @@ Pushed to `https://github.com/LeisHo/Handy-Set`
 
 ## Recently completed
 
+- **FOLLOW-UP (2026-09-28): Sensors log Beta/Gamma + Phone Model
+  Responsive Rotation axis remap.** Added `Log Beta`/`Log Gamma`
+  checkboxes to the Sensors log (Debug group), reading
+  `deviceorientation.beta/gamma` (absolute tilt angle) — distinct from
+  `Gyro`'s own `rotationRate` numbers, which share the same greek
+  letters but measure angular velocity instead. Remapped Phone Model
+  Responsive Rotation to match a literal device-tilt spec: X <- beta
+  (front-back tilt, forward = +90), Z <- gamma (left-right tilt,
+  inverted so left = +90/right = -90), Y <- compass heading (the
+  leftover axis, previously on X). Verified via a standalone script
+  replicating the exact formula (all 6 test cases correct, zero
+  cross-axis talk) since this sandbox can't reach a real device or even
+  a synthetic orientation event. **Not yet verified on a real phone —
+  see What's Next.** This session shared a working directory with the
+  dev-panel re-sync session below, so both changes rode along inside
+  that session's own `c69cb8a` commit automatically. See
+  `docs/CHANGELOG.txt`'s matching 2026-09-28 (28th) entry.
 - **FOLLOW-UP (2026-09-28): Dev panel re-sync from the canonical
   template + curve/range control migration.** Full re-sync of
   `src/devpanel/devPanel.js`/`src/style.css` from
@@ -531,7 +548,16 @@ Pushed to `https://github.com/LeisHo/Handy-Set`
 
 ## What's next
 
-1. **Live-verify the 2026-09-28 dev panel re-sync in a real browser** —
+1. **Verify the 2026-09-28 Phone Model Responsive Rotation axis remap
+   on a real phone.** The mapping (forward tilt = +90 X, left tilt =
+   +90 Z, compass turn = Y) was implemented per the W3C
+   `deviceorientation` spec's beta/gamma sign convention, not measured
+   against real hardware — this sandbox's `DeviceOrientationEvent.
+   requestPermission()` auto-denies with no real gesture behind it, so
+   not even a synthetic event reaches the handler. If any one axis
+   looks backwards on a real device, that axis's sign needs flipping in
+   `computePhoneCombinedQuat()` — see that function's own comment.
+2. **Live-verify the 2026-09-28 dev panel re-sync in a real browser** —
    this round's changes (Undo/Redo, the new Panel UI theme colors, all
    12 migrated curve/range fields, the header button reorganization)
    were pushed without a browser verification pass, per direct
@@ -539,34 +565,34 @@ Pushed to `https://github.com/LeisHo/Handy-Set`
    confirm the migrated curve-editor/range-bar widgets still drag/
    click-to-edit correctly and round-trip through Sync, and that
    nothing else regressed.
-2. **Test Device Information on a real Pixel 9a + Chrome** (and ideally a
+3. **Test Device Information on a real Pixel 9a + Chrome** (and ideally a
    real iPhone/Safari) — open `https://handy-set.vercel.app/?dev=1` ->
    DEV -> Debug -> Settings, check "Device Information". Confirm whether
    Chrome's `getHighEntropyValues()` actually returns `model: "Pixel 9a"`
    on real hardware (unverified — this environment has no physical
    device), and that the fallback path behaves sensibly on Safari.
-3. Decide whether a single master kill-switch for all gyro-driven
+4. Decide whether a single master kill-switch for all gyro-driven
    effects is wanted — Phone Tilt's own "Tracking Enabled" checkbox
    currently only gates whole-hand rotation, NOT Responsive Wrist Splay
    or Reactive Arm Length (each has its own separate toggle). Flagged to
    the user 2026-09-25, not yet built (not requested).
-4. Find "Responsive Palm Rotation" — the user says this group exists in
+5. Find "Responsive Palm Rotation" — the user says this group exists in
    their own app, but an exhaustive search of the git-tracked
    dev-panel-settings.json found no trace of it anywhere. Likely needs
    the user to hit Sync from whichever device/browser shows it (so its
    real state reaches git), or a screenshot/more specific description.
-5. Verify Phone Tilt gyroscope rotation specifically on the user's actual
+6. Verify Phone Tilt gyroscope rotation specifically on the user's actual
    Pixel 9a — still unverified, no physical device available here (can be
-   folded into the same real-device session as item 2 above).
-6. ~~Decide on a visible default color scheme~~ — now moot for production:
+   folded into the same real-device session as item 3 above).
+7. ~~Decide on a visible default color scheme~~ — now moot for production:
    the startup-sync fix above means production correctly picks up the
    git-tracked gray background (`#bfbfbf`) instead of the all-white
    hardcoded default. Revisit only if the *hardcoded* literal defaults
    in `main.js` (the fallback when no git settings are reachable, e.g.
    `file://` or an offline API) still need their own deliberate tuning.
-7. Port Pose Offset X/Y/Z to Handy Dandies' camera-relative resolution
+8. Port Pose Offset X/Y/Z to Handy Dandies' camera-relative resolution
    before any saved pose is given a nonzero offset value.
-8. Tune default Camera/Lighting/Toon values to taste, now that Camera
+9. Tune default Camera/Lighting/Toon values to taste, now that Camera
    restore, the color/rim controls, and Set-as-Default persistence all
    actually work.
 

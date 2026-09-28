@@ -3503,6 +3503,71 @@ generalizing CLAUDE.md §9a's existing "when a push is requested, push
 first" rule into a standing default for this project.
 
 --------------------------------------------------------------------------------
+2026-09-28  -  (28th)
+
+Direct request, prompted by a question about what the Sensors log's
+`Gyro α/β/γ` fields actually are: explained that those are
+`DeviceMotionEvent.rotationRate` (angular VELOCITY, deg/s), not the
+same numbers as `DeviceOrientationEvent.beta/gamma` (absolute tilt
+ANGLE, degrees) that Phone Tilt's own `handleDeviceOrientation()`
+actually reads -- the log never captured the latter at all. Added 2
+new Sensors-group checkboxes, `Log Beta (Front/Back Tilt Angle)` /
+`Log Gamma (Left/Right Tilt Angle)` (`cfg.sensorLogOrientBeta`/
+`sensorLogOrientGamma`, both default true), following the exact
+existing per-sensor-toggle pattern (`sensorLogAccel`/`Gyro`/`Compass`).
+The new log segment is labeled `Orient β:_ γ:_` specifically so it
+never reads as a duplicate of `Gyro`'s own α/β/γ despite sharing
+greek-letter names.
+
+Separately, direct spec to fix Phone Model Responsive Rotation for
+mobile so it matches real device tilt: "tilted forwards ... facing the
+user, top of phone pointing up = 90 X, tilting backwards = -90 X.
+Tilted left 90 = 90 Z, tilted right = -90 Z. Handle the leftover axis
+(Y)." Remapped `computePhoneCombinedQuat()`'s 3 responsive axes:
+X <- beta (front-back tilt, NOT inverted -- W3C spec: positive beta
+means the device's top tilts toward the user, exactly the "tilted
+forwards" example given); Z <- gamma (left-right tilt), INVERTED (W3C
+spec: positive gamma = right edge down/tilting right, the OPPOSITE of
+this project's left=+90/right=-90 spec); Y <- compass heading delta
+(the "leftover axis" -- the only remaining independent orientation
+signal a real device provides that a 2D mouse position can't).
+Previously X held the compass axis and Y/Z held gamma/beta
+respectively; renamed the compass-delta variable
+`phoneTiltAxisXRaw` -> `phoneTiltAxisYRaw` throughout to match its new
+role, rather than leaving a stale name (this project's own established
+gotcha pattern -- see the Hand Model checkbox repurpose history).
+
+NOT verified against a real device this session (no physical phone
+available in this sandbox, and `DeviceOrientationEvent.requestPermission()`
+here auto-denies with no real user gesture behind it, so not even a
+synthetic `deviceorientation` event reaches `handleDeviceOrientation()`
+-- a stricter limitation than this file's other already-documented
+"no real sensors on Desktop" gotcha, since it blocks simulated events
+too). Verified instead via a standalone Node script
+(`verify_phone_rotation.js`, scratchpad-only, not committed)
+replicating `computePhoneCombinedQuat()`'s exact arithmetic with
+synthetic beta/gamma/alpha inputs: confirmed each of the 6 test cases
+(rest, forward, backward, left, right, compass-turn) produces rotation
+on exactly the intended single axis with the correct sign and zero
+cross-talk onto the other 2 axes. The beta/gamma SIGN CONVENTION
+itself is per spec, not measured -- if any one axis comes out backwards
+on a real phone, flip that axis's own sign in
+`computePhoneCombinedQuat()` (negate the `rawComponent` passed to
+`computePhoneResponsiveAxisDeg()`) rather than re-deriving the mapping.
+
+Both changes landed in `src/main.js` only; `index.html`'s cache-buster
+bumped `?v=110` -> `?v=111` (before the concurrent dev-panel-migration
+session's own later `?v=112` bump superseded it). This session and the
+one doing the dev-panel-template re-sync (see the 27th entry above)
+share the same physical working directory (not separate worktrees), so
+these 2 changes rode along inside that session's own `c69cb8a` commit
+automatically -- confirmed after the fact via `git show c69cb8a:src/main.js
+| grep sensorLogOrientBeta/phoneTiltAxisYRaw`, both present. No separate
+code commit was needed; this entry documents work that was already
+pushed under someone else's commit message, which is why it wasn't
+mentioned there.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
