@@ -97,6 +97,7 @@
     "sliderPhoneModelRotZ": 0,
     "checkboxPhoneResponsiveRotationEnabled": true,
     "sliderPhoneResponsiveRotationFineTune": 0,
+    "sliderPhoneRotationDamping": 0.25,
     "textPhoneResponsiveRotationRange": "{\"min\":0,\"max\":30}",
     "textPhoneResponsiveRotationCurve": "{\"points\": [{\"x\": 0, \"y\": 1}, {\"x\": 1, \"y\": 0}], \"method\": \"catmullrom\"}",
     "checkboxWristSplayResponsiveEnabled": false,
@@ -104,16 +105,16 @@
     "checkboxWristSplayReactiveEnabled": true,
     "textWristSplayRange": "{\"min\":5,\"max\":-71}",
     "textWristSplayCurve": "{\"points\":[{\"x\":0,\"y\":1},{\"x\":0.31833343505859374,\"y\":0.6961458841959636},{\"x\":1,\"y\":0.042812347412109375}],\"method\":\"catmullrom\"}",
-    "sliderCameraX": 1,
-    "sliderCameraY": 130,
-    "sliderCameraZ": 5,
+    "sliderCameraX": -49.5,
+    "sliderCameraY": 57.5,
+    "sliderCameraZ": 82.5,
     "sliderCameraFov": 15,
     "sliderCameraZoom": 99.5,
     "checkboxLockCameraPan": false,
     "checkboxLockCameraZoom": false,
     "checkboxLockCameraRotate": false,
-    "sliderCameraYaw": -174,
-    "sliderCameraPitch": -87,
+    "sliderCameraYaw": 148,
+    "sliderCameraPitch": -16,
     "checkboxCameraMaxExtentsEnabled": false,
     "sliderKeyAzimuth": 360,
     "sliderKeyElevation": -3,
@@ -153,8 +154,8 @@
     "checkboxSensorLogCompass": true,
     "checkboxSensorLogOrientBeta": true,
     "checkboxSensorLogOrientGamma": true,
-    "checkboxObjectAxesEnabled": false,
-    "checkboxObjectAxesRenderInFront": false,
+    "checkboxObjectAxesEnabled": true,
+    "checkboxObjectAxesRenderInFront": true,
     "sliderObjectAxesThickness": 2,
     "sliderObjectAxesLength": 40,
     "checkboxDeviceInfoEnabled": true
@@ -397,13 +398,18 @@
                       {
                         "type": "row",
                         "key": "textPhoneResponsiveRotationCurve"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderPhoneRotationDamping"
                       }
                     ],
                     "rowKeys": [
                       "checkboxPhoneResponsiveRotationEnabled",
                       "sliderPhoneResponsiveRotationFineTune",
                       "textPhoneResponsiveRotationRange",
-                      "textPhoneResponsiveRotationCurve"
+                      "textPhoneResponsiveRotationCurve",
+                      "sliderPhoneRotationDamping"
                     ],
                     "subgroups": []
                   }
@@ -429,13 +435,18 @@
                     {
                       "type": "row",
                       "key": "textPhoneResponsiveRotationCurve"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderPhoneRotationDamping"
                     }
                   ],
                   "rowKeys": [
                     "checkboxPhoneResponsiveRotationEnabled",
                     "sliderPhoneResponsiveRotationFineTune",
                     "textPhoneResponsiveRotationRange",
-                    "textPhoneResponsiveRotationCurve"
+                    "textPhoneResponsiveRotationCurve",
+                    "sliderPhoneRotationDamping"
                   ],
                   "subgroups": []
                 }
@@ -518,13 +529,18 @@
                     {
                       "type": "row",
                       "key": "textPhoneResponsiveRotationCurve"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderPhoneRotationDamping"
                     }
                   ],
                   "rowKeys": [
                     "checkboxPhoneResponsiveRotationEnabled",
                     "sliderPhoneResponsiveRotationFineTune",
                     "textPhoneResponsiveRotationRange",
-                    "textPhoneResponsiveRotationCurve"
+                    "textPhoneResponsiveRotationCurve",
+                    "sliderPhoneRotationDamping"
                   ],
                   "subgroups": []
                 }
@@ -550,13 +566,18 @@
                   {
                     "type": "row",
                     "key": "textPhoneResponsiveRotationCurve"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderPhoneRotationDamping"
                   }
                 ],
                 "rowKeys": [
                   "checkboxPhoneResponsiveRotationEnabled",
                   "sliderPhoneResponsiveRotationFineTune",
                   "textPhoneResponsiveRotationRange",
-                  "textPhoneResponsiveRotationCurve"
+                  "textPhoneResponsiveRotationCurve",
+                  "sliderPhoneRotationDamping"
                 ],
                 "subgroups": []
               }
@@ -4128,6 +4149,15 @@
           {
             "type": "row",
             "key": "__row7"
+          },
+          {
+            "type": "group",
+            "section": {
+              "key": "desktop:Phone Model Log",
+              "items": [],
+              "rowKeys": [],
+              "subgroups": []
+            }
           }
         ],
         "rowKeys": [
@@ -4247,6 +4277,12 @@
               "checkboxSensorLogOrientBeta",
               "checkboxSensorLogOrientGamma"
             ],
+            "subgroups": []
+          },
+          {
+            "key": "desktop:Phone Model Log",
+            "items": [],
+            "rowKeys": [],
             "subgroups": []
           }
         ]
@@ -6086,6 +6122,15 @@
               "rowKeys": [],
               "subgroups": []
             }
+          },
+          {
+            "type": "group",
+            "section": {
+              "key": "mobile:Phone Model Log",
+              "items": [],
+              "rowKeys": [],
+              "subgroups": []
+            }
           }
         ],
         "rowKeys": [],
@@ -6104,6 +6149,12 @@
           },
           {
             "key": "mobile:Sensors",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
+          {
+            "key": "mobile:Phone Model Log",
             "items": [],
             "rowKeys": [],
             "subgroups": []
@@ -7790,6 +7841,15 @@
               "rowKeys": [],
               "subgroups": []
             }
+          },
+          {
+            "type": "group",
+            "section": {
+              "key": "landscape:Phone Model Log",
+              "items": [],
+              "rowKeys": [],
+              "subgroups": []
+            }
           }
         ],
         "rowKeys": [],
@@ -7808,6 +7868,12 @@
           },
           {
             "key": "landscape:Sensors",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
+          {
+            "key": "landscape:Phone Model Log",
             "items": [],
             "rowKeys": [],
             "subgroups": []
@@ -7931,11 +7997,12 @@
     "desktop:Setting Title": true,
     "desktop:TABS": true,
     "desktop:BUTTONS": true,
-    "desktop:Debug": false,
-    "desktop:Object Axes": true,
+    "desktop:Debug": true,
+    "desktop:Object Axes": false,
     "desktop:Settings": true,
     "desktop:Mouse Log": true,
-    "desktop:Sensors": true,
+    "desktop:Sensors": false,
+    "desktop:Phone Model Log": false,
     "desktop:Camera": true,
     "desktop:Saved Cameras": true,
     "desktop:Lighting": true,
@@ -7986,6 +8053,7 @@
     "mobile:Object Axes": false,
     "mobile:Settings": false,
     "mobile:Sensors": false,
+    "mobile:Phone Model Log": false,
     "mobile:Camera": false,
     "mobile:Saved Cameras": false,
     "mobile:Lighting": false,
@@ -8036,6 +8104,7 @@
     "landscape:Object Axes": false,
     "landscape:Settings": false,
     "landscape:Sensors": true,
+    "landscape:Phone Model Log": false,
     "landscape:Camera": true,
     "landscape:Saved Cameras": true,
     "landscape:Lighting": true,
@@ -8312,7 +8381,9 @@
     "textwristSplayClampRange": null,
     "textBaseArmRotationRange": null,
     "textBaseArmRotationCurve": null,
-    "textPoseTweenCurve": null
+    "textPoseTweenCurve": null,
+    "mobile:Phone Model Log": null,
+    "landscape:Phone Model Log": null
   },
   "devTextOverridesManual": [
     "desktop:New Group",
