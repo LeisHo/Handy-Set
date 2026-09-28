@@ -4218,6 +4218,67 @@ this feature through 2 extra, partially-wrong correction rounds.
 `index.html`'s cache-buster bumped `?v=120` -> `?v=121`.
 
 --------------------------------------------------------------------------------
+2026-09-28  -  (38th)
+
+Direct follow-up, same day, showing the 37th entry's "identity, just
+alpha/gamma crossed" fix was itself still wrong: "bro still wrong. real
+world Z - model y. real world x - model z. real world y - model x." --
+the exact same 3-way cyclic permutation the 36th entry had already
+described and supposedly fixed. Direct instruction this round: "bro
+just switch the outputs i told you" -- an explicit request to stop
+re-deriving a new root-cause theory and just apply the reported
+before/after mapping directly.
+
+Took that literally: relabeling "whatever used to visually rotate
+around axis A now rotates around axis B" for every one of the 3
+reported cases is a fixed 3-cycle permutation (old-Z->new-X for pitch,
+old-X->new-Y for roll, old-Y->new-Z for spin). Conjugating the WHOLE
+accumulated quaternion by that permutation every frame would achieve
+this, but since conjugation distributes over quaternion composition,
+it's mathematically equivalent (and far simpler) to apply the same
+permutation directly to each individual increment's own axis vector
+before building it -- once, in `integratePhoneGyroRotation()`, not
+every frame. Applied to the 2 axis vectors that function already
+builds: the combined pitch+roll tilt vector `(dPitchDeg, dRollDeg, 0)`
+-> `(0, dPitchDeg, dRollDeg)`; the separate spin axis `(0,0,1)` ->
+`(1,0,0)` (now `PHONE_GYRO_SPIN_LOCAL_AXIS`'s new value). The
+alpha/gamma raw-property assignment from the 37th entry is left
+untouched -- this fix is about which SLOT each role's value lands in,
+a separate question from which raw sensor field feeds which role.
+
+An isolated standalone quaternion-math script was used to sanity-check
+the ALGEBRA of this permutation (confirming it reduces cleanly to a
+single-axis rotation for each pure-motion case, and that applying it to
+the round-37 code's own axis vectors matches the derived permuted
+vectors by hand). That same isolated script, run against the CURRENT
+(37th-entry) code, predicted an identity mapping (pitch keeps its own
+axis fixed, etc.) that does NOT match this round's real-device report
+of a 3-way cyclic permutation for that same code -- a real, unresolved
+discrepancy between the isolated quaternion math (which has no
+visibility into anything beyond `phoneGyroQuat` itself) and the actual
+rendered result on a real phone. `computePhoneCombinedQuat()` and
+`applyPhoneModelTransform()` were both read directly to rule out an
+obvious extra transform (there isn't one -- `phoneModelWrapper.quaternion`
+is a straight damped slerp toward the combined quaternion, no further
+remap), so the source of that discrepancy is NOT understood this round.
+Given that, this fix trusts the user's literal, real-device-tested
+report as ground truth over the isolated simulation, rather than
+withholding a fix until the simulation can be reconciled.
+
+Not independently browser/device-verified this round (same standing
+limitation as every prior round on this feature -- no physical device
+available in this sandbox). If this is STILL wrong on the next real
+test, do NOT reach for a 5th permutation guess -- the unexplained
+gap between the isolated `phoneGyroQuat` math and the real rendered
+result (noted above) is the more likely place a 5th round needs to
+actually dig, e.g. instrumenting `phoneGyroQuat`'s live value on the
+real device at a few known physical orientations and comparing directly
+against what the isolated script predicts for those same inputs, rather
+than reasoning about the code in isolation again.
+
+`index.html`'s cache-buster bumped `?v=121` -> `?v=122`.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

@@ -2308,4 +2308,32 @@ wiring, and are still open:
   MESSAGES in this same conversation — the same letter may not have
   meant the same physical motion in 2 different reports from the same
   user, simply because there was no fixed, restated physical anchor
-  each time.
+  each time. **CORRECTED 2026-09-28 — this guidance is proven
+  insufficient on its own.** A 5th round was needed: the 37th entry's
+  "identity, just alpha/gamma crossed" fix STILL reproduced the exact
+  same 3-way cyclic permutation the 36th entry described, even with an
+  unambiguous physical report both times. Direct instruction that round:
+  "just switch the outputs I told you" — stop re-deriving root causes
+  and apply the reported before/after mapping as a literal permutation.
+  Mechanism: relabeling "old-visual-A now shows as new-visual-B" for
+  every case is a fixed permutation; applying it to each individual
+  axis-angle increment's own axis vector (rather than conjugating the
+  whole accumulated quaternion every frame) is mathematically
+  equivalent and simpler. See the 38th CHANGELOG entry for the exact
+  vectors. **A real, still-UNEXPLAINED discrepancy was found doing
+  this: an isolated standalone quaternion-math script replicating the
+  37th-entry code predicts an IDENTITY mapping (pitch/roll/spin each
+  keep their own axis fixed) for that exact code — directly
+  contradicting the real-device report of a 3-way cyclic permutation
+  for that same code.** `computePhoneCombinedQuat()`/
+  `applyPhoneModelTransform()` were read directly and ruled out as the
+  source (no extra remap exists between `phoneGyroQuat` and the
+  rendered `phoneModelWrapper.quaternion` — just a damped slerp). This
+  fix trusted the real-device report over the isolated simulation
+  rather than waiting to reconcile them. **If a 6th round is ever
+  needed, don't reach for another permutation guess — instrument
+  `phoneGyroQuat`'s live value on the real device at known physical
+  orientations (e.g. via the Sensors/Phone Model logs) and compare
+  directly against what an isolated script predicts for those same
+  raw inputs, to actually find where the isolated math and the real
+  rendered result diverge.**

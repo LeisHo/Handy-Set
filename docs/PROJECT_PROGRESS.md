@@ -7,34 +7,59 @@ append-only history.
 
 ## Currently working on
 
-Nothing in progress — a 4th-round axis fix for the gyroscope-integrated
-mobile rotation (2026-09-28: `rotationRate.alpha`/`.gamma` were
-CROSSED relative to `deviceorientation`'s same-named fields; the target
-mapping is a plain identity, pitch->X/roll->Y/spin->Z, no permutation
-needed) is pushed, on top of a 3rd-round cyclic-permutation attempt
-(also 2026-09-28, since superseded/simplified by this round), the
-gyroscope-integration switch itself (also 2026-09-28, "I want the
-rotation to continue forever"), a Rotation Reset baseline bug fix plus
-6 per-axis enable/scale controls (also 2026-09-28), 3 more real-device-
-testing fixes (also 2026-09-28: touch/mouse conflict, camera-lock/
-slider sync, Y/Z world-axis swap), the mobile-vs-desktop rotation
-redesign (also 2026-09-28), the Rotation Reset feature (also
-2026-09-28), the curve-inversion fix (also 2026-09-28), the rotation-
-node/damping/log follow-up (also 2026-09-28), the dev panel template
-re-sync (also 2026-09-28), and the 6-part Palm Rotation/Responsive-
-features request (2026-09-27). See Recently completed below for the
-full account. **Still needs real device re-verification** — this
-feature has now needed 4 correction rounds in one session; if the next
-real test still shows one axis wrong, describing it with a concrete
-physical landmark (e.g. "perpendicular to the screen," not just an
-axis letter) is what actually got this round right, and should be used
-again rather than axis letters alone.
+Nothing in progress — a 5th-round axis fix for the gyroscope-integrated
+mobile rotation (2026-09-28: the 4th round's "alpha/gamma crossed"
+theory still reproduced the same 3-way cyclic permutation; this round
+applied the user's literal reported before/after mapping as a direct
+output permutation instead of re-deriving another theory — see
+Recently completed for the exact mechanism and an unresolved
+isolated-math-vs-real-device discrepancy found while verifying it) is
+pushed, on top of the 4th-round "alpha/gamma crossed" attempt (also
+2026-09-28, since superseded by this round), a 3rd-round cyclic-
+permutation attempt (also 2026-09-28, superseded), the gyroscope-
+integration switch itself (also 2026-09-28, "I want the rotation to
+continue forever"), a Rotation Reset baseline bug fix plus 6 per-axis
+enable/scale controls (also 2026-09-28), 3 more real-device-testing
+fixes (also 2026-09-28: touch/mouse conflict, camera-lock/slider sync,
+Y/Z world-axis swap), the mobile-vs-desktop rotation redesign (also
+2026-09-28), the Rotation Reset feature (also 2026-09-28), the
+curve-inversion fix (also 2026-09-28), the rotation-node/damping/log
+follow-up (also 2026-09-28), the dev panel template re-sync (also
+2026-09-28), and the 6-part Palm Rotation/Responsive-features request
+(2026-09-27). See Recently completed below for the full account.
+**Still needs real device re-verification** — this feature has now
+needed 5 correction rounds in one session, and even an unambiguous
+physical description didn't prevent the 4th round's regression; if a
+6th round is needed, don't guess another permutation — instrument
+`phoneGyroQuat`'s live value on the real device at known orientations
+and compare against isolated-script predictions to find where they
+actually diverge (see the CLAUDE.md gotcha and the 38th CHANGELOG
+entry).
 
 Pushed to `https://github.com/LeisHo/Handy-Set`
 (deployed via the Vercel project at `https://vercel.com/lpeis/handy-set`).
 
 ## Recently completed
 
+- **RESOLVED (2026-09-28, 5th round): The 4th round's "alpha/gamma
+  crossed" fix still reproduced the exact same 3-way cyclic
+  permutation.** Direct instruction: "just switch the outputs I told
+  you" — stop re-deriving a root cause and apply the reported
+  before/after mapping directly. Relabeling "old-visual-A now shows as
+  new-visual-B" for all 3 reported cases is a fixed permutation;
+  applying it to each axis-angle increment's own axis vector (rather
+  than conjugating the whole accumulated quaternion every frame) is
+  mathematically equivalent and simpler. Combined pitch+roll tilt
+  vector `(pitch,roll,0)` -> `(0,pitch,roll)`; separate spin axis
+  `(0,0,1)` -> `(1,0,0)`. **Found but did not resolve a real
+  discrepancy while verifying this**: an isolated quaternion-math
+  script replicating the prior (4th-round) code predicts an IDENTITY
+  mapping for that code, directly contradicting the real-device report
+  of a 3-way cyclic permutation for the same code.
+  `computePhoneCombinedQuat()`/`applyPhoneModelTransform()` were read
+  directly and ruled out as an extra remap source. This fix trusts the
+  real-device report over the unreconciled simulation. See
+  `docs/CHANGELOG.txt`'s matching 2026-09-28 (38th) entry.
 - **RESOLVED (2026-09-28): Gyroscope rotation's real bug was a 2-sensor
   crossing, not the 3-axis cycle the previous round diagnosed.** A
   follow-up report using an unambiguous physical description ("Z sticks
