@@ -6,3 +6,17 @@ node_modules/
 # meant to be tracked; a `git add -A` swept one into a commit once,
 # caught and amended out before push (2026-09-21).
 datalog/
+# Phone Model asset source material (2026-09-27) -- the app only ever
+# loads the top-level *.glb files in this folder (see
+# PHONE_MODEL_OPTIONS, src/main.js); the .zip archives, .blend/.blend1
+# working files, and extracted source/textures subfolders are raw
+# provenance (~104MB), not runtime assets -- excluded per workspace
+# CLAUDE.md Section 11 ("exclude only genuinely large/regenerable
+# material"), kept locally rather than committed.
+data/processed/SMARTPHONE MODELS/*.zip
+data/processed/SMARTPHONE MODELS/*.blend
+data/processed/SMARTPHONE MODELS/*.blend1
+data/processed/SMARTPHONE MODELS/google-pixel-5/
+data/processed/SMARTPHONE MODELS/iphone-17-pro/
+data/processed/SMARTPHONE MODELS/iphone-17-pro-max/
+data/processed/SMARTPHONE MODELS/pixel-9a-rumored-design/

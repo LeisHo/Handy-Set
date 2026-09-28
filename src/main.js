@@ -6,6 +6,9 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
 import { OutlinePass } from 'three/addons/postprocessing/OutlinePass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
 import { clone as cloneSkinnedSkeleton } from 'three/addons/utils/SkeletonUtils.js'
+import { Line2 } from 'three/addons/lines/Line2.js'
+import { LineGeometry } from 'three/addons/lines/LineGeometry.js'
+import { LineMaterial } from 'three/addons/lines/LineMaterial.js'
 import { detectDeviceInfo } from './deviceInfo.js'
 
 // Dev panel schema-version guard — runs synchronously, before devPanel.js
@@ -25,7 +28,7 @@ import { detectDeviceInfo } from './deviceInfo.js'
 // this simply clears the stale local save; it does not touch the
 // separate git-tracked save (data/processed/dev-panel-settings.json,
 // reset directly when this was first found).
-const HANDYSET_SETTINGS_SCHEMA_VERSION = '2026-09-25a'
+const HANDYSET_SETTINGS_SCHEMA_VERSION = '2026-09-27a'
 try {
   if (localStorage.getItem('handysetSettingsSchemaVersion') !== HANDYSET_SETTINGS_SCHEMA_VERSION) {
     localStorage.removeItem('devPanelSettings')
@@ -166,7 +169,27 @@ const cfg = {
   fingerGizmosEnabled: false, fingerGizmoSize: 1, fingerGizmoColor: '#ffcc00',
   fingerGizmoAxisLength: 4, fingerGizmoAxisThickness: 0.3,
   sensorStreamEnabled: false, sensorIntervalMs: 200,
-  deviceInfoEnabled: false
+  deviceInfoEnabled: false,
+  // Phone Model -- direct request 2026-09-27: a loadable smartphone GLB,
+  // positioned/scaled/rotated independently of the hand, with its own
+  // phone-tilt-driven responsive rotation (see PHONE_MODEL_OPTIONS and
+  // the Responsive Rotation section below for the full design).
+  phoneModelEnabled: false,
+  phoneModelFile: '',
+  phoneModelScale: 1,
+  phoneModelOffsetX: 0, phoneModelOffsetY: 0, phoneModelOffsetZ: 0,
+  phoneModelRotX: 0, phoneModelRotY: 0, phoneModelRotZ: 0,
+  // Responsive Behaviour - Phone > Responsive Rotation -- same 4-control
+  // pattern as Responsive Arm Rotation at Base (On/Off, Fine-Tune,
+  // Min/Max Range, Curve), see computePhoneResponsiveAxisDeg()'s own
+  // comment for how these drive multiple axes from one shared mapping.
+  phoneResponsiveRotationEnabled: false, phoneResponsiveRotationFineTune: 0,
+  phoneResponsiveRotationRange: '{"min":0,"max":30}',
+  phoneResponsiveRotationCurve: '[{"x":0,"y":1},{"x":1,"y":0}]',
+  // Debug > Object Axes -- ported from 3JS ENGINE's own feature (see that
+  // project's src/main.js, "World Axes / Object Axes visualization").
+  objectAxesEnabled: false, objectAxesRenderInFront: false,
+  objectAxesThickness: 2, objectAxesLength: 40
 }
 
 // ---------------------------------------------------------------------
@@ -1475,6 +1498,12 @@ function createToonMaterial(map) {
 // normalized magnitude/angle -> circular-offset approach, which is the
 // correct abstraction for that fundamentally different kind of input.
 let tiltMagnitude = 0, tiltAngle = 0
+// Phone Model Responsive Rotation's mobile-only 3rd axis -- see
+// handleDeviceOrientation()'s own comment. Stays 0 on desktop (nothing
+// ever writes it outside that function), which is what makes "desktop:
+// Y/Z only, mobile: all 3 axes" true without an explicit platform branch.
+let phoneTiltAxisXRaw = 0
+let phoneAlphaBaseline = null
 let lastInputSource = 'device' // 'device' | 'mouse' — which path updateTiltTarget() should use this frame
 const cursorNDC = new THREE.Vector2(0, 0)
 const raycaster = new THREE.Raycaster()
@@ -1531,6 +1560,27 @@ function handleDeviceOrientation(e) {
   const ny = THREE.MathUtils.clamp(beta / maxTilt, -1, 1)
   tiltMagnitude = Math.min(Math.hypot(nx, ny), 1)
   tiltAngle = Math.atan2(ny, nx)
+  // Phone Model Responsive Rotation's 3rd (mobile-only) axis -- direct
+  // request: "On Desktop, it will rotate around its local y and z axes
+  // only, but on mobile it will rotate on all axes." Y/Z are covered by
+  // nx/ny above (reconstructed from tiltMagnitude/tiltAngle, identical on
+  // both mouse and device paths); the 3rd axis needs a signal that
+  // genuinely doesn't exist for a 2D mouse position -- device compass
+  // heading (e.alpha) is the natural candidate, since real devices expose
+  // 3 independent orientation angles (alpha/beta/gamma) while a mouse only
+  // ever gives 2 (screen x/y). alpha is an ABSOLUTE compass heading
+  // (0-360), not a centered tilt like beta/gamma, so it needs a captured
+  // baseline (first reading) to turn into a centered delta before it's
+  // usable the same way. phoneTiltAxisXRaw stays 0 on desktop (this
+  // function never runs there), which is exactly what makes "desktop:
+  // Y/Z only" fall out naturally rather than needing an explicit
+  // isTouchDevice branch in the responsive-rotation code itself.
+  if (typeof e.alpha === 'number') {
+    if (phoneAlphaBaseline === null) phoneAlphaBaseline = e.alpha
+    let deltaAlpha = e.alpha - phoneAlphaBaseline
+    deltaAlpha = ((deltaAlpha + 180) % 360 + 360) % 360 - 180 // normalize to -180..180
+    phoneTiltAxisXRaw = THREE.MathUtils.clamp(deltaAlpha / maxTilt, -1, 1)
+  }
 }
 function handleMouseMoveFallback(e) {
   lastInputSource = 'mouse'
@@ -1591,6 +1641,286 @@ function requestMotionPermissionIfNeeded() {
 function initMotionInput() {
   window.addEventListener('mousemove', handleMouseMoveFallback)
   if (cfg.trackingEnabled) requestMotionPermissionIfNeeded()
+}
+
+// =======================================================================
+// Scene Object registry -- a minimal port of 3JS ENGINE's own
+// registerSceneObject()/sceneObjectEntries (its src/main.js), scoped down
+// to just what the Object Axes picker below needs (that project's own
+// version also backs a full property Inspector this project doesn't
+// have). Populated by rebuildField() (one entry per hand) and the Phone
+// Model load/remove functions below (one entry for the phone).
+// =======================================================================
+const sceneObjectEntries = []
+function registerSceneObject(id, label, object3d) {
+  unregisterSceneObject(id) // idempotent -- re-registering replaces, never duplicates
+  sceneObjectEntries.push({ id, label, object3d })
+  if (typeof renderObjectAxesPicker === 'function') renderObjectAxesPicker()
+}
+function unregisterSceneObject(id) {
+  if (typeof removeObjectAxesFor === 'function') removeObjectAxesFor(id) // detach/dispose before the entry disappears; the id STAYS in objectAxesEnabledIds
+  const idx = sceneObjectEntries.findIndex((e) => e.id === id)
+  if (idx >= 0) sceneObjectEntries.splice(idx, 1)
+  if (typeof renderObjectAxesPicker === 'function') renderObjectAxesPicker()
+}
+
+// =======================================================================
+// Object Axes (Debug group) -- ported from 3JS ENGINE's own
+// "World Axes / Object Axes visualization" (its src/main.js), Object Axes
+// half only (World Axes wasn't requested). Fat Line2/LineMaterial lines,
+// not a bare THREE.AxesHelper -- a plain AxesHelper's LineBasicMaterial
+// silently ignores `linewidth` on most platforms, so its own "Line
+// Thickness" control would have no visible effect.
+// =======================================================================
+const AXES_DIRS = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+const AXES_COLORS = [0xff3333, 0x33ff33, 0x3388ff] // X/red, Y/green, Z/blue -- THREE.AxesHelper's own convention
+const fatAxesLineMaterials = [] // every live LineMaterial -- resize handler below keeps their `resolution` current
+function createFatAxesVisualization(length, thicknessPx) {
+  const group = new THREE.Group()
+  group.name = 'ObjectAxesVisualization'
+  AXES_DIRS.forEach((dir, i) => {
+    const geometry = new LineGeometry()
+    geometry.setPositions([0, 0, 0, dir[0] * length, dir[1] * length, dir[2] * length])
+    const material = new LineMaterial({ color: AXES_COLORS[i], linewidth: thicknessPx })
+    material.resolution.set(renderer.domElement.width || 1, renderer.domElement.height || 1)
+    fatAxesLineMaterials.push(material)
+    group.add(new Line2(geometry, material))
+  })
+  return group
+}
+function disposeFatAxesVisualization(group) {
+  group.children.forEach((line) => {
+    const idx = fatAxesLineMaterials.indexOf(line.material)
+    if (idx >= 0) fatAxesLineMaterials.splice(idx, 1)
+    line.geometry.dispose()
+    line.material.dispose()
+  })
+}
+function rebuildFatAxesLength(group, length) {
+  group.children.forEach((line, i) => {
+    line.geometry.setPositions([0, 0, 0, AXES_DIRS[i][0] * length, AXES_DIRS[i][1] * length, AXES_DIRS[i][2] * length])
+  })
+}
+function applyFatAxesRenderState(group, renderInFront, thicknessPx) {
+  group.children.forEach((line) => {
+    line.material.depthTest = !renderInFront
+    line.renderOrder = renderInFront ? 999 : 0
+    line.material.linewidth = thicknessPx
+  })
+}
+// entryId -> the live THREE.Group parented to that entry's own object3d
+// (inherits its local transform automatically -- no per-frame matrix math
+// needed to keep the visualization following a moving/rotating object).
+const objectAxesGroups = new Map()
+const objectAxesEnabledIds = new Set()
+function ensureObjectAxesFor(entryId) {
+  const entry = sceneObjectEntries.find((e) => e.id === entryId)
+  if (!entry) return
+  let group = objectAxesGroups.get(entryId)
+  if (group && group.parent !== entry.object3d) {
+    if (group.parent) group.parent.remove(group)
+    entry.object3d.add(group)
+  } else if (!group) {
+    group = createFatAxesVisualization(cfg.objectAxesLength, cfg.objectAxesThickness)
+    entry.object3d.add(group)
+    objectAxesGroups.set(entryId, group)
+  }
+  group.visible = cfg.objectAxesEnabled
+  applyFatAxesRenderState(group, cfg.objectAxesRenderInFront, cfg.objectAxesThickness)
+}
+function removeObjectAxesFor(entryId) {
+  const group = objectAxesGroups.get(entryId)
+  if (!group) return
+  if (group.parent) group.parent.remove(group)
+  disposeFatAxesVisualization(group)
+  objectAxesGroups.delete(entryId)
+}
+function renderObjectAxesPicker() {
+  const listEl = document.getElementById('objectAxesPickerList')
+  if (!listEl) return
+  listEl.innerHTML = ''
+  if (!sceneObjectEntries.length) {
+    const empty = document.createElement('div')
+    empty.className = 'dev-label'
+    empty.textContent = '(no objects currently registered)'
+    listEl.appendChild(empty)
+    return
+  }
+  sceneObjectEntries.forEach((entry) => {
+    const row = document.createElement('div')
+    row.className = 'dev-lp-row'
+    const cb = document.createElement('input')
+    cb.type = 'checkbox'
+    cb.checked = objectAxesEnabledIds.has(entry.id)
+    cb.addEventListener('click', (e) => e.stopPropagation())
+    cb.addEventListener('change', () => {
+      if (cb.checked) { objectAxesEnabledIds.add(entry.id); ensureObjectAxesFor(entry.id) }
+      else { objectAxesEnabledIds.delete(entry.id); removeObjectAxesFor(entry.id) }
+    })
+    row.appendChild(cb)
+    const label = document.createElement('span')
+    label.textContent = entry.label
+    row.appendChild(label)
+    listEl.appendChild(row)
+  })
+}
+
+// =======================================================================
+// Phone Model -- direct request 2026-09-27: a loadable smartphone GLB
+// (data/processed/SMARTPHONE MODELS/*.glb), positioned/scaled/rotated
+// independently of the hand, with its own phone-tilt-driven responsive
+// rotation. "Anchor of rotation will be the centroid of the 3d geometry"
+// -- uses the exact same rotate-about-arbitrary-point technique as
+// applyModelRootTransform()'s own modelRotationPivot (see that function's
+// comment for the formula's origin/derivation), just for this single
+// unrigged model instead of a skinned hand.
+//
+// Filenames under SMARTPHONE MODELS/ contain literal spaces (e.g.
+// "iphone 17_4.glb", "Pixel 9A.glb") -- encodeURI() at the GLTFLoader.load
+// call site handles this; cfg.phoneModelFile itself stores the raw,
+// human-readable relative path (so a Copy/Save dump of this setting stays
+// readable), not a pre-encoded one.
+// =======================================================================
+const PHONE_MODEL_OPTIONS = [
+  { value: 'data/processed/SMARTPHONE MODELS/P5_Project_1.glb', text: 'P5 Project 1' },
+  { value: 'data/processed/SMARTPHONE MODELS/Pixel 9A.glb', text: 'Pixel 9A' },
+  { value: 'data/processed/SMARTPHONE MODELS/google_pixel_5.glb', text: 'Google Pixel 5' },
+  { value: 'data/processed/SMARTPHONE MODELS/google_pixel_phone.glb', text: 'Google Pixel Phone' },
+  { value: 'data/processed/SMARTPHONE MODELS/iphone 17_4.glb', text: 'iPhone 17 (v4)' },
+  { value: 'data/processed/SMARTPHONE MODELS/iphone_17_pro.glb', text: 'iPhone 17 Pro' },
+  { value: 'data/processed/SMARTPHONE MODELS/iphone_17_pro_max.glb', text: 'iPhone 17 Pro Max' },
+  { value: 'data/processed/SMARTPHONE MODELS/pixel_9a_rumored_design.glb', text: 'Pixel 9A (Rumored Design)' }
+]
+let phoneModelWrapper = null // THREE.Group at world origin + Offset sliders, added to `scene`
+let phoneModelRaw = null // the loaded gltf.scene, child of phoneModelWrapper -- rotation/scale/pivot-compensated position
+const phoneModelCentroidLocal = new THREE.Vector3()
+let phoneModelLoadToken = 0 // guards a stale async load callback from applying after a newer selection superseded it
+
+let phoneResponsiveRotationRangeParsed = { min: 0, max: 30 }
+let phoneResponsiveRotationCurveParsed = [{ x: 0, y: 1 }, { x: 1, y: 0 }]
+function parsePhoneResponsiveRotationConfig() {
+  try { phoneResponsiveRotationRangeParsed = JSON.parse(cfg.phoneResponsiveRotationRange) } catch (e) { /* keep last-good value */ }
+  try { phoneResponsiveRotationCurveParsed = JSON.parse(cfg.phoneResponsiveRotationCurve).sort((a, b) => a.x - b.x) } catch (e) { /* keep last-good value */ }
+}
+// Same curve math as computeResponsiveBaseArmRotationDeg(), reused as ONE
+// shared magnitude-mapping applied independently per axis -- rawComponent
+// is a signed -1..1 input (nx/ny, reconstructed from tiltMagnitude/
+// tiltAngle below, or phoneTiltAxisXRaw for the mobile-only 3rd axis).
+// |rawComponent| drives the curve (a 0-1 "how far this axis is tilted"
+// magnitude, same shape as Base Arm Rotation's own distanceT), and
+// Math.sign(rawComponent) gives the resulting rotation a direction --
+// Base Arm Rotation doesn't need this since it only ever has one fixed
+// rotation direction around one axis; a per-axis mechanism driving
+// multiple axes from signed inputs does.
+function computePhoneResponsiveAxisDeg(rawComponent) {
+  if (!cfg.trackingEnabled) return 0
+  if (!cfg.phoneResponsiveRotationEnabled) return 0
+  const t = THREE.MathUtils.clamp(Math.abs(rawComponent), 0, 1)
+  const curveY = THREE.MathUtils.clamp(evaluateReactiveCurve(phoneResponsiveRotationCurveParsed, t), 0, 1)
+  const { min, max } = phoneResponsiveRotationRangeParsed
+  const magnitude = min + (max - min) * curveY + (cfg.phoneResponsiveRotationFineTune || 0)
+  return magnitude * Math.sign(rawComponent)
+}
+const _phoneCombinedQuat = new THREE.Quaternion()
+const _phoneManualQuat = new THREE.Quaternion()
+const _phoneResponsiveQuat = new THREE.Quaternion()
+function computePhoneCombinedQuat() {
+  _phoneManualQuat.setFromEuler(new THREE.Euler(
+    THREE.MathUtils.degToRad(cfg.phoneModelRotX), THREE.MathUtils.degToRad(cfg.phoneModelRotY), THREE.MathUtils.degToRad(cfg.phoneModelRotZ), 'XYZ'
+  ))
+  // nx/ny reconstructed from tiltMagnitude/tiltAngle -- the same 2
+  // components handleDeviceOrientation()/handleMouseMoveFallback() already
+  // reduce BOTH input paths into, so desktop and mobile share identical
+  // Y/Z behavior with no extra plumbing. phoneTiltAxisXRaw (X axis) is
+  // only ever written by handleDeviceOrientation() -- see that function's
+  // own comment for why that alone is what makes "desktop: Y/Z only"
+  // true.
+  const nx = tiltMagnitude * Math.cos(tiltAngle)
+  const ny = tiltMagnitude * Math.sin(tiltAngle)
+  const respX = computePhoneResponsiveAxisDeg(phoneTiltAxisXRaw)
+  const respY = computePhoneResponsiveAxisDeg(nx)
+  const respZ = computePhoneResponsiveAxisDeg(ny)
+  _phoneResponsiveQuat.setFromEuler(new THREE.Euler(
+    THREE.MathUtils.degToRad(respX), THREE.MathUtils.degToRad(respY), THREE.MathUtils.degToRad(respZ), 'XYZ'
+  ))
+  return _phoneCombinedQuat.copy(_phoneManualQuat).multiply(_phoneResponsiveQuat)
+}
+const _phoneRotatedPivot = new THREE.Vector3()
+function applyPhoneModelTransform() {
+  if (!phoneModelRaw || !phoneModelWrapper) return
+  phoneModelWrapper.position.set(cfg.phoneModelOffsetX, cfg.phoneModelOffsetY, cfg.phoneModelOffsetZ)
+  const scale = cfg.phoneModelScale
+  phoneModelRaw.scale.setScalar(scale)
+  const combinedQuat = computePhoneCombinedQuat()
+  phoneModelRaw.quaternion.copy(combinedQuat)
+  // Rotate-about-centroid, exactly applyModelRootTransform()'s own
+  // `position = pivot - rotation*(scale*pivot)` formula.
+  _phoneRotatedPivot.copy(phoneModelCentroidLocal).multiplyScalar(scale).applyQuaternion(combinedQuat)
+  phoneModelRaw.position.copy(phoneModelCentroidLocal).multiplyScalar(scale).sub(_phoneRotatedPivot)
+}
+function ensurePhoneModelWrapper() {
+  if (!phoneModelWrapper) {
+    phoneModelWrapper = new THREE.Group()
+    phoneModelWrapper.name = 'PhoneModelWrapper'
+    scene.add(phoneModelWrapper)
+    registerSceneObject('phoneModel', 'Phone Model', phoneModelWrapper)
+  }
+  return phoneModelWrapper
+}
+function disposePhoneModelRaw() {
+  if (!phoneModelRaw) return
+  phoneModelWrapper.remove(phoneModelRaw)
+  phoneModelRaw.traverse((obj) => {
+    if (obj.geometry) obj.geometry.dispose()
+    if (obj.material) {
+      const mats = Array.isArray(obj.material) ? obj.material : [obj.material]
+      mats.forEach((m) => { Object.values(m).forEach((v) => { if (v && v.isTexture) v.dispose() }); m.dispose() })
+    }
+  })
+  phoneModelRaw = null
+}
+function loadPhoneModel(relativePath) {
+  if (!relativePath) return
+  const token = ++phoneModelLoadToken
+  ensurePhoneModelWrapper()
+  new GLTFLoader().load(encodeURI(relativePath), (gltf) => {
+    if (token !== phoneModelLoadToken) return // superseded by a newer selection/reload before this one finished
+    disposePhoneModelRaw()
+    phoneModelRaw = gltf.scene
+    phoneModelWrapper.add(phoneModelRaw)
+    // Centroid measured in the model's own local space, BEFORE any
+    // scale/rotation is applied -- same "measure at bind pose, before
+    // posing touches anything" discipline as modelRotationPivot's own
+    // comment documents for the hand.
+    new THREE.Box3().setFromObject(phoneModelRaw).getCenter(phoneModelCentroidLocal)
+    applyPhoneModelTransform()
+  }, undefined, (err) => { console.error('Phone model failed to load:', relativePath, err) })
+}
+function removePhoneModel() {
+  phoneModelLoadToken++ // invalidate any in-flight load
+  disposePhoneModelRaw()
+  if (phoneModelWrapper) {
+    unregisterSceneObject('phoneModel')
+    scene.remove(phoneModelWrapper)
+    phoneModelWrapper = null
+  }
+}
+function setPhoneModelEnabled(enabled) {
+  cfg.phoneModelEnabled = enabled
+  if (enabled) {
+    if (cfg.phoneModelFile) loadPhoneModel(cfg.phoneModelFile)
+  } else {
+    removePhoneModel()
+  }
+}
+// Called every animate() frame (unconditionally within !isPaused, same as
+// updateAllFingerGizmos()) -- Responsive Rotation depends on live
+// tiltMagnitude/tiltAngle/phoneTiltAxisXRaw, so the transform needs
+// recomputing every frame while the phone model is loaded, not just on a
+// dev-panel control's own input event.
+function updatePhoneModelFrame() {
+  if (!cfg.phoneModelEnabled || !phoneModelRaw) return
+  applyPhoneModelTransform()
 }
 
 const tiltTarget = new THREE.Vector3()
@@ -1790,9 +2120,10 @@ function updateTiltTarget() {
 // DANDIES build once fieldRows/fieldCols are actually raised above 1.
 // =======================================================================
 function rebuildField() {
-  hands.forEach((h) => {
+  hands.forEach((h, i) => {
     if (h.wrapper.parent) h.wrapper.parent.remove(h.wrapper)
     teardownFingerGizmosForHand(h) // NOT parented under h.wrapper -- must be removed separately or they leak into the scene
+    unregisterSceneObject('hand-' + i) // Object Axes registry -- see that section's own comment
   })
   hands = []
   const rows = Math.max(1, Math.round(cfg.fieldRows))
@@ -1884,6 +2215,7 @@ function rebuildField() {
       skinnedMesh.onBeforeRender = () => updateWristClipPlaneForHand(handEntry)
       setupFingerGizmosForHand(handEntry)
       hands.push(handEntry)
+      registerSceneObject('hand-' + (hands.length - 1), 'Hand ' + hands.length, wrapper) // Object Axes registry
     }
   }
   hand = hands[0]
@@ -2305,6 +2637,10 @@ window.__debug = {
   get wristCropNormalAligned() { return wristCropNormalAligned }, get alignQuat() { return alignQuat },
   get tiltTarget() { return tiltTarget }, get tiltOriginGround() { return tiltOriginGround },
   get handLengthRaw() { return handLengthRaw }, get handCenterLocal() { return handCenterLocal },
+  get phoneModelRaw() { return phoneModelRaw }, get phoneModelWrapper() { return phoneModelWrapper },
+  get phoneModelCentroidLocal() { return phoneModelCentroidLocal }, get sceneObjectEntries() { return sceneObjectEntries },
+  get tiltMagnitude() { return tiltMagnitude }, get tiltAngle() { return tiltAngle },
+  get phoneTiltAxisXRaw() { return phoneTiltAxisXRaw }, get lastInputSource() { return lastInputSource },
   getHandCenterWorld, updateWristCrop, computeBaseScale
 }
 
@@ -2319,6 +2655,7 @@ function applyRendererSize(w, h) {
   renderer.setSize(w, h)
   composer.setSize(w, h)
   outlinePass.resolution.set(w, h)
+  fatAxesLineMaterials.forEach((m) => m.resolution.set(w, h)) // Object Axes -- LineMaterial computes screen-space width from this
 }
 window.addEventListener('resize', () => applyRendererSize(window.innerWidth, window.innerHeight))
 
@@ -2466,6 +2803,7 @@ function animate() {
       applyResponsiveBaseArmRotationFrame()
     }
     updateAllFingerGizmos()
+    updatePhoneModelFrame()
   }
   curveWidgetResyncs.forEach((fn) => fn())
   composer.render()
@@ -3398,6 +3736,61 @@ function renderPhoneTiltGroup(content) {
   buildReactiveCurveWidget(poseTweenCurveRow, { caption: 'X: Cursor Distance From Arm Base / Phone Tilt (0-1)  ·  Y: Tween Progress (0=Default Pose, 1=Target Pose)', onExternalChange: (v) => { cfg.poseTweenCurve = v; parsePoseTweenConfig() } })
 }
 
+// PHONE MODEL -- direct request 2026-09-27, a loadable smartphone GLB
+// asset with its own On/Off, Model picker, Scale, Offset, Rotation, and
+// (nested 2 levels: RESPONSIVE BEHAVIOUR - PHONE > Responsive Rotation)
+// its own phone-tilt-driven reactive rotation. See the Phone Model
+// section above (loadPhoneModel/applyPhoneModelTransform/etc.) for the
+// actual scene-graph mechanics.
+function renderPhoneModelGroup(content) {
+  addRow(content, { id: 'checkboxPhoneModelEnabled', label: 'Phone Model On/Off', type: 'checkbox' })
+  document.getElementById('checkboxPhoneModelEnabled').checked = cfg.phoneModelEnabled
+  wireCheckbox('checkboxPhoneModelEnabled', (v) => { setPhoneModelEnabled(v) })
+
+  if (!cfg.phoneModelFile) cfg.phoneModelFile = PHONE_MODEL_OPTIONS[0].value
+  addRow(content, { id: 'selectPhoneModelFile', label: 'Model', type: 'select', options: PHONE_MODEL_OPTIONS, value: cfg.phoneModelFile })
+  document.getElementById('selectPhoneModelFile').value = cfg.phoneModelFile
+  wireSelect('selectPhoneModelFile', (v) => { cfg.phoneModelFile = v; if (cfg.phoneModelEnabled) loadPhoneModel(v) })
+
+  addRow(content, { id: 'sliderPhoneModelScale', label: 'Model Scale (x)', type: 'slider', min: 0.01, max: 5, step: 0.01, value: cfg.phoneModelScale })
+  wireSlider('sliderPhoneModelScale', (v) => { cfg.phoneModelScale = v; applyPhoneModelTransform() })
+
+  const subOffset = addSubgroup(content, 'OFFSET')
+  addRow(subOffset, { id: 'sliderPhoneModelOffsetX', label: 'X Offset (World Units)', type: 'slider', min: -200, max: 200, step: 0.5, value: cfg.phoneModelOffsetX })
+  wireSlider('sliderPhoneModelOffsetX', (v) => { cfg.phoneModelOffsetX = v; applyPhoneModelTransform() })
+  addRow(subOffset, { id: 'sliderPhoneModelOffsetY', label: 'Y Offset (World Units)', type: 'slider', min: -200, max: 200, step: 0.5, value: cfg.phoneModelOffsetY })
+  wireSlider('sliderPhoneModelOffsetY', (v) => { cfg.phoneModelOffsetY = v; applyPhoneModelTransform() })
+  addRow(subOffset, { id: 'sliderPhoneModelOffsetZ', label: 'Z Offset (World Units)', type: 'slider', min: -200, max: 200, step: 0.5, value: cfg.phoneModelOffsetZ })
+  wireSlider('sliderPhoneModelOffsetZ', (v) => { cfg.phoneModelOffsetZ = v; applyPhoneModelTransform() })
+
+  const subRotation = addSubgroup(content, 'ROTATION')
+  addRow(subRotation, { id: 'sliderPhoneModelRotX', label: 'X Rotation (Deg)', type: 'slider', min: -180, max: 180, step: 1, value: cfg.phoneModelRotX })
+  wireSlider('sliderPhoneModelRotX', (v) => { cfg.phoneModelRotX = v; applyPhoneModelTransform() })
+  addRow(subRotation, { id: 'sliderPhoneModelRotY', label: 'Y Rotation (Deg)', type: 'slider', min: -180, max: 180, step: 1, value: cfg.phoneModelRotY })
+  wireSlider('sliderPhoneModelRotY', (v) => { cfg.phoneModelRotY = v; applyPhoneModelTransform() })
+  addRow(subRotation, { id: 'sliderPhoneModelRotZ', label: 'Z Rotation (Deg)', type: 'slider', min: -180, max: 180, step: 1, value: cfg.phoneModelRotZ })
+  wireSlider('sliderPhoneModelRotZ', (v) => { cfg.phoneModelRotZ = v; applyPhoneModelTransform() })
+
+  // RESPONSIVE BEHAVIOUR - PHONE (level 2, per direct correction) >
+  // Responsive Rotation (level 3) -- 4 controls, same pattern as
+  // Responsive Arm Rotation at Base (On/Off, Fine-Tune, Min/Max Range,
+  // Curve). See computePhoneResponsiveAxisDeg()'s own comment for how one
+  // shared curve/range drives all 3 axes independently.
+  const subResponsiveBehaviour = addSubgroup(content, 'RESPONSIVE BEHAVIOUR - PHONE')
+  const subResponsiveRotation = addSubgroup(subResponsiveBehaviour, 'Responsive Rotation')
+  addRow(subResponsiveRotation, { id: 'checkboxPhoneResponsiveRotationEnabled', label: 'Responsive Rotation (On/Off)', type: 'checkbox' })
+  document.getElementById('checkboxPhoneResponsiveRotationEnabled').checked = cfg.phoneResponsiveRotationEnabled
+  wireCheckbox('checkboxPhoneResponsiveRotationEnabled', (v) => { cfg.phoneResponsiveRotationEnabled = v })
+  addRow(subResponsiveRotation, { id: 'sliderPhoneResponsiveRotationFineTune', label: 'Rotation Fine-Tune (Deg)', type: 'slider', min: -90, max: 90, step: 1, value: cfg.phoneResponsiveRotationFineTune })
+  wireSlider('sliderPhoneResponsiveRotationFineTune', (v) => { cfg.phoneResponsiveRotationFineTune = v })
+  const phoneRangeRow = addRow(subResponsiveRotation, { id: 'textPhoneResponsiveRotationRange', label: 'Min / Max Rotation (Deg)', type: 'text', inputType: 'text', value: cfg.phoneResponsiveRotationRange })
+  wireTextInput('textPhoneResponsiveRotationRange', (v) => { cfg.phoneResponsiveRotationRange = v; parsePhoneResponsiveRotationConfig() })
+  buildReactiveRangeWidget(phoneRangeRow, { trackMin: -180, trackMax: 180, isPercent: false, crossClamp: false, minLabel: 'Min', maxLabel: 'Max', unit: '°', onExternalChange: (v) => { cfg.phoneResponsiveRotationRange = v; parsePhoneResponsiveRotationConfig() } })
+  const phoneCurveRow = addRow(subResponsiveRotation, { id: 'textPhoneResponsiveRotationCurve', label: 'Rotation Curve (Tilt -> Rotation)', type: 'text', inputType: 'text', value: cfg.phoneResponsiveRotationCurve })
+  wireTextInput('textPhoneResponsiveRotationCurve', (v) => { cfg.phoneResponsiveRotationCurve = v; parsePhoneResponsiveRotationConfig() })
+  buildReactiveCurveWidget(phoneCurveRow, { caption: 'X: Per-Axis Tilt Magnitude (0-1)  ·  Y: Rotation Fraction (0=Min, 1=Max)', onExternalChange: (v) => { cfg.phoneResponsiveRotationCurve = v; parsePhoneResponsiveRotationConfig() } })
+}
+
 function renderLightingGroup(content) {
   addRow(content, { id: 'sliderKeyAzimuth', label: 'Key Light Azimuth (Deg)', type: 'slider', min: 0, max: 360, step: 1, value: cfg.keyAzimuth })
   wireSlider('sliderKeyAzimuth', (v) => { cfg.keyAzimuth = v; updateKeyLightPosition() })
@@ -3698,13 +4091,45 @@ function renderDebugExtras() {
   sensorLogEl.className = 'dev-mouse-log'
   sensorSub.appendChild(sensorLogEl)
 
+  // Object Axes -- ported from 3JS ENGINE's own Debug/Diagnostics
+  // subgroup (its src/main.js), per direct request. World Axes wasn't
+  // requested, so only this half was ported.
+  const objectAxesContent = addSubgroup(debugContent, 'Object Axes')
+  addRow(objectAxesContent, { id: 'checkboxObjectAxesEnabled', label: 'Object Axes On/Off', type: 'checkbox' })
+  document.getElementById('checkboxObjectAxesEnabled').checked = cfg.objectAxesEnabled
+  wireCheckbox('checkboxObjectAxesEnabled', (v) => { cfg.objectAxesEnabled = v; objectAxesGroups.forEach((group) => { group.visible = v }) })
+  addRow(objectAxesContent, { id: 'checkboxObjectAxesRenderInFront', label: 'Render In Front', type: 'checkbox' })
+  document.getElementById('checkboxObjectAxesRenderInFront').checked = cfg.objectAxesRenderInFront
+  wireCheckbox('checkboxObjectAxesRenderInFront', (v) => { cfg.objectAxesRenderInFront = v; objectAxesGroups.forEach((group) => applyFatAxesRenderState(group, v, cfg.objectAxesThickness)) })
+  addRow(objectAxesContent, { id: 'sliderObjectAxesThickness', label: 'Line Thickness (Px)', type: 'slider', min: 1, max: 10, step: 0.5, value: cfg.objectAxesThickness })
+  wireSlider('sliderObjectAxesThickness', (v) => { cfg.objectAxesThickness = v; objectAxesGroups.forEach((group) => applyFatAxesRenderState(group, cfg.objectAxesRenderInFront, v)) })
+  addRow(objectAxesContent, { id: 'sliderObjectAxesLength', label: 'Line Length (World Units)', type: 'slider', min: 1, max: 200, step: 1, value: cfg.objectAxesLength })
+  wireSlider('sliderObjectAxesLength', (v) => { cfg.objectAxesLength = v; objectAxesGroups.forEach((group) => rebuildFatAxesLength(group, v)) })
+  const objectAxesPickerLabel = document.createElement('div')
+  objectAxesPickerLabel.className = 'dev-label'
+  objectAxesPickerLabel.style.marginTop = '6px'
+  objectAxesPickerLabel.textContent = 'Objects (check to show its axes — multi-select):'
+  objectAxesContent.appendChild(objectAxesPickerLabel)
+  const objectAxesPickerListEl = document.createElement('div')
+  objectAxesPickerListEl.id = 'objectAxesPickerList'
+  objectAxesPickerListEl.className = 'dev-list-picker'
+  objectAxesContent.appendChild(objectAxesPickerListEl)
+  renderObjectAxesPicker()
+
   renderDeviceInfoSettings(debugContent)
 }
 
 function renderHandysetDevGroups() {
-  renderTweenGroup(addGroup('Tween'))
+  // HAND MODEL -- direct request 2026-09-27: a new top-level group holding
+  // Field Layout, Pose, Tween, and the renamed Phone Tilt subgroup, in
+  // that exact order. "Phone Tilt" is renamed "RESPONSIVE BEHAVIOUR -
+  // HAND" (per direct correction, distinguishing it from the new PHONE
+  // MODEL group's own "RESPONSIVE BEHAVIOUR - PHONE" subgroup) -- same
+  // function (renderPhoneTiltGroup), just built into a subgroup instead
+  // of a top-level group and titled differently.
+  const handModelContent = addGroup('HAND MODEL')
 
-  const fieldContent = addGroup('Field Layout')
+  const fieldContent = addSubgroup(handModelContent, 'Field Layout')
   addRow(fieldContent, { id: 'sliderFieldRows', label: 'Rows (Count)', type: 'slider', min: 1, max: 40, step: 1, value: cfg.fieldRows })
   wireSlider('sliderFieldRows', (v) => { cfg.fieldRows = v; rebuildField() })
   addRow(fieldContent, { id: 'sliderFieldCols', label: 'Columns (Count)', type: 'slider', min: 1, max: 40, step: 1, value: cfg.fieldCols })
@@ -3726,10 +4151,14 @@ function renderHandysetDevGroups() {
   document.getElementById('checkboxHideHands').checked = cfg.hideHands
   wireCheckbox('checkboxHideHands', (v) => { cfg.hideHands = v; relayoutField() })
 
-  renderPoseGroup(addGroup('Pose'))
+  renderPoseGroup(addSubgroup(handModelContent, 'Pose'))
+  renderTweenGroup(addSubgroup(handModelContent, 'Tween'))
+  renderPhoneTiltGroup(addSubgroup(handModelContent, 'RESPONSIVE BEHAVIOUR - HAND'))
+
+  renderPhoneModelGroup(addGroup('PHONE MODEL'))
+
   renderResponsiveWristSplayGroup(addGroup('Responsive Wrist Splay'))
   renderCameraGroup(addGroup('Camera'))
-  renderPhoneTiltGroup(addGroup('Phone Tilt'))
   renderLightingGroup(addGroup('Lighting'))
   renderToonGroup(addGroup('Toon Shading'))
 

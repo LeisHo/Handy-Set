@@ -274,6 +274,1209 @@
   "sectionOrder": {
     "desktopTabContent": [
       {
+        "key": "desktop:HAND MODEL",
+        "items": [
+          {
+            "type": "group",
+            "section": {
+              "key": "desktop:Field Layout",
+              "items": [
+                {
+                  "type": "row",
+                  "key": "sliderFieldRows"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderFieldCols"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderRowSpacing"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderColumnSpacing"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderHandScale"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderAlternateRowOffset"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderProgressiveRowOffset"
+                },
+                {
+                  "type": "row",
+                  "key": "checkboxUseProgressiveOffset"
+                },
+                {
+                  "type": "row",
+                  "key": "checkboxHideHands"
+                }
+              ],
+              "rowKeys": [
+                "sliderFieldRows",
+                "sliderFieldCols",
+                "sliderRowSpacing",
+                "sliderColumnSpacing",
+                "sliderHandScale",
+                "sliderAlternateRowOffset",
+                "sliderProgressiveRowOffset",
+                "checkboxUseProgressiveOffset",
+                "checkboxHideHands"
+              ],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "group",
+            "section": {
+              "key": "desktop:Pose",
+              "items": [
+                {
+                  "type": "group",
+                  "section": {
+                    "key": "desktop:Whole-Hand Rotation at Base",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "sliderbaseRotationX"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderbaseRotationY"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderbaseRotationZ"
+                      }
+                    ],
+                    "rowKeys": [
+                      "sliderbaseRotationX",
+                      "sliderbaseRotationY",
+                      "sliderbaseRotationZ"
+                    ],
+                    "subgroups": []
+                  }
+                },
+                {
+                  "type": "group",
+                  "section": {
+                    "key": "desktop:ROTATION",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "slidermodelRotX"
+                      },
+                      {
+                        "type": "row",
+                        "key": "slidermodelRotY"
+                      },
+                      {
+                        "type": "row",
+                        "key": "slidermodelRotZ"
+                      }
+                    ],
+                    "rowKeys": [
+                      "slidermodelRotX",
+                      "slidermodelRotY",
+                      "slidermodelRotZ"
+                    ],
+                    "subgroups": []
+                  }
+                },
+                {
+                  "type": "group",
+                  "section": {
+                    "key": "desktop:THUMB",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "sliderthumbCurl"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderthumbSplay"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderthumbSplay2"
+                      },
+                      {
+                        "type": "row",
+                        "key": "slidercurlBiasThumb"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderbaseOnlyCurlThumb"
+                      },
+                      {
+                        "type": "row",
+                        "key": "slidermidOnlyCurlThumb"
+                      },
+                      {
+                        "type": "row",
+                        "key": "slidertipOnlyCurlThumb"
+                      },
+                      {
+                        "type": "row",
+                        "key": "slidertipTwistThumb"
+                      }
+                    ],
+                    "rowKeys": [
+                      "sliderthumbCurl",
+                      "sliderthumbSplay",
+                      "sliderthumbSplay2",
+                      "slidercurlBiasThumb",
+                      "sliderbaseOnlyCurlThumb",
+                      "slidermidOnlyCurlThumb",
+                      "slidertipOnlyCurlThumb",
+                      "slidertipTwistThumb"
+                    ],
+                    "subgroups": []
+                  }
+                },
+                {
+                  "type": "group",
+                  "section": {
+                    "key": "desktop:Wrist",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "textwristRotationClampRange"
+                      },
+                      {
+                        "type": "row",
+                        "key": "textwristBendClampRange"
+                      },
+                      {
+                        "type": "row",
+                        "key": "textwristSplayClampRange"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderwristRotation"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderwristBend"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderwristSplay"
+                      }
+                    ],
+                    "rowKeys": [
+                      "textwristRotationClampRange",
+                      "textwristBendClampRange",
+                      "textwristSplayClampRange",
+                      "sliderwristRotation",
+                      "sliderwristBend",
+                      "sliderwristSplay"
+                    ],
+                    "subgroups": []
+                  }
+                },
+                {
+                  "type": "group",
+                  "section": {
+                    "key": "desktop:Index",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "slidercurlIndex"
+                      },
+                      {
+                        "type": "row",
+                        "key": "slidersplayIndex"
+                      },
+                      {
+                        "type": "row",
+                        "key": "slidersplayIndex2"
+                      },
+                      {
+                        "type": "row",
+                        "key": "slidercurlBiasIndex"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderbaseOnlyCurlIndex"
+                      },
+                      {
+                        "type": "row",
+                        "key": "slidermidOnlyCurlIndex"
+                      },
+                      {
+                        "type": "row",
+                        "key": "slidertipOnlyCurlIndex"
+                      },
+                      {
+                        "type": "row",
+                        "key": "slidertipTwistIndex"
+                      }
+                    ],
+                    "rowKeys": [
+                      "slidercurlIndex",
+                      "slidersplayIndex",
+                      "slidersplayIndex2",
+                      "slidercurlBiasIndex",
+                      "sliderbaseOnlyCurlIndex",
+                      "slidermidOnlyCurlIndex",
+                      "slidertipOnlyCurlIndex",
+                      "slidertipTwistIndex"
+                    ],
+                    "subgroups": []
+                  }
+                },
+                {
+                  "type": "group",
+                  "section": {
+                    "key": "desktop:Middle",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "slidercurlMiddle"
+                      },
+                      {
+                        "type": "row",
+                        "key": "slidersplayMiddle"
+                      },
+                      {
+                        "type": "row",
+                        "key": "slidersplayMiddle2"
+                      },
+                      {
+                        "type": "row",
+                        "key": "slidercurlBiasMiddle"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderbaseOnlyCurlMiddle"
+                      },
+                      {
+                        "type": "row",
+                        "key": "slidermidOnlyCurlMiddle"
+                      },
+                      {
+                        "type": "row",
+                        "key": "slidertipOnlyCurlMiddle"
+                      },
+                      {
+                        "type": "row",
+                        "key": "slidertipTwistMiddle"
+                      }
+                    ],
+                    "rowKeys": [
+                      "slidercurlMiddle",
+                      "slidersplayMiddle",
+                      "slidersplayMiddle2",
+                      "slidercurlBiasMiddle",
+                      "sliderbaseOnlyCurlMiddle",
+                      "slidermidOnlyCurlMiddle",
+                      "slidertipOnlyCurlMiddle",
+                      "slidertipTwistMiddle"
+                    ],
+                    "subgroups": []
+                  }
+                },
+                {
+                  "type": "group",
+                  "section": {
+                    "key": "desktop:Ring",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "slidercurlRing"
+                      },
+                      {
+                        "type": "row",
+                        "key": "slidersplayRing"
+                      },
+                      {
+                        "type": "row",
+                        "key": "slidersplayRing2"
+                      },
+                      {
+                        "type": "row",
+                        "key": "slidercurlBiasRing"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderbaseOnlyCurlRing"
+                      },
+                      {
+                        "type": "row",
+                        "key": "slidermidOnlyCurlRing"
+                      },
+                      {
+                        "type": "row",
+                        "key": "slidertipOnlyCurlRing"
+                      },
+                      {
+                        "type": "row",
+                        "key": "slidertipTwistRing"
+                      }
+                    ],
+                    "rowKeys": [
+                      "slidercurlRing",
+                      "slidersplayRing",
+                      "slidersplayRing2",
+                      "slidercurlBiasRing",
+                      "sliderbaseOnlyCurlRing",
+                      "slidermidOnlyCurlRing",
+                      "slidertipOnlyCurlRing",
+                      "slidertipTwistRing"
+                    ],
+                    "subgroups": []
+                  }
+                },
+                {
+                  "type": "group",
+                  "section": {
+                    "key": "desktop:Pinky",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "slidercurlPinky"
+                      },
+                      {
+                        "type": "row",
+                        "key": "slidersplayPinky"
+                      },
+                      {
+                        "type": "row",
+                        "key": "slidersplayPinky2"
+                      },
+                      {
+                        "type": "row",
+                        "key": "slidercurlBiasPinky"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderbaseOnlyCurlPinky"
+                      },
+                      {
+                        "type": "row",
+                        "key": "slidermidOnlyCurlPinky"
+                      },
+                      {
+                        "type": "row",
+                        "key": "slidertipOnlyCurlPinky"
+                      },
+                      {
+                        "type": "row",
+                        "key": "slidertipTwistPinky"
+                      }
+                    ],
+                    "rowKeys": [
+                      "slidercurlPinky",
+                      "slidersplayPinky",
+                      "slidersplayPinky2",
+                      "slidercurlBiasPinky",
+                      "sliderbaseOnlyCurlPinky",
+                      "slidermidOnlyCurlPinky",
+                      "slidertipOnlyCurlPinky",
+                      "slidertipTwistPinky"
+                    ],
+                    "subgroups": []
+                  }
+                },
+                {
+                  "type": "group",
+                  "section": {
+                    "key": "desktop:Pose Offset",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "sliderposeOffsetX"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderposeOffsetY"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderposeOffsetZ"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderPoseScale"
+                      }
+                    ],
+                    "rowKeys": [
+                      "sliderposeOffsetX",
+                      "sliderposeOffsetY",
+                      "sliderposeOffsetZ",
+                      "sliderPoseScale"
+                    ],
+                    "subgroups": []
+                  }
+                },
+                {
+                  "type": "group",
+                  "section": {
+                    "key": "desktop:Saved Poses",
+                    "items": [],
+                    "rowKeys": [],
+                    "subgroups": []
+                  }
+                }
+              ],
+              "rowKeys": [],
+              "subgroups": [
+                {
+                  "key": "desktop:Whole-Hand Rotation at Base",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "sliderbaseRotationX"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderbaseRotationY"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderbaseRotationZ"
+                    }
+                  ],
+                  "rowKeys": [
+                    "sliderbaseRotationX",
+                    "sliderbaseRotationY",
+                    "sliderbaseRotationZ"
+                  ],
+                  "subgroups": []
+                },
+                {
+                  "key": "desktop:ROTATION",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "slidermodelRotX"
+                    },
+                    {
+                      "type": "row",
+                      "key": "slidermodelRotY"
+                    },
+                    {
+                      "type": "row",
+                      "key": "slidermodelRotZ"
+                    }
+                  ],
+                  "rowKeys": [
+                    "slidermodelRotX",
+                    "slidermodelRotY",
+                    "slidermodelRotZ"
+                  ],
+                  "subgroups": []
+                },
+                {
+                  "key": "desktop:THUMB",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "sliderthumbCurl"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderthumbSplay"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderthumbSplay2"
+                    },
+                    {
+                      "type": "row",
+                      "key": "slidercurlBiasThumb"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderbaseOnlyCurlThumb"
+                    },
+                    {
+                      "type": "row",
+                      "key": "slidermidOnlyCurlThumb"
+                    },
+                    {
+                      "type": "row",
+                      "key": "slidertipOnlyCurlThumb"
+                    },
+                    {
+                      "type": "row",
+                      "key": "slidertipTwistThumb"
+                    }
+                  ],
+                  "rowKeys": [
+                    "sliderthumbCurl",
+                    "sliderthumbSplay",
+                    "sliderthumbSplay2",
+                    "slidercurlBiasThumb",
+                    "sliderbaseOnlyCurlThumb",
+                    "slidermidOnlyCurlThumb",
+                    "slidertipOnlyCurlThumb",
+                    "slidertipTwistThumb"
+                  ],
+                  "subgroups": []
+                },
+                {
+                  "key": "desktop:Wrist",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "textwristRotationClampRange"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textwristBendClampRange"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textwristSplayClampRange"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderwristRotation"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderwristBend"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderwristSplay"
+                    }
+                  ],
+                  "rowKeys": [
+                    "textwristRotationClampRange",
+                    "textwristBendClampRange",
+                    "textwristSplayClampRange",
+                    "sliderwristRotation",
+                    "sliderwristBend",
+                    "sliderwristSplay"
+                  ],
+                  "subgroups": []
+                },
+                {
+                  "key": "desktop:Index",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "slidercurlIndex"
+                    },
+                    {
+                      "type": "row",
+                      "key": "slidersplayIndex"
+                    },
+                    {
+                      "type": "row",
+                      "key": "slidersplayIndex2"
+                    },
+                    {
+                      "type": "row",
+                      "key": "slidercurlBiasIndex"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderbaseOnlyCurlIndex"
+                    },
+                    {
+                      "type": "row",
+                      "key": "slidermidOnlyCurlIndex"
+                    },
+                    {
+                      "type": "row",
+                      "key": "slidertipOnlyCurlIndex"
+                    },
+                    {
+                      "type": "row",
+                      "key": "slidertipTwistIndex"
+                    }
+                  ],
+                  "rowKeys": [
+                    "slidercurlIndex",
+                    "slidersplayIndex",
+                    "slidersplayIndex2",
+                    "slidercurlBiasIndex",
+                    "sliderbaseOnlyCurlIndex",
+                    "slidermidOnlyCurlIndex",
+                    "slidertipOnlyCurlIndex",
+                    "slidertipTwistIndex"
+                  ],
+                  "subgroups": []
+                },
+                {
+                  "key": "desktop:Middle",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "slidercurlMiddle"
+                    },
+                    {
+                      "type": "row",
+                      "key": "slidersplayMiddle"
+                    },
+                    {
+                      "type": "row",
+                      "key": "slidersplayMiddle2"
+                    },
+                    {
+                      "type": "row",
+                      "key": "slidercurlBiasMiddle"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderbaseOnlyCurlMiddle"
+                    },
+                    {
+                      "type": "row",
+                      "key": "slidermidOnlyCurlMiddle"
+                    },
+                    {
+                      "type": "row",
+                      "key": "slidertipOnlyCurlMiddle"
+                    },
+                    {
+                      "type": "row",
+                      "key": "slidertipTwistMiddle"
+                    }
+                  ],
+                  "rowKeys": [
+                    "slidercurlMiddle",
+                    "slidersplayMiddle",
+                    "slidersplayMiddle2",
+                    "slidercurlBiasMiddle",
+                    "sliderbaseOnlyCurlMiddle",
+                    "slidermidOnlyCurlMiddle",
+                    "slidertipOnlyCurlMiddle",
+                    "slidertipTwistMiddle"
+                  ],
+                  "subgroups": []
+                },
+                {
+                  "key": "desktop:Ring",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "slidercurlRing"
+                    },
+                    {
+                      "type": "row",
+                      "key": "slidersplayRing"
+                    },
+                    {
+                      "type": "row",
+                      "key": "slidersplayRing2"
+                    },
+                    {
+                      "type": "row",
+                      "key": "slidercurlBiasRing"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderbaseOnlyCurlRing"
+                    },
+                    {
+                      "type": "row",
+                      "key": "slidermidOnlyCurlRing"
+                    },
+                    {
+                      "type": "row",
+                      "key": "slidertipOnlyCurlRing"
+                    },
+                    {
+                      "type": "row",
+                      "key": "slidertipTwistRing"
+                    }
+                  ],
+                  "rowKeys": [
+                    "slidercurlRing",
+                    "slidersplayRing",
+                    "slidersplayRing2",
+                    "slidercurlBiasRing",
+                    "sliderbaseOnlyCurlRing",
+                    "slidermidOnlyCurlRing",
+                    "slidertipOnlyCurlRing",
+                    "slidertipTwistRing"
+                  ],
+                  "subgroups": []
+                },
+                {
+                  "key": "desktop:Pinky",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "slidercurlPinky"
+                    },
+                    {
+                      "type": "row",
+                      "key": "slidersplayPinky"
+                    },
+                    {
+                      "type": "row",
+                      "key": "slidersplayPinky2"
+                    },
+                    {
+                      "type": "row",
+                      "key": "slidercurlBiasPinky"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderbaseOnlyCurlPinky"
+                    },
+                    {
+                      "type": "row",
+                      "key": "slidermidOnlyCurlPinky"
+                    },
+                    {
+                      "type": "row",
+                      "key": "slidertipOnlyCurlPinky"
+                    },
+                    {
+                      "type": "row",
+                      "key": "slidertipTwistPinky"
+                    }
+                  ],
+                  "rowKeys": [
+                    "slidercurlPinky",
+                    "slidersplayPinky",
+                    "slidersplayPinky2",
+                    "slidercurlBiasPinky",
+                    "sliderbaseOnlyCurlPinky",
+                    "slidermidOnlyCurlPinky",
+                    "slidertipOnlyCurlPinky",
+                    "slidertipTwistPinky"
+                  ],
+                  "subgroups": []
+                },
+                {
+                  "key": "desktop:Pose Offset",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "sliderposeOffsetX"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderposeOffsetY"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderposeOffsetZ"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderPoseScale"
+                    }
+                  ],
+                  "rowKeys": [
+                    "sliderposeOffsetX",
+                    "sliderposeOffsetY",
+                    "sliderposeOffsetZ",
+                    "sliderPoseScale"
+                  ],
+                  "subgroups": []
+                },
+                {
+                  "key": "desktop:Saved Poses",
+                  "items": [],
+                  "rowKeys": [],
+                  "subgroups": []
+                }
+              ]
+            }
+          },
+          {
+            "type": "group",
+            "section": {
+              "key": "desktop:Tween",
+              "items": [
+                {
+                  "type": "row",
+                  "key": "sliderTweenT"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderTweenFrameCount"
+                },
+                {
+                  "type": "row",
+                  "key": "textExportFramePrefix"
+                },
+                {
+                  "type": "group",
+                  "section": {
+                    "key": "desktop:Saved Tween Sequences",
+                    "items": [],
+                    "rowKeys": [],
+                    "subgroups": []
+                  }
+                }
+              ],
+              "rowKeys": [
+                "sliderTweenT",
+                "sliderTweenFrameCount",
+                "textExportFramePrefix"
+              ],
+              "subgroups": [
+                {
+                  "key": "desktop:Saved Tween Sequences",
+                  "items": [],
+                  "rowKeys": [],
+                  "subgroups": []
+                }
+              ]
+            }
+          },
+          {
+            "type": "group",
+            "section": {
+              "key": "desktop:RESPONSIVE BEHAVIOUR - HAND",
+              "items": [
+                {
+                  "type": "row",
+                  "key": "checkboxTrackingEnabled"
+                },
+                {
+                  "type": "group",
+                  "section": {
+                    "key": "desktop:Target",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "sliderTargetDepthFactor"
+                      },
+                      {
+                        "type": "row",
+                        "key": "checkboxShowTargetMarker"
+                      }
+                    ],
+                    "rowKeys": [
+                      "sliderTargetDepthFactor",
+                      "checkboxShowTargetMarker"
+                    ],
+                    "subgroups": []
+                  }
+                },
+                {
+                  "type": "group",
+                  "section": {
+                    "key": "desktop:Responsive Arm Rotation at Base",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "checkboxBaseArmRotationResponsiveEnabled"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderBaseArmRotationFineTune"
+                      },
+                      {
+                        "type": "row",
+                        "key": "textBaseArmRotationRange"
+                      },
+                      {
+                        "type": "row",
+                        "key": "textBaseArmRotationCurve"
+                      }
+                    ],
+                    "rowKeys": [
+                      "checkboxBaseArmRotationResponsiveEnabled",
+                      "sliderBaseArmRotationFineTune",
+                      "textBaseArmRotationRange",
+                      "textBaseArmRotationCurve"
+                    ],
+                    "subgroups": []
+                  }
+                },
+                {
+                  "type": "group",
+                  "section": {
+                    "key": "desktop:Responsive Pose Tween",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "checkboxPoseTweenResponsiveEnabled"
+                      },
+                      {
+                        "type": "row",
+                        "key": "selectPoseTweenTargetPoseName"
+                      },
+                      {
+                        "type": "row",
+                        "key": "textPoseTweenCurve"
+                      }
+                    ],
+                    "rowKeys": [
+                      "checkboxPoseTweenResponsiveEnabled",
+                      "selectPoseTweenTargetPoseName",
+                      "textPoseTweenCurve"
+                    ],
+                    "subgroups": []
+                  }
+                },
+                {
+                  "type": "group",
+                  "section": {
+                    "key": "desktop:Responsive Wrist Splay",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "checkboxWristSplayResponsiveEnabled"
+                      },
+                      {
+                        "type": "row",
+                        "key": "checkboxWristSplayReactiveEnabled"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderWristSplayDefault"
+                      },
+                      {
+                        "type": "row",
+                        "key": "textWristSplayRange"
+                      },
+                      {
+                        "type": "row",
+                        "key": "textWristSplayCurve"
+                      }
+                    ],
+                    "rowKeys": [
+                      "checkboxWristSplayResponsiveEnabled",
+                      "checkboxWristSplayReactiveEnabled",
+                      "sliderWristSplayDefault",
+                      "textWristSplayRange",
+                      "textWristSplayCurve"
+                    ],
+                    "subgroups": []
+                  }
+                },
+                {
+                  "type": "group",
+                  "section": {
+                    "key": "desktop:New Group",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "checkboxCropWristEnabled"
+                      },
+                      {
+                        "type": "row",
+                        "key": "checkboxReactiveArmLengthEnabled"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderHideWrist"
+                      },
+                      {
+                        "type": "row",
+                        "key": "textArmLengthRange"
+                      },
+                      {
+                        "type": "row",
+                        "key": "textArmLengthCurve"
+                      }
+                    ],
+                    "rowKeys": [
+                      "checkboxCropWristEnabled",
+                      "checkboxReactiveArmLengthEnabled",
+                      "sliderHideWrist",
+                      "textArmLengthRange",
+                      "textArmLengthCurve"
+                    ],
+                    "subgroups": []
+                  }
+                },
+                {
+                  "type": "group",
+                  "section": {
+                    "key": "desktop:Palm Facing",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "sliderPalmFaceRotationOffset"
+                      },
+                      {
+                        "type": "row",
+                        "key": "checkboxPalmFacesCursor"
+                      }
+                    ],
+                    "rowKeys": [
+                      "sliderPalmFaceRotationOffset",
+                      "checkboxPalmFacesCursor"
+                    ],
+                    "subgroups": []
+                  }
+                }
+              ],
+              "rowKeys": [
+                "checkboxTrackingEnabled"
+              ],
+              "subgroups": [
+                {
+                  "key": "desktop:Target",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "sliderTargetDepthFactor"
+                    },
+                    {
+                      "type": "row",
+                      "key": "checkboxShowTargetMarker"
+                    }
+                  ],
+                  "rowKeys": [
+                    "sliderTargetDepthFactor",
+                    "checkboxShowTargetMarker"
+                  ],
+                  "subgroups": []
+                },
+                {
+                  "key": "desktop:Responsive Arm Rotation at Base",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "checkboxBaseArmRotationResponsiveEnabled"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderBaseArmRotationFineTune"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textBaseArmRotationRange"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textBaseArmRotationCurve"
+                    }
+                  ],
+                  "rowKeys": [
+                    "checkboxBaseArmRotationResponsiveEnabled",
+                    "sliderBaseArmRotationFineTune",
+                    "textBaseArmRotationRange",
+                    "textBaseArmRotationCurve"
+                  ],
+                  "subgroups": []
+                },
+                {
+                  "key": "desktop:Responsive Pose Tween",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "checkboxPoseTweenResponsiveEnabled"
+                    },
+                    {
+                      "type": "row",
+                      "key": "selectPoseTweenTargetPoseName"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textPoseTweenCurve"
+                    }
+                  ],
+                  "rowKeys": [
+                    "checkboxPoseTweenResponsiveEnabled",
+                    "selectPoseTweenTargetPoseName",
+                    "textPoseTweenCurve"
+                  ],
+                  "subgroups": []
+                },
+                {
+                  "key": "desktop:Responsive Wrist Splay",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "checkboxWristSplayResponsiveEnabled"
+                    },
+                    {
+                      "type": "row",
+                      "key": "checkboxWristSplayReactiveEnabled"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderWristSplayDefault"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textWristSplayRange"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textWristSplayCurve"
+                    }
+                  ],
+                  "rowKeys": [
+                    "checkboxWristSplayResponsiveEnabled",
+                    "checkboxWristSplayReactiveEnabled",
+                    "sliderWristSplayDefault",
+                    "textWristSplayRange",
+                    "textWristSplayCurve"
+                  ],
+                  "subgroups": []
+                },
+                {
+                  "key": "desktop:New Group",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "checkboxCropWristEnabled"
+                    },
+                    {
+                      "type": "row",
+                      "key": "checkboxReactiveArmLengthEnabled"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderHideWrist"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textArmLengthRange"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textArmLengthCurve"
+                    }
+                  ],
+                  "rowKeys": [
+                    "checkboxCropWristEnabled",
+                    "checkboxReactiveArmLengthEnabled",
+                    "sliderHideWrist",
+                    "textArmLengthRange",
+                    "textArmLengthCurve"
+                  ],
+                  "subgroups": []
+                },
+                {
+                  "key": "desktop:Palm Facing",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "sliderPalmFaceRotationOffset"
+                    },
+                    {
+                      "type": "row",
+                      "key": "checkboxPalmFacesCursor"
+                    }
+                  ],
+                  "rowKeys": [
+                    "sliderPalmFaceRotationOffset",
+                    "checkboxPalmFacesCursor"
+                  ],
+                  "subgroups": []
+                }
+              ]
+            }
+          }
+        ],
+        "rowKeys": [],
+        "subgroups": []
+      },
+      {
         "key": "desktop:Ground Plane",
         "items": [
           {
@@ -1508,1190 +2711,6 @@
         ]
       },
       {
-        "key": "desktop:Tween",
-        "items": [
-          {
-            "type": "row",
-            "key": "sliderTweenT"
-          },
-          {
-            "type": "row",
-            "key": "sliderTweenFrameCount"
-          },
-          {
-            "type": "row",
-            "key": "textExportFramePrefix"
-          },
-          {
-            "type": "group",
-            "section": {
-              "key": "desktop:Saved Tween Sequences",
-              "items": [],
-              "rowKeys": [],
-              "subgroups": []
-            }
-          }
-        ],
-        "rowKeys": [
-          "sliderTweenT",
-          "sliderTweenFrameCount",
-          "textExportFramePrefix"
-        ],
-        "subgroups": [
-          {
-            "key": "desktop:Saved Tween Sequences",
-            "items": [],
-            "rowKeys": [],
-            "subgroups": []
-          }
-        ]
-      },
-      {
-        "key": "desktop:Field Layout",
-        "items": [
-          {
-            "type": "row",
-            "key": "sliderFieldRows"
-          },
-          {
-            "type": "row",
-            "key": "sliderFieldCols"
-          },
-          {
-            "type": "row",
-            "key": "sliderRowSpacing"
-          },
-          {
-            "type": "row",
-            "key": "sliderColumnSpacing"
-          },
-          {
-            "type": "row",
-            "key": "sliderHandScale"
-          },
-          {
-            "type": "row",
-            "key": "sliderAlternateRowOffset"
-          },
-          {
-            "type": "row",
-            "key": "sliderProgressiveRowOffset"
-          },
-          {
-            "type": "row",
-            "key": "checkboxUseProgressiveOffset"
-          },
-          {
-            "type": "row",
-            "key": "checkboxHideHands"
-          }
-        ],
-        "rowKeys": [
-          "sliderFieldRows",
-          "sliderFieldCols",
-          "sliderRowSpacing",
-          "sliderColumnSpacing",
-          "sliderHandScale",
-          "sliderAlternateRowOffset",
-          "sliderProgressiveRowOffset",
-          "checkboxUseProgressiveOffset",
-          "checkboxHideHands"
-        ],
-        "subgroups": []
-      },
-      {
-        "key": "desktop:Phone Tilt",
-        "items": [
-          {
-            "type": "row",
-            "key": "checkboxTrackingEnabled"
-          },
-          {
-            "type": "group",
-            "section": {
-              "key": "desktop:Target",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "sliderTargetDepthFactor"
-                },
-                {
-                  "type": "row",
-                  "key": "checkboxShowTargetMarker"
-                }
-              ],
-              "rowKeys": [
-                "sliderTargetDepthFactor",
-                "checkboxShowTargetMarker"
-              ],
-              "subgroups": []
-            }
-          },
-          {
-            "type": "group",
-            "section": {
-              "key": "desktop:Responsive Arm Rotation at Base",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "checkboxBaseArmRotationResponsiveEnabled"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderBaseArmRotationFineTune"
-                },
-                {
-                  "type": "row",
-                  "key": "textBaseArmRotationRange"
-                },
-                {
-                  "type": "row",
-                  "key": "textBaseArmRotationCurve"
-                }
-              ],
-              "rowKeys": [
-                "checkboxBaseArmRotationResponsiveEnabled",
-                "sliderBaseArmRotationFineTune",
-                "textBaseArmRotationRange",
-                "textBaseArmRotationCurve"
-              ],
-              "subgroups": []
-            }
-          },
-          {
-            "type": "group",
-            "section": {
-              "key": "desktop:Responsive Pose Tween",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "checkboxPoseTweenResponsiveEnabled"
-                },
-                {
-                  "type": "row",
-                  "key": "selectPoseTweenTargetPoseName"
-                },
-                {
-                  "type": "row",
-                  "key": "textPoseTweenCurve"
-                }
-              ],
-              "rowKeys": [
-                "checkboxPoseTweenResponsiveEnabled",
-                "selectPoseTweenTargetPoseName",
-                "textPoseTweenCurve"
-              ],
-              "subgroups": []
-            }
-          },
-          {
-            "type": "group",
-            "section": {
-              "key": "desktop:Responsive Wrist Splay",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "checkboxWristSplayResponsiveEnabled"
-                },
-                {
-                  "type": "row",
-                  "key": "checkboxWristSplayReactiveEnabled"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderWristSplayDefault"
-                },
-                {
-                  "type": "row",
-                  "key": "textWristSplayRange"
-                },
-                {
-                  "type": "row",
-                  "key": "textWristSplayCurve"
-                }
-              ],
-              "rowKeys": [
-                "checkboxWristSplayResponsiveEnabled",
-                "checkboxWristSplayReactiveEnabled",
-                "sliderWristSplayDefault",
-                "textWristSplayRange",
-                "textWristSplayCurve"
-              ],
-              "subgroups": []
-            }
-          },
-          {
-            "type": "group",
-            "section": {
-              "key": "desktop:New Group",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "checkboxCropWristEnabled"
-                },
-                {
-                  "type": "row",
-                  "key": "checkboxReactiveArmLengthEnabled"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderHideWrist"
-                },
-                {
-                  "type": "row",
-                  "key": "textArmLengthRange"
-                },
-                {
-                  "type": "row",
-                  "key": "textArmLengthCurve"
-                }
-              ],
-              "rowKeys": [
-                "checkboxCropWristEnabled",
-                "checkboxReactiveArmLengthEnabled",
-                "sliderHideWrist",
-                "textArmLengthRange",
-                "textArmLengthCurve"
-              ],
-              "subgroups": []
-            }
-          },
-          {
-            "type": "group",
-            "section": {
-              "key": "desktop:Palm Facing",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "sliderPalmFaceRotationOffset"
-                },
-                {
-                  "type": "row",
-                  "key": "checkboxPalmFacesCursor"
-                }
-              ],
-              "rowKeys": [
-                "sliderPalmFaceRotationOffset",
-                "checkboxPalmFacesCursor"
-              ],
-              "subgroups": []
-            }
-          }
-        ],
-        "rowKeys": [
-          "checkboxTrackingEnabled"
-        ],
-        "subgroups": [
-          {
-            "key": "desktop:Target",
-            "items": [
-              {
-                "type": "row",
-                "key": "sliderTargetDepthFactor"
-              },
-              {
-                "type": "row",
-                "key": "checkboxShowTargetMarker"
-              }
-            ],
-            "rowKeys": [
-              "sliderTargetDepthFactor",
-              "checkboxShowTargetMarker"
-            ],
-            "subgroups": []
-          },
-          {
-            "key": "desktop:Responsive Arm Rotation at Base",
-            "items": [
-              {
-                "type": "row",
-                "key": "checkboxBaseArmRotationResponsiveEnabled"
-              },
-              {
-                "type": "row",
-                "key": "sliderBaseArmRotationFineTune"
-              },
-              {
-                "type": "row",
-                "key": "textBaseArmRotationRange"
-              },
-              {
-                "type": "row",
-                "key": "textBaseArmRotationCurve"
-              }
-            ],
-            "rowKeys": [
-              "checkboxBaseArmRotationResponsiveEnabled",
-              "sliderBaseArmRotationFineTune",
-              "textBaseArmRotationRange",
-              "textBaseArmRotationCurve"
-            ],
-            "subgroups": []
-          },
-          {
-            "key": "desktop:Responsive Pose Tween",
-            "items": [
-              {
-                "type": "row",
-                "key": "checkboxPoseTweenResponsiveEnabled"
-              },
-              {
-                "type": "row",
-                "key": "selectPoseTweenTargetPoseName"
-              },
-              {
-                "type": "row",
-                "key": "textPoseTweenCurve"
-              }
-            ],
-            "rowKeys": [
-              "checkboxPoseTweenResponsiveEnabled",
-              "selectPoseTweenTargetPoseName",
-              "textPoseTweenCurve"
-            ],
-            "subgroups": []
-          },
-          {
-            "key": "desktop:Responsive Wrist Splay",
-            "items": [
-              {
-                "type": "row",
-                "key": "checkboxWristSplayResponsiveEnabled"
-              },
-              {
-                "type": "row",
-                "key": "checkboxWristSplayReactiveEnabled"
-              },
-              {
-                "type": "row",
-                "key": "sliderWristSplayDefault"
-              },
-              {
-                "type": "row",
-                "key": "textWristSplayRange"
-              },
-              {
-                "type": "row",
-                "key": "textWristSplayCurve"
-              }
-            ],
-            "rowKeys": [
-              "checkboxWristSplayResponsiveEnabled",
-              "checkboxWristSplayReactiveEnabled",
-              "sliderWristSplayDefault",
-              "textWristSplayRange",
-              "textWristSplayCurve"
-            ],
-            "subgroups": []
-          },
-          {
-            "key": "desktop:New Group",
-            "items": [
-              {
-                "type": "row",
-                "key": "checkboxCropWristEnabled"
-              },
-              {
-                "type": "row",
-                "key": "checkboxReactiveArmLengthEnabled"
-              },
-              {
-                "type": "row",
-                "key": "sliderHideWrist"
-              },
-              {
-                "type": "row",
-                "key": "textArmLengthRange"
-              },
-              {
-                "type": "row",
-                "key": "textArmLengthCurve"
-              }
-            ],
-            "rowKeys": [
-              "checkboxCropWristEnabled",
-              "checkboxReactiveArmLengthEnabled",
-              "sliderHideWrist",
-              "textArmLengthRange",
-              "textArmLengthCurve"
-            ],
-            "subgroups": []
-          },
-          {
-            "key": "desktop:Palm Facing",
-            "items": [
-              {
-                "type": "row",
-                "key": "sliderPalmFaceRotationOffset"
-              },
-              {
-                "type": "row",
-                "key": "checkboxPalmFacesCursor"
-              }
-            ],
-            "rowKeys": [
-              "sliderPalmFaceRotationOffset",
-              "checkboxPalmFacesCursor"
-            ],
-            "subgroups": []
-          }
-        ]
-      },
-      {
-        "key": "desktop:Pose",
-        "items": [
-          {
-            "type": "group",
-            "section": {
-              "key": "desktop:Whole-Hand Rotation at Base",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "sliderbaseRotationX"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderbaseRotationY"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderbaseRotationZ"
-                }
-              ],
-              "rowKeys": [
-                "sliderbaseRotationX",
-                "sliderbaseRotationY",
-                "sliderbaseRotationZ"
-              ],
-              "subgroups": []
-            }
-          },
-          {
-            "type": "group",
-            "section": {
-              "key": "desktop:ROTATION",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "slidermodelRotX"
-                },
-                {
-                  "type": "row",
-                  "key": "slidermodelRotY"
-                },
-                {
-                  "type": "row",
-                  "key": "slidermodelRotZ"
-                }
-              ],
-              "rowKeys": [
-                "slidermodelRotX",
-                "slidermodelRotY",
-                "slidermodelRotZ"
-              ],
-              "subgroups": []
-            }
-          },
-          {
-            "type": "group",
-            "section": {
-              "key": "desktop:THUMB",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "sliderthumbCurl"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderthumbSplay"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderthumbSplay2"
-                },
-                {
-                  "type": "row",
-                  "key": "slidercurlBiasThumb"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderbaseOnlyCurlThumb"
-                },
-                {
-                  "type": "row",
-                  "key": "slidermidOnlyCurlThumb"
-                },
-                {
-                  "type": "row",
-                  "key": "slidertipOnlyCurlThumb"
-                },
-                {
-                  "type": "row",
-                  "key": "slidertipTwistThumb"
-                }
-              ],
-              "rowKeys": [
-                "sliderthumbCurl",
-                "sliderthumbSplay",
-                "sliderthumbSplay2",
-                "slidercurlBiasThumb",
-                "sliderbaseOnlyCurlThumb",
-                "slidermidOnlyCurlThumb",
-                "slidertipOnlyCurlThumb",
-                "slidertipTwistThumb"
-              ],
-              "subgroups": []
-            }
-          },
-          {
-            "type": "group",
-            "section": {
-              "key": "desktop:Wrist",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "textwristRotationClampRange"
-                },
-                {
-                  "type": "row",
-                  "key": "textwristBendClampRange"
-                },
-                {
-                  "type": "row",
-                  "key": "textwristSplayClampRange"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderwristRotation"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderwristBend"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderwristSplay"
-                }
-              ],
-              "rowKeys": [
-                "textwristRotationClampRange",
-                "textwristBendClampRange",
-                "textwristSplayClampRange",
-                "sliderwristRotation",
-                "sliderwristBend",
-                "sliderwristSplay"
-              ],
-              "subgroups": []
-            }
-          },
-          {
-            "type": "group",
-            "section": {
-              "key": "desktop:Index",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "slidercurlIndex"
-                },
-                {
-                  "type": "row",
-                  "key": "slidersplayIndex"
-                },
-                {
-                  "type": "row",
-                  "key": "slidersplayIndex2"
-                },
-                {
-                  "type": "row",
-                  "key": "slidercurlBiasIndex"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderbaseOnlyCurlIndex"
-                },
-                {
-                  "type": "row",
-                  "key": "slidermidOnlyCurlIndex"
-                },
-                {
-                  "type": "row",
-                  "key": "slidertipOnlyCurlIndex"
-                },
-                {
-                  "type": "row",
-                  "key": "slidertipTwistIndex"
-                }
-              ],
-              "rowKeys": [
-                "slidercurlIndex",
-                "slidersplayIndex",
-                "slidersplayIndex2",
-                "slidercurlBiasIndex",
-                "sliderbaseOnlyCurlIndex",
-                "slidermidOnlyCurlIndex",
-                "slidertipOnlyCurlIndex",
-                "slidertipTwistIndex"
-              ],
-              "subgroups": []
-            }
-          },
-          {
-            "type": "group",
-            "section": {
-              "key": "desktop:Middle",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "slidercurlMiddle"
-                },
-                {
-                  "type": "row",
-                  "key": "slidersplayMiddle"
-                },
-                {
-                  "type": "row",
-                  "key": "slidersplayMiddle2"
-                },
-                {
-                  "type": "row",
-                  "key": "slidercurlBiasMiddle"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderbaseOnlyCurlMiddle"
-                },
-                {
-                  "type": "row",
-                  "key": "slidermidOnlyCurlMiddle"
-                },
-                {
-                  "type": "row",
-                  "key": "slidertipOnlyCurlMiddle"
-                },
-                {
-                  "type": "row",
-                  "key": "slidertipTwistMiddle"
-                }
-              ],
-              "rowKeys": [
-                "slidercurlMiddle",
-                "slidersplayMiddle",
-                "slidersplayMiddle2",
-                "slidercurlBiasMiddle",
-                "sliderbaseOnlyCurlMiddle",
-                "slidermidOnlyCurlMiddle",
-                "slidertipOnlyCurlMiddle",
-                "slidertipTwistMiddle"
-              ],
-              "subgroups": []
-            }
-          },
-          {
-            "type": "group",
-            "section": {
-              "key": "desktop:Ring",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "slidercurlRing"
-                },
-                {
-                  "type": "row",
-                  "key": "slidersplayRing"
-                },
-                {
-                  "type": "row",
-                  "key": "slidersplayRing2"
-                },
-                {
-                  "type": "row",
-                  "key": "slidercurlBiasRing"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderbaseOnlyCurlRing"
-                },
-                {
-                  "type": "row",
-                  "key": "slidermidOnlyCurlRing"
-                },
-                {
-                  "type": "row",
-                  "key": "slidertipOnlyCurlRing"
-                },
-                {
-                  "type": "row",
-                  "key": "slidertipTwistRing"
-                }
-              ],
-              "rowKeys": [
-                "slidercurlRing",
-                "slidersplayRing",
-                "slidersplayRing2",
-                "slidercurlBiasRing",
-                "sliderbaseOnlyCurlRing",
-                "slidermidOnlyCurlRing",
-                "slidertipOnlyCurlRing",
-                "slidertipTwistRing"
-              ],
-              "subgroups": []
-            }
-          },
-          {
-            "type": "group",
-            "section": {
-              "key": "desktop:Pinky",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "slidercurlPinky"
-                },
-                {
-                  "type": "row",
-                  "key": "slidersplayPinky"
-                },
-                {
-                  "type": "row",
-                  "key": "slidersplayPinky2"
-                },
-                {
-                  "type": "row",
-                  "key": "slidercurlBiasPinky"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderbaseOnlyCurlPinky"
-                },
-                {
-                  "type": "row",
-                  "key": "slidermidOnlyCurlPinky"
-                },
-                {
-                  "type": "row",
-                  "key": "slidertipOnlyCurlPinky"
-                },
-                {
-                  "type": "row",
-                  "key": "slidertipTwistPinky"
-                }
-              ],
-              "rowKeys": [
-                "slidercurlPinky",
-                "slidersplayPinky",
-                "slidersplayPinky2",
-                "slidercurlBiasPinky",
-                "sliderbaseOnlyCurlPinky",
-                "slidermidOnlyCurlPinky",
-                "slidertipOnlyCurlPinky",
-                "slidertipTwistPinky"
-              ],
-              "subgroups": []
-            }
-          },
-          {
-            "type": "group",
-            "section": {
-              "key": "desktop:Pose Offset",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "sliderposeOffsetX"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderposeOffsetY"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderposeOffsetZ"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderPoseScale"
-                }
-              ],
-              "rowKeys": [
-                "sliderposeOffsetX",
-                "sliderposeOffsetY",
-                "sliderposeOffsetZ",
-                "sliderPoseScale"
-              ],
-              "subgroups": []
-            }
-          },
-          {
-            "type": "group",
-            "section": {
-              "key": "desktop:Saved Poses",
-              "items": [],
-              "rowKeys": [],
-              "subgroups": []
-            }
-          }
-        ],
-        "rowKeys": [],
-        "subgroups": [
-          {
-            "key": "desktop:Whole-Hand Rotation at Base",
-            "items": [
-              {
-                "type": "row",
-                "key": "sliderbaseRotationX"
-              },
-              {
-                "type": "row",
-                "key": "sliderbaseRotationY"
-              },
-              {
-                "type": "row",
-                "key": "sliderbaseRotationZ"
-              }
-            ],
-            "rowKeys": [
-              "sliderbaseRotationX",
-              "sliderbaseRotationY",
-              "sliderbaseRotationZ"
-            ],
-            "subgroups": []
-          },
-          {
-            "key": "desktop:ROTATION",
-            "items": [
-              {
-                "type": "row",
-                "key": "slidermodelRotX"
-              },
-              {
-                "type": "row",
-                "key": "slidermodelRotY"
-              },
-              {
-                "type": "row",
-                "key": "slidermodelRotZ"
-              }
-            ],
-            "rowKeys": [
-              "slidermodelRotX",
-              "slidermodelRotY",
-              "slidermodelRotZ"
-            ],
-            "subgroups": []
-          },
-          {
-            "key": "desktop:THUMB",
-            "items": [
-              {
-                "type": "row",
-                "key": "sliderthumbCurl"
-              },
-              {
-                "type": "row",
-                "key": "sliderthumbSplay"
-              },
-              {
-                "type": "row",
-                "key": "sliderthumbSplay2"
-              },
-              {
-                "type": "row",
-                "key": "slidercurlBiasThumb"
-              },
-              {
-                "type": "row",
-                "key": "sliderbaseOnlyCurlThumb"
-              },
-              {
-                "type": "row",
-                "key": "slidermidOnlyCurlThumb"
-              },
-              {
-                "type": "row",
-                "key": "slidertipOnlyCurlThumb"
-              },
-              {
-                "type": "row",
-                "key": "slidertipTwistThumb"
-              }
-            ],
-            "rowKeys": [
-              "sliderthumbCurl",
-              "sliderthumbSplay",
-              "sliderthumbSplay2",
-              "slidercurlBiasThumb",
-              "sliderbaseOnlyCurlThumb",
-              "slidermidOnlyCurlThumb",
-              "slidertipOnlyCurlThumb",
-              "slidertipTwistThumb"
-            ],
-            "subgroups": []
-          },
-          {
-            "key": "desktop:Wrist",
-            "items": [
-              {
-                "type": "row",
-                "key": "textwristRotationClampRange"
-              },
-              {
-                "type": "row",
-                "key": "textwristBendClampRange"
-              },
-              {
-                "type": "row",
-                "key": "textwristSplayClampRange"
-              },
-              {
-                "type": "row",
-                "key": "sliderwristRotation"
-              },
-              {
-                "type": "row",
-                "key": "sliderwristBend"
-              },
-              {
-                "type": "row",
-                "key": "sliderwristSplay"
-              }
-            ],
-            "rowKeys": [
-              "textwristRotationClampRange",
-              "textwristBendClampRange",
-              "textwristSplayClampRange",
-              "sliderwristRotation",
-              "sliderwristBend",
-              "sliderwristSplay"
-            ],
-            "subgroups": []
-          },
-          {
-            "key": "desktop:Index",
-            "items": [
-              {
-                "type": "row",
-                "key": "slidercurlIndex"
-              },
-              {
-                "type": "row",
-                "key": "slidersplayIndex"
-              },
-              {
-                "type": "row",
-                "key": "slidersplayIndex2"
-              },
-              {
-                "type": "row",
-                "key": "slidercurlBiasIndex"
-              },
-              {
-                "type": "row",
-                "key": "sliderbaseOnlyCurlIndex"
-              },
-              {
-                "type": "row",
-                "key": "slidermidOnlyCurlIndex"
-              },
-              {
-                "type": "row",
-                "key": "slidertipOnlyCurlIndex"
-              },
-              {
-                "type": "row",
-                "key": "slidertipTwistIndex"
-              }
-            ],
-            "rowKeys": [
-              "slidercurlIndex",
-              "slidersplayIndex",
-              "slidersplayIndex2",
-              "slidercurlBiasIndex",
-              "sliderbaseOnlyCurlIndex",
-              "slidermidOnlyCurlIndex",
-              "slidertipOnlyCurlIndex",
-              "slidertipTwistIndex"
-            ],
-            "subgroups": []
-          },
-          {
-            "key": "desktop:Middle",
-            "items": [
-              {
-                "type": "row",
-                "key": "slidercurlMiddle"
-              },
-              {
-                "type": "row",
-                "key": "slidersplayMiddle"
-              },
-              {
-                "type": "row",
-                "key": "slidersplayMiddle2"
-              },
-              {
-                "type": "row",
-                "key": "slidercurlBiasMiddle"
-              },
-              {
-                "type": "row",
-                "key": "sliderbaseOnlyCurlMiddle"
-              },
-              {
-                "type": "row",
-                "key": "slidermidOnlyCurlMiddle"
-              },
-              {
-                "type": "row",
-                "key": "slidertipOnlyCurlMiddle"
-              },
-              {
-                "type": "row",
-                "key": "slidertipTwistMiddle"
-              }
-            ],
-            "rowKeys": [
-              "slidercurlMiddle",
-              "slidersplayMiddle",
-              "slidersplayMiddle2",
-              "slidercurlBiasMiddle",
-              "sliderbaseOnlyCurlMiddle",
-              "slidermidOnlyCurlMiddle",
-              "slidertipOnlyCurlMiddle",
-              "slidertipTwistMiddle"
-            ],
-            "subgroups": []
-          },
-          {
-            "key": "desktop:Ring",
-            "items": [
-              {
-                "type": "row",
-                "key": "slidercurlRing"
-              },
-              {
-                "type": "row",
-                "key": "slidersplayRing"
-              },
-              {
-                "type": "row",
-                "key": "slidersplayRing2"
-              },
-              {
-                "type": "row",
-                "key": "slidercurlBiasRing"
-              },
-              {
-                "type": "row",
-                "key": "sliderbaseOnlyCurlRing"
-              },
-              {
-                "type": "row",
-                "key": "slidermidOnlyCurlRing"
-              },
-              {
-                "type": "row",
-                "key": "slidertipOnlyCurlRing"
-              },
-              {
-                "type": "row",
-                "key": "slidertipTwistRing"
-              }
-            ],
-            "rowKeys": [
-              "slidercurlRing",
-              "slidersplayRing",
-              "slidersplayRing2",
-              "slidercurlBiasRing",
-              "sliderbaseOnlyCurlRing",
-              "slidermidOnlyCurlRing",
-              "slidertipOnlyCurlRing",
-              "slidertipTwistRing"
-            ],
-            "subgroups": []
-          },
-          {
-            "key": "desktop:Pinky",
-            "items": [
-              {
-                "type": "row",
-                "key": "slidercurlPinky"
-              },
-              {
-                "type": "row",
-                "key": "slidersplayPinky"
-              },
-              {
-                "type": "row",
-                "key": "slidersplayPinky2"
-              },
-              {
-                "type": "row",
-                "key": "slidercurlBiasPinky"
-              },
-              {
-                "type": "row",
-                "key": "sliderbaseOnlyCurlPinky"
-              },
-              {
-                "type": "row",
-                "key": "slidermidOnlyCurlPinky"
-              },
-              {
-                "type": "row",
-                "key": "slidertipOnlyCurlPinky"
-              },
-              {
-                "type": "row",
-                "key": "slidertipTwistPinky"
-              }
-            ],
-            "rowKeys": [
-              "slidercurlPinky",
-              "slidersplayPinky",
-              "slidersplayPinky2",
-              "slidercurlBiasPinky",
-              "sliderbaseOnlyCurlPinky",
-              "slidermidOnlyCurlPinky",
-              "slidertipOnlyCurlPinky",
-              "slidertipTwistPinky"
-            ],
-            "subgroups": []
-          },
-          {
-            "key": "desktop:Pose Offset",
-            "items": [
-              {
-                "type": "row",
-                "key": "sliderposeOffsetX"
-              },
-              {
-                "type": "row",
-                "key": "sliderposeOffsetY"
-              },
-              {
-                "type": "row",
-                "key": "sliderposeOffsetZ"
-              },
-              {
-                "type": "row",
-                "key": "sliderPoseScale"
-              }
-            ],
-            "rowKeys": [
-              "sliderposeOffsetX",
-              "sliderposeOffsetY",
-              "sliderposeOffsetZ",
-              "sliderPoseScale"
-            ],
-            "subgroups": []
-          },
-          {
-            "key": "desktop:Saved Poses",
-            "items": [],
-            "rowKeys": [],
-            "subgroups": []
-          }
-        ]
-      },
-      {
         "key": "desktop:Camera",
         "items": [
           {
@@ -3544,7 +3563,7 @@
         "subgroups": []
       },
       {
-        "key": "mobile:Phone Tilt",
+        "key": "mobile:RESPONSIVE BEHAVIOUR - HAND",
         "items": [
           {
             "type": "group",
@@ -4569,7 +4588,7 @@
         "subgroups": []
       },
       {
-        "key": "landscape:Phone Tilt",
+        "key": "landscape:RESPONSIVE BEHAVIOUR - HAND",
         "items": [
           {
             "type": "group",
@@ -5150,7 +5169,6 @@
     "mobile:Tracking": null,
     "mobile:Target": null,
     "mobile:Palm Facing": "RESPONSIVE PALM ROTATION",
-    "mobile:Phone Tilt": null,
     "mobile:Saved Lighting": null,
     "mobile:Lighting": null,
     "mobile:Saved Toon Shading": null,
@@ -5200,7 +5218,6 @@
     "landscape:Tracking": null,
     "landscape:Target": null,
     "landscape:Palm Facing": "RESPONSIVE PALM ROTATION",
-    "landscape:Phone Tilt": null,
     "landscape:Saved Lighting": null,
     "landscape:Lighting": null,
     "landscape:Saved Toon Shading": null,
@@ -5351,7 +5368,9 @@
     "mobile:Responsive Arm Rotation at Base": null,
     "mobile:Responsive Pose Tween": null,
     "landscape:Responsive Arm Rotation at Base": null,
-    "landscape:Responsive Pose Tween": null
+    "landscape:Responsive Pose Tween": null,
+    "mobile:RESPONSIVE BEHAVIOUR - HAND": null,
+    "landscape:RESPONSIVE BEHAVIOUR - HAND": null
   },
   "devTextOverridesManual": [
     "desktop:New Group",
