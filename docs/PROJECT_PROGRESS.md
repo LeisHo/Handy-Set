@@ -7,27 +7,38 @@ append-only history.
 
 ## Currently working on
 
-Nothing in progress — 3 more real-device-testing fixes (2026-09-28:
-touch/mouse conflict, camera-lock/slider sync, Y/Z world-axis swap) are
-pushed, on top of the mobile-vs-desktop rotation redesign (also
-2026-09-28), the Rotation Reset feature (also 2026-09-28), the
-curve-inversion fix (also 2026-09-28), the rotation-node/damping/log
-follow-up (also 2026-09-28), the dev panel template re-sync (also
-2026-09-28), and the 6-part Palm Rotation/Responsive-features request
-(2026-09-27). See Recently completed below for the full account.
-**Still needs real device re-verification** — this round's phone-
-rotation fix was checked with a standalone numeric script; the touch/
-mouse-conflict and camera-lock fixes are standard, well-understood
-browser/library behaviors applied directly, not something a script can
-meaningfully simulate without a real touch device or a real
-OrbitControls-attached canvas. The user's next real test is what will
-actually confirm all of this worked.
+Nothing in progress — a Rotation Reset baseline bug fix plus 6 new
+per-axis enable/scale controls (2026-09-28) are pushed, on top of 3
+more real-device-testing fixes (also 2026-09-28: touch/mouse conflict,
+camera-lock/slider sync, Y/Z world-axis swap), the mobile-vs-desktop
+rotation redesign (also 2026-09-28), the Rotation Reset feature (also
+2026-09-28), the curve-inversion fix (also 2026-09-28), the rotation-
+node/damping/log follow-up (also 2026-09-28), the dev panel template
+re-sync (also 2026-09-28), and the 6-part Palm Rotation/Responsive-
+features request (2026-09-27). See Recently completed below for the
+full account. **Still needs real device re-verification** — the user's
+next real test is what will actually confirm this whole line of fixes
+worked; several of these (synthetic touch events, OrbitControls event
+conflicts) are standard browser/library behaviors that can't be
+meaningfully simulated without a real touch device.
 
 Pushed to `https://github.com/LeisHo/Handy-Set`
 (deployed via the Vercel project at `https://vercel.com/lpeis/handy-set`).
 
 ## Recently completed
 
+- **RESOLVED (2026-09-28): Rotation Reset's real bug found — "double tap
+  works but rotation is wrong afterward, still using axes prior to
+  realignment."** Root cause: the reset only updated ONE of the 2
+  possible baselines (mobile or desktop), chosen by which input source
+  was flagged active at that exact instant — if that flag was wrong for
+  even one frame, the reset silently updated the wrong one, leaving the
+  real rotation pipeline's baseline untouched. Fixed by always updating
+  both, regardless of which is actually in use. Also added, same
+  round: 3 on/off checkboxes and 3 scale sliders (0-3x) for X/Y/Z axis
+  rotation, so any axis can be disabled or sped up/slowed down
+  independently. See `docs/CHANGELOG.txt`'s matching 2026-09-28 (34th)
+  entry.
 - **RESOLVED (2026-09-28): 3 more real-device-testing bugs on Phone
   Model, all root-caused and fixed.** (1) Tapping the screen briefly
   threw the rotation off before it snapped back — a tap can fire a

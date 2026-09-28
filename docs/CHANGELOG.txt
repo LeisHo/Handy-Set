@@ -3970,6 +3970,53 @@ device or a real OrbitControls-attached canvas.
 `index.html`'s cache-buster bumped `?v=116` -> `?v=117`.
 
 --------------------------------------------------------------------------------
+2026-09-28  -  (34th)
+
+3 more direct follow-ups: (1) "provide me a checkbox to turn the Z axis
+rotation on and off" (revised mid-turn to "actually provide me a check
+box for all 3 axes on and off"); (2) "double tap works. BUT. after the
+realignment, the rotation becomes wrong. I think its still using the
+rotaiton axes prior to the realignment"; (3) "Provide me a slider per
+axes for me to scale the rotational relationship. In case i want to
+slow down or speed up the rotaion of the phone model."
+
+Diagnosed (2) before implementing (1)/(3): `resetPhoneModelRotationBaseline()`
+used to branch on `lastInputSource`, updating ONLY the mobile
+(beta/gamma/alpha) baseline OR ONLY the desktop (nx/ny) baseline,
+never both. If `lastInputSource` read wrong for even a single frame at
+the exact tap instant -- a real, established risk this session (see
+the 33rd entry's synthetic-touch-mousemove finding) -- the reset
+silently re-baselined the INACTIVE pipeline while leaving the REAL one
+completely untouched, exactly matching "still using the axes prior to
+the realignment." Fixed by updating BOTH baselines unconditionally on
+every reset, regardless of which input source is flagged active at
+that instant -- whichever pipeline actually ends up driving the
+rotation afterward is guaranteed to have a freshly-captured baseline
+either way, removing the dependency on `lastInputSource` being exactly
+right at that one moment.
+
+Built (1) and (3) together as 6 new controls in Responsive Rotation:
+`checkboxPhoneAxisXEnabled`/`Y`/`Z` (default all true) and
+`sliderPhoneRotationScaleX`/`Y`/`Z` (0-3x, default 1). Axis letters
+match the WORLD axis each real motion drives per the 33rd entry's
+mapping: X = beta (up/down), Y = alpha/compass (spin), Z = gamma
+(left/right). Applied in ONE shared place in `computePhoneCombinedQuat()`,
+after both the mobile and desktop branches compute their own
+`betaDeg`/`gammaDeg`/`alphaDeg`, so both pipelines respect the same 6
+controls without duplicating the logic per-branch. Disabling an axis
+zeroes it outright (not just scale=0) so a disabled axis can't
+contribute even a tiny floating-point residual.
+
+Not independently browser/device-verified this round (same standing
+instruction) -- the reset-baseline fix removes a specific branching
+dependency rather than introducing new math to verify, and the 6 new
+controls are a direct, mechanical application of already-verified
+per-axis values (scale/enable applied before the already-tested
+axis-angle combine step from the 33rd entry).
+
+`index.html`'s cache-buster bumped `?v=117` -> `?v=118`.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

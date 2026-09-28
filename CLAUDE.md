@@ -2136,3 +2136,34 @@ wiring, and are still open:
   model's actual behavior too, not just the source file's own stated
   axes, since the export pipeline itself is a second place a coordinate
   convention can change.**
+- **`resetPhoneModelRotationBaseline()` must update EVERY baseline
+  variable unconditionally, never branch on `lastInputSource` to decide
+  which one(s) to update.** Found 2026-09-28, direct report: "double tap
+  works. BUT. after the realignment, the rotation becomes wrong. I
+  think its still using the rotation axes prior to the realignment."
+  The original version updated ONLY the mobile (`phoneBeta/Gamma/
+  AlphaBaseline`) OR ONLY the desktop (`phoneNx/NyBaseline`) baseline,
+  based on whichever `lastInputSource` said was active AT THE EXACT
+  INSTANT the reset fired — a real, established risk in this file this
+  same session (synthetic touch-sourced `mousemove` events can flip
+  this flag momentarily, see the entry above). If it read wrong for
+  even one frame at tap-time, the reset silently re-baselined the
+  INACTIVE pipeline while leaving the REAL one completely untouched —
+  the user's own "still using the axes prior to realignment" is exactly
+  that. Fixed by removing the branch entirely: every call updates BOTH
+  the mobile and desktop baselines, always, regardless of which one is
+  flagged active. **This is now the standing pattern for this function
+  — if a future change reintroduces a `lastInputSource` branch here
+  (e.g. to "optimize" by skipping the inactive pipeline's computation),
+  it's reintroducing this exact bug, not a harmless simplification.**
+- **Phone Model's per-axis enable/scale controls
+  (`cfg.phoneAxisX/Y/ZEnabled`, `cfg.phoneRotationScaleX/Y/Z`) are
+  applied in ONE shared place in `computePhoneCombinedQuat()`, after
+  BOTH the mobile and desktop branches compute their own raw
+  `betaDeg`/`gammaDeg`/`alphaDeg`** — not duplicated inside each
+  branch. If a future change adds a 3rd input path (or restructures the
+  mobile/desktop branching), keep this single shared application point
+  so both/all paths automatically respect the same 6 controls. An axis
+  being "disabled" sets its degree value to exactly `0` (not just a
+  `0`-scale multiply) so it can never contribute even a tiny
+  floating-point residual to the combined rotation.
