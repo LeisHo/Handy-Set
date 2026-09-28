@@ -3184,6 +3184,93 @@ Commit: `cb9cd84`. Pushed to `https://github.com/LeisHo/Handy-Set`;
 Vercel auto-deployed.
 
 --------------------------------------------------------------------------------
+2026-09-27  -  (24th, same day)
+
+4 direct follow-ups on the 23rd entry's Phone Model feature: add a new
+model (`Iphone17MaxPro.glb`), sync `PHONE_MODEL_OPTIONS` to the folder's
+real current contents (6 of the original 8 models deleted, 2 updated
+in place), add a convenience On/Off checkbox for the phone model
+directly in HAND MODEL, and 2 real bugs the user found live on the
+deployed site: PHONE MODEL was missing its own ROTATION subgroup
+entirely, and an empty phantom "ROTATION" group had appeared inside
+Pose (under HAND MODEL) that was "not the Hand Model's own rotation
+group."
+
+Root cause of both symptoms at once: the 23rd entry's own PHONE MODEL
+group named its rotation subgroup literally "ROTATION" -- an EXACT
+string collision with Pose's own pre-existing "ROTATION" subgroup
+(`slidermodelRotX/Y/Z`, `renderPoseGroup()`). `data-sid` identity is
+flat per device tab, not scoped by parent, so 2 subgroups sharing one
+name anywhere in the same tab is a real structural bug, not a cosmetic
+one -- confirmed directly in the real git-tracked
+`dev-panel-settings.json`: Pose's own `items` array had literally TWO
+`"key": "desktop:ROTATION"` entries, one empty (the phantom) and one
+holding SIX rows -- `sliderPhoneModelRotX/Y/Z` merged together with
+`slidermodelRotX/Y/Z` -- while `desktop:PHONE MODEL` had no ROTATION
+entry of its own at all. Fixed in code by renaming Phone Model's own
+subgroup to "PHONE ROTATION" (unique), and in the git-tracked settings
+file via a 2nd surgery script (Python, same discipline as the 23rd
+entry's own HAND MODEL reorg): split the merged 6-row phantom entry
+back into its 2 real halves by row-id set membership, deleted the
+empty duplicate, rebuilt a clean 3-row "ROTATION" under Pose, and
+created a new "PHONE ROTATION" entry under PHONE MODEL holding the 3
+phone rows. Verified via a full row-level key-diff (zero lost, zero
+added) plus an explicit duplicate-key scan (zero duplicates across all
+3 device tabs) both before and after. Re-applied a 2nd time after a
+newer remote Sync commit landed mid-task (same "re-run against the
+freshest pull" discipline as the 23rd entry).
+
+A 3rd, separate direct report arrived after this fix was already
+underway: "responsive phone rotation should be anchored by the phone
+models OWN geoemtr origin... its currently rotating around some world
+origin." The original implementation pivoted on a COMPUTED
+bounding-box centroid (`Box3().setFromObject()`), not the model's own
+authored local origin -- a GLB's local (0,0,0) is whatever point the
+modeler chose and isn't guaranteed to coincide with its geometric
+bounding-box center. Fixed by removing the centroid computation and
+pivot-compensation math entirely: `phoneModelRaw.position` now simply
+stays `(0,0,0)` always (rotating purely around its own local origin),
+with `phoneModelWrapper.position` (the Offset sliders) doing all the
+actual world-space placement. Live-verified: a 90° Y rotation left
+`phoneModelRaw.position` at exactly `(0,0,0)`, confirming no residual
+drift-compensation logic remains.
+
+New HAND MODEL checkbox (`checkboxPhoneModelEnabledHandModel`): a
+plain duplicate wired to the same `setPhoneModelEnabled()`, kept in
+sync with the PHONE MODEL group's own checkbox via a new
+`syncPhoneModelEnabledCheckboxes()` helper (both checkboxes' `.checked`
+are updated together on every enable/disable, regardless of which one
+was actually clicked). Live-verified in both directions.
+
+Live-verified end-to-end after all 4 fixes, against the real
+git-tracked settings (fetched via `fetch()` into `localStorage` in the
+absence of a local serverless backend, not just fresh-load defaults):
+PHONE MODEL correctly shows OFFSET/PHONE ROTATION/RESPONSIVE
+BEHAVIOUR - PHONE with no missing content; Pose's own ROTATION is
+clean (3 rows, no phantom); the dropdown lists exactly the 3 current
+models; the new HAND MODEL checkbox toggles the real phone model and
+stays in sync with the other checkbox; rotation pivot confirmed
+anchored at local origin. One PRE-EXISTING, unrelated issue was found
+and DISCLOSED, not fixed (out of scope for this request) --
+`rebuildField()` can throw `Cannot read properties of null (reading
+'clone')` inside `SkeletonUtils.clone()` if a Field Layout slider's
+restore-triggered `rebuildField()` call fires before the hand's own
+async `GLTFLoader.load()` has resolved `modelRoot`; observed once
+during this session's own synthetic (~283KB) localStorage injection,
+self-recovered (hands.length back to 1 immediately after), not yet
+reproduced under normal load conditions -- flag if a future report
+describes a genuinely broken/missing hand on first load.
+
+`.gitignore`/model files: `Iphone17MaxPro.blend`/`.blend1` already
+match the existing generic `*.blend`/`*.blend1` exclusion pattern, no
+`.gitignore` change needed this round. 6 old `.glb` files deleted (git
+`rm`), `Iphone17MaxPro.glb` added, `Pixel 9A.glb`/`P5_Project_1.glb`
+updated in place (same filenames, new content, per the user's own
+in-folder edits).
+
+`index.html`'s own `main.js` cache-buster bumped `?v=103` -> `?v=105`.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

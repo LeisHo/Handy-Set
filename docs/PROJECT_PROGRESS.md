@@ -9,45 +9,60 @@ append-only history.
 
 Nothing in progress — the 6-part Palm Rotation/Responsive-features
 request (2026-09-27) is fully complete, plus 9 interjected fixes and a
-new Phone Model feature from the same session (Saved Cameras/
-list-picker persistence; Palm Rotation height/distance independence +
-forearm-base marker; a hand-disappears clash between Pose Tween and
-Base Arm Rotation; `armBaseDistanceT` freezing at a stale value in the
-ground-raycast dead zone; Pose Tween applying the live Whole-Hand
-Rotation / Base Rotation sliders to whatever pose is showing; a
-follow-on fix for fingers freezing while the wrist kept responding;
-Save/Sync never persisting ANY curve/range text control project-wide;
-Camera slider decimals/jitter/click-to-type; Phone Tilt's "Show in
-Mobile/Landscape" checkbox not mirroring its 3 curve/range widgets;
-and a new PHONE MODEL group + Object Axes debug feature + HAND MODEL
-reorg). See Recently completed below for the full account.
+new Phone Model feature (with a same-day follow-up round: a new model,
+a ROTATION name-collision bugfix, a rotation-anchor correction, and a
+HAND MODEL convenience checkbox) from the same session. See Recently
+completed below for the full account.
 
 Pushed to `https://github.com/LeisHo/Handy-Set`
 (deployed via the Vercel project at `https://vercel.com/lpeis/handy-set`).
 
 ## Recently completed
 
-- **NEW (2026-09-27): Phone Model group** — loads any of 8 smartphone
-  GLBs (`data/processed/SMARTPHONE MODELS/`) with On/Off, a Model
-  picker, Scale, Offset (X/Y/Z), Rotation (X/Y/Z, pivoting on the
-  model's own geometry centroid), and its own Responsive Rotation
-  (RESPONSIVE BEHAVIOUR - PHONE > Responsive Rotation) driving 3 axes
-  from one shared curve/range — Y/Z on both desktop and mobile
-  (reusing `tiltMagnitude`/`tiltAngle`), X only on mobile (the device's
-  own compass heading, a signal that doesn't exist for a mouse). A
-  naming collision in the original spec (2 groups both wanting
-  "RESPONSIVE BEHAVIOUR - PHONE") was resolved via AskUserQuestion —
-  the hand's own responsive group is "RESPONSIVE BEHAVIOUR - HAND".
-  **Object Axes** (Debug group) ported from 3JS ENGINE — a
-  multi-select picker showing a fat-line axes gizmo on any registered
-  scene object (hands, the Phone Model). **HAND MODEL** — a new
-  top-level group nesting Field Layout/Pose/Tween/RESPONSIVE BEHAVIOUR
-  - HAND (renamed from Phone Tilt) in that order. The git-tracked
-  `dev-panel-settings.json` was surgically restructured (not reset) to
-  preserve every existing custom rename/reorder, verified via a
-  before/after key-diff (zero lost entries) and re-applied against 3
-  newer remote Sync commits that landed mid-session. Live-verified
-  end-to-end: all 8 models load, centroid pivot holds to ~1e-16 drift,
+- **FOLLOW-UP (2026-09-27, same day): Phone Model corrections.** Added
+  a 3rd model (`Iphone17MaxPro.glb`) and synced `PHONE_MODEL_OPTIONS`
+  to the folder's real current contents (the user deleted 6 of the
+  original 8 files and updated 2 others in place — the dropdown now
+  lists exactly P5 Project 1 / Pixel 9A / iPhone 17 Max Pro). Added a
+  convenience On/Off checkbox for the phone model directly in HAND
+  MODEL, kept in sync with the PHONE MODEL group's own checkbox. Fixed
+  2 real bugs the user found live on the deployed site: (1) PHONE
+  MODEL was missing its own ROTATION subgroup, while an empty phantom
+  "ROTATION" had appeared inside Pose — root cause was a literal
+  `data-sid` name collision (Phone Model's "ROTATION" vs. Pose's
+  pre-existing one), fixed by renaming to "PHONE ROTATION" in code and
+  splitting the merged JSON entry back apart in the git-tracked
+  settings file (verified via a full key-diff, zero lost, zero
+  duplicate group keys). (2) Responsive Rotation was pivoting on a
+  computed bounding-box centroid instead of the model's own true local
+  origin — fixed by removing the centroid math entirely; the model now
+  rotates purely around `(0,0,0)` in its own local space, verified via
+  a 90° rotation leaving that position exactly unchanged. One
+  pre-existing, unrelated issue was found and disclosed (not fixed,
+  out of scope): `rebuildField()` can throw if a Field Layout slider's
+  restore fires before the hand's own async model load resolves —
+  self-recovered when observed, not yet reproduced under normal load.
+  See `docs/CHANGELOG.txt`'s matching 2026-09-27 (24th) entry.
+- **NEW (2026-09-27): Phone Model group** — loads a selectable
+  smartphone GLB (`data/processed/SMARTPHONE MODELS/`) with On/Off, a
+  Model picker, Scale, Offset (X/Y/Z), Rotation (X/Y/Z), and its own
+  Responsive Rotation (RESPONSIVE BEHAVIOUR - PHONE > Responsive
+  Rotation) driving 3 axes from one shared curve/range — Y/Z on both
+  desktop and mobile (reusing `tiltMagnitude`/`tiltAngle`), X only on
+  mobile (the device's own compass heading, a signal that doesn't
+  exist for a mouse). A naming collision in the original spec (2
+  groups both wanting "RESPONSIVE BEHAVIOUR - PHONE") was resolved via
+  AskUserQuestion — the hand's own responsive group is "RESPONSIVE
+  BEHAVIOUR - HAND". **Object Axes** (Debug group) ported from 3JS
+  ENGINE — a multi-select picker showing a fat-line axes gizmo on any
+  registered scene object (hands, the Phone Model). **HAND MODEL** — a
+  new top-level group nesting Field Layout/Pose/Tween/RESPONSIVE
+  BEHAVIOUR - HAND (renamed from Phone Tilt) in that order. The
+  git-tracked `dev-panel-settings.json` was surgically restructured
+  (not reset) to preserve every existing custom rename/reorder,
+  verified via a before/after key-diff (zero lost entries) and
+  re-applied against 3 newer remote Sync commits that landed
+  mid-session. Live-verified end-to-end: models load correctly,
   Responsive Rotation confirmed via a real mousemove, Object Axes
   gizmo renders on both Hand 1 and Phone Model, Show-in-Mobile
   mirroring works for the new controls. See `docs/CHANGELOG.txt`'s

@@ -1554,9 +1554,31 @@ wiring, and are still open:
   platform-conditional axis, check whether this same "let the signal's
   own availability define the platform split" pattern applies before
   reaching for an explicit device-detection branch.
-- **Phone Model's rotation pivots on its own geometry centroid using
+- **CORRECTED 2026-09-27, same day — the entry below (originally
+  claiming a computed bounding-box CENTROID pivot) is superseded.**
+  Direct report right after this shipped: "responsive phone rotation
+  should be anchored by the phone models OWN geoemtr origin... its
+  currently rotating around some world origin." A GLB's own local
+  `(0,0,0)` is whatever point the modeler chose — it doesn't have to
+  coincide with the mesh's geometric bounding-box center at all, so
+  "centroid" and "the model's own origin" are genuinely different
+  anchors. Fixed by removing the centroid computation and pivot-
+  compensation math entirely: `phoneModelRaw.position` now simply
+  stays `(0,0,0)` always (`applyPhoneModelTransform()`), rotating
+  purely around its own local geometry origin;
+  `phoneModelWrapper.position` (the Offset sliders) does all the actual
+  world-space placement. `phoneModelCentroidLocal` and its own
+  `Box3().setFromObject()` measurement (previously described directly
+  below) are REMOVED, not just unused — don't reintroduce them. If a
+  future model's own origin turns out to be positioned somewhere
+  visually awkward for rotation (e.g. at one edge, not the middle),
+  that's a property of that specific asset to fix in the source model
+  or compensate for via the Offset sliders, not something this code
+  should silently work around with a computed substitute again. See
+  `docs/CHANGELOG.txt`'s matching 2026-09-27 (24th) entry.
+- ~~Phone Model's rotation pivots on its own geometry centroid using
   the EXACT SAME formula as `applyModelRootTransform()`'s own
-  `modelRotationPivot`** (`position = pivot - rotation*(scale*pivot)`)
+  `modelRotationPivot`~~ (`position = pivot - rotation*(scale*pivot)`)
   — reused verbatim, not re-derived, since this project has already
   gotten this formula wrong from scratch multiple times for the hand
   (see the Whole-Hand Rotation gotchas above). The centroid itself
@@ -1565,6 +1587,8 @@ wiring, and are still open:
   "measure at bind pose" discipline as `modelRotationPivot`'s own
   comment documents. Live-verified: a 90° Y-rotation left the model's
   world-space centroid unchanged to ~3.1e-16 (floating-point noise).
+  **Superseded by the correction directly above — kept only for
+  history, do not follow this description.**
 - **A freshly-loaded Phone Model at `phoneModelScale: 1` is easy to
   mistake for "not loading" — it's genuinely tiny relative to this
   scene's own units** (a real GLB's native scale vs. the hand scene's
@@ -1591,8 +1615,53 @@ wiring, and are still open:
   `[FAILED: net::ERR_CONNECTION_RESET]` tag on `main.js`/a GLB before
   assuming a real regression; a plain retry-by-navigating resolves it.
 - **`window.__debug` gained several new getters this session**
-  (`phoneModelRaw`, `phoneModelWrapper`, `phoneModelCentroidLocal`,
-  `sceneObjectEntries`, `tiltMagnitude`, `tiltAngle`,
-  `phoneTiltAxisXRaw`, `lastInputSource`) — kept permanently, matching
-  this file's own existing debug-exposure convention, not removed
-  after this session's own live verification ended.
+  (`phoneModelRaw`, `phoneModelWrapper`, `sceneObjectEntries`,
+  `tiltMagnitude`, `tiltAngle`, `phoneTiltAxisXRaw`, `lastInputSource`)
+  — kept permanently, matching this file's own existing debug-exposure
+  convention, not removed after this session's own live verification
+  ended. (`phoneModelCentroidLocal` was ALSO added, then removed the
+  same day when its own underlying variable was deleted — see the
+  geometry-origin correction above.)
+- **A NEW dev-panel group/subgroup name must be checked against every
+  OTHER `addGroup()`/`addSubgroup()` call in this file first (grep for
+  the literal string) — reusing a name that already exists elsewhere
+  in the SAME device tab is a real, reproduced structural bug, not a
+  cosmetic clash.** Found 2026-09-27: Phone Model's own "ROTATION"
+  subgroup collided with Pose's own pre-existing "ROTATION" subgroup.
+  `data-sid` identity is flat per device tab, not scoped by parent, so
+  devPanel.js's own `sectionOrder` reconciliation genuinely merged the
+  two groups' rows together in the real git-tracked settings file (Pose
+  ended up with one empty phantom "ROTATION" entry plus one holding
+  BOTH groups' rows mixed together, 6 total) — confirmed directly by
+  reading the JSON, not just observed visually. Fixed by renaming
+  Phone Model's subgroup to "PHONE ROTATION" (code) and, separately,
+  by splitting the merged JSON entry back into its 2 real halves (a
+  2nd Python surgery script, same discipline as the HAND MODEL reorg's
+  own script — see that gotcha above). **This is now a standing check
+  for every future group name in this file, not just Phone Model's.**
+  See `docs/CHANGELOG.txt`'s matching 2026-09-27 (24th) entry.
+- **`PHONE_MODEL_OPTIONS` (main.js) has no directory-listing mechanism
+  — it has to be updated BY HAND every time `data/processed/SMARTPHONE
+  MODELS/`'s own `.glb` contents change**, and it drifted out of sync
+  with the real folder once already (2026-09-27: the user deleted 6 of
+  the original 8 files and added a new one directly in the folder;
+  `main.js`'s own list still referenced the deleted files and was
+  missing the new one until corrected). If a future report says a
+  dropdown option "doesn't load" or a real added/updated model "isn't
+  showing up," check whether this list still matches
+  `ls "data/processed/SMARTPHONE MODELS"` before assuming a code bug.
+- **DISCLOSED, not fixed (out of scope for the request that surfaced
+  it) — `rebuildField()` can throw `Cannot read properties of null
+  (reading 'clone')` inside `SkeletonUtils.clone()` if a Field Layout
+  slider's restore-triggered `rebuildField()` call fires before the
+  hand's own async `GLTFLoader.load()` (Model load section) has
+  resolved `modelRoot`.** Observed once, 2026-09-27, during a
+  synthetic ~283KB `localStorage` injection used for live-testing this
+  session's own settings-file surgery (not a normal page load) — the
+  app self-recovered immediately afterward (`hands.length` back to 1).
+  Not yet reproduced under normal load conditions, so not chased down
+  this round — but if a future report describes a genuinely broken or
+  missing hand specifically on first load (not after), this race
+  between `applyFullDevPanelState()`'s synchronous control-restore
+  loop and the hand's own asynchronous model load is the first thing
+  to check.
