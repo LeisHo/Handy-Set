@@ -1,5 +1,6 @@
 {
   "controls": {
+    "checkboxHandModelEnabled": false,
     "sliderFieldRows": 1,
     "sliderFieldCols": 1,
     "sliderRowSpacing": 9.5,
@@ -8,7 +9,7 @@
     "sliderAlternateRowOffset": -5.5,
     "sliderProgressiveRowOffset": 0,
     "checkboxUseProgressiveOffset": false,
-    "checkboxHideHands": false,
+    "checkboxHideHands": true,
     "slidermodelRotX": 90,
     "slidermodelRotY": 0,
     "slidermodelRotZ": 0,
@@ -33,7 +34,7 @@
     "sliderHideWrist": 78,
     "checkboxReactiveArmLengthEnabled": false,
     "textArmLengthRange": "{\"min\":0,\"max\":85}",
-    "textArmLengthCurve": "{\"points\": [{\"x\": 0, \"y\": 1}, {\"x\": 0.148333740234375, \"y\": 0.6613540649414062}, {\"x\": 0.4100001017252604, \"y\": 0.31468760172526045}, {\"x\": 0.5316670735677084, \"y\": 0.2680206298828125}, {\"x\": 0.748333740234375, \"y\": 0.19468739827473958}, {\"x\": 1, \"y\": 0}], \"method\": \"catmullrom\"}",
+    "textArmLengthCurve": "{\"points\":[{\"x\":0,\"y\":1},{\"x\":0.148333740234375,\"y\":0.6613540649414062},{\"x\":0.4100001017252604,\"y\":0.31468760172526045},{\"x\":0.5316670735677084,\"y\":0.2680206298828125},{\"x\":0.748333740234375,\"y\":0.19468739827473958},{\"x\":1,\"y\":0}],\"method\":\"catmullrom\"}",
     "slidercurlIndex": 90,
     "slidersplayIndex": 18,
     "slidersplayIndex2": 0,
@@ -102,7 +103,7 @@
     "sliderWristSplayDefault": -25,
     "checkboxWristSplayReactiveEnabled": true,
     "textWristSplayRange": "{\"min\":5,\"max\":-71}",
-    "textWristSplayCurve": "{\"points\": [{\"x\": 0, \"y\": 1}, {\"x\": 0.31833343505859374, \"y\": 0.6961458841959636}, {\"x\": 1, \"y\": 0.042812347412109375}], \"method\": \"catmullrom\"}",
+    "textWristSplayCurve": "{\"points\":[{\"x\":0,\"y\":1},{\"x\":0.31833343505859374,\"y\":0.6961458841959636},{\"x\":1,\"y\":0.042812347412109375}],\"method\":\"catmullrom\"}",
     "sliderCameraX": 1,
     "sliderCameraY": 130,
     "sliderCameraZ": 5,
@@ -137,7 +138,7 @@
     "sliderGroundHeight": 0,
     "colorGroundColor": "#ffffff",
     "sliderGroundScale": 200,
-    "checkboxFingerGizmosEnabled": true,
+    "checkboxFingerGizmosEnabled": false,
     "sliderFingerGizmoSize": 0.3,
     "colorFingerGizmoColor": "#ffcc00",
     "sliderFingerGizmoAxisLength": 0.75,
@@ -147,12 +148,16 @@
     "checkboxShowWireframe": false,
     "checkboxSensorStream": false,
     "sliderSensorInterval": 200,
+    "checkboxSensorLogAccel": true,
+    "checkboxSensorLogGyro": true,
+    "checkboxSensorLogCompass": true,
+    "checkboxSensorLogOrientBeta": true,
+    "checkboxSensorLogOrientGamma": true,
     "checkboxObjectAxesEnabled": false,
     "checkboxObjectAxesRenderInFront": false,
     "sliderObjectAxesThickness": 2,
     "sliderObjectAxesLength": 40,
-    "checkboxDeviceInfoEnabled": true,
-    "checkboxHandModelEnabled": true
+    "checkboxDeviceInfoEnabled": true
   },
   "layout": {
     "left": 79,
@@ -201,7 +206,10 @@
     "groupTextColor": "#ffffff",
     "buttonTextColor": "#ffffff",
     "settingNumberColor": "#5cc9ff",
-    "tabTextColor": "#ffffff"
+    "tabTextColor": "#ffffff",
+    "accentColor2": "#26253a",
+    "buttonColor": "#3a3a4a",
+    "accentColor3": "#7ec8e3"
   },
   "mobileDevPanelStyle": {
     "titleFontSize": 17,
@@ -244,7 +252,10 @@
     "groupTextColor": "#ffffff",
     "buttonTextColor": "#ffffff",
     "settingNumberColor": "#5cc9ff",
-    "tabTextColor": "#ffffff"
+    "tabTextColor": "#ffffff",
+    "accentColor2": "#26253a",
+    "buttonColor": "#3a3a4a",
+    "accentColor3": "#7ec8e3"
   },
   "landscapeDevPanelStyle": {
     "titleFontSize": 17,
@@ -287,7 +298,10 @@
     "groupTextColor": "#ffffff",
     "buttonTextColor": "#ffffff",
     "settingNumberColor": "#5cc9ff",
-    "tabTextColor": "#ffffff"
+    "tabTextColor": "#ffffff",
+    "accentColor2": "#26253a",
+    "buttonColor": "#3a3a4a",
+    "accentColor3": "#7ec8e3"
   },
   "sectionOrder": {
     "desktopTabContent": [
@@ -1515,22 +1529,12 @@
                       {
                         "type": "row",
                         "key": "sliderWristSplayDefault"
-                      },
-                      {
-                        "type": "row",
-                        "key": "textWristSplayRange"
-                      },
-                      {
-                        "type": "row",
-                        "key": "textWristSplayCurve"
                       }
                     ],
                     "rowKeys": [
                       "checkboxWristSplayResponsiveEnabled",
                       "checkboxWristSplayReactiveEnabled",
-                      "sliderWristSplayDefault",
-                      "textWristSplayRange",
-                      "textWristSplayCurve"
+                      "sliderWristSplayDefault"
                     ],
                     "subgroups": []
                   }
@@ -1551,22 +1555,12 @@
                       {
                         "type": "row",
                         "key": "sliderHideWrist"
-                      },
-                      {
-                        "type": "row",
-                        "key": "textArmLengthRange"
-                      },
-                      {
-                        "type": "row",
-                        "key": "textArmLengthCurve"
                       }
                     ],
                     "rowKeys": [
                       "checkboxCropWristEnabled",
                       "checkboxReactiveArmLengthEnabled",
-                      "sliderHideWrist",
-                      "textArmLengthRange",
-                      "textArmLengthCurve"
+                      "sliderHideWrist"
                     ],
                     "subgroups": []
                   }
@@ -1680,22 +1674,12 @@
                     {
                       "type": "row",
                       "key": "sliderWristSplayDefault"
-                    },
-                    {
-                      "type": "row",
-                      "key": "textWristSplayRange"
-                    },
-                    {
-                      "type": "row",
-                      "key": "textWristSplayCurve"
                     }
                   ],
                   "rowKeys": [
                     "checkboxWristSplayResponsiveEnabled",
                     "checkboxWristSplayReactiveEnabled",
-                    "sliderWristSplayDefault",
-                    "textWristSplayRange",
-                    "textWristSplayCurve"
+                    "sliderWristSplayDefault"
                   ],
                   "subgroups": []
                 },
@@ -1713,22 +1697,12 @@
                     {
                       "type": "row",
                       "key": "sliderHideWrist"
-                    },
-                    {
-                      "type": "row",
-                      "key": "textArmLengthRange"
-                    },
-                    {
-                      "type": "row",
-                      "key": "textArmLengthCurve"
                     }
                   ],
                   "rowKeys": [
                     "checkboxCropWristEnabled",
                     "checkboxReactiveArmLengthEnabled",
-                    "sliderHideWrist",
-                    "textArmLengthRange",
-                    "textArmLengthCurve"
+                    "sliderHideWrist"
                   ],
                   "subgroups": []
                 },
@@ -1755,7 +1729,7 @@
           }
         ],
         "rowKeys": [
-          "checkboxPhoneModelEnabledHandModel"
+          "checkboxHandModelEnabled"
         ],
         "subgroups": [
           {
@@ -2705,22 +2679,12 @@
                     {
                       "type": "row",
                       "key": "sliderWristSplayDefault"
-                    },
-                    {
-                      "type": "row",
-                      "key": "textWristSplayRange"
-                    },
-                    {
-                      "type": "row",
-                      "key": "textWristSplayCurve"
                     }
                   ],
                   "rowKeys": [
                     "checkboxWristSplayResponsiveEnabled",
                     "checkboxWristSplayReactiveEnabled",
-                    "sliderWristSplayDefault",
-                    "textWristSplayRange",
-                    "textWristSplayCurve"
+                    "sliderWristSplayDefault"
                   ],
                   "subgroups": []
                 }
@@ -2741,22 +2705,12 @@
                     {
                       "type": "row",
                       "key": "sliderHideWrist"
-                    },
-                    {
-                      "type": "row",
-                      "key": "textArmLengthRange"
-                    },
-                    {
-                      "type": "row",
-                      "key": "textArmLengthCurve"
                     }
                   ],
                   "rowKeys": [
                     "checkboxCropWristEnabled",
                     "checkboxReactiveArmLengthEnabled",
-                    "sliderHideWrist",
-                    "textArmLengthRange",
-                    "textArmLengthCurve"
+                    "sliderHideWrist"
                   ],
                   "subgroups": []
                 }
@@ -2870,22 +2824,12 @@
                   {
                     "type": "row",
                     "key": "sliderWristSplayDefault"
-                  },
-                  {
-                    "type": "row",
-                    "key": "textWristSplayRange"
-                  },
-                  {
-                    "type": "row",
-                    "key": "textWristSplayCurve"
                   }
                 ],
                 "rowKeys": [
                   "checkboxWristSplayResponsiveEnabled",
                   "checkboxWristSplayReactiveEnabled",
-                  "sliderWristSplayDefault",
-                  "textWristSplayRange",
-                  "textWristSplayCurve"
+                  "sliderWristSplayDefault"
                 ],
                 "subgroups": []
               },
@@ -2903,22 +2847,12 @@
                   {
                     "type": "row",
                     "key": "sliderHideWrist"
-                  },
-                  {
-                    "type": "row",
-                    "key": "textArmLengthRange"
-                  },
-                  {
-                    "type": "row",
-                    "key": "textArmLengthCurve"
                   }
                 ],
                 "rowKeys": [
                   "checkboxCropWristEnabled",
                   "checkboxReactiveArmLengthEnabled",
-                  "sliderHideWrist",
-                  "textArmLengthRange",
-                  "textArmLengthCurve"
+                  "sliderHideWrist"
                 ],
                 "subgroups": []
               },
@@ -3044,13 +2978,28 @@
                 {
                   "type": "row",
                   "key": "sliderDevPanelOpacity"
+                },
+                {
+                  "type": "row",
+                  "key": "colorDevPanelAccent2"
+                },
+                {
+                  "type": "row",
+                  "key": "colorDevPanelAccent3"
+                },
+                {
+                  "type": "row",
+                  "key": "colorDevPanelButtonColor"
                 }
               ],
               "rowKeys": [
                 "colorDevPanelBg",
                 "colorDevPanelAccent",
                 "colorDevPanelSliderColor",
-                "sliderDevPanelOpacity"
+                "sliderDevPanelOpacity",
+                "colorDevPanelAccent2",
+                "colorDevPanelAccent3",
+                "colorDevPanelButtonColor"
               ],
               "subgroups": []
             }
@@ -3551,13 +3500,28 @@
               {
                 "type": "row",
                 "key": "sliderDevPanelOpacity"
+              },
+              {
+                "type": "row",
+                "key": "colorDevPanelAccent2"
+              },
+              {
+                "type": "row",
+                "key": "colorDevPanelAccent3"
+              },
+              {
+                "type": "row",
+                "key": "colorDevPanelButtonColor"
               }
             ],
             "rowKeys": [
               "colorDevPanelBg",
               "colorDevPanelAccent",
               "colorDevPanelSliderColor",
-              "sliderDevPanelOpacity"
+              "sliderDevPanelOpacity",
+              "colorDevPanelAccent2",
+              "colorDevPanelAccent3",
+              "colorDevPanelButtonColor"
             ],
             "subgroups": []
           },
@@ -4026,10 +3990,6 @@
         "key": "desktop:Debug",
         "items": [
           {
-            "type": "row",
-            "key": "__row0"
-          },
-          {
             "type": "group",
             "section": {
               "key": "desktop:Object Axes",
@@ -4131,21 +4091,50 @@
                 {
                   "type": "row",
                   "key": "sliderSensorInterval"
+                },
+                {
+                  "type": "row",
+                  "key": "checkboxSensorLogAccel"
+                },
+                {
+                  "type": "row",
+                  "key": "checkboxSensorLogGyro"
+                },
+                {
+                  "type": "row",
+                  "key": "checkboxSensorLogCompass"
+                },
+                {
+                  "type": "row",
+                  "key": "checkboxSensorLogOrientBeta"
+                },
+                {
+                  "type": "row",
+                  "key": "checkboxSensorLogOrientGamma"
                 }
               ],
               "rowKeys": [
                 "checkboxSensorStream",
-                "sliderSensorInterval"
+                "sliderSensorInterval",
+                "checkboxSensorLogAccel",
+                "checkboxSensorLogGyro",
+                "checkboxSensorLogCompass",
+                "checkboxSensorLogOrientBeta",
+                "checkboxSensorLogOrientGamma"
               ],
               "subgroups": []
             }
+          },
+          {
+            "type": "row",
+            "key": "__row7"
           }
         ],
         "rowKeys": [
-          "__row0",
           "checkboxShowAxesHelper",
           "checkboxShowGridHelper",
-          "checkboxShowWireframe"
+          "checkboxShowWireframe",
+          "__row7"
         ],
         "subgroups": [
           {
@@ -4227,11 +4216,36 @@
               {
                 "type": "row",
                 "key": "sliderSensorInterval"
+              },
+              {
+                "type": "row",
+                "key": "checkboxSensorLogAccel"
+              },
+              {
+                "type": "row",
+                "key": "checkboxSensorLogGyro"
+              },
+              {
+                "type": "row",
+                "key": "checkboxSensorLogCompass"
+              },
+              {
+                "type": "row",
+                "key": "checkboxSensorLogOrientBeta"
+              },
+              {
+                "type": "row",
+                "key": "checkboxSensorLogOrientGamma"
               }
             ],
             "rowKeys": [
               "checkboxSensorStream",
-              "sliderSensorInterval"
+              "sliderSensorInterval",
+              "checkboxSensorLogAccel",
+              "checkboxSensorLogGyro",
+              "checkboxSensorLogCompass",
+              "checkboxSensorLogOrientBeta",
+              "checkboxSensorLogOrientGamma"
             ],
             "subgroups": []
           }
@@ -4499,8 +4513,20 @@
                   "type": "group",
                   "section": {
                     "key": "mobile:Responsive Rotation",
-                    "items": [],
-                    "rowKeys": [],
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "textPhoneResponsiveRotationRange"
+                      },
+                      {
+                        "type": "row",
+                        "key": "textPhoneResponsiveRotationCurve"
+                      }
+                    ],
+                    "rowKeys": [
+                      "textPhoneResponsiveRotationRange",
+                      "textPhoneResponsiveRotationCurve"
+                    ],
                     "subgroups": []
                   }
                 }
@@ -4509,8 +4535,20 @@
               "subgroups": [
                 {
                   "key": "mobile:Responsive Rotation",
-                  "items": [],
-                  "rowKeys": [],
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "textPhoneResponsiveRotationRange"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textPhoneResponsiveRotationCurve"
+                    }
+                  ],
+                  "rowKeys": [
+                    "textPhoneResponsiveRotationRange",
+                    "textPhoneResponsiveRotationCurve"
+                  ],
                   "subgroups": []
                 }
               ]
@@ -4538,8 +4576,20 @@
                 "type": "group",
                 "section": {
                   "key": "mobile:Responsive Rotation",
-                  "items": [],
-                  "rowKeys": [],
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "textPhoneResponsiveRotationRange"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textPhoneResponsiveRotationCurve"
+                    }
+                  ],
+                  "rowKeys": [
+                    "textPhoneResponsiveRotationRange",
+                    "textPhoneResponsiveRotationCurve"
+                  ],
                   "subgroups": []
                 }
               }
@@ -4548,8 +4598,20 @@
             "subgroups": [
               {
                 "key": "mobile:Responsive Rotation",
-                "items": [],
-                "rowKeys": [],
+                "items": [
+                  {
+                    "type": "row",
+                    "key": "textPhoneResponsiveRotationRange"
+                  },
+                  {
+                    "type": "row",
+                    "key": "textPhoneResponsiveRotationCurve"
+                  }
+                ],
+                "rowKeys": [
+                  "textPhoneResponsiveRotationRange",
+                  "textPhoneResponsiveRotationCurve"
+                ],
                 "subgroups": []
               }
             ]
@@ -4604,8 +4666,35 @@
                   "type": "group",
                   "section": {
                     "key": "mobile:Wrist",
-                    "items": [],
-                    "rowKeys": [],
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "textwristRotationClampRange"
+                      },
+                      {
+                        "type": "row",
+                        "key": "textwristBendClampRange"
+                      },
+                      {
+                        "type": "row",
+                        "key": "textwristSplayClampRange"
+                      },
+                      {
+                        "type": "row",
+                        "key": "textArmLengthRange"
+                      },
+                      {
+                        "type": "row",
+                        "key": "textArmLengthCurve"
+                      }
+                    ],
+                    "rowKeys": [
+                      "textwristRotationClampRange",
+                      "textwristBendClampRange",
+                      "textwristSplayClampRange",
+                      "textArmLengthRange",
+                      "textArmLengthCurve"
+                    ],
                     "subgroups": []
                   }
                 },
@@ -4686,8 +4775,35 @@
                 },
                 {
                   "key": "mobile:Wrist",
-                  "items": [],
-                  "rowKeys": [],
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "textwristRotationClampRange"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textwristBendClampRange"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textwristSplayClampRange"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textArmLengthRange"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textArmLengthCurve"
+                    }
+                  ],
+                  "rowKeys": [
+                    "textwristRotationClampRange",
+                    "textwristBendClampRange",
+                    "textwristSplayClampRange",
+                    "textArmLengthRange",
+                    "textArmLengthCurve"
+                  ],
                   "subgroups": []
                 },
                 {
@@ -4776,16 +4892,16 @@
                     "items": [
                       {
                         "type": "row",
-                        "key": "textBaseArmRotationRangeMobile"
+                        "key": "textBaseArmRotationRange"
                       },
                       {
                         "type": "row",
-                        "key": "textBaseArmRotationCurveMobile"
+                        "key": "textBaseArmRotationCurve"
                       }
                     ],
                     "rowKeys": [
-                      "textBaseArmRotationRangeMobile",
-                      "textBaseArmRotationCurveMobile"
+                      "textBaseArmRotationRange",
+                      "textBaseArmRotationCurve"
                     ],
                     "subgroups": []
                   }
@@ -4797,11 +4913,11 @@
                     "items": [
                       {
                         "type": "row",
-                        "key": "textPoseTweenCurveMobile"
+                        "key": "textPoseTweenCurve"
                       }
                     ],
                     "rowKeys": [
-                      "textPoseTweenCurveMobile"
+                      "textPoseTweenCurve"
                     ],
                     "subgroups": []
                   }
@@ -4812,6 +4928,14 @@
                     "key": "mobile:Responsive Wrist Splay",
                     "items": [
                       {
+                        "type": "row",
+                        "key": "textWristSplayRange"
+                      },
+                      {
+                        "type": "row",
+                        "key": "textWristSplayCurve"
+                      },
+                      {
                         "type": "group",
                         "section": {
                           "key": "mobile:Tracking",
@@ -4821,7 +4945,10 @@
                         }
                       }
                     ],
-                    "rowKeys": [],
+                    "rowKeys": [
+                      "textWristSplayRange",
+                      "textWristSplayCurve"
+                    ],
                     "subgroups": [
                       {
                         "key": "mobile:Tracking",
@@ -4864,16 +4991,16 @@
                   "items": [
                     {
                       "type": "row",
-                      "key": "textBaseArmRotationRangeMobile"
+                      "key": "textBaseArmRotationRange"
                     },
                     {
                       "type": "row",
-                      "key": "textBaseArmRotationCurveMobile"
+                      "key": "textBaseArmRotationCurve"
                     }
                   ],
                   "rowKeys": [
-                    "textBaseArmRotationRangeMobile",
-                    "textBaseArmRotationCurveMobile"
+                    "textBaseArmRotationRange",
+                    "textBaseArmRotationCurve"
                   ],
                   "subgroups": []
                 },
@@ -4882,17 +5009,25 @@
                   "items": [
                     {
                       "type": "row",
-                      "key": "textPoseTweenCurveMobile"
+                      "key": "textPoseTweenCurve"
                     }
                   ],
                   "rowKeys": [
-                    "textPoseTweenCurveMobile"
+                    "textPoseTweenCurve"
                   ],
                   "subgroups": []
                 },
                 {
                   "key": "mobile:Responsive Wrist Splay",
                   "items": [
+                    {
+                      "type": "row",
+                      "key": "textWristSplayRange"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textWristSplayCurve"
+                    },
                     {
                       "type": "group",
                       "section": {
@@ -4903,7 +5038,10 @@
                       }
                     }
                   ],
-                  "rowKeys": [],
+                  "rowKeys": [
+                    "textWristSplayRange",
+                    "textWristSplayCurve"
+                  ],
                   "subgroups": [
                     {
                       "key": "mobile:Tracking",
@@ -4971,8 +5109,35 @@
                 "type": "group",
                 "section": {
                   "key": "mobile:Wrist",
-                  "items": [],
-                  "rowKeys": [],
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "textwristRotationClampRange"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textwristBendClampRange"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textwristSplayClampRange"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textArmLengthRange"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textArmLengthCurve"
+                    }
+                  ],
+                  "rowKeys": [
+                    "textwristRotationClampRange",
+                    "textwristBendClampRange",
+                    "textwristSplayClampRange",
+                    "textArmLengthRange",
+                    "textArmLengthCurve"
+                  ],
                   "subgroups": []
                 }
               },
@@ -5053,8 +5218,35 @@
               },
               {
                 "key": "mobile:Wrist",
-                "items": [],
-                "rowKeys": [],
+                "items": [
+                  {
+                    "type": "row",
+                    "key": "textwristRotationClampRange"
+                  },
+                  {
+                    "type": "row",
+                    "key": "textwristBendClampRange"
+                  },
+                  {
+                    "type": "row",
+                    "key": "textwristSplayClampRange"
+                  },
+                  {
+                    "type": "row",
+                    "key": "textArmLengthRange"
+                  },
+                  {
+                    "type": "row",
+                    "key": "textArmLengthCurve"
+                  }
+                ],
+                "rowKeys": [
+                  "textwristRotationClampRange",
+                  "textwristBendClampRange",
+                  "textwristSplayClampRange",
+                  "textArmLengthRange",
+                  "textArmLengthCurve"
+                ],
                 "subgroups": []
               },
               {
@@ -5137,16 +5329,16 @@
                   "items": [
                     {
                       "type": "row",
-                      "key": "textBaseArmRotationRangeMobile"
+                      "key": "textBaseArmRotationRange"
                     },
                     {
                       "type": "row",
-                      "key": "textBaseArmRotationCurveMobile"
+                      "key": "textBaseArmRotationCurve"
                     }
                   ],
                   "rowKeys": [
-                    "textBaseArmRotationRangeMobile",
-                    "textBaseArmRotationCurveMobile"
+                    "textBaseArmRotationRange",
+                    "textBaseArmRotationCurve"
                   ],
                   "subgroups": []
                 }
@@ -5158,11 +5350,11 @@
                   "items": [
                     {
                       "type": "row",
-                      "key": "textPoseTweenCurveMobile"
+                      "key": "textPoseTweenCurve"
                     }
                   ],
                   "rowKeys": [
-                    "textPoseTweenCurveMobile"
+                    "textPoseTweenCurve"
                   ],
                   "subgroups": []
                 }
@@ -5173,6 +5365,14 @@
                   "key": "mobile:Responsive Wrist Splay",
                   "items": [
                     {
+                      "type": "row",
+                      "key": "textWristSplayRange"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textWristSplayCurve"
+                    },
+                    {
                       "type": "group",
                       "section": {
                         "key": "mobile:Tracking",
@@ -5182,7 +5382,10 @@
                       }
                     }
                   ],
-                  "rowKeys": [],
+                  "rowKeys": [
+                    "textWristSplayRange",
+                    "textWristSplayCurve"
+                  ],
                   "subgroups": [
                     {
                       "key": "mobile:Tracking",
@@ -5225,16 +5428,16 @@
                 "items": [
                   {
                     "type": "row",
-                    "key": "textBaseArmRotationRangeMobile"
+                    "key": "textBaseArmRotationRange"
                   },
                   {
                     "type": "row",
-                    "key": "textBaseArmRotationCurveMobile"
+                    "key": "textBaseArmRotationCurve"
                   }
                 ],
                 "rowKeys": [
-                  "textBaseArmRotationRangeMobile",
-                  "textBaseArmRotationCurveMobile"
+                  "textBaseArmRotationRange",
+                  "textBaseArmRotationCurve"
                 ],
                 "subgroups": []
               },
@@ -5243,17 +5446,25 @@
                 "items": [
                   {
                     "type": "row",
-                    "key": "textPoseTweenCurveMobile"
+                    "key": "textPoseTweenCurve"
                   }
                 ],
                 "rowKeys": [
-                  "textPoseTweenCurveMobile"
+                  "textPoseTweenCurve"
                 ],
                 "subgroups": []
               },
               {
                 "key": "mobile:Responsive Wrist Splay",
                 "items": [
+                  {
+                    "type": "row",
+                    "key": "textWristSplayRange"
+                  },
+                  {
+                    "type": "row",
+                    "key": "textWristSplayCurve"
+                  },
                   {
                     "type": "group",
                     "section": {
@@ -5264,7 +5475,10 @@
                     }
                   }
                 ],
-                "rowKeys": [],
+                "rowKeys": [
+                  "textWristSplayRange",
+                  "textWristSplayCurve"
+                ],
                 "subgroups": [
                   {
                     "key": "mobile:Tracking",
@@ -6003,8 +6217,20 @@
                   "type": "group",
                   "section": {
                     "key": "landscape:Responsive Rotation",
-                    "items": [],
-                    "rowKeys": [],
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "textPhoneResponsiveRotationRange"
+                      },
+                      {
+                        "type": "row",
+                        "key": "textPhoneResponsiveRotationCurve"
+                      }
+                    ],
+                    "rowKeys": [
+                      "textPhoneResponsiveRotationRange",
+                      "textPhoneResponsiveRotationCurve"
+                    ],
                     "subgroups": []
                   }
                 }
@@ -6013,8 +6239,20 @@
               "subgroups": [
                 {
                   "key": "landscape:Responsive Rotation",
-                  "items": [],
-                  "rowKeys": [],
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "textPhoneResponsiveRotationRange"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textPhoneResponsiveRotationCurve"
+                    }
+                  ],
+                  "rowKeys": [
+                    "textPhoneResponsiveRotationRange",
+                    "textPhoneResponsiveRotationCurve"
+                  ],
                   "subgroups": []
                 }
               ]
@@ -6042,8 +6280,20 @@
                 "type": "group",
                 "section": {
                   "key": "landscape:Responsive Rotation",
-                  "items": [],
-                  "rowKeys": [],
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "textPhoneResponsiveRotationRange"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textPhoneResponsiveRotationCurve"
+                    }
+                  ],
+                  "rowKeys": [
+                    "textPhoneResponsiveRotationRange",
+                    "textPhoneResponsiveRotationCurve"
+                  ],
                   "subgroups": []
                 }
               }
@@ -6052,8 +6302,20 @@
             "subgroups": [
               {
                 "key": "landscape:Responsive Rotation",
-                "items": [],
-                "rowKeys": [],
+                "items": [
+                  {
+                    "type": "row",
+                    "key": "textPhoneResponsiveRotationRange"
+                  },
+                  {
+                    "type": "row",
+                    "key": "textPhoneResponsiveRotationCurve"
+                  }
+                ],
+                "rowKeys": [
+                  "textPhoneResponsiveRotationRange",
+                  "textPhoneResponsiveRotationCurve"
+                ],
                 "subgroups": []
               }
             ]
@@ -6108,8 +6370,35 @@
                   "type": "group",
                   "section": {
                     "key": "landscape:Wrist",
-                    "items": [],
-                    "rowKeys": [],
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "textwristRotationClampRange"
+                      },
+                      {
+                        "type": "row",
+                        "key": "textwristBendClampRange"
+                      },
+                      {
+                        "type": "row",
+                        "key": "textwristSplayClampRange"
+                      },
+                      {
+                        "type": "row",
+                        "key": "textArmLengthRange"
+                      },
+                      {
+                        "type": "row",
+                        "key": "textArmLengthCurve"
+                      }
+                    ],
+                    "rowKeys": [
+                      "textwristRotationClampRange",
+                      "textwristBendClampRange",
+                      "textwristSplayClampRange",
+                      "textArmLengthRange",
+                      "textArmLengthCurve"
+                    ],
                     "subgroups": []
                   }
                 },
@@ -6190,8 +6479,35 @@
                 },
                 {
                   "key": "landscape:Wrist",
-                  "items": [],
-                  "rowKeys": [],
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "textwristRotationClampRange"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textwristBendClampRange"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textwristSplayClampRange"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textArmLengthRange"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textArmLengthCurve"
+                    }
+                  ],
+                  "rowKeys": [
+                    "textwristRotationClampRange",
+                    "textwristBendClampRange",
+                    "textwristSplayClampRange",
+                    "textArmLengthRange",
+                    "textArmLengthCurve"
+                  ],
                   "subgroups": []
                 },
                 {
@@ -6280,16 +6596,16 @@
                     "items": [
                       {
                         "type": "row",
-                        "key": "textBaseArmRotationRangeLandscape"
+                        "key": "textBaseArmRotationRange"
                       },
                       {
                         "type": "row",
-                        "key": "textBaseArmRotationCurveLandscape"
+                        "key": "textBaseArmRotationCurve"
                       }
                     ],
                     "rowKeys": [
-                      "textBaseArmRotationRangeLandscape",
-                      "textBaseArmRotationCurveLandscape"
+                      "textBaseArmRotationRange",
+                      "textBaseArmRotationCurve"
                     ],
                     "subgroups": []
                   }
@@ -6301,11 +6617,11 @@
                     "items": [
                       {
                         "type": "row",
-                        "key": "textPoseTweenCurveLandscape"
+                        "key": "textPoseTweenCurve"
                       }
                     ],
                     "rowKeys": [
-                      "textPoseTweenCurveLandscape"
+                      "textPoseTweenCurve"
                     ],
                     "subgroups": []
                   }
@@ -6316,6 +6632,14 @@
                     "key": "landscape:Responsive Wrist Splay",
                     "items": [
                       {
+                        "type": "row",
+                        "key": "textWristSplayRange"
+                      },
+                      {
+                        "type": "row",
+                        "key": "textWristSplayCurve"
+                      },
+                      {
                         "type": "group",
                         "section": {
                           "key": "landscape:Tracking",
@@ -6325,7 +6649,10 @@
                         }
                       }
                     ],
-                    "rowKeys": [],
+                    "rowKeys": [
+                      "textWristSplayRange",
+                      "textWristSplayCurve"
+                    ],
                     "subgroups": [
                       {
                         "key": "landscape:Tracking",
@@ -6368,16 +6695,16 @@
                   "items": [
                     {
                       "type": "row",
-                      "key": "textBaseArmRotationRangeLandscape"
+                      "key": "textBaseArmRotationRange"
                     },
                     {
                       "type": "row",
-                      "key": "textBaseArmRotationCurveLandscape"
+                      "key": "textBaseArmRotationCurve"
                     }
                   ],
                   "rowKeys": [
-                    "textBaseArmRotationRangeLandscape",
-                    "textBaseArmRotationCurveLandscape"
+                    "textBaseArmRotationRange",
+                    "textBaseArmRotationCurve"
                   ],
                   "subgroups": []
                 },
@@ -6386,17 +6713,25 @@
                   "items": [
                     {
                       "type": "row",
-                      "key": "textPoseTweenCurveLandscape"
+                      "key": "textPoseTweenCurve"
                     }
                   ],
                   "rowKeys": [
-                    "textPoseTweenCurveLandscape"
+                    "textPoseTweenCurve"
                   ],
                   "subgroups": []
                 },
                 {
                   "key": "landscape:Responsive Wrist Splay",
                   "items": [
+                    {
+                      "type": "row",
+                      "key": "textWristSplayRange"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textWristSplayCurve"
+                    },
                     {
                       "type": "group",
                       "section": {
@@ -6407,7 +6742,10 @@
                       }
                     }
                   ],
-                  "rowKeys": [],
+                  "rowKeys": [
+                    "textWristSplayRange",
+                    "textWristSplayCurve"
+                  ],
                   "subgroups": [
                     {
                       "key": "landscape:Tracking",
@@ -6475,8 +6813,35 @@
                 "type": "group",
                 "section": {
                   "key": "landscape:Wrist",
-                  "items": [],
-                  "rowKeys": [],
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "textwristRotationClampRange"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textwristBendClampRange"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textwristSplayClampRange"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textArmLengthRange"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textArmLengthCurve"
+                    }
+                  ],
+                  "rowKeys": [
+                    "textwristRotationClampRange",
+                    "textwristBendClampRange",
+                    "textwristSplayClampRange",
+                    "textArmLengthRange",
+                    "textArmLengthCurve"
+                  ],
                   "subgroups": []
                 }
               },
@@ -6557,8 +6922,35 @@
               },
               {
                 "key": "landscape:Wrist",
-                "items": [],
-                "rowKeys": [],
+                "items": [
+                  {
+                    "type": "row",
+                    "key": "textwristRotationClampRange"
+                  },
+                  {
+                    "type": "row",
+                    "key": "textwristBendClampRange"
+                  },
+                  {
+                    "type": "row",
+                    "key": "textwristSplayClampRange"
+                  },
+                  {
+                    "type": "row",
+                    "key": "textArmLengthRange"
+                  },
+                  {
+                    "type": "row",
+                    "key": "textArmLengthCurve"
+                  }
+                ],
+                "rowKeys": [
+                  "textwristRotationClampRange",
+                  "textwristBendClampRange",
+                  "textwristSplayClampRange",
+                  "textArmLengthRange",
+                  "textArmLengthCurve"
+                ],
                 "subgroups": []
               },
               {
@@ -6641,16 +7033,16 @@
                   "items": [
                     {
                       "type": "row",
-                      "key": "textBaseArmRotationRangeLandscape"
+                      "key": "textBaseArmRotationRange"
                     },
                     {
                       "type": "row",
-                      "key": "textBaseArmRotationCurveLandscape"
+                      "key": "textBaseArmRotationCurve"
                     }
                   ],
                   "rowKeys": [
-                    "textBaseArmRotationRangeLandscape",
-                    "textBaseArmRotationCurveLandscape"
+                    "textBaseArmRotationRange",
+                    "textBaseArmRotationCurve"
                   ],
                   "subgroups": []
                 }
@@ -6662,11 +7054,11 @@
                   "items": [
                     {
                       "type": "row",
-                      "key": "textPoseTweenCurveLandscape"
+                      "key": "textPoseTweenCurve"
                     }
                   ],
                   "rowKeys": [
-                    "textPoseTweenCurveLandscape"
+                    "textPoseTweenCurve"
                   ],
                   "subgroups": []
                 }
@@ -6677,6 +7069,14 @@
                   "key": "landscape:Responsive Wrist Splay",
                   "items": [
                     {
+                      "type": "row",
+                      "key": "textWristSplayRange"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textWristSplayCurve"
+                    },
+                    {
                       "type": "group",
                       "section": {
                         "key": "landscape:Tracking",
@@ -6686,7 +7086,10 @@
                       }
                     }
                   ],
-                  "rowKeys": [],
+                  "rowKeys": [
+                    "textWristSplayRange",
+                    "textWristSplayCurve"
+                  ],
                   "subgroups": [
                     {
                       "key": "landscape:Tracking",
@@ -6729,16 +7132,16 @@
                 "items": [
                   {
                     "type": "row",
-                    "key": "textBaseArmRotationRangeLandscape"
+                    "key": "textBaseArmRotationRange"
                   },
                   {
                     "type": "row",
-                    "key": "textBaseArmRotationCurveLandscape"
+                    "key": "textBaseArmRotationCurve"
                   }
                 ],
                 "rowKeys": [
-                  "textBaseArmRotationRangeLandscape",
-                  "textBaseArmRotationCurveLandscape"
+                  "textBaseArmRotationRange",
+                  "textBaseArmRotationCurve"
                 ],
                 "subgroups": []
               },
@@ -6747,17 +7150,25 @@
                 "items": [
                   {
                     "type": "row",
-                    "key": "textPoseTweenCurveLandscape"
+                    "key": "textPoseTweenCurve"
                   }
                 ],
                 "rowKeys": [
-                  "textPoseTweenCurveLandscape"
+                  "textPoseTweenCurve"
                 ],
                 "subgroups": []
               },
               {
                 "key": "landscape:Responsive Wrist Splay",
                 "items": [
+                  {
+                    "type": "row",
+                    "key": "textWristSplayRange"
+                  },
+                  {
+                    "type": "row",
+                    "key": "textWristSplayCurve"
+                  },
                   {
                     "type": "group",
                     "section": {
@@ -6768,7 +7179,10 @@
                     }
                   }
                 ],
-                "rowKeys": [],
+                "rowKeys": [
+                  "textWristSplayRange",
+                  "textWristSplayCurve"
+                ],
                 "subgroups": [
                   {
                     "key": "landscape:Tracking",
@@ -7479,7 +7893,7 @@
   },
   "sectionCollapseState": {
     "desktop:Saved Dev Settings": false,
-    "desktop:PHONE MODEL": false,
+    "desktop:PHONE MODEL": true,
     "desktop:OFFSET": true,
     "desktop:PHONE ROTATION": true,
     "desktop:RESPONSIVE BEHAVIOUR - PHONE": false,
@@ -7890,7 +8304,15 @@
     "landscape:HAND MODEL": null,
     "landscape:Object Axes": null,
     "mobile:PHONE ROTATION": null,
-    "landscape:PHONE ROTATION": null
+    "landscape:PHONE ROTATION": null,
+    "textPhoneResponsiveRotationRange": null,
+    "textPhoneResponsiveRotationCurve": null,
+    "textwristRotationClampRange": null,
+    "textwristBendClampRange": null,
+    "textwristSplayClampRange": null,
+    "textBaseArmRotationRange": null,
+    "textBaseArmRotationCurve": null,
+    "textPoseTweenCurve": null
   },
   "devTextOverridesManual": [
     "desktop:New Group",
