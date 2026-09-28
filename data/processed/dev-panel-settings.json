@@ -98,7 +98,7 @@
     "checkboxPhoneResponsiveRotationEnabled": true,
     "sliderPhoneResponsiveRotationFineTune": 0,
     "sliderPhoneRotationDamping": 1,
-    "textPhoneResponsiveRotationRange": "{\"min\":-57,\"max\":45}",
+    "textPhoneResponsiveRotationRange": "{\"min\":0,\"max\":30}",
     "textPhoneResponsiveRotationCurve": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"natural\"}",
     "checkboxWristSplayResponsiveEnabled": false,
     "sliderWristSplayDefault": -25,
