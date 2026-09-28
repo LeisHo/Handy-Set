@@ -97,24 +97,24 @@
     "sliderPhoneModelRotZ": 0,
     "checkboxPhoneResponsiveRotationEnabled": true,
     "sliderPhoneResponsiveRotationFineTune": 0,
-    "sliderPhoneRotationDamping": 0.25,
-    "textPhoneResponsiveRotationRange": "{\"min\":0,\"max\":30}",
-    "textPhoneResponsiveRotationCurve": "{\"points\": [{\"x\": 0, \"y\": 0}, {\"x\": 1, \"y\": 1}], \"method\": \"catmullrom\"}",
+    "sliderPhoneRotationDamping": 1,
+    "textPhoneResponsiveRotationRange": "{\"min\":-57,\"max\":45}",
+    "textPhoneResponsiveRotationCurve": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"natural\"}",
     "checkboxWristSplayResponsiveEnabled": false,
     "sliderWristSplayDefault": -25,
     "checkboxWristSplayReactiveEnabled": true,
     "textWristSplayRange": "{\"min\":5,\"max\":-71}",
     "textWristSplayCurve": "{\"points\":[{\"x\":0,\"y\":1},{\"x\":0.31833343505859374,\"y\":0.6961458841959636},{\"x\":1,\"y\":0.042812347412109375}],\"method\":\"catmullrom\"}",
-    "sliderCameraX": -49.5,
-    "sliderCameraY": 57.5,
-    "sliderCameraZ": 82.5,
+    "sliderCameraX": 2,
+    "sliderCameraY": 102,
+    "sliderCameraZ": -1,
     "sliderCameraFov": 15,
-    "sliderCameraZoom": 99.5,
+    "sliderCameraZoom": 14,
     "checkboxLockCameraPan": false,
     "checkboxLockCameraZoom": false,
     "checkboxLockCameraRotate": false,
-    "sliderCameraYaw": 148,
-    "sliderCameraPitch": -16,
+    "sliderCameraYaw": 180,
+    "sliderCameraPitch": -90,
     "checkboxCameraMaxExtentsEnabled": false,
     "sliderKeyAzimuth": 360,
     "sliderKeyElevation": -3,
@@ -163,7 +163,7 @@
   "layout": {
     "left": 79,
     "top": 6,
-    "width": 313,
+    "width": 412,
     "height": 671
   },
   "devPanelStyle": {
@@ -4147,10 +4147,6 @@
             }
           },
           {
-            "type": "row",
-            "key": "__row7"
-          },
-          {
             "type": "group",
             "section": {
               "key": "desktop:Phone Model Log",
@@ -4158,13 +4154,17 @@
               "rowKeys": [],
               "subgroups": []
             }
+          },
+          {
+            "type": "row",
+            "key": "__row8"
           }
         ],
         "rowKeys": [
           "checkboxShowAxesHelper",
           "checkboxShowGridHelper",
           "checkboxShowWireframe",
-          "__row7"
+          "__row8"
         ],
         "subgroups": [
           {
@@ -7959,10 +7959,10 @@
   },
   "sectionCollapseState": {
     "desktop:Saved Dev Settings": false,
-    "desktop:PHONE MODEL": true,
+    "desktop:PHONE MODEL": false,
     "desktop:OFFSET": true,
     "desktop:PHONE ROTATION": true,
-    "desktop:RESPONSIVE BEHAVIOUR - PHONE": false,
+    "desktop:RESPONSIVE BEHAVIOUR - PHONE": true,
     "desktop:Responsive Rotation": false,
     "desktop:HAND MODEL": true,
     "desktop:Field Layout": true,
@@ -8003,8 +8003,8 @@
     "desktop:Mouse Log": true,
     "desktop:Sensors": false,
     "desktop:Phone Model Log": false,
-    "desktop:Camera": true,
-    "desktop:Saved Cameras": true,
+    "desktop:Camera": false,
+    "desktop:Saved Cameras": false,
     "desktop:Lighting": true,
     "desktop:Saved Lighting": true,
     "desktop:Toon Shading": true,
