@@ -7,20 +7,40 @@ append-only history.
 
 ## Currently working on
 
-Nothing in progress — the Phone Responsive Rotation curve-inversion fix
-(2026-09-28) is pushed, on top of the rotation-node/damping/log
+Nothing in progress — Phone Model's new Rotation Reset feature
+(2026-09-28) is pushed, on top of the Phone Responsive Rotation
+curve-inversion fix (also 2026-09-28), the rotation-node/damping/log
 follow-up (also 2026-09-28), the dev panel template re-sync (also
 2026-09-28), and the 6-part Palm Rotation/Responsive-features request
 (2026-09-27). See Recently completed below for the full account. Not
-independently browser/device-verified this round (per direct
-instruction) — this one was grounded directly in a real device's own
-pasted log data instead, see that entry for the full cross-check.
+independently browser/device-verified this round (per standing
+instruction) — 2 real design flaws in this feature were instead caught
+by a standalone numeric script before it ever shipped; see that entry.
 
 Pushed to `https://github.com/LeisHo/Handy-Set`
 (deployed via the Vercel project at `https://vercel.com/lpeis/handy-set`).
 
 ## Recently completed
 
+- **NEW (2026-09-28): Phone Model Rotation Reset.** A new "Rotation
+  Reset On/Off" checkbox (Responsive Rotation) — when on, a double-tap
+  (mobile) or double-click (desktop) anywhere on screen (excluding the
+  dev panel) re-baselines the phone model's rotation to match world
+  XYZ at that instant, regardless of the phone's absolute orientation
+  when reset. Also answered a direct question along the way: X/Z are
+  absolute (always relative to "phone flat," unaffected by page-load
+  timing); Y (compass) is relative to a baseline captured on the FIRST
+  reading after load — which is exactly the gap this reset closes. Two
+  real design flaws were caught and fixed BEFORE shipping, via a
+  standalone numeric script rather than live testing: (1) baselining
+  the shared, already-clamped nx/ny broke down near a physical clamp
+  boundary (e.g. lying in bed, phone near-vertical) — fixed by
+  baselining the raw, pre-clamp quantity instead; (2) even then, beta's
+  own raw clamp was still the shared pipeline's ±90 instead of its true
+  ±180 physical range, producing a one-sided, half-dead response when
+  reset happened exactly at that boundary — fixed by widening beta's
+  own clamp specifically for this feature. See `docs/CHANGELOG.txt`'s
+  matching 2026-09-28 (31st) entry for the full numeric verification.
 - **RESOLVED (2026-09-28): Phone Responsive Rotation's default curve
   was inverted — rest gave near-max rotation with an unstable sign
   (the jitter), full tilt gave only a small rotation (the "missing

@@ -3715,6 +3715,71 @@ one.
 `index.html`'s cache-buster bumped `?v=113` -> `?v=114`.
 
 --------------------------------------------------------------------------------
+2026-09-28  -  (31st)
+
+2 direct follow-ups: (1) "does the starting orientation of my phone
+matter?"; (2) a new feature -- a "Rotation Reset On/Off" checkbox in
+Phone Model, where a double-tap (mobile) or double-click (desktop)
+anywhere on screen re-baselines the phone model's rotation so its own
+XYZ axes match world XYZ at that instant, regardless of the phone's
+absolute orientation when reset.
+
+Answered (1) directly rather than guessing: X/Z (beta/gamma-driven) are
+absolute angles relative to "phone lying flat," a fixed physical zero
+-- NOT affected by whenever the page happened to load. Y (compass/
+alpha-driven) IS relative to a baseline (`phoneAlphaBaseline`) captured
+once on the FIRST orientation reading after page load -- so whichever
+direction the phone was facing at that moment becomes Y's permanent
+zero. This is exactly the gap (2)'s reset button closes.
+
+Built (2): new `cfg.phoneRotationResetEnabled` (default false) +
+"Rotation Reset On/Off" checkbox in Responsive Rotation.
+`setupPhoneRotationResetGesture()` wires a native `dblclick` listener
+(Desktop) plus a manually-detected touch double-tap (2 `touchend`
+events within 350ms and 40px of each other -- most mobile browsers
+don't fire `dblclick` from a tap gesture), both excluding clicks/taps
+that land inside `#devPanel` or the floating DEV toggle button.
+`resetPhoneModelRotationBaseline()` captures the CURRENT raw nx/ny
+(gamma/45, beta/45 on the device path; the existing
+tiltMagnitude/tiltAngle-derived reconstruction on the mouse path) plus
+the current compass alpha as new baselines, subtracted in
+`computePhoneCombinedQuat()` before the final +-1 clamp. Manual
+`phoneModelRotX/Y/Z` sliders are deliberately untouched -- the request
+was specifically about matching the phone's real orientation, not
+resetting a separate, deliberate manual offset.
+
+Direct follow-up mid-build caught a real design flaw before it shipped:
+"if im lying in bed and i hit reset, you will have to adjust the beta
+gama accordingly so its not always reading real world up as up." The
+first version subtracted the baseline from the SHARED, already-clamped
+nx/ny (each individually clamped to +-1 upstream) -- lying in bed with
+the phone near-vertical means real beta is already near its own clamp
+boundary, so nx/ny are already saturated before the baseline is even
+subtracted, leaving almost no headroom to respond to further real tilt
+around the new "neutral" pose. Fixed by capturing/subtracting the
+baseline on the RAW, pre-clamp quantity instead (mirroring how
+`phoneAlphaBaseline`'s own delta was already computed before ITS final
+clamp). A standalone numeric sweep (not just "does it respond to a
+nearby tilt") caught a 2nd, subtler version of the same problem: beta's
+raw clamp was still +-90 (the shared pipeline's own bound) even after
+this fix, which is only HALF of beta's true +-180 physical range -- a
+reset captured at exactly beta=90 (lying in bed) still produced a
+fully one-sided, asymmetric response (dead from 90 up to 135, working
+fine from 90 down to 45). Widened beta's OWN raw clamp (not the shared
+one other features still rely on) to +-180 in `computePhoneRawNxNy()`
+specifically, confirmed via the same sweep to give a clean, symmetric
++-1 response in both directions around any reset point. gamma's true
+physical range genuinely is +-90, so it needed no such widening.
+
+Not independently browser/device-verified this round (same standing
+"no need to verify" instruction) -- both design flaws above were caught
+by a standalone numeric script reproducing the exact math with
+synthetic inputs before the feature ever touched a real device, not by
+live testing.
+
+`index.html`'s cache-buster bumped `?v=114` -> `?v=115`.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

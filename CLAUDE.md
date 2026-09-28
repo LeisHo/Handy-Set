@@ -1916,3 +1916,51 @@ wiring, and are still open:
   diagnosable at all; a report or test that only covers "does it move
   when I tilt" (not "what does it do when I DON'T") can hide this
   exact bug shape.
+- **`deviceorientation`'s beta/gamma are absolute (relative to "phone
+  lying flat," a fixed physical zero); alpha is NOT — it's relative to
+  whatever direction the phone was facing on its FIRST reading after
+  page load (`phoneAlphaBaseline`).** So Phone Model's X/Z axes never
+  depend on when the page loaded or which way the phone was originally
+  facing; its Y axis (the compass-driven "leftover axis") does, until
+  Rotation Reset (below) is used. If a future report asks "does
+  starting orientation matter," this is the direct, already-answered
+  question — don't re-derive it, just check which axis is involved.
+- **Phone Model's Rotation Reset (`cfg.phoneRotationResetEnabled`,
+  double-tap/double-click gesture, `resetPhoneModelRotationBaseline()`)
+  baselines `phoneNxBaseline`/`phoneNyBaseline`/`phoneAlphaBaseline` in
+  the RAW, pre-final-clamp domain — NOT the shared, already-clamped
+  nx/ny that `tiltMagnitude`/`tiltAngle` produce.** A baseline
+  subtracted from an already-`clamp(x,-1,1)`'d value can be *itself*
+  saturated at ±1 if the reset happens near a physical clamp boundary
+  (e.g. lying in bed holding the phone near-vertical, where real beta
+  is already near its own limit) — subtracting a saturated baseline
+  leaves almost no headroom to respond to further real tilt around the
+  new "neutral" pose. `computePhoneRawNxNy()` computes gamma/45 and
+  beta/45 directly from `latestOrientation` (device path) or the
+  existing `tiltMagnitude`/`tiltAngle` reconstruction (mouse path,
+  reused as-is), and **beta's own clamp here is deliberately widened to
+  its TRUE physical range (±180), not the ±90 the shared pipeline
+  uses** — found via a standalone numeric sweep before shipping: even
+  after moving the baseline to the raw domain, leaving beta clamped to
+  ±90 still produced a one-sided, half-dead response range when reset
+  happened exactly at that boundary (e.g. beta=90 lying in bed — fine
+  sweeping 90→45, completely flat/unresponsive sweeping 90→135). gamma
+  genuinely only spans ±90 physically, so it needs no such widening. If
+  a FUTURE feature needs its own baseline/reset mechanism on a
+  clamped-and-shared quantity (anything derived from `tiltMagnitude`/
+  `tiltAngle`, which many features share), check BOTH of these before
+  assuming a plain "capture current value, subtract it later" baseline
+  is sufficient: (1) is the value already clamped to a narrower range
+  than the sensor can actually report, and (2) does the baseline need
+  its own raw computation, separate from the shared clamped pipeline,
+  so other features aren't affected. A live/interactive test that only
+  checks "does it respond when I tilt a bit" will NOT catch either
+  problem — both were found by a synthetic sweep spanning the full
+  range around the reset point in both directions, not by testing one
+  nearby value.
+- **Rotation Reset does NOT touch the manual `phoneModelRotX/Y/Z`
+  sliders** — only the responsive/sensor-tracked rotation. This was a
+  deliberate scope decision (the request was specifically about
+  matching the phone's real orientation, not clearing a separate
+  manual offset the user set intentionally), not an oversight — don't
+  "fix" this without being asked.
