@@ -1557,7 +1557,24 @@ let phoneGyroLastTimestamp = null
 const _phoneGyroTiltAxis = new THREE.Vector3()
 const _phoneGyroTiltQuat = new THREE.Quaternion()
 const _phoneGyroSpinQuat = new THREE.Quaternion()
-const PHONE_GYRO_SPIN_LOCAL_AXIS = new THREE.Vector3(0, 1, 0)
+// CORRECTED 2026-09-28 (same day as gyro integration shipped), direct
+// report: "you crossed some wires. real world Z rotation now rotates
+// the model around its Y. real world Y rotation now rotates the model
+// around X. real world x rotation is now Z." That's a clean, consistent
+// 3-way CYCLIC relabeling between what this file calls local X/Y/Z and
+// what the RENDERED MODEL actually shows -- independent of which sensor
+// drives it (beta's motion visually landed on Z, gamma's on Y, alpha's
+// on X, no matter that the code put them on X/Z/Y respectively). Rather
+// than re-deriving the W3C rotationRate axis spec from memory a 5th
+// time, applied the user's own precise empirical correction directly:
+// whichever code-axis previously visually produced a given letter is
+// now fed the signal that SHOULD produce that letter. Concretely: beta
+// (was axis.x) now goes in the combined tilt axis's Y-slot; gamma (was
+// axis.z) now goes in the X-slot; alpha (was this constant, world Y)
+// now targets Z instead. See integratePhoneGyroRotation()'s own
+// `_phoneGyroTiltAxis.set(dGammaDeg, dBetaDeg, 0)` line for the tilt
+// half of this remap.
+const PHONE_GYRO_SPIN_LOCAL_AXIS = new THREE.Vector3(0, 0, 1)
 let phoneNxBaseline = 0
 let phoneNyBaseline = 0
 let lastInputSource = 'device' // 'device' | 'mouse' — which path updateTiltTarget() should use this frame
@@ -2101,7 +2118,7 @@ function integratePhoneGyroRotation(e) {
     const dAlphaDeg = (cfg.phoneAxisYEnabled ? (rr.alpha || 0) * cfg.phoneRotationScaleY : 0) * dt
     const combinedTiltDeg = Math.hypot(dBetaDeg, dGammaDeg)
     if (combinedTiltDeg > 1e-8) {
-      _phoneGyroTiltAxis.set(dBetaDeg, 0, dGammaDeg).normalize()
+      _phoneGyroTiltAxis.set(dGammaDeg, dBetaDeg, 0).normalize()
       _phoneGyroTiltQuat.setFromAxisAngle(_phoneGyroTiltAxis, THREE.MathUtils.degToRad(combinedTiltDeg))
       phoneGyroQuat.multiply(_phoneGyroTiltQuat)
     }
