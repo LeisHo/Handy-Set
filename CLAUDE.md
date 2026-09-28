@@ -2352,12 +2352,45 @@ wiring, and are still open:
   any permutation fix. Also reverted the 3rd-round "alpha/gamma
   crossed" raw-property theory back to W3C-spec-standard
   (`rr.beta`=pitch, `rr.gamma`=roll, `rr.alpha`=spin), since it was
-  built on the same discredited measurement. **If a 7th round is ever
-  needed: verify using this SAME Euler-XYZ script methodology against
-  the new reported numbers — do not revert to axis-invariance
-  reasoning, and do not guess a permutation without a script
-  reproducing the CURRENT bug's exact numbers first.** Separately
-  confirmed (checked `createFatAxesVisualization()`/
-  `ensureObjectAxesFor()` directly): the Object Axes gizmo is correctly
-  parented onto `phoneModelWrapper` and draws along its own local
-  X/Y/Z, so it is NOT a contributing factor to this bug.
+  built on the same discredited measurement. Separately confirmed
+  (checked `createFatAxesVisualization()`/`ensureObjectAxesFor()`
+  directly): the Object Axes gizmo is correctly parented onto
+  `phoneModelWrapper` and draws along its own local X/Y/Z, so it is NOT
+  a contributing factor to this bug. **CORRECTED 2026-09-28 (rounds
+  7-10, same day) — rounds 7/8/9 kept guessing whole-quaternion
+  permutations and each produced a DIFFERENT clean-but-wrong result
+  (never converging), because a real, DIFFERENT scramble existed
+  underneath the whole time that no permutation of an already-scrambled
+  signal could fix.** Round 9 proved algebraically that no single fixed
+  code-level mapping explains rounds 6/7/8's 3 different reports
+  together, reverted to the plainest mapping, and added an automatic
+  rotation-reset-on-enable (to rule out inconsistent starting
+  orientation as the cause) — round 10's test with that guaranteed
+  clean start STILL came out scrambled ("YXZ" again), which ruled the
+  starting-orientation theory out. The user then independently spotted
+  and reported the real root cause: **the 3 per-axis enable checkboxes
+  (§ "X/Y/Z Axis Rotation On/Off") don't gate the raw sensor property
+  their label implies** — toggling ONLY one checkbox at a time and
+  testing (the cleanest, most isolating test this feature has had all
+  session — it removes the combined-axis-angle's own cross-talk between
+  2 simultaneous values, unlike every prior round's test) revealed TWO
+  independent, previously-conflated scrambles: (1) `rr.beta`/`rr.gamma`/
+  `rr.alpha` don't correlate with physical X/Y/Z the way the W3C-spec-
+  standard letter-matching assumption (which EVERY round through the
+  9th relied on, including the "spec-standard, no swaps" reverts)
+  suggested — actual correspondence is `beta`<->Y, `gamma`<->Z,
+  `alpha`<->X; and (2) the code's own 2 rotation-composition mechanisms
+  (the combined axis-angle vs. the separate single-axis rotation) don't
+  read out as their own component names either — combined-x reads
+  correctly as X, but combined-y reads as Z, and the separate mechanism
+  reads as Y. Fixed by solving both simultaneously (see the 10th
+  CHANGELOG entry for the exact routing) rather than patching either
+  scramble in isolation, which is exactly what every earlier round did
+  and why none of them converged. **If an 11th round is needed and it's
+  a SIGN issue only (letters correct, direction backwards): fix that
+  one role's own raw-value sign, don't revisit the letter/slot solve —
+  it's now independently confirmed via isolated single-checkbox testing,
+  the strongest evidence this feature has had.** If letters are STILL
+  wrong even after this, the isolated single-checkbox testing technique
+  itself (not full-rotation testing) is the thing to lean on again, not
+  whole-rotation permutation guessing.

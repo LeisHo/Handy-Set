@@ -4458,6 +4458,74 @@ whole feature.
 `index.html`'s cache-buster bumped `?v=125` -> `?v=126`.
 
 --------------------------------------------------------------------------------
+2026-09-28  -  (43rd)
+
+Direct follow-up, same day: the 42nd entry's guaranteed-clean-start
+revert still reported "Real phone XYZ to Model YXZ." Rather than
+another permutation guess, the user independently found and reported
+the actual issue: "the XYZ on/off checkboxes are completely incorrect
+-- the Z axis On/Off is in fact the Y axis, Y axis is in fact the
+Z axis," then provided 3 CLEAN, ISOLATED, one-checkbox-at-a-time test
+results (each with the other 2 axes' checkboxes OFF, so only one of the
+3 gyro-role variables could be nonzero at all) -- by far the most
+reliable data this feature has had all session, since it removes both
+the combined-axis-angle's own cross-talk and the previously-suspected
+starting-orientation confound simultaneously:
+- X checkbox only on (gates `rr.beta`): physical Y motion produced a
+  response, read as model X.
+- Y checkbox only on (gates `-rr.gamma`): physical Z motion produced a
+  response, read as model Z, inverted sign.
+- Z checkbox only on (gates `rr.alpha`): physical X motion produced a
+  response, read as model Y.
+
+Solved this as TWO independent, previously-conflated scrambles rather
+than patching one at a time: (1) which raw `rotationRate` property
+actually correlates with which physical axis (`beta`<->Y, `gamma`<->Z,
+`alpha`<->X -- none matching the W3C-spec-standard letter assumption
+every prior round relied on), and (2) which CODE SLOT reads as which
+VISUAL letter (the combined axis-angle's x-component reads correctly as
+X, but its y-component reads as Z, and the separate single-axis
+mechanism reads as Y, not X or Z respectively).
+
+Solved both simultaneously in `integratePhoneGyroRotation()`: physical
+X now routes `alpha` into the x-component (the one slot that reads
+correctly), physical Z routes `gamma` into the y-component (which reads
+as Z), physical Y routes `beta` into the separate mechanism (which
+reads as Y). Renamed the 3 local variables from
+`dPitchDeg`/`dRollDeg`/`dSpinDeg` to `dRoleXDeg`/`dRoleYDeg`/`dRoleZDeg`
+-- the pitch/roll/spin naming baked in the same wrong
+beta=pitch/gamma=roll/alpha=spin assumption this fix corrects, and kept
+being a source of confusion across rounds. Removed gamma's existing
+negation, since test 2 reported "inverted" despite it already being
+applied -- the direct fix is removing it, not adding another negation.
+
+Not independently browser/device-verified this round (same standing
+limitation). Beta's and alpha's signs in their NEW slots are UNVERIFIED
+-- this codebase has repeatedly shown that moving a value between
+mechanisms (combined vs. separate) can flip its effective sign in ways
+that aren't predictable from the old mechanism's sign alone, so if X or
+Y comes out backwards next test, that's a plausible, easy next fix
+(negate that one role's raw value) rather than evidence the letter/slot
+solve above is wrong.
+
+`index.html`'s cache-buster bumped `?v=126` -> `?v=127`.
+
+--------------------------------------------------------------------------------
+2026-09-28  -  (44th)
+
+Direct follow-up, same day: "oh actually Y axis is inverted" -- the
+43rd entry's own disclosed uncertainty (beta/alpha's signs in their new
+slots were unverified) turned out to apply to Y. Since the LETTER/SLOT
+solve was independently confirmed via isolated single-checkbox testing
+(the strongest evidence this feature has had), this was treated as a
+sign-only fix, not a reason to revisit the routing: negated
+`dRoleYDeg`'s own raw value (`rr.beta`). This is the fix pattern the
+43rd entry's own comment anticipated for exactly this situation.
+
+Not independently browser/device-verified this round (same standing
+limitation). `index.html`'s cache-buster bumped `?v=127` -> `?v=128`.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

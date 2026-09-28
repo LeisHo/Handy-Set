@@ -7,29 +7,29 @@ append-only history.
 
 ## Currently working on
 
-**Awaiting real-device re-test of Phone Model's gyroscope-integrated
-mobile rotation axis mapping — this single feature has now needed 9
-correction rounds in one session (2026-09-28).** Rounds 6/7/8 each
-reported a DIFFERENT clean permutation for the same kind of test;
-cross-checking all 3 algebraically proved no fixed code-level mapping
-explains them together, which points at the phone's own accumulated
-starting orientation differing between tests (this rotation integrates
-in body frame, relative to wherever the phone currently points, not a
-fixed reference) rather than the axis wiring itself. Round 9 reverted
-`integratePhoneGyroRotation()` to the plainest, spec-standard axis
-mapping and removed the 8th round's output-conjugation layer entirely,
-then made `resetPhoneModelRotationBaseline()` fire AUTOMATICALLY
-whenever Tracking Enabled or Phone Model's Responsive Rotation checkbox
-turns on — guaranteeing every test starts from the same known
-orientation. Full round-by-round history is in `docs/CHANGELOG.txt`'s
-35th-42nd entries and the matching CLAUDE.md gotcha (search "Phone
-Model's mobile rotation"). **If a 10th round is needed:** re-test the
-current, reverted-to-plain mapping fresh (toggle the checkbox off then
-on immediately before testing each axis, never mid-session after other
-testing) and report using the same precise "real X maps to model ?"
-format. If it's STILL wrong even with a guaranteed clean start, that
-rules out the starting-orientation theory and means the axis wiring
-itself needs another look, informed by this new information.
+**Phone Model's gyroscope-integrated mobile rotation axis mapping —
+fixed 2026-09-28 (10th round), pending real-device confirmation.** This
+single feature needed 10 correction rounds in one session. The
+breakthrough: rather than testing the full combined rotation (which
+mixes 2 values together and can't isolate a single cause), the user
+tested each of the 3 per-axis enable checkboxes ONE AT A TIME (the
+other 2 off), revealing 2 independent, previously-conflated scrambles —
+(1) `rotationRate.beta/gamma/alpha` don't correlate with physical X/Y/Z
+the way their W3C-spec letters suggest (actual: `beta`<->Y, `gamma`<->Z,
+`alpha`<->X), and (2) the code's own 2 rotation mechanisms (combined
+axis-angle vs. separate single-axis) don't read out as their own
+component names (combined-x reads correctly, combined-y reads as Z, the
+separate mechanism reads as Y). Solved both simultaneously in
+`integratePhoneGyroRotation()`. Full round-by-round history (10 rounds)
+is in `docs/CHANGELOG.txt`'s 35th-43rd entries and the matching
+CLAUDE.md gotcha (search "Phone Model's mobile rotation"). **If an 11th
+round is needed and it's a sign-only issue (letters correct, direction
+backwards): fix that one role's own raw-value sign — don't revisit the
+letter/slot solve, it's independently confirmed via isolated
+single-checkbox testing, the strongest evidence this feature has had.**
+If letters are somehow still wrong, lean on that same isolated
+single-checkbox testing technique again, not whole-rotation permutation
+guessing.
 
 Pushed to `https://github.com/LeisHo/Handy-Set`
 (deployed via the Vercel project at `https://vercel.com/lpeis/handy-set`).
