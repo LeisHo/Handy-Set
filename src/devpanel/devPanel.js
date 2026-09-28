@@ -912,7 +912,7 @@
     // siblings, since the sibling query used the call's own itemSelector -
     // meaning a dragged group could never be interleaved with rows, and a
     // dragged row could never be interleaved with groups.
-    const REORDERABLE_SIBLING_SELECTOR = ':scope > .dev-section, :scope > .dev-row';
+    const REORDERABLE_SIBLING_SELECTOR = ':scope > .dev-section, :scope > .dev-row, :scope > .dev-lp-group, :scope > .dev-lp-row';
     let sectionJustDragged = false;
     function setupDragReorder(handleSelector, itemSelector, onDrop, crossContainerSelector) {
         let dragging = null;
@@ -2597,7 +2597,1168 @@
         row.appendChild(input);
         return row;
     }
-    const UNIFORM_ROW_BUILDERS = { slider: buildSliderRow, color: buildColorRow, select: buildSelectRow, checkbox: buildCheckboxRow };
+    // ================================================================
+    // TOGGLEABLE SETTINGS GROUP (re-synced 2026-09-28)
+    // ================================================================
+    // A group whose own title bar carries a checkbox controlling the
+    // WHOLE group's on/off state. When off, the group's ENTIRE content
+    // area (including any nested subgroups, at any depth) is hidden as
+    // ONE unit via display:none on .dev-section-content — never per-
+    // child — so nothing inside ever renders, including an otherwise-
+    // empty subgroup shell.
+    //
+    // Usage: register the toggle as a NORMAL checkbox control first (so
+    // it rides Copy/Save/Reset/Undo exactly like any other setting, no
+    // special-casing needed there), THEN call this to relocate its real,
+    // already-wired <input> into the group's own title bar:
+    //   addRow(content, { id: 'myGroupEnabled', type: 'checkbox', label: 'Enabled' })
+    //   makeDevGroupToggleable('desktop', 'My Group', 'myGroupEnabled')
+    // A host project reads that same checkbox's value like any other
+    // registered checkbox control to decide whether to actually apply
+    // that group's settings — this function only owns the UI/visibility
+    // side, not the "applied" half.
+    function makeDevGroupToggleable(tab, groupSid, ctrlId) {
+        const titleEl = document.querySelector('#' + tab + 'TabContent > .dev-section > .dev-section-title[data-sid="' + groupSid.replace(/"/g, '\\"') + '"]');
+        const cb = document.getElementById(ctrlId);
+        if (!titleEl || !cb || cb.type !== 'checkbox') { console.warn('makeDevGroupToggleable: group or checkbox control not found', groupSid, ctrlId); return; }
+        const section = titleEl.closest('.dev-section');
+        const originalRow = cb.closest('.dev-row');
+
+        cb.classList.add('dev-group-toggle-checkbox');
+        cb.title = 'Enable/disable this whole group';
+        cb.addEventListener('click', e => e.stopPropagation()); // don't also collapse/expand the group via the title's own onclick
+        titleEl.appendChild(cb); // preserved across rename/collapse by withPreservedTitleCheckbox() above
+        if (originalRow) originalRow.remove(); // the control's own default row is now redundant — the checkbox lives in the title instead
+
+        function applyState() { section.classList.toggle('dev-section-group-disabled', !cb.checked); }
+        cb.addEventListener('change', applyState);
+        cb.addEventListener('input', applyState); // covers whichever event a Reset/Undo/Load restore dispatches
+        applyState();
+    }
+    // ================================================================
+    // [JS-15] SAVED PRESETS UI — 'list-picker' CONTROL TYPE
+    // ================================================================
+    // A named-item picker for a list of independently Save/Use/Rename/
+    // Delete-able snapshots (Saved Cameras, Saved Poses, Saved Lighting,
+    // a Rendering Style's own saved parameter sets, etc.) — CLAUDE.md
+    // §12r "Standard Saved Presets UI". Re-implemented against this
+    // template's own primitives (dev-row conventions, UNIFORM_ROW_BUILDERS
+    // dispatch, the shared setupDragReorder() engine, the generic
+    // el.value-based Copy/Save/Reset/Undo pipeline) from HANDO's own
+    // independent dev-panel lineage, which built the original — ported
+    // for exact behavioral parity (button set, name-collision handling,
+    // arbitrary-depth grouping, drag-reorder, export/import merge
+    // semantics), not a from-scratch reinterpretation.
+    //
+    // Registration ({tab, group, id, type:'list-picker', ...}):
+    //   label            - row label text.
+    //   itemLabel        - noun used in the Save-name prompt ("Camera",
+    //                      "Pose", "Preset") — defaults to "Item".
+    //   value            - default items array, e.g. [].
+    //   captureCurrent() - REQUIRED. Returns a plain object snapshotting
+    //                      whatever this picker represents right now.
+    //   onUse(item)      - REQUIRED. Applies a saved item back to live
+    //                      state.
+    //   exportable       - true adds a per-item checkbox + "Export
+    //                      Selected" (checked items -> clipboard JSON).
+    //   importable       - true adds "Import" (clipboard/paste JSON,
+    //                      merged by name — same-name overwrites in
+    //                      place, everything else untouched).
+    // Never device-mirrored (a saved-preset list isn't a per-device
+    // value) — buildListPickerRow sets ctrl.skipDeviceCheckbox itself,
+    // no need to pass it. Rides Copy/Save/Reset/Undo automatically: its
+    // state lives in a hidden <input id=ctrl.id> whose .value is the
+    // JSON-serialized {items, groupOrder}, exactly like a slider's own
+    // numeric .value — no special-casing needed in the capture/apply
+    // pipeline (captureAllRegisteredControlValues()/applyControlValues()).
+    const LP_GROUP_PATH_SEP = '/';
+    const lpEntries = {};
+
+    function lpCommit(entry) {
+        const hidden = document.getElementById(entry.ctrl.id);
+        if (hidden) hidden.value = JSON.stringify({ items: entry.items, groupOrder: entry.groupOrder || [] });
+    }
+
+    // Renders one item row (ungrouped or inside a group body). Click
+    // selects (tracked by object reference, not index — drag-reorder
+    // makes indices unstable); Shift-click extends a contiguous range
+    // from the last plain-clicked item, in current visual order — both
+    // feed entry.multiSelected, which +Group and Export Selected act on.
+    function renderLpItemRow(entry, item) {
+        const row = document.createElement('div');
+        row.className = 'dev-lp-row' + (entry.multiSelected.has(item) ? ' dev-lp-row-selected' : '');
+        row.__item = item;
+        const handle = document.createElement('span');
+        handle.className = 'dev-lp-row-handle';
+        handle.textContent = '⠿';
+        row.appendChild(handle);
+        if (entry.ctrl.exportable) {
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.className = 'dev-lp-export-checkbox';
+            cb.checked = entry.exportChecked.has(item);
+            cb.addEventListener('click', (e) => e.stopPropagation());
+            cb.addEventListener('change', () => {
+                if (cb.checked) entry.exportChecked.add(item); else entry.exportChecked.delete(item);
+                // Checking/unchecking one checkbox while multiple rows are
+                // shift-click-selected applies the same state to every
+                // selected row, so a highlighted batch can be
+                // checked/unchecked together in one click.
+                if (entry.multiSelected.size > 1 && entry.multiSelected.has(item)) {
+                    entry.multiSelected.forEach(it => {
+                        if (cb.checked) entry.exportChecked.add(it); else entry.exportChecked.delete(it);
+                    });
+                    entry.listEl.querySelectorAll('.dev-lp-row').forEach(r => {
+                        if (r.__item !== item && entry.multiSelected.has(r.__item)) {
+                            const rowCb = r.querySelector('.dev-lp-export-checkbox');
+                            if (rowCb) rowCb.checked = cb.checked;
+                        }
+                    });
+                }
+            });
+            row.appendChild(cb);
+        }
+        const label = document.createElement('span');
+        label.className = 'dev-lp-row-label';
+        label.textContent = item.name;
+        row.appendChild(label);
+        row.addEventListener('click', (e) => {
+            if (e.shiftKey && entry.selectedItem) {
+                const ordered = Array.from(entry.listEl.querySelectorAll('.dev-lp-row')).map(r => r.__item);
+                const a = ordered.indexOf(entry.selectedItem), b = ordered.indexOf(item);
+                if (a >= 0 && b >= 0) entry.multiSelected = new Set(ordered.slice(Math.min(a, b), Math.max(a, b) + 1));
+                else entry.multiSelected = new Set([item]);
+            } else {
+                entry.selectedItem = item;
+                entry.multiSelected = new Set([item]);
+            }
+            entry.listEl.querySelectorAll('.dev-lp-row').forEach(r => {
+                r.classList.toggle('dev-lp-row-selected', entry.multiSelected.has(r.__item));
+            });
+        });
+        return row;
+    }
+
+    // One group's header — click toggles collapse (tracked in
+    // entry.expandedGroups so a re-render preserves it); the title
+    // renames (cascading to every descendant path); "x" removes the
+    // group (ungroups its own direct members only, never cascades into
+    // a nested subgroup's own members).
+    function buildLpGroupHeader(entry, path) {
+        const header = document.createElement('div');
+        header.className = 'dev-lp-group-header';
+        const handle = document.createElement('span');
+        handle.className = 'dev-lp-group-handle';
+        handle.textContent = '⠿';
+        header.appendChild(handle);
+        const arrow = document.createElement('span');
+        arrow.textContent = '▼';
+        header.appendChild(arrow);
+        const title = document.createElement('span');
+        title.className = 'dev-lp-group-title';
+        title.textContent = path.split(LP_GROUP_PATH_SEP).pop();
+        title.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const oldLeaf = path.split(LP_GROUP_PATH_SEP).pop();
+            const newLeaf = prompt('Rename group to:', oldLeaf);
+            if (!newLeaf || newLeaf === oldLeaf) return;
+            if (newLeaf.includes(LP_GROUP_PATH_SEP)) { alert('Group name can\'t contain "' + LP_GROUP_PATH_SEP + '"'); return; }
+            const segments = path.split(LP_GROUP_PATH_SEP);
+            segments[segments.length - 1] = newLeaf;
+            const newPath = segments.join(LP_GROUP_PATH_SEP);
+            const prefix = path + LP_GROUP_PATH_SEP;
+            const rename = (p) => (p === path ? newPath : (p.startsWith(prefix) ? newPath + LP_GROUP_PATH_SEP + p.slice(prefix.length) : p));
+            entry.items.forEach(it => { if (it.group) it.group = rename(it.group); });
+            entry.pendingGroups = (entry.pendingGroups || []).map(rename);
+            entry.expandedGroups = new Set(Array.from(entry.expandedGroups).map(rename));
+            entry.groupOrder = (entry.groupOrder || []).map(rename);
+            lpCommit(entry);
+            renderLpRows(entry);
+        });
+        header.appendChild(title);
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'dev-lp-group-remove';
+        removeBtn.textContent = '×';
+        removeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            entry.items.forEach(it => { if (it.group === path) delete it.group; });
+            entry.pendingGroups = (entry.pendingGroups || []).filter(p => p !== path);
+            entry.expandedGroups.delete(path);
+            lpCommit(entry);
+            renderLpRows(entry);
+        });
+        header.appendChild(removeBtn);
+        header.addEventListener('click', () => {
+            const g = header.closest('.dev-lp-group');
+            g.classList.toggle('collapsed');
+            if (g.classList.contains('collapsed')) entry.expandedGroups.delete(path);
+            else entry.expandedGroups.add(path);
+        });
+        return header;
+    }
+
+    // Rebuilds entry.items (order + each item's .group) from the LIVE
+    // DOM after a drag-drop. Item identity is tracked via row.__item,
+    // never index. Groups are a flat "/"-joined path on each item —
+    // nesting to arbitrary depth needs no separate tree structure, only
+    // a recursive DOM walk.
+    function syncLpFromDom(entry) {
+        const items = [];
+        const pending = [];
+        Array.from(entry.ungroupedBody.querySelectorAll(':scope > .dev-lp-row')).forEach(r => {
+            if (!r.__item) return;
+            delete r.__item.group;
+            items.push(r.__item);
+        });
+        function walk(container, path) {
+            Array.from(container.querySelectorAll(':scope > .dev-lp-row')).forEach(r => {
+                if (!r.__item) return;
+                r.__item.group = path;
+                items.push(r.__item);
+            });
+            const childGroups = Array.from(container.querySelectorAll(':scope > .dev-lp-group'));
+            if (container.querySelectorAll(':scope > .dev-lp-row').length === 0 && childGroups.length === 0) pending.push(path);
+            childGroups.forEach(g => {
+                const leaf = g.__groupName.split(LP_GROUP_PATH_SEP).pop();
+                walk(g.querySelector(':scope > .dev-lp-group-body'), path + LP_GROUP_PATH_SEP + leaf);
+            });
+        }
+        Array.from(entry.listEl.querySelectorAll(':scope > .dev-lp-group')).forEach(g => {
+            walk(g.querySelector(':scope > .dev-lp-group-body'), g.__groupName);
+        });
+        entry.items = items;
+        entry.pendingGroups = pending;
+        entry.groupOrder = Array.from(entry.listEl.querySelectorAll(':scope > .dev-lp-group')).map(g => g.__groupName);
+        lpCommit(entry);
+    }
+
+    // Redraws entry.items into ungrouped-first + nested collapsible
+    // groups, per each item's own .group path. Called after any
+    // Save/Rename/Delete/Overwrite/+Group/Import (which mutate
+    // entry.items directly) — NOT after a drag-drop, which resyncs
+    // entry.items from the already-correct DOM instead (syncLpFromDom).
+    // A freshly-created empty group (entry.pendingGroups) still renders
+    // so it has something to drag an item into — it won't survive a
+    // reload if it's still empty at Save time.
+    function renderLpRows(entry) {
+        entry.listEl.innerHTML = '';
+        const root = { items: [], children: new Map() };
+        const discoveryOrder = [];
+        const ungrouped = [];
+        function ensureNode(segs) {
+            let node = root;
+            segs.forEach(seg => {
+                if (!node.children.has(seg)) node.children.set(seg, { items: [], children: new Map() });
+                node = node.children.get(seg);
+            });
+            return node;
+        }
+        entry.items.forEach(item => {
+            if (!item.group) { ungrouped.push(item); return; }
+            const segs = item.group.split(LP_GROUP_PATH_SEP);
+            if (!root.children.has(segs[0])) discoveryOrder.push(segs[0]);
+            ensureNode(segs).items.push(item);
+        });
+        (entry.pendingGroups || []).forEach(path => {
+            const segs = path.split(LP_GROUP_PATH_SEP);
+            if (!root.children.has(segs[0])) discoveryOrder.push(segs[0]);
+            ensureNode(segs);
+        });
+        // A freshly-created group (+Group, below) lands at the TOP of the
+        // list — entry.groupOrder is the explicit override; any name not
+        // yet in it falls back to natural discovery-order position.
+        const known = new Set(entry.groupOrder || []);
+        const topOrder = (entry.groupOrder || []).filter(n => root.children.has(n));
+        discoveryOrder.forEach(n => { if (!known.has(n)) topOrder.push(n); });
+        entry.groupOrder = topOrder.slice();
+
+        const ungroupedBody = document.createElement('div');
+        ungroupedBody.className = 'dev-lp-ungrouped-body';
+        ungrouped.forEach(item => ungroupedBody.appendChild(renderLpItemRow(entry, item)));
+        entry.listEl.appendChild(ungroupedBody);
+        entry.ungroupedBody = ungroupedBody;
+
+        function renderGroup(path, node) {
+            const g = document.createElement('div');
+            g.className = 'dev-lp-group' + (!entry.expandedGroups.has(path) ? ' collapsed' : '');
+            g.__groupName = path;
+            g.appendChild(buildLpGroupHeader(entry, path));
+            const body = document.createElement('div');
+            body.className = 'dev-lp-group-body';
+            node.items.forEach(item => body.appendChild(renderLpItemRow(entry, item)));
+            node.children.forEach((childNode, leaf) => body.appendChild(renderGroup(path + LP_GROUP_PATH_SEP + leaf, childNode)));
+            g.appendChild(body);
+            return g;
+        }
+        topOrder.forEach(name => entry.listEl.appendChild(renderGroup(name, root.children.get(name))));
+    }
+
+    // Item/group drag-reorder, set up ONCE globally (setupDragReorder
+    // itself is a singleton engine — see [JS-3] above) the first time any
+    // list-picker control is built, scoped by CSS class so it never
+    // interferes with the main panel's own group/row dragging. Groups
+    // reorder among top-level siblings by default and can also be dragged
+    // into ANY other group's own body, at any depth, to nest — the only
+    // real constraint is a group can never be dropped into itself or one
+    // of its own descendants. Both are scoped to the DRAGGED item's own
+    // .dev-list-picker ancestor, so dragging never crosses between two
+    // different saved-preset lists.
+    let lpDragReorderInitialized = false;
+    function lpSyncAllVisibleEntries() {
+        Object.values(lpEntries).forEach(entry => { if (document.body.contains(entry.listEl)) syncLpFromDom(entry); });
+    }
+    function ensureLpDragReorder() {
+        if (lpDragReorderInitialized) return;
+        lpDragReorderInitialized = true;
+        setupDragReorder('.dev-lp-group-handle', '.dev-lp-group', lpSyncAllVisibleEntries, (tabRoot, dragging) => {
+            const picker = dragging.closest('.dev-list-picker');
+            if (!picker) return [];
+            const bodies = Array.from(picker.querySelectorAll('.dev-lp-group-body')).filter(b => !dragging.contains(b));
+            return [picker, ...bodies];
+        });
+        setupDragReorder('.dev-lp-row-handle', '.dev-lp-row', lpSyncAllVisibleEntries, (tabRoot, dragging) => {
+            const picker = dragging.closest('.dev-list-picker');
+            return picker ? Array.from(picker.querySelectorAll('.dev-lp-group-body, .dev-lp-ungrouped-body')) : [];
+        });
+    }
+
+    // {tab, group, id, type:'list-picker', label, itemLabel?, value?,
+    //  captureCurrent, onUse, exportable?, importable?} — see this
+    // section's own top comment for the full contract.
+    function buildListPickerRow(ctrl) {
+        ensureLpDragReorder();
+        ctrl.skipDeviceCheckbox = true; // a saved-preset list is never per-device
+        const row = document.createElement('div');
+        row.className = 'dev-row dev-list-picker-row-container';
+        row.style.flexDirection = 'column';
+        row.style.alignItems = 'stretch';
+        const label = document.createElement('span');
+        label.className = 'dev-label';
+        label.textContent = ctrl.label;
+        row.appendChild(label);
+
+        const listEl = document.createElement('div');
+        listEl.className = 'dev-list-picker';
+        const btnRow = document.createElement('div');
+        btnRow.className = 'dev-list-picker-actions';
+        const mkBtn = (text) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = text; return b; };
+        const saveBtn = mkBtn('Save');
+        const overwriteBtn = mkBtn('Overwrite');
+        const useBtn = mkBtn('Use');
+        const renameBtn = mkBtn('Rename');
+        const deleteBtn = mkBtn('Delete');
+        const addGroupBtn = mkBtn('+ Group');
+        btnRow.append(saveBtn, overwriteBtn, useBtn, renameBtn, deleteBtn, addGroupBtn);
+        let exportBtn = null, importBtn = null;
+        if (ctrl.exportable) { exportBtn = mkBtn('Export Selected'); btnRow.appendChild(exportBtn); }
+        if (ctrl.importable) { importBtn = mkBtn('Import'); btnRow.appendChild(importBtn); }
+
+        row.appendChild(listEl);
+        row.appendChild(btnRow);
+
+        // Hidden input carries this control's serialized state so it
+        // rides the generic el.value-based Copy/Save/Reset/Undo pipeline
+        // exactly like any other control — no special-casing needed
+        // there (see this section's own top comment). 'input' fires only
+        // on an EXTERNAL restore (Reset/Undo/Load, via applyControlValues()
+        // below), never on our own internal mutations (which call
+        // lpCommit() directly) — it re-parses and re-renders from
+        // whatever was just restored.
+        const hidden = document.createElement('input');
+        hidden.type = 'hidden';
+        hidden.id = ctrl.id;
+        const initialItems = (ctrl.value || []).slice();
+        hidden.value = JSON.stringify({ items: initialItems, groupOrder: [] });
+        row.appendChild(hidden);
+
+        const entry = {
+            ctrl, listEl, items: initialItems, groupOrder: [],
+            selectedItem: null, multiSelected: new Set(), expandedGroups: new Set(),
+            pendingGroups: [], exportChecked: new Set(),
+        };
+        lpEntries[ctrl.id] = entry;
+
+        hidden.addEventListener('input', () => {
+            let parsed;
+            try { parsed = JSON.parse(hidden.value || '{}'); } catch (err) { parsed = {}; }
+            entry.items = Array.isArray(parsed.items) ? parsed.items : [];
+            entry.groupOrder = Array.isArray(parsed.groupOrder) ? parsed.groupOrder : [];
+            entry.selectedItem = null;
+            entry.multiSelected = new Set();
+            renderLpRows(entry);
+        });
+
+        saveBtn.addEventListener('click', () => {
+            const itemLabel = ctrl.itemLabel || 'Item';
+            const name = prompt(itemLabel + ' name:', itemLabel + ' ' + (entry.items.length + 1));
+            if (!name) return;
+            const data = ctrl.captureCurrent ? ctrl.captureCurrent() : {};
+            // Same-name Save overwrites in place rather than duplicating —
+            // two different saved items sharing one name is a landmine for
+            // anything that looks a saved item up BY NAME.
+            const existing = entry.items.find(it => it.name === name);
+            if (existing) {
+                if (!confirm('"' + name + '" already exists. Overwrite it?')) return;
+                entry.items = entry.items.map(it => it === existing ? Object.assign({ name }, data, it.group ? { group: it.group } : {}) : it);
+            } else {
+                entry.items = entry.items.concat([Object.assign({ name }, data)]);
+            }
+            lpCommit(entry);
+            renderLpRows(entry);
+        });
+        overwriteBtn.addEventListener('click', () => {
+            if (!entry.selectedItem) return;
+            const target = entry.selectedItem;
+            const data = ctrl.captureCurrent ? ctrl.captureCurrent() : {};
+            entry.items = entry.items.map(it => it === target ? Object.assign({ name: it.name }, data, it.group ? { group: it.group } : {}) : it);
+            entry.selectedItem = entry.items.find(it => it.name === target.name && it.group === target.group) || null;
+            lpCommit(entry);
+            renderLpRows(entry);
+        });
+        useBtn.addEventListener('click', () => { if (entry.selectedItem && ctrl.onUse) ctrl.onUse(entry.selectedItem); });
+        renameBtn.addEventListener('click', () => {
+            if (!entry.selectedItem) return;
+            const target = entry.selectedItem;
+            const name = prompt('Rename to:', target.name);
+            if (!name || name === target.name) return;
+            entry.items = entry.items.map(it => it === target ? Object.assign({}, it, { name }) : it);
+            entry.selectedItem = entry.items.find(it => it.name === name && it.group === target.group) || null;
+            lpCommit(entry);
+            renderLpRows(entry);
+        });
+        deleteBtn.addEventListener('click', () => {
+            if (!entry.selectedItem) return;
+            entry.items = entry.items.filter(it => it !== entry.selectedItem);
+            entry.selectedItem = null;
+            entry.multiSelected = new Set();
+            lpCommit(entry);
+            renderLpRows(entry);
+        });
+        // Shift-click one or more rows first (renderLpItemRow above), then
+        // +Group drops them straight into the new group already populated.
+        // With no selection, falls back to an empty group shell to drag
+        // items into by hand.
+        addGroupBtn.addEventListener('click', () => {
+            const existingNames = new Set([].concat(entry.items.map(it => it.group).filter(Boolean), entry.pendingGroups));
+            let name = 'New Group', n = 2;
+            while (existingNames.has(name)) { name = 'New Group (' + n + ')'; n++; }
+            entry.groupOrder = [name].concat((entry.groupOrder || []).filter(n2 => n2 !== name));
+            if (entry.multiSelected.size > 0) {
+                entry.items.forEach(it => { if (entry.multiSelected.has(it)) it.group = name; });
+                lpCommit(entry);
+            } else {
+                entry.pendingGroups = entry.pendingGroups.concat([name]);
+            }
+            renderLpRows(entry);
+        });
+        const flashBtn = (btn, msg) => { const orig = btn.textContent; btn.textContent = msg; setTimeout(() => { btn.textContent = orig; }, 1400); };
+        if (exportBtn) {
+            exportBtn.addEventListener('click', async () => {
+                const checked = entry.items.filter(it => entry.exportChecked.has(it));
+                if (checked.length === 0) { flashBtn(exportBtn, 'Check items first'); return; }
+                // Retains .group on export so an item that was grouped
+                // here shows the same grouping once imported elsewhere —
+                // renderLpRows() already auto-creates whatever group path
+                // a .group value names the first time it sees it.
+                const payload = checked.map(it => Object.assign({}, it));
+                try {
+                    await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
+                    flashBtn(exportBtn, 'Copied ' + checked.length + '!');
+                } catch (err) { flashBtn(exportBtn, 'Copy failed'); }
+            });
+        }
+        if (importBtn) {
+            importBtn.addEventListener('click', async () => {
+                let text;
+                try { text = await navigator.clipboard.readText(); }
+                catch (err) {
+                    // Clipboard read can be blocked (permissions, insecure
+                    // context) — prompt() as a manual-paste fallback.
+                    text = prompt('Paste exported JSON:', '');
+                    if (!text) return;
+                }
+                let incoming;
+                try {
+                    incoming = JSON.parse(text);
+                    if (!Array.isArray(incoming)) throw new Error('not an array');
+                } catch (err) { flashBtn(importBtn, 'Invalid JSON'); return; }
+                // Same-name overwrites in place (preserving the existing
+                // item's own local .group), everything else untouched —
+                // an import never wipes the existing list.
+                let items = entry.items.slice();
+                incoming.forEach(incomingItem => {
+                    if (!incomingItem || typeof incomingItem.name !== 'string') return;
+                    const idx = items.findIndex(it => it.name === incomingItem.name);
+                    if (idx >= 0) items[idx] = Object.assign({}, incomingItem, items[idx].group ? { group: items[idx].group } : {});
+                    else items = items.concat([incomingItem]);
+                });
+                entry.items = items;
+                lpCommit(entry);
+                renderLpRows(entry);
+                flashBtn(importBtn, 'Imported ' + incoming.length + '!');
+            });
+        }
+
+        renderLpRows(entry);
+        return row;
+    }
+    // {id, label, defaultPoints, defaultMethod?, caption?, maxPoints?,
+    // hitRadiusPx?} — CLAUDE.md §12's "Component Gallery" curve editor (a
+    // draggable-point curve mapping normalized X->Y, the same shape as
+    // Unity's Curve Editor or a photo editor's Levels/Curves tool).
+    // Re-derived from Handy Dandies' buildGenericCurveWidget()/
+    // evaluateArmLengthCurve() rather than ported as-is — direct report
+    // 2026-09-28 ("in Photoshop... it looks like a smooth interpolation.
+    // Ours right now doesnt") identified the source's plain uniform
+    // Catmull-Rom as the cause (its tangent estimate ignores each
+    // segment's real X-spacing, causing visible overshoot/kinks once
+    // points aren't evenly spaced — which is almost immediately, once you
+    // drag one). Default interpolation here is Monotone Cubic Hermite
+    // (Fritsch-Carlson — the same algorithm behind D3's curveMonotoneX),
+    // mathematically guaranteed not to overshoot between points. 3
+    // alternates are offered via a dropdown per direct request ("provide
+    // me a drop down to select interpolation method" / "if there are
+    // other interpolation methods, provide that"): Linear (exact, no
+    // curvature), Catmull-Rom (the original), and Natural Cubic Spline (a
+    // global tridiagonal solve — smooth but, like Catmull-Rom, can
+    // overshoot, with a different curvature character). A point's own
+    // explicit bezier handle (h1/h2, Alt/Shift+drag) always overrides
+    // whichever method is selected for that one segment, same as the
+    // source. Max point count and per-point tap-hit radius are both
+    // configurable per direct request 2026-09-28 (mobile tap precision).
+    const CURVE_SAMPLES = 48;
+    const CURVE_MAX_POINTS_DEFAULT = 5;
+    const CURVE_HIT_RADIUS_PX_DEFAULT = 16; // vs. the 5px visual dot
+    const CURVE_HANDLE_REMOVE_THRESHOLD_PX = 6;
+    function curveCatmullRomY(y0, y1, y2, y3, t) {
+        const t2 = t * t, t3 = t2 * t;
+        return 0.5 * ((2 * y1) + (-y0 + y2) * t + (2 * y0 - 5 * y1 + 4 * y2 - y3) * t2 + (-y0 + 3 * y1 - 3 * y2 + y3) * t3);
+    }
+    function curveCatmullRomSegmentY(sorted, i, x) {
+        const p1 = sorted[i], p2 = sorted[i + 1];
+        const p0 = sorted[i - 1] || p1;
+        const p3 = sorted[i + 2] || p2;
+        const segT = p2.x === p1.x ? 0 : (x - p1.x) / (p2.x - p1.x);
+        return curveCatmullRomY(p0.y, p1.y, p2.y, p3.y, segT);
+    }
+    function curveLinearY(p1, p2, x) {
+        const dx = p2.x - p1.x;
+        if (dx === 0) return p1.y;
+        return p1.y + (p2.y - p1.y) * (x - p1.x) / dx;
+    }
+    function curveCubicBezier1D(p0, p1, p2, p3, t) {
+        const u = 1 - t;
+        return u * u * u * p0 + 3 * u * u * t * p1 + 3 * u * t * t * p2 + t * t * t * p3;
+    }
+    function curveBezierSegmentY(P0, C1, C2, P3, x) {
+        let lo = 0, hi = 1;
+        for (let iter = 0; iter < 24; iter++) {
+            const mid = (lo + hi) / 2;
+            const xm = curveCubicBezier1D(P0.x, C1.x, C2.x, P3.x, mid);
+            if (xm < x) lo = mid; else hi = mid;
+        }
+        const t = (lo + hi) / 2;
+        return curveCubicBezier1D(P0.y, C1.y, C2.y, P3.y, t);
+    }
+    // Monotone cubic Hermite (Fritsch-Carlson) tangent estimation — the
+    // fix for the source's overshoot problem. Unlike uniform Catmull-Rom,
+    // this weighs each side's slope by whether the curve is even locally
+    // monotonic, and rescales tangents so the resulting curve never
+    // exceeds the data's own min/max between any 2 points.
+    function curveComputeMonotoneTangents(pts) {
+        const n = pts.length;
+        const d = new Array(n - 1);
+        for (let k = 0; k < n - 1; k++) {
+            const dx = pts[k + 1].x - pts[k].x;
+            d[k] = dx === 0 ? 0 : (pts[k + 1].y - pts[k].y) / dx;
+        }
+        const m = new Array(n);
+        m[0] = d[0] || 0;
+        m[n - 1] = d[n - 2] || 0;
+        for (let k = 1; k < n - 1; k++) {
+            m[k] = (d[k - 1] === 0 || d[k] === 0 || (d[k - 1] > 0) !== (d[k] > 0)) ? 0 : (d[k - 1] + d[k]) / 2;
+        }
+        for (let k = 0; k < n - 1; k++) {
+            if (d[k] === 0) { m[k] = 0; m[k + 1] = 0; continue; }
+            const a = m[k] / d[k], b = m[k + 1] / d[k];
+            if (a < 0) m[k] = 0;
+            if (b < 0) m[k + 1] = 0;
+            const s = a * a + b * b;
+            if (s > 9) {
+                const tau = 3 / Math.sqrt(s);
+                m[k] = tau * a * d[k];
+                m[k + 1] = tau * b * d[k];
+            }
+        }
+        return m;
+    }
+    function curveHermiteY(p1, p2, m1, m2, x) {
+        const dx = p2.x - p1.x;
+        if (dx === 0) return p1.y;
+        const t = (x - p1.x) / dx, t2 = t * t, t3 = t2 * t;
+        const h00 = 2 * t3 - 3 * t2 + 1, h10 = t3 - 2 * t2 + t, h01 = -2 * t3 + 3 * t2, h11 = t3 - t2;
+        return h00 * p1.y + h10 * dx * m1 + h01 * p2.y + h11 * dx * m2;
+    }
+    // Natural cubic spline (global tridiagonal solve, second derivative
+    // zero at both endpoints) — a distinct "classic smooth spline" option
+    // alongside monotone Hermite; can overshoot (like Catmull-Rom) but
+    // with an evenly-distributed curvature character.
+    function curveComputeNaturalSplineSecondDerivs(sorted) {
+        const n = sorted.length;
+        if (n < 3) return new Array(n).fill(0);
+        const h = new Array(n - 1);
+        for (let i = 0; i < n - 1; i++) h[i] = sorted[i + 1].x - sorted[i].x;
+        const a = new Array(n).fill(0), b = new Array(n).fill(1), c = new Array(n).fill(0), d = new Array(n).fill(0);
+        for (let i = 1; i < n - 1; i++) {
+            a[i] = h[i - 1];
+            b[i] = 2 * (h[i - 1] + h[i]);
+            c[i] = h[i];
+            d[i] = 6 * ((sorted[i + 1].y - sorted[i].y) / h[i] - (sorted[i].y - sorted[i - 1].y) / h[i - 1]);
+        }
+        const cp = new Array(n).fill(0), dp = new Array(n).fill(0);
+        for (let i = 1; i < n - 1; i++) {
+            const denom = b[i] - a[i] * cp[i - 1];
+            cp[i] = c[i] / denom;
+            dp[i] = (d[i] - a[i] * dp[i - 1]) / denom;
+        }
+        const M = new Array(n).fill(0);
+        for (let i = n - 2; i >= 1; i--) M[i] = dp[i] - cp[i] * M[i + 1];
+        return M;
+    }
+    function curveNaturalSplineY(sorted, M, i, x) {
+        const p1 = sorted[i], p2 = sorted[i + 1];
+        const h = p2.x - p1.x;
+        if (h === 0) return p1.y;
+        const a = (p2.x - x) / h, b = (x - p1.x) / h;
+        return a * p1.y + b * p2.y + ((a * a * a - a) * M[i] + (b * b * b - b) * M[i + 1]) * (h * h) / 6;
+    }
+    // Per-segment EASING functions (as distinct from the spline family
+    // above) — direct request 2026-09-28 ("Sine, Bezier, Linear, Constant
+    // (stepped), Cubic/Spline, Exponential, Logarithmic, Elastic, etc
+    // etc"). Each maps a segment-local t in [0,1] to an eased t in [0,1];
+    // the curve then lerps p1.y->p2.y by that eased value — the same
+    // shape family as CSS/GSAP easing, applied per-segment rather than as
+    // a multi-point spline derivative. Formulas are the standard ones
+    // from easings.net except logarithmic (a simple, clean, normalized
+    // log10(1+9t) — no widely "standard" logarithmic easing exists to
+    // match).
+    function curveEaseLinear(t) { return t; }
+    function curveEaseSine(t) { return -(Math.cos(Math.PI * t) - 1) / 2; }
+    function curveEaseBezier(t) { return curveBezierSegmentY({ x: 0, y: 0 }, { x: 0.42, y: 0 }, { x: 0.58, y: 1 }, { x: 1, y: 1 }, t); }
+    function curveEaseConstant(t) { return t < 1 ? 0 : 1; }
+    function curveEaseExpo(t) {
+        if (t === 0) return 0;
+        if (t === 1) return 1;
+        return t < 0.5 ? Math.pow(2, 20 * t - 10) / 2 : (2 - Math.pow(2, -20 * t + 10)) / 2;
+    }
+    function curveEaseLog(t) { return Math.log10(1 + 9 * t); }
+    function curveEaseElastic(t) {
+        const c5 = (2 * Math.PI) / 4.5;
+        if (t === 0) return 0;
+        if (t === 1) return 1;
+        return t < 0.5
+            ? -(Math.pow(2, 20 * t - 10) * Math.sin((20 * t - 11.125) * c5)) / 2
+            : (Math.pow(2, -20 * t + 10) * Math.sin((20 * t - 11.125) * c5)) / 2 + 1;
+    }
+    const CURVE_EASING_FNS = {
+        linear: curveEaseLinear, sine: curveEaseSine, bezier: curveEaseBezier,
+        constant: curveEaseConstant, exponential: curveEaseExpo,
+        logarithmic: curveEaseLog, elastic: curveEaseElastic,
+    };
+    // Public runtime evaluator — a host project reads a saved curve's
+    // JSON ({points, method}) and calls this the same way it would call
+    // Handy Dandies' own evaluateArmLengthCurve(). Recomputes tangents/
+    // spline coefficients per call for simplicity — cheap given the
+    // CURVE_MAX_POINTS_DEFAULT cap; a host evaluating this every frame
+    // for many instances should precompute once via the lower-level
+    // curveComputeMonotoneTangents()/curveComputeNaturalSplineSecondDerivs()
+    // helpers instead.
+    function evaluateCurveEditorPoints(points, x, method) {
+        if (!points || points.length === 0) return 1;
+        if (points.length === 1) return points[0].y;
+        const sorted = points;
+        if (x <= sorted[0].x) return sorted[0].y;
+        if (x >= sorted[sorted.length - 1].x) return sorted[sorted.length - 1].y;
+        const m = method || 'monotone';
+        const tangents = m === 'monotone' ? curveComputeMonotoneTangents(sorted) : null;
+        const naturalM = m === 'natural' ? curveComputeNaturalSplineSecondDerivs(sorted) : null;
+        for (let i = 0; i < sorted.length - 1; i++) {
+            const p1 = sorted[i], p2 = sorted[i + 1];
+            if (x >= p1.x && x <= p2.x) {
+                if (p1.h1 || p2.h2) {
+                    const C1 = p1.h1 ? { x: p1.x + p1.h1.x, y: p1.y + p1.h1.y } : p1;
+                    const C2 = p2.h2 ? { x: p2.x + p2.h2.x, y: p2.y + p2.h2.y } : p2;
+                    return curveBezierSegmentY(p1, C1, C2, p2, x);
+                }
+                if (CURVE_EASING_FNS[m]) {
+                    const t = p2.x === p1.x ? 0 : (x - p1.x) / (p2.x - p1.x);
+                    return p1.y + (p2.y - p1.y) * CURVE_EASING_FNS[m](t);
+                }
+                if (m === 'catmullrom') return curveCatmullRomSegmentY(sorted, i, x);
+                if (m === 'natural') return curveNaturalSplineY(sorted, naturalM, i, x);
+                return curveHermiteY(p1, p2, tangents[i], tangents[i + 1], x);
+            }
+        }
+        return sorted[sorted.length - 1].y;
+    }
+    // Mirror X reverses which point is "first" (each x -> 1-x), so a
+    // point's out-handle (h1, toward the next/right point) becomes the
+    // new in-handle (h2, from the previous/left point) and vice versa,
+    // with the handle's own x-offset sign flipped to match the reversed
+    // direction. Mirror Y keeps point order/x untouched and just flips
+    // y (and each handle's y-offset sign) since left-right relationships
+    // don't change under a vertical flip.
+    function curveMirrorX(points) {
+        return points.map(p => {
+            const np = { x: 1 - p.x, y: p.y };
+            if (p.h2) np.h1 = { x: -p.h2.x, y: p.h2.y };
+            if (p.h1) np.h2 = { x: -p.h1.x, y: p.h1.y };
+            return np;
+        }).sort((a, b) => a.x - b.x);
+    }
+    function curveMirrorY(points) {
+        return points.map(p => {
+            const np = { x: p.x, y: 1 - p.y };
+            if (p.h1) np.h1 = { x: p.h1.x, y: -p.h1.y };
+            if (p.h2) np.h2 = { x: p.h2.x, y: -p.h2.y };
+            return np;
+        });
+    }
+    const CURVE_METHOD_OPTIONS = [
+        { value: 'monotone', text: 'Monotone Cubic (Smooth, No Overshoot)' },
+        { value: 'catmullrom', text: 'Catmull-Rom (Classic)' },
+        { value: 'natural', text: 'Natural Cubic Spline (Smooth, Global)' },
+        { value: 'linear', text: 'Linear' },
+        { value: 'sine', text: 'Sine (Ease In-Out)' },
+        { value: 'bezier', text: 'Bezier (Ease In-Out)' },
+        { value: 'constant', text: 'Constant (Stepped)' },
+        { value: 'exponential', text: 'Exponential (Ease In-Out)' },
+        { value: 'logarithmic', text: 'Logarithmic' },
+        { value: 'elastic', text: 'Elastic (Ease In-Out)' },
+    ];
+    function buildCurveEditorRow(ctrl) {
+        ctrl.skipDeviceCheckbox = true; // a curve shape isn't a per-device value, same reasoning as list-picker
+        const row = document.createElement('div');
+        row.className = 'dev-row dev-curve-editor-row-container';
+        const label = document.createElement('span');
+        label.className = 'dev-label';
+        label.textContent = ctrl.label;
+        row.appendChild(label);
+
+        // Everything below (dropdown, graph, buttons, caption) lives in
+        // its own full-width block that wraps onto its own line beneath
+        // the label — keeping `row` itself in its normal horizontal
+        // layout so the auto-injected row-drag-handle sits BESIDE the
+        // label, same as a plain slider row, instead of above it (direct
+        // report 2026-09-28: the earlier column-direction `row` itself
+        // pushed the handle above the label).
+        const bodyWrap = document.createElement('div');
+        bodyWrap.className = 'dev-curve-editor-body';
+        row.appendChild(bodyWrap);
+
+        const methodSelect = document.createElement('select');
+        methodSelect.className = 'dev-select';
+        methodSelect.style.marginTop = '4px';
+        CURVE_METHOD_OPTIONS.forEach(o => {
+            const opt = document.createElement('option');
+            opt.value = o.value; opt.textContent = o.text;
+            methodSelect.appendChild(opt);
+        });
+        bodyWrap.appendChild(methodSelect);
+
+        const W = 240, H = 120;
+        const svgNS = 'http://www.w3.org/2000/svg';
+        const svg = document.createElementNS(svgNS, 'svg');
+        svg.setAttribute('width', W); svg.setAttribute('height', H);
+        svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+        svg.classList.add('dev-curve-editor-svg');
+        const axisX = document.createElementNS(svgNS, 'line');
+        axisX.setAttribute('x1', 0); axisX.setAttribute('y1', H - 1); axisX.setAttribute('x2', W); axisX.setAttribute('y2', H - 1);
+        axisX.setAttribute('stroke', 'rgba(255,255,255,0.25)');
+        const axisY = document.createElementNS(svgNS, 'line');
+        axisY.setAttribute('x1', 1); axisY.setAttribute('y1', 0); axisY.setAttribute('x2', 1); axisY.setAttribute('y2', H);
+        axisY.setAttribute('stroke', 'rgba(255,255,255,0.25)');
+        const curvePath = document.createElementNS(svgNS, 'path');
+        curvePath.setAttribute('fill', 'none'); curvePath.setAttribute('stroke', 'var(--dev-accent-color, #0ff)'); curvePath.setAttribute('stroke-width', '2');
+        svg.appendChild(axisX); svg.appendChild(axisY); svg.appendChild(curvePath);
+        bodyWrap.appendChild(svg);
+
+        const btnRow = document.createElement('div');
+        btnRow.className = 'dev-list-picker-actions';
+        const mirrorXBtn = document.createElement('button');
+        mirrorXBtn.type = 'button'; mirrorXBtn.textContent = 'Mirror X';
+        const mirrorYBtn = document.createElement('button');
+        mirrorYBtn.type = 'button'; mirrorYBtn.textContent = 'Mirror Y';
+        btnRow.append(mirrorXBtn, mirrorYBtn);
+        bodyWrap.appendChild(btnRow);
+
+        if (ctrl.caption) {
+            const caption = document.createElement('div');
+            caption.className = 'dev-curve-editor-caption';
+            caption.textContent = ctrl.caption;
+            bodyWrap.appendChild(caption);
+        }
+        // No separate instructional hint text (per direct request
+        // 2026-09-28) — handles are always visible/grabbable below (see
+        // redraw()'s own comment), so the Alt/Shift gesture is
+        // discoverable by direct interaction instead of a caption.
+
+        // Hidden input carries this control's serialized {points, method}
+        // so it rides the generic Copy/Save/Reset/Undo pipeline exactly
+        // like list-picker's own hidden input does.
+        const hidden = document.createElement('input');
+        hidden.type = 'hidden';
+        hidden.id = ctrl.id;
+        let points = (ctrl.defaultPoints || [{ x: 0, y: 0 }, { x: 1, y: 1 }]).map(p => ({ ...p }));
+        let method = ctrl.defaultMethod || 'monotone';
+        methodSelect.value = method;
+        hidden.value = JSON.stringify({ points, method });
+        row.appendChild(hidden);
+
+        const maxPoints = ctrl.maxPoints || CURVE_MAX_POINTS_DEFAULT;
+        const hitRadius = ctrl.hitRadiusPx || CURVE_HIT_RADIUS_PX_DEFAULT;
+
+        const toPx = (p) => ({ x: p.x * W, y: (1 - p.y) * H });
+        const clamp01 = (v) => Math.min(1, Math.max(0, v));
+        const fromPx = (px, py) => ({ x: clamp01(px / W), y: clamp01(1 - py / H) });
+        let circles = [];
+        let handleEls = [];
+
+        function commitPoints() {
+            points.sort((a, b) => a.x - b.x);
+            hidden.value = JSON.stringify({ points, method });
+        }
+        function startHandleDrag(p, i, kind, downEv) {
+            downEv.stopPropagation();
+            downEv.preventDefault();
+            const canHave = kind === 'h1' ? i < points.length - 1 : i > 0;
+            if (!canHave) return;
+            if (!p[kind]) p[kind] = { x: kind === 'h1' ? 0.08 : -0.08, y: 0 };
+            function onMove(moveEv) {
+                const rect = svg.getBoundingClientRect();
+                if (rect.width <= 0 || rect.height <= 0) return;
+                const np = fromPx(moveEv.clientX - rect.left, moveEv.clientY - rect.top);
+                p[kind] = { x: np.x - p.x, y: np.y - p.y };
+                redraw();
+            }
+            function onUp() {
+                window.removeEventListener('pointermove', onMove);
+                window.removeEventListener('pointerup', onUp);
+                const handlePx = toPx({ x: p.x + p[kind].x, y: p.y + p[kind].y });
+                const pointPx = toPx(p);
+                if (Math.hypot(handlePx.x - pointPx.x, handlePx.y - pointPx.y) <= CURVE_HANDLE_REMOVE_THRESHOLD_PX) delete p[kind];
+                redraw();
+                commitPoints();
+            }
+            window.addEventListener('pointermove', onMove);
+            window.addEventListener('pointerup', onUp);
+        }
+        function redraw() {
+            let d = '';
+            for (let i = 0; i <= CURVE_SAMPLES; i++) {
+                const x = i / CURVE_SAMPLES;
+                const y = clamp01(evaluateCurveEditorPoints(points, x, method));
+                const px = toPx({ x, y });
+                d += (i === 0 ? 'M' : 'L') + px.x.toFixed(2) + ',' + px.y.toFixed(2) + ' ';
+            }
+            curvePath.setAttribute('d', d.trim());
+            handleEls.forEach(el => svg.removeChild(el));
+            handleEls = [];
+            circles.forEach(c => svg.removeChild(c));
+            circles = [];
+            points.forEach((p, i) => {
+                // Handles are always shown/grabbable, per direct request
+                // 2026-09-28 ("i want bezier handles to be visible at all
+                // times") — replacing the source's "invisible until
+                // dragged once" behavior (a real, previously-documented
+                // discoverability gap in Handy Dandies). A side that has
+                // no REAL p[kind] yet shows a dimmer preview marker at the
+                // default offset; grabbing and dragging it is what
+                // actually creates p[kind] and starts influencing the
+                // curve (startHandleDrag(), unchanged) — purely visual
+                // until then, so the active interpolation method above
+                // still governs the curve exactly as before.
+                const canHaveH1 = i < points.length - 1, canHaveH2 = i > 0;
+                [['h1', canHaveH1], ['h2', canHaveH2]].forEach(([kind, canHave]) => {
+                    if (!canHave) return;
+                    const isReal = !!p[kind];
+                    const offset = p[kind] || { x: kind === 'h1' ? 0.08 : -0.08, y: 0 };
+                    const px = toPx(p);
+                    const hx = toPx({ x: p.x + offset.x, y: p.y + offset.y });
+                    const line = document.createElementNS(svgNS, 'line');
+                    line.setAttribute('x1', px.x); line.setAttribute('y1', px.y); line.setAttribute('x2', hx.x); line.setAttribute('y2', hx.y);
+                    line.setAttribute('stroke', isReal ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.15)'); line.setAttribute('stroke-width', '1');
+                    svg.appendChild(line);
+                    handleEls.push(line);
+                    const marker = document.createElementNS(svgNS, 'rect');
+                    marker.setAttribute('x', hx.x - 3.5); marker.setAttribute('y', hx.y - 3.5); marker.setAttribute('width', 7); marker.setAttribute('height', 7);
+                    marker.setAttribute('fill', '#e0a030');
+                    marker.setAttribute('fill-opacity', isReal ? '1' : '0.35');
+                    marker.style.cursor = 'grab';
+                    marker.addEventListener('pointerdown', downEv => startHandleDrag(p, i, kind, downEv));
+                    svg.appendChild(marker);
+                    handleEls.push(marker);
+                });
+                const px = toPx(p);
+                // Bigger invisible hit target UNDER the small visible dot
+                // — a plain 5px dot is too small to reliably tap on
+                // mobile (direct report 2026-09-28). The dot itself is
+                // decorative (pointer-events:none) so every real
+                // interaction routes through this larger circle
+                // regardless of its own visual size.
+                const hit = document.createElementNS(svgNS, 'circle');
+                hit.setAttribute('cx', px.x); hit.setAttribute('cy', px.y); hit.setAttribute('r', hitRadius);
+                hit.setAttribute('fill', 'transparent');
+                hit.style.cursor = 'grab';
+                let dragged = false;
+                hit.addEventListener('pointerdown', downEv => {
+                    if (downEv.altKey) { startHandleDrag(p, i, 'h1', downEv); return; }
+                    if (downEv.shiftKey) { startHandleDrag(p, i, 'h2', downEv); return; }
+                    downEv.stopPropagation();
+                    dragged = false;
+                    const isEndpoint = i === 0 || i === points.length - 1;
+                    function onMove(moveEv) {
+                        const rect = svg.getBoundingClientRect();
+                        if (rect.width <= 0 || rect.height <= 0) return;
+                        dragged = true;
+                        const np = fromPx(moveEv.clientX - rect.left, moveEv.clientY - rect.top);
+                        if (isEndpoint) { p.y = np.y; } else { p.x = np.x; p.y = np.y; }
+                        redraw();
+                    }
+                    function onUp() {
+                        window.removeEventListener('pointermove', onMove);
+                        window.removeEventListener('pointerup', onUp);
+                        if (dragged) commitPoints();
+                    }
+                    window.addEventListener('pointermove', onMove);
+                    window.addEventListener('pointerup', onUp);
+                });
+                function deletePointIfRemovable() {
+                    if (points.length > 2 && i !== 0 && i !== points.length - 1) {
+                        points.splice(points.indexOf(p), 1);
+                        redraw();
+                        commitPoints();
+                    }
+                }
+                hit.addEventListener('dblclick', dblEv => { dblEv.stopPropagation(); deletePointIfRemovable(); });
+                hit.addEventListener('contextmenu', ctxEv => { ctxEv.preventDefault(); ctxEv.stopPropagation(); deletePointIfRemovable(); });
+                svg.appendChild(hit);
+                circles.push(hit);
+                const dot = document.createElementNS(svgNS, 'circle');
+                dot.setAttribute('cx', px.x); dot.setAttribute('cy', px.y); dot.setAttribute('r', 5);
+                dot.setAttribute('fill', 'var(--dev-accent-color, #0ff)');
+                dot.style.pointerEvents = 'none';
+                svg.appendChild(dot);
+                circles.push(dot);
+            });
+        }
+        svg.addEventListener('click', clickEv => {
+            if (clickEv.target.tagName === 'circle') return;
+            if (points.length >= maxPoints) return;
+            const rect = svg.getBoundingClientRect();
+            const np = fromPx(clickEv.clientX - rect.left, clickEv.clientY - rect.top);
+            if (np.x <= 0 || np.x >= 1) return;
+            points.push(np);
+            redraw();
+            commitPoints();
+        });
+        methodSelect.addEventListener('change', () => {
+            method = methodSelect.value;
+            redraw();
+            commitPoints();
+        });
+        mirrorXBtn.addEventListener('click', () => {
+            points = curveMirrorX(points);
+            redraw();
+            commitPoints();
+        });
+        mirrorYBtn.addEventListener('click', () => {
+            points = curveMirrorY(points);
+            redraw();
+            commitPoints();
+        });
+
+        // External restore (Reset/Undo/Load) re-parses and re-renders,
+        // exactly like list-picker's own hidden-input 'input' listener.
+        hidden.addEventListener('input', () => {
+            try {
+                const parsed = JSON.parse(hidden.value || '{}');
+                if (Array.isArray(parsed.points) && parsed.points.length >= 2) {
+                    points = parsed.points;
+                    method = parsed.method || 'monotone';
+                    methodSelect.value = method;
+                    redraw();
+                }
+            } catch (e) { /* leave displayed state as-is */ }
+        });
+
+        redraw();
+        return row;
+    }
+    // {id, label, trackMin, trackMax, unit?, defaultValue} — a dual-
+    // handle min/max range slider ("Range Bar"), re-derived from Handy
+    // Dandies' buildGenericRangeBarWidget(). Min/max numbers sit at their
+    // own ends (left/right of the track) rather than a single combined
+    // center readout, per direct request 2026-09-28 ("Place the min on
+    // the left side under the slider, and the max on the right side...
+    // I dont need the words 'Min' and 'Max', just the numbers") — the
+    // same left/right, no-label convention as the plain slider's own
+    // click-to-type bound labels above.
+    function buildRangeBarRow(ctrl) {
+        ctrl.skipDeviceCheckbox = true; // a range's own bounds aren't a per-device value, same reasoning as list-picker/curve-editor
+        const row = document.createElement('div');
+        row.className = 'dev-row dev-range-bar-row-container';
+        const label = document.createElement('span');
+        label.className = 'dev-label';
+        label.textContent = ctrl.label;
+        row.appendChild(label);
+
+        // Content lives in its own full-width block that wraps onto its
+        // own line beneath the label, same fix as the curve editor's own
+        // bodyWrap — keeps the auto-injected row-drag-handle beside the
+        // label instead of above it.
+        const bodyWrap = document.createElement('div');
+        bodyWrap.className = 'dev-range-bar-body';
+        row.appendChild(bodyWrap);
+
+        const trackMin = ctrl.trackMin, trackMax = ctrl.trackMax, unit = ctrl.unit || '';
+        const track = document.createElement('div');
+        track.className = 'dev-range-bar-track';
+        const fill = document.createElement('div');
+        fill.className = 'dev-range-bar-fill';
+        const minHandle = document.createElement('div');
+        minHandle.className = 'dev-range-bar-handle';
+        const maxHandle = document.createElement('div');
+        maxHandle.className = 'dev-range-bar-handle';
+        track.append(fill, minHandle, maxHandle);
+        bodyWrap.appendChild(track);
+
+        const readoutRow = document.createElement('div');
+        readoutRow.className = 'dev-range-bar-readouts';
+        const minReadout = document.createElement('span');
+        minReadout.className = 'dev-range-bar-readout dev-range-bar-readout-editable';
+        minReadout.dataset.bound = 'min';
+        const maxReadout = document.createElement('span');
+        maxReadout.className = 'dev-range-bar-readout dev-range-bar-readout-editable';
+        maxReadout.dataset.bound = 'max';
+        readoutRow.append(minReadout, maxReadout);
+        bodyWrap.appendChild(readoutRow);
+
+        // Hidden input carries this control's serialized {min, max} so it
+        // rides the generic Copy/Save/Reset/Undo pipeline exactly like
+        // list-picker/curve-editor's own hidden inputs do.
+        const hidden = document.createElement('input');
+        hidden.type = 'hidden';
+        hidden.id = ctrl.id;
+        let current = Object.assign({ min: trackMin, max: trackMax }, ctrl.defaultValue || {});
+        hidden.value = JSON.stringify(current);
+        row.appendChild(hidden);
+
+        const toPct = (v) => Math.min(100, Math.max(0, (v - trackMin) / (trackMax - trackMin) * 100));
+        const fromPct = (pct) => trackMin + (pct / 100) * (trackMax - trackMin);
+
+        function commit() { hidden.value = JSON.stringify(current); }
+        function redraw() {
+            const minPct = toPct(current.min), maxPct = toPct(current.max);
+            fill.style.left = Math.min(minPct, maxPct) + '%';
+            fill.style.right = (100 - Math.max(minPct, maxPct)) + '%';
+            minHandle.style.left = minPct + '%';
+            maxHandle.style.left = maxPct + '%';
+            minReadout.textContent = current.min + unit;
+            maxReadout.textContent = current.max + unit;
+        }
+        function startDrag(key) {
+            return (downEv) => {
+                downEv.preventDefault();
+                function onMove(moveEv) {
+                    const rect = track.getBoundingClientRect();
+                    if (rect.width <= 0) return;
+                    const pct = Math.min(100, Math.max(0, (moveEv.clientX - rect.left) / rect.width * 100));
+                    current[key] = Math.round(fromPct(pct));
+                    redraw();
+                }
+                function onUp() {
+                    window.removeEventListener('pointermove', onMove);
+                    window.removeEventListener('pointerup', onUp);
+                    commit();
+                }
+                window.addEventListener('pointermove', onMove);
+                window.addEventListener('pointerup', onUp);
+            };
+        }
+        minHandle.addEventListener('pointerdown', startDrag('min'));
+        maxHandle.addEventListener('pointerdown', startDrag('max'));
+
+        // Click-to-type either readout directly, same interaction as the
+        // plain slider's own bound labels.
+        [minReadout, maxReadout].forEach(el => {
+            el.addEventListener('click', () => {
+                if (el.querySelector('input')) return;
+                const kind = el.dataset.bound;
+                const originalText = el.textContent;
+                const input = document.createElement('input');
+                input.type = 'number';
+                input.className = 'dev-value-edit-input';
+                input.value = current[kind];
+                el.textContent = '';
+                el.appendChild(input);
+                input.focus(); input.select();
+                let settled = false;
+                function commitEdit() {
+                    if (settled) return;
+                    settled = true;
+                    let val = parseFloat(input.value);
+                    if (isNaN(val)) val = current[kind];
+                    current[kind] = val;
+                    input.remove();
+                    redraw();
+                    commit();
+                }
+                function cancelEdit() {
+                    if (settled) return;
+                    settled = true;
+                    el.textContent = originalText;
+                }
+                input.addEventListener('blur', commitEdit);
+                input.addEventListener('keydown', ev => {
+                    if (ev.key === 'Enter') input.blur();
+                    else if (ev.key === 'Escape') cancelEdit();
+                });
+                input.addEventListener('click', ev => ev.stopPropagation());
+            });
+        });
+
+        // External restore (Reset/Undo/Load) re-parses and re-renders,
+        // same convention as list-picker/curve-editor's own hidden input.
+        hidden.addEventListener('input', () => {
+            try {
+                const parsed = JSON.parse(hidden.value || '{}');
+                if (typeof parsed.min === 'number' && typeof parsed.max === 'number') { current = parsed; redraw(); }
+            } catch (e) { /* leave displayed state as-is */ }
+        });
+
+        redraw();
+        return row;
+    }
+    // {id, label} — a standalone action button (CLAUDE.md §12n's test/
+    // utility-button pattern). Wired the same way every other uniform
+    // control is (document.getElementById(ctrl.id).addEventListener('click', ...)
+    // per [JS-7]'s own worked example) — no ctrl.onClick field, so it needs
+    // no special-casing in the generic Copy/Save/Reset/Undo pipeline either
+    // (a plain <button> has no meaningful .value to capture, and none is read).
+    function buildButtonRow(ctrl) {
+        const row = document.createElement('div');
+        row.className = 'dev-row';
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'dev-action-button';
+        btn.id = ctrl.id;
+        btn.textContent = ctrl.label;
+        row.appendChild(btn);
+        return row;
+    }
+    const UNIFORM_ROW_BUILDERS = { slider: buildSliderRow, color: buildColorRow, select: buildSelectRow, checkbox: buildCheckboxRow, button: buildButtonRow, 'list-picker': buildListPickerRow, 'curve-editor': buildCurveEditorRow, 'range-bar': buildRangeBarRow };
     // Dispatches on ctrl.type. Use this for slider/color/select/checkbox
     // controls; call buildTextInputRow(ctrl) directly for text/number
     // inputs (it has its own required fields, not just {type,...}).
@@ -4491,11 +5652,28 @@
             }
             if (e.button === 2 || mouseLogActivePointers.size > 1) return;
             clearTimeout(mouseLogHoldTimer);
+            // Multi-click-hold detection (re-synced 2026-09-28): if a
+            // prior click's own multi-click debounce is still pending
+            // when THIS press starts, this press continues that same
+            // sequence (a 2nd/3rd press-and-hold), not an independent
+            // single hold — cancel the pending plain-click log (it never
+            // resolves as a lone click now; it's the Nth press of a
+            // click-hold sequence instead) and count this hold into the
+            // sequence.
+            const continuingClickSequence = !!mouseLogClickTimer;
+            if (continuingClickSequence) { clearTimeout(mouseLogClickTimer); mouseLogClickTimer = null; }
+            const holdSequenceCount = continuingClickSequence ? mouseLogClickCount + 1 : 1;
             mouseLogHoldTimer = setTimeout(() => {
                 const info2 = mouseLogActivePointers.get(e.pointerId);
                 if (info2 && !info2.moved) {
                     const { target, triggered } = describeMouseLogTarget(e.target);
-                    pushMouseLogEntry({ type: 'hold', x: Math.round(e.clientX), y: Math.round(e.clientY), device: mouseLogDeviceContext(), pointerType: e.pointerType, target, triggered });
+                    // 'hold' here is the START of the gesture (the press
+                    // crossing the hold threshold) — the matching release
+                    // is always its OWN separate log entry, below, never
+                    // merged into this one.
+                    const holdType = holdSequenceCount >= 3 ? 'tripleclickhold' : holdSequenceCount === 2 ? 'doubleclickhold' : 'hold';
+                    info2.holdType = holdType; // read by pointerup below to log the matching release with the same label
+                    pushMouseLogEntry({ type: holdType, x: Math.round(e.clientX), y: Math.round(e.clientY), device: mouseLogDeviceContext(), pointerType: e.pointerType, target, triggered });
                 }
             }, MOUSE_LOG_HOLD_MS);
         });
@@ -4557,7 +5735,15 @@
                 return;
             }
             if (heldMs > MOUSE_LOG_HOLD_MS) {
-                pushMouseLogEntry({ type: 'release', x, y, device, pointerType: e.pointerType, target, triggered, detail: 'heldMs:' + Math.round(heldMs) });
+                // Its own separate entry from the 'hold'/'doubleclickhold'/
+                // 'tripleclickhold' start entry above — never merged
+                // (re-synced 2026-09-28). Labeled to match whichever hold
+                // sequence actually started (info.holdType, set by the
+                // pointerdown hold-timer callback above).
+                const holdType = info.holdType || 'hold';
+                const releaseType = holdType === 'hold' ? 'release' : holdType + '-release';
+                pushMouseLogEntry({ type: releaseType, x, y, device, pointerType: e.pointerType, target, triggered, detail: 'heldMs:' + Math.round(heldMs) });
+                mouseLogClickCount = 0; // a completed hold ends the click-counting sequence
                 return;
             }
             mouseLogClickCount++;

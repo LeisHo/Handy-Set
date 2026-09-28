@@ -343,8 +343,25 @@ html, body {
     .dev-panel.dev-bold-title .dev-panel-title { font-weight: bold; }
     .dev-panel.dev-caps-title-text .dev-panel-title { text-transform: uppercase; }
     .dev-header-buttons { display: flex; gap: 4px; }
+    /* The 2 button sub-containers (see the header's own HTML comment for
+       the full reasoning) sit side by side on desktop, in DOM order
+       (secondary then primary — Edit Text...Redo, then Copy...Close),
+       reading as ONE continuous left-to-right sequence (re-synced
+       2026-09-28). */
+    .dev-header-buttons-secondary, .dev-header-buttons-primary { display: flex; gap: 4px; }
+    @media (max-width: 767px) {
+        /* Same DOM order, but flipped top-to-bottom instead of left-to-
+           right: primary (2nd in DOM) renders ON TOP, secondary (1st in
+           DOM) renders BELOW — Copy/Reset/Save/Minimize/Close on top,
+           the other 6 below — without reordering the DOM or duplicating
+           any button. */
+        .dev-header-buttons { flex-direction: column-reverse; align-items: stretch; gap: 4px; }
+        .dev-header-buttons-secondary, .dev-header-buttons-primary { flex-wrap: wrap; justify-content: flex-end; }
+    }
     .dev-hide-btn, .dev-collapse-btn, .dev-header-icon-btn {
-        background: var(--dev-accent-color, #0ff);
+        /* Decoupled from Accent Color to its own Button Color
+           (re-synced 2026-09-28). */
+        background: var(--dev-button-color, #3a3a4a);
         /* Was a fixed #000 - decoupled to the same Button Text Color
            control every other dev-panel button below now uses
            (2026-09-14, matching Clicko's current Dev Panel group). */
@@ -483,7 +500,9 @@ html, body {
         align-items: center;
         justify-content: center;
         font-size: calc(var(--dev-button-text-font-size-px, 10) * 1px);
-        background: var(--dev-accent-color, #0ff);
+        /* Decoupled from Accent Color to its own Button Color
+           (re-synced 2026-09-28). */
+        background: var(--dev-button-color, #3a3a4a);
         /* Was a fixed #000 - decoupled to its own independent Button Text
            Color control (2026-09-14, matching Clicko's current Dev Panel
            group). */
@@ -544,6 +563,10 @@ html, body {
        corner is simpler as a plain sibling, no reattachment machinery
        needed at all). */
     .dev-section { margin-bottom: 15px; position: relative; }
+    /* This ONE group's title uses Accent Color #2 specifically, rather
+       than the generic Group Label Background Color every other group's
+       title uses (re-synced 2026-09-28). */
+    #devSavedSettingsGroupTitle { background: var(--dev-accent-color-2, #26253a); }
     .dev-section-title {
         /* FIX (project-side, not upstream — same "genuine template bug"
            class as the group-cascade-checkbox display:none fix above):
@@ -708,6 +731,9 @@ html, body {
         user-select: none;
         z-index: 1;
         opacity: 0.75;
+        /* Decoupled from Accent Color to Accent Color #3, matching the
+           checkbox color (re-synced 2026-09-28). */
+        color: var(--dev-accent-color-3, #7ec8e3);
     }
     .dev-group-undock-btn:hover { opacity: 1; }
     .dev-section-content > .dev-section > .dev-group-undock-btn {
@@ -836,9 +862,14 @@ html, body {
        row's own value controls; the group-level cascade version sits
        inline right after a section title's own text instead (no
        margin-left:auto there - see its own selector below). */
+    /* Every checkbox in the panel — registered controls included —
+       shares this one color, decoupled from Accent Color, per Accent
+       Color #3 (re-synced 2026-09-28). The specific rules below repeat
+       it explicitly for clarity, but this alone already covers them. */
+    .dev-panel input[type="checkbox"] { accent-color: var(--dev-accent-color-3, #7ec8e3); }
     .dev-visibility-checkbox, .dev-independence-checkbox {
         margin-left: auto;
-        accent-color: var(--dev-accent-color, #0ff);
+        accent-color: var(--dev-accent-color-3, #7ec8e3);
         cursor: pointer;
         flex-shrink: 0;
     }
@@ -859,7 +890,7 @@ html, body {
         top: 50%;
         right: 52px;
         transform: translateY(-50%);
-        accent-color: var(--dev-accent-color, #0ff);
+        accent-color: var(--dev-accent-color-3, #7ec8e3);
         cursor: pointer;
         z-index: 1;
     }
@@ -941,6 +972,13 @@ html, body {
         font-family: var(--dev-panel-font-family, monospace);
         font-size: calc(var(--dev-value-font-size-px, 10) * 1px); text-align: right; padding: 0;
     }
+    /* Slider min/max bound labels — click-to-type (re-synced 2026-09-28),
+       same interaction language as .dev-value-editable above but visually
+       dimmer (opacity 0.6) since these are the track's own bounds, not
+       the live value. */
+    .dev-slider-bound { font-size: 9px; opacity: 0.6; flex-shrink: 0; }
+    .dev-slider-bound-editable { cursor: text; }
+    .dev-slider-bound-editable:hover { outline: 1px solid var(--dev-accent-color, #0ff); opacity: 1; }
     .dev-text-input {
         width: 52px; background: #000; color: var(--dev-accent-color, #0ff);
         border: 1px solid var(--dev-accent-color, #0ff);
@@ -980,3 +1018,130 @@ html, body {
     .dev-panel.dev-caps-tab-text .dev-tab-btn { text-transform: uppercase; }
     .dev-panel.dev-caps-group-names .dev-section-title { text-transform: uppercase; }
     .dev-panel.dev-caps-settings-text .dev-label { text-transform: uppercase; }
+
+    /* ============================================================
+       [CSS-11] SAVED PRESETS UI — 'list-picker' CONTROL TYPE
+       ============================================================ */
+    /* CLAUDE.md §12r. Save/Overwrite/Use/Rename/Delete/+Group/Export/
+       Import picker for a named list of saved snapshots (Saved Cameras,
+       Saved Poses, Saved Lighting, a Rendering Style's own saved
+       presets, etc.). Re-expressed against this template's own
+       dev-row/dev-section visual language (not a separately-themed
+       widget) — see [JS-15] for the control type itself. */
+    .dev-list-picker-row-container { width: 100%; }
+    .dev-list-picker {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        max-height: 220px;
+        overflow-y: auto;
+        border: 1px solid var(--dev-accent-color, #0ff);
+        border-radius: 4px;
+        padding: 4px;
+        margin: 4px 0;
+        background: rgba(255, 255, 255, 0.04);
+        scrollbar-color: var(--dev-accent-color, #0ff) #000;
+        scrollbar-width: thin;
+    }
+    .dev-list-picker::-webkit-scrollbar { width: 8px; }
+    .dev-list-picker::-webkit-scrollbar-thumb { background: var(--dev-accent-color, #0ff); border-radius: 4px; }
+    .dev-lp-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 4px;
+        border-radius: 3px;
+        cursor: pointer;
+        font-size: calc(var(--dev-setting-title-font-size-px, 12) * 1px);
+        color: #fff;
+    }
+    .dev-lp-row:hover { background: rgba(255, 255, 255, 0.08); }
+    .dev-lp-row-selected {
+        background: color-mix(in srgb, var(--dev-accent-color, #0ff) 25%, transparent);
+        color: var(--dev-panel-non-title-text-color, #fff);
+    }
+    .dev-lp-row-handle { cursor: grab; opacity: 0.6; flex-shrink: 0; touch-action: none; }
+    .dev-lp-row-handle:hover { opacity: 1; }
+    .dev-lp-row-handle:active { cursor: grabbing; }
+    .dev-lp-row-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .dev-lp-export-checkbox { accent-color: var(--dev-accent-color, #0ff); cursor: pointer; flex-shrink: 0; }
+    .dev-lp-group { margin-left: 4px; }
+    .dev-lp-group-header {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 4px;
+        cursor: pointer;
+        color: var(--dev-panel-group-text-color, #0ff);
+        font-weight: bold;
+    }
+    .dev-lp-group-handle { cursor: grab; opacity: 0.6; flex-shrink: 0; touch-action: none; }
+    .dev-lp-group-handle:hover { opacity: 1; }
+    .dev-lp-group-handle:active { cursor: grabbing; }
+    .dev-lp-group-title { flex: 1; }
+    .dev-lp-group-remove { background: none; border: none; color: inherit; cursor: pointer; font-size: 13px; opacity: 0.7; padding: 0 4px; }
+    .dev-lp-group-remove:hover { opacity: 1; }
+    .dev-lp-group-body { margin-left: 14px; border-left: 1px dashed rgba(0, 255, 255, 0.25); padding-left: 6px; }
+    .dev-lp-group.collapsed > .dev-lp-group-body { display: none; }
+    .dev-lp-ungrouped-body { display: flex; flex-direction: column; gap: 2px; }
+    .dev-list-picker-actions { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+    .dev-list-picker-actions button {
+        flex: 1 1 auto;
+        min-width: 60px;
+        min-height: calc(var(--dev-button-height-px, 22) * 1px);
+        background: var(--dev-button-color, #3a3a4a);
+        color: var(--dev-panel-button-text-color, #000);
+        border: none;
+        border-radius: 3px;
+        font-size: calc(var(--dev-button-text-font-size-px, 10) * 1px);
+        cursor: pointer;
+    }
+    .dev-list-picker-actions button:hover { filter: brightness(1.3); }
+
+    /* ============================================================
+       [CSS-12] CURVE EDITOR CONTROL TYPE
+       ============================================================ */
+    /* CLAUDE.md §12 Component Gallery. Ported (and re-derived, not
+       copied as-is -- see [JS-17]'s own comment) from Handy Dandies'
+       buildGenericCurveWidget()/evaluateArmLengthCurve() -- a draggable-
+       point curve/bezier editor mapping a normalized X input to a Y
+       output, the same shape as Unity's "Curve Editor" or a photo
+       editor's Levels/Curves tool. */
+    .dev-curve-editor-row-container { width: 100%; }
+    /* Forces this block onto its own line below the label (flex-basis:
+       100% in a flex-wrap:wrap row can never share a line with a
+       preceding sibling) so the row-drag-handle + label stay side by
+       side like a plain slider row, per direct request 2026-09-28. */
+    .dev-curve-editor-body { flex-basis: 100%; width: 100%; display: flex; flex-direction: column; align-items: stretch; }
+    .dev-curve-editor-svg {
+        background: rgba(255, 255, 255, 0.06);
+        border-radius: 4px;
+        margin-top: 6px;
+        touch-action: none;
+        cursor: crosshair;
+    }
+    .dev-curve-editor-caption { font-size: 10px; opacity: 0.7; margin-top: 3px; text-align: center; }
+
+    /* ============================================================
+       [CSS-13] RANGE BAR (MIN/MAX SLIDER) CONTROL TYPE
+       ============================================================ */
+    /* Re-derived from Handy Dandies' buildGenericRangeBarWidget() — a
+       dual-handle min/max range slider. */
+    .dev-range-bar-row-container { width: 100%; }
+    .dev-range-bar-body { flex-basis: 100%; width: 100%; display: flex; flex-direction: column; align-items: stretch; margin-top: 6px; }
+    .dev-range-bar-track { position: relative; height: 18px; margin: 0 9px; background: rgba(255, 255, 255, 0.12); border-radius: 9px; touch-action: none; }
+    .dev-range-bar-fill { position: absolute; top: 0; bottom: 0; background: var(--dev-accent-color, #0ff); opacity: 0.5; border-radius: 9px; }
+    .dev-range-bar-handle { position: absolute; top: -3px; width: 18px; height: 24px; margin-left: -9px; background: var(--dev-accent-color, #0ff); border-radius: 4px; cursor: ew-resize; touch-action: none; }
+    .dev-range-bar-readouts { display: flex; justify-content: space-between; margin-top: 4px; font-size: 10px; }
+    .dev-range-bar-readout-editable { cursor: text; }
+    .dev-range-bar-readout-editable:hover { outline: 1px solid var(--dev-accent-color, #0ff); }
+
+
+    /* ============================================================
+       TOGGLEABLE SETTINGS GROUP (re-synced 2026-09-28)
+       ============================================================ */
+    /* Hides the WHOLE content block as one unit (never per-child) so a
+       disabled group shows nothing when expanded, including any nested
+       subgroup, at any depth. */
+    .dev-section-group-disabled > .dev-section-content { display: none !important; }
+    .dev-group-toggle-checkbox { margin-right: 4px; cursor: pointer; flex-shrink: 0; }

@@ -87,7 +87,7 @@ const cfg = {
   // otherwise a verbatim port.
   reactiveArmLengthEnabled: true,
   armLengthRange: '{"min":0,"max":85}',
-  armLengthCurve: '[{"x":0,"y":1},{"x":0.148333740234375,"y":0.6613540649414062},{"x":0.4100001017252604,"y":0.31468760172526045},{"x":0.5316670735677084,"y":0.2680206298828125},{"x":0.748333740234375,"y":0.19468739827473958},{"x":1,"y":0}]',
+  armLengthCurve: '{"points": [{"x": 0, "y": 1}, {"x": 0.148333740234375, "y": 0.6613540649414062}, {"x": 0.4100001017252604, "y": 0.31468760172526045}, {"x": 0.5316670735677084, "y": 0.2680206298828125}, {"x": 0.748333740234375, "y": 0.19468739827473958}, {"x": 1, "y": 0}], "method": "catmullrom"}',
   // Responsive Wrist Splay — RESTORED 2026-09-21 after direct instruction
   // ("Leave Responsive Wrist Splay") following an earlier removal this
   // same session that was based on a misidentification of a DIFFERENT
@@ -97,7 +97,7 @@ const cfg = {
   // DANDIES' per-field live distance range).
   wristSplayResponsiveEnabled: true, wristSplayDefault: 7, wristSplayReactiveEnabled: true,
   wristSplayRange: '{"min":5,"max":-71}',
-  wristSplayCurve: '[{"x":0,"y":1},{"x":0.31833343505859374,"y":0.6961458841959636},{"x":1,"y":0.042812347412109375}]',
+  wristSplayCurve: '{"points": [{"x": 0, "y": 1}, {"x": 0.31833343505859374, "y": 0.6961458841959636}, {"x": 1, "y": 0.042812347412109375}], "method": "catmullrom"}',
   // Wrist axis clamps — direct request 2026-09-25, after diagnosing why
   // a saved pose's own Wrist Splay (e.g. -55) plus Responsive Wrist
   // Splay's own live contribution (e.g. -71 at rest) sum to an
@@ -132,7 +132,7 @@ const cfg = {
   // percentage on mobile (identical to tiltMagnitude there already).
   baseArmRotationResponsiveEnabled: false, baseArmRotationFineTune: 0,
   baseArmRotationRange: '{"min":0,"max":30}',
-  baseArmRotationCurve: '[{"x":0,"y":1},{"x":1,"y":0}]',
+  baseArmRotationCurve: '{"points": [{"x": 0, "y": 1}, {"x": 1, "y": 0}], "method": "catmullrom"}',
   // Responsive Pose Tween -- direct request 2026-09-27: "add a
   // 'Responsive Pose Tween' subgroup... As the cursor moves/ phone is
   // tilted, the hand will tween between the default pose and the
@@ -148,7 +148,7 @@ const cfg = {
   // why this reading was chosen over the request's own literal "target
   // pose is 100 on the x axis" wording.
   poseTweenResponsiveEnabled: false, poseTweenTargetPoseName: '',
-  poseTweenCurve: '[{"x":0,"y":0},{"x":1,"y":1}]',
+  poseTweenCurve: '{"points": [{"x": 0, "y": 0}, {"x": 1, "y": 1}], "method": "catmullrom"}',
   // Lighting
   keyAzimuth: 117, keyElevation: 56, keyTargetHeight: 71, keyIntensity: 6, keyColor: '#ffffff',
   ambientIntensity: 0, ambientSkyColor: '#ffffff', ambientGroundColor: '#3a2f2a',
@@ -175,6 +175,12 @@ const cfg = {
   // Per-sensor log toggles -- direct request 2026-09-28. Default all on,
   // matching the log line's pre-existing (always-all-3) behavior.
   sensorLogAccel: true, sensorLogGyro: true, sensorLogCompass: true,
+  // deviceorientation's beta/gamma (absolute tilt ANGLE, degrees) --
+  // added 2026-09-28, distinct from Gyro's rotationRate alpha/beta/gamma
+  // (angular VELOCITY) already logged above under the same greek-letter
+  // names. Labeled "Orient" in the log line specifically so the two
+  // never look like duplicates of each other.
+  sensorLogOrientBeta: true, sensorLogOrientGamma: true,
   deviceInfoEnabled: false,
   // Phone Model -- direct request 2026-09-27: a loadable smartphone GLB,
   // positioned/scaled/rotated independently of the hand, with its own
@@ -196,7 +202,7 @@ const cfg = {
   // comment for how these drive multiple axes from one shared mapping.
   phoneResponsiveRotationEnabled: false, phoneResponsiveRotationFineTune: 0,
   phoneResponsiveRotationRange: '{"min":0,"max":30}',
-  phoneResponsiveRotationCurve: '[{"x":0,"y":1},{"x":1,"y":0}]',
+  phoneResponsiveRotationCurve: '{"points": [{"x": 0, "y": 1}, {"x": 1, "y": 0}], "method": "catmullrom"}',
   // Debug > Object Axes -- ported from 3JS ENGINE's own feature (see that
   // project's src/main.js, "World Axes / Object Axes visualization").
   objectAxesEnabled: false, objectAxesRenderInFront: false,
@@ -497,8 +503,10 @@ function computeBaseScale() { return (8 / handLengthRaw) * cfg.handScale }
 // ---------------------------------------------------------------------
 let armLengthRangeParsed = { min: 0, max: 85 }
 let armLengthCurveParsed = [{ x: 0, y: 1 }, { x: 1, y: 0 }]
+let armLengthCurveMethod = 'catmullrom'
 let wristSplayRangeParsed = { min: 5, max: -71 }
 let wristSplayCurveParsed = [{ x: 0, y: 1 }, { x: 1, y: 0 }]
+let wristSplayCurveMethod = 'catmullrom'
 // Wrist axis clamps (safety ceiling on the FINAL combined angle, not a
 // reactive curve's own range) — see cfg's own declaration comment.
 let wristRotationClampParsed = { min: -360, max: 360 }
@@ -506,53 +514,20 @@ let wristBendClampParsed = { min: -90, max: 90 }
 let wristSplayClampParsed = { min: -180, max: 180 }
 const curveWidgetResyncs = []
 
-function catmullRomY(y0, y1, y2, y3, t) {
-  const t2 = t * t, t3 = t2 * t
-  return 0.5 * ((2 * y1) + (-y0 + y2) * t + (2 * y0 - 5 * y1 + 4 * y2 - y3) * t2 + (-y0 + 3 * y1 - 3 * y2 + y3) * t3)
-}
-function cubicBezier1D(p0, p1, p2, p3, t) {
-  const u = 1 - t
-  return u * u * u * p0 + 3 * u * u * t * p1 + 3 * u * t * t * p2 + t * t * t * p3
-}
-function bezierSegmentY(P0, C1, C2, P3, x) {
-  let lo = 0, hi = 1
-  for (let iter = 0; iter < 24; iter++) {
-    const mid = (lo + hi) / 2
-    const xm = cubicBezier1D(P0.x, C1.x, C2.x, P3.x, mid)
-    if (xm < x) lo = mid; else hi = mid
-  }
-  const t = (lo + hi) / 2
-  return cubicBezier1D(P0.y, C1.y, C2.y, P3.y, t)
-}
-function evaluateReactiveCurve(points, x) {
-  if (!points || points.length === 0) return 1
-  if (points.length === 1) return points[0].y
-  const sorted = points
-  if (x <= sorted[0].x) return sorted[0].y
-  if (x >= sorted[sorted.length - 1].x) return sorted[sorted.length - 1].y
-  for (let i = 0; i < sorted.length - 1; i++) {
-    const p1 = sorted[i], p2 = sorted[i + 1]
-    if (x >= p1.x && x <= p2.x) {
-      if (p1.h1 || p2.h2) {
-        const C1 = p1.h1 ? { x: p1.x + p1.h1.x, y: p1.y + p1.h1.y } : p1
-        const C2 = p2.h2 ? { x: p2.x + p2.h2.x, y: p2.y + p2.h2.y } : p2
-        return bezierSegmentY(p1, C1, C2, p2, x)
-      }
-      const p0 = sorted[i - 1] || p1
-      const p3 = sorted[i + 2] || p2
-      const segT = p2.x === p1.x ? 0 : (x - p1.x) / (p2.x - p1.x)
-      return catmullRomY(p0.y, p1.y, p2.y, p3.y, segT)
-    }
-  }
-  return sorted[sorted.length - 1].y
-}
+// REMOVED 2026-09-28 -- catmullRomY/cubicBezier1D/bezierSegmentY/
+// evaluateReactiveCurve (the hand-built curve math backing this file's
+// own retired buildReactiveCurveWidget(), just below) are dead code now
+// that all 12 curve/range fields are migrated to devPanel.js's own
+// generic type:'curve-editor'/'range-bar' controls, which use their own
+// window.evaluateCurveEditorPoints() instead (see each field's own
+// "MIGRATED 2026-09-28" comment).
 function parseArmLengthConfig() {
   try { armLengthRangeParsed = JSON.parse(cfg.armLengthRange) } catch (e) { /* keep last-good value */ }
-  try { armLengthCurveParsed = JSON.parse(cfg.armLengthCurve).sort((a, b) => a.x - b.x) } catch (e) { /* keep last-good value */ }
+  try { const parsed = JSON.parse(cfg.armLengthCurve); armLengthCurveParsed = (parsed.points || parsed).slice().sort((a, b) => a.x - b.x); armLengthCurveMethod = parsed.method || 'catmullrom' } catch (e) { /* keep last-good value */ }
 }
 function parseWristSplayConfig() {
   try { wristSplayRangeParsed = JSON.parse(cfg.wristSplayRange) } catch (e) { /* keep last-good value */ }
-  try { wristSplayCurveParsed = JSON.parse(cfg.wristSplayCurve).sort((a, b) => a.x - b.x) } catch (e) { /* keep last-good value */ }
+  try { const parsed = JSON.parse(cfg.wristSplayCurve); wristSplayCurveParsed = (parsed.points || parsed).slice().sort((a, b) => a.x - b.x); wristSplayCurveMethod = parsed.method || 'catmullrom' } catch (e) { /* keep last-good value */ }
 }
 function parseWristClampConfig() {
   try { wristRotationClampParsed = JSON.parse(cfg.wristRotationClampRange) } catch (e) { /* keep last-good value */ }
@@ -577,7 +552,7 @@ function computeArmLengthT(distanceT) {
   if (!cfg.trackingEnabled) return 0
   if (!cfg.cropWristEnabled) return 0
   if (!cfg.reactiveArmLengthEnabled) return cfg.hideWrist / 100
-  const curveY = THREE.MathUtils.clamp(evaluateReactiveCurve(armLengthCurveParsed, distanceT), 0, 1)
+  const curveY = THREE.MathUtils.clamp(window.evaluateCurveEditorPoints(armLengthCurveParsed, distanceT, armLengthCurveMethod), 0, 1)
   const minT = armLengthRangeParsed.min / 100, maxT = armLengthRangeParsed.max / 100
   return minT + (maxT - minT) * curveY
 }
@@ -590,16 +565,17 @@ function computeResponsiveWristSplayDeg(distanceT) {
   if (!cfg.trackingEnabled) return 0
   if (!cfg.wristSplayResponsiveEnabled) return 0
   if (!cfg.wristSplayReactiveEnabled) return cfg.wristSplayDefault
-  const curveY = THREE.MathUtils.clamp(evaluateReactiveCurve(wristSplayCurveParsed, distanceT), 0, 1)
+  const curveY = THREE.MathUtils.clamp(window.evaluateCurveEditorPoints(wristSplayCurveParsed, distanceT, wristSplayCurveMethod), 0, 1)
   const { min, max } = wristSplayRangeParsed
   return min + (max - min) * curveY
 }
 // Responsive Arm Rotation at Base -- see cfg's own declaration comment.
 let baseArmRotationRangeParsed = { min: 0, max: 30 }
 let baseArmRotationCurveParsed = [{ x: 0, y: 1 }, { x: 1, y: 0 }]
+let baseArmRotationCurveMethod = 'catmullrom'
 function parseBaseArmRotationConfig() {
   try { baseArmRotationRangeParsed = JSON.parse(cfg.baseArmRotationRange) } catch (e) { /* keep last-good value */ }
-  try { baseArmRotationCurveParsed = JSON.parse(cfg.baseArmRotationCurve).sort((a, b) => a.x - b.x) } catch (e) { /* keep last-good value */ }
+  try { const parsed = JSON.parse(cfg.baseArmRotationCurve); baseArmRotationCurveParsed = (parsed.points || parsed).slice().sort((a, b) => a.x - b.x); baseArmRotationCurveMethod = parsed.method || 'catmullrom' } catch (e) { /* keep last-good value */ }
 }
 // Returns the EXTRA rotation (degrees) to add onto cfg.baseRotationX --
 // unlike computeArmLengthT/computeResponsiveWristSplayDeg above, a
@@ -610,14 +586,15 @@ function parseBaseArmRotationConfig() {
 function computeResponsiveBaseArmRotationDeg(distanceT) {
   if (!cfg.trackingEnabled) return 0
   if (!cfg.baseArmRotationResponsiveEnabled) return 0
-  const curveY = THREE.MathUtils.clamp(evaluateReactiveCurve(baseArmRotationCurveParsed, distanceT), 0, 1)
+  const curveY = THREE.MathUtils.clamp(window.evaluateCurveEditorPoints(baseArmRotationCurveParsed, distanceT, baseArmRotationCurveMethod), 0, 1)
   const { min, max } = baseArmRotationRangeParsed
   return min + (max - min) * curveY + (cfg.baseArmRotationFineTune || 0)
 }
 // Responsive Pose Tween -- see cfg's own declaration comment.
 let poseTweenCurveParsed = [{ x: 0, y: 0 }, { x: 1, y: 1 }]
+let poseTweenCurveMethod = 'catmullrom'
 function parsePoseTweenConfig() {
-  try { poseTweenCurveParsed = JSON.parse(cfg.poseTweenCurve).sort((a, b) => a.x - b.x) } catch (e) { /* keep last-good value */ }
+  try { const parsed = JSON.parse(cfg.poseTweenCurve); poseTweenCurveParsed = (parsed.points || parsed).slice().sort((a, b) => a.x - b.x); poseTweenCurveMethod = parsed.method || 'catmullrom' } catch (e) { /* keep last-good value */ }
 }
 // Looks up a SAVED_POSES entry by name -- used by Responsive Pose
 // Tween's Default (DEFAULT_POSE_NAME) and Target (cfg.poseTweenTargetPoseName)
@@ -1080,7 +1057,7 @@ function applyResponsivePoseTweenFrame() {
   const defaultPose = findSavedPoseByName(DEFAULT_POSE_NAME)
   const targetPose = findSavedPoseByName(cfg.poseTweenTargetPoseName)
   if (!defaultPose || !targetPose) return
-  const curveY = THREE.MathUtils.clamp(evaluateReactiveCurve(poseTweenCurveParsed, armBaseDistanceT), 0, 1)
+  const curveY = THREE.MathUtils.clamp(window.evaluateCurveEditorPoints(poseTweenCurveParsed, armBaseDistanceT, poseTweenCurveMethod), 0, 1)
   const blended = {}
   Object.keys(defaultPose).forEach((k) => {
     if (k === 'name' || k === 'group') return
@@ -1512,8 +1489,10 @@ let tiltMagnitude = 0, tiltAngle = 0
 // Phone Model Responsive Rotation's mobile-only 3rd axis -- see
 // handleDeviceOrientation()'s own comment. Stays 0 on desktop (nothing
 // ever writes it outside that function), which is what makes "desktop:
-// Y/Z only, mobile: all 3 axes" true without an explicit platform branch.
-let phoneTiltAxisXRaw = 0
+// X/Z only, mobile: all 3 axes" true without an explicit platform branch.
+// Renamed from phoneTiltAxisXRaw 2026-09-28 -- it now drives the Y axis
+// (see computePhoneCombinedQuat()'s own comment for the full remap).
+let phoneTiltAxisYRaw = 0
 let phoneAlphaBaseline = null
 let lastInputSource = 'device' // 'device' | 'mouse' — which path updateTiltTarget() should use this frame
 const cursorNDC = new THREE.Vector2(0, 0)
@@ -1572,9 +1551,9 @@ function handleDeviceOrientation(e) {
   tiltMagnitude = Math.min(Math.hypot(nx, ny), 1)
   tiltAngle = Math.atan2(ny, nx)
   // Phone Model Responsive Rotation's 3rd (mobile-only) axis -- direct
-  // request: "On Desktop, it will rotate around its local y and z axes
-  // only, but on mobile it will rotate on all axes." Y/Z are covered by
-  // nx/ny above (reconstructed from tiltMagnitude/tiltAngle, identical on
+  // request: "On Desktop, it will rotate around its local x and z axes
+  // only, but on mobile it will rotate on all axes." X/Z are covered by
+  // ny/nx above (reconstructed from tiltMagnitude/tiltAngle, identical on
   // both mouse and device paths); the 3rd axis needs a signal that
   // genuinely doesn't exist for a 2D mouse position -- device compass
   // heading (e.alpha) is the natural candidate, since real devices expose
@@ -1582,15 +1561,15 @@ function handleDeviceOrientation(e) {
   // ever gives 2 (screen x/y). alpha is an ABSOLUTE compass heading
   // (0-360), not a centered tilt like beta/gamma, so it needs a captured
   // baseline (first reading) to turn into a centered delta before it's
-  // usable the same way. phoneTiltAxisXRaw stays 0 on desktop (this
+  // usable the same way. phoneTiltAxisYRaw stays 0 on desktop (this
   // function never runs there), which is exactly what makes "desktop:
-  // Y/Z only" fall out naturally rather than needing an explicit
+  // X/Z only" fall out naturally rather than needing an explicit
   // isTouchDevice branch in the responsive-rotation code itself.
   if (typeof e.alpha === 'number') {
     if (phoneAlphaBaseline === null) phoneAlphaBaseline = e.alpha
     let deltaAlpha = e.alpha - phoneAlphaBaseline
     deltaAlpha = ((deltaAlpha + 180) % 360 + 360) % 360 - 180 // normalize to -180..180
-    phoneTiltAxisXRaw = THREE.MathUtils.clamp(deltaAlpha / maxTilt, -1, 1)
+    phoneTiltAxisYRaw = THREE.MathUtils.clamp(deltaAlpha / maxTilt, -1, 1)
   }
 }
 function handleMouseMoveFallback(e) {
@@ -1809,14 +1788,15 @@ let phoneModelLoadToken = 0 // guards a stale async load callback from applying 
 
 let phoneResponsiveRotationRangeParsed = { min: 0, max: 30 }
 let phoneResponsiveRotationCurveParsed = [{ x: 0, y: 1 }, { x: 1, y: 0 }]
+let phoneResponsiveRotationCurveMethod = 'catmullrom'
 function parsePhoneResponsiveRotationConfig() {
   try { phoneResponsiveRotationRangeParsed = JSON.parse(cfg.phoneResponsiveRotationRange) } catch (e) { /* keep last-good value */ }
-  try { phoneResponsiveRotationCurveParsed = JSON.parse(cfg.phoneResponsiveRotationCurve).sort((a, b) => a.x - b.x) } catch (e) { /* keep last-good value */ }
+  try { const parsed = JSON.parse(cfg.phoneResponsiveRotationCurve); phoneResponsiveRotationCurveParsed = (parsed.points || parsed).slice().sort((a, b) => a.x - b.x); phoneResponsiveRotationCurveMethod = parsed.method || 'catmullrom' } catch (e) { /* keep last-good value */ }
 }
 // Same curve math as computeResponsiveBaseArmRotationDeg(), reused as ONE
 // shared magnitude-mapping applied independently per axis -- rawComponent
 // is a signed -1..1 input (nx/ny, reconstructed from tiltMagnitude/
-// tiltAngle below, or phoneTiltAxisXRaw for the mobile-only 3rd axis).
+// tiltAngle below, or phoneTiltAxisYRaw for the mobile-only 3rd axis).
 // |rawComponent| drives the curve (a 0-1 "how far this axis is tilted"
 // magnitude, same shape as Base Arm Rotation's own distanceT), and
 // Math.sign(rawComponent) gives the resulting rotation a direction --
@@ -1827,7 +1807,7 @@ function computePhoneResponsiveAxisDeg(rawComponent) {
   if (!cfg.trackingEnabled) return 0
   if (!cfg.phoneResponsiveRotationEnabled) return 0
   const t = THREE.MathUtils.clamp(Math.abs(rawComponent), 0, 1)
-  const curveY = THREE.MathUtils.clamp(evaluateReactiveCurve(phoneResponsiveRotationCurveParsed, t), 0, 1)
+  const curveY = THREE.MathUtils.clamp(window.evaluateCurveEditorPoints(phoneResponsiveRotationCurveParsed, t, phoneResponsiveRotationCurveMethod), 0, 1)
   const { min, max } = phoneResponsiveRotationRangeParsed
   const magnitude = min + (max - min) * curveY + (cfg.phoneResponsiveRotationFineTune || 0)
   return magnitude * Math.sign(rawComponent)
@@ -1835,22 +1815,46 @@ function computePhoneResponsiveAxisDeg(rawComponent) {
 const _phoneCombinedQuat = new THREE.Quaternion()
 const _phoneManualQuat = new THREE.Quaternion()
 const _phoneResponsiveQuat = new THREE.Quaternion()
+// REMAPPED 2026-09-28, direct spec: "tilted forwards (facing the user,
+// top of phone pointing up) = +90 X, tilting backwards = -90 X. Tilted
+// left = +90 Z, tilted right = -90 Z. Handle the leftover axis (Y)."
+//
+// nx/ny are reconstructed from tiltMagnitude/tiltAngle -- the same 2
+// components handleDeviceOrientation()/handleMouseMoveFallback() already
+// reduce BOTH input paths into. nx tracks gamma (left-right tilt), ny
+// tracks beta (front-back tilt) -- see handleDeviceOrientation()'s own
+// nx/ny assignment.
+//
+// - X <- beta (ny), NOT inverted. Per the W3C deviceorientation spec,
+//   positive beta means the device's top is tilted toward the user (the
+//   "stand the phone up to face you" motion) -- exactly the "tilted
+//   forwards" example given, so no sign flip is needed.
+// - Z <- gamma (nx), INVERTED. Per spec, positive gamma means the RIGHT
+//   edge tilts down (tilting right), negative means the left edge tilts
+//   down (tilting left) -- the OPPOSITE of what's wanted here (left=+90,
+//   right=-90), so this axis is negated.
+// - Y <- compass heading delta (phoneTiltAxisYRaw, alpha-based) -- the
+//   "leftover axis": the only remaining independent orientation signal a
+//   real device provides that a 2D mouse position can't. Previously
+//   assigned to X (pre-2026-09-28); simply moved here now that beta/gamma
+//   have claimed X/Z.
+//
+// NOT verified against a real device this session (no physical phone
+// available in this sandbox, same documented limitation as every other
+// device-orientation feature in this file) -- the beta/gamma sign
+// conventions above are per spec, not measured. If any ONE axis comes
+// out backwards on a real phone, flip that axis's own sign here (negate
+// the rawComponent passed to computePhoneResponsiveAxisDeg) rather than
+// re-deriving the whole mapping.
 function computePhoneCombinedQuat() {
   _phoneManualQuat.setFromEuler(new THREE.Euler(
     THREE.MathUtils.degToRad(cfg.phoneModelRotX), THREE.MathUtils.degToRad(cfg.phoneModelRotY), THREE.MathUtils.degToRad(cfg.phoneModelRotZ), 'XYZ'
   ))
-  // nx/ny reconstructed from tiltMagnitude/tiltAngle -- the same 2
-  // components handleDeviceOrientation()/handleMouseMoveFallback() already
-  // reduce BOTH input paths into, so desktop and mobile share identical
-  // Y/Z behavior with no extra plumbing. phoneTiltAxisXRaw (X axis) is
-  // only ever written by handleDeviceOrientation() -- see that function's
-  // own comment for why that alone is what makes "desktop: Y/Z only"
-  // true.
-  const nx = tiltMagnitude * Math.cos(tiltAngle)
-  const ny = tiltMagnitude * Math.sin(tiltAngle)
-  const respX = computePhoneResponsiveAxisDeg(phoneTiltAxisXRaw)
-  const respY = computePhoneResponsiveAxisDeg(nx)
-  const respZ = computePhoneResponsiveAxisDeg(ny)
+  const nx = tiltMagnitude * Math.cos(tiltAngle) // gamma-based (left-right)
+  const ny = tiltMagnitude * Math.sin(tiltAngle) // beta-based (front-back)
+  const respX = computePhoneResponsiveAxisDeg(ny)
+  const respY = computePhoneResponsiveAxisDeg(phoneTiltAxisYRaw)
+  const respZ = computePhoneResponsiveAxisDeg(-nx)
   _phoneResponsiveQuat.setFromEuler(new THREE.Euler(
     THREE.MathUtils.degToRad(respX), THREE.MathUtils.degToRad(respY), THREE.MathUtils.degToRad(respZ), 'XYZ'
   ))
@@ -1943,7 +1947,7 @@ function syncHandModelEnabledCheckboxes() {
 }
 // Called every animate() frame (unconditionally within !isPaused, same as
 // updateAllFingerGizmos()) -- Responsive Rotation depends on live
-// tiltMagnitude/tiltAngle/phoneTiltAxisXRaw, so the transform needs
+// tiltMagnitude/tiltAngle/phoneTiltAxisYRaw, so the transform needs
 // recomputing every frame while the phone model is loaded, not just on a
 // dev-panel control's own input event.
 function updatePhoneModelFrame() {
@@ -2668,7 +2672,7 @@ window.__debug = {
   get phoneModelRaw() { return phoneModelRaw }, get phoneModelWrapper() { return phoneModelWrapper },
   get sceneObjectEntries() { return sceneObjectEntries },
   get tiltMagnitude() { return tiltMagnitude }, get tiltAngle() { return tiltAngle },
-  get phoneTiltAxisXRaw() { return phoneTiltAxisXRaw }, get lastInputSource() { return lastInputSource },
+  get phoneTiltAxisYRaw() { return phoneTiltAxisYRaw }, get lastInputSource() { return lastInputSource },
   get sensorLog() { return sensorLog },
   getHandCenterWorld, updateWristCrop, computeBaseScale, pushSensorLog, restartSensorTimer
 }
@@ -2888,6 +2892,16 @@ function restartSensorTimer() {
       const heading = latestOrientation ? latestOrientation.alpha : null
       parts.push(`Compass:${fmt(heading)}°`)
     }
+    // Absolute orientation angle (deviceorientation.beta/gamma) -- NOT the
+    // same numbers as Gyro's rotationRate alpha/beta/gamma above (that's
+    // angular velocity); labeled "Orient" so the two never read as
+    // duplicates despite sharing greek-letter names.
+    if (cfg.sensorLogOrientBeta || cfg.sensorLogOrientGamma) {
+      const bits = []
+      if (cfg.sensorLogOrientBeta) bits.push(`β:${fmt(latestOrientation ? latestOrientation.beta : null)}°`)
+      if (cfg.sensorLogOrientGamma) bits.push(`γ:${fmt(latestOrientation ? latestOrientation.gamma : null)}°`)
+      parts.push(`Orient ${bits.join(' ')}`)
+    }
     if (parts.length) pushSensorLog(parts.join('  |  '))
   }, cfg.sensorIntervalMs)
 }
@@ -3003,207 +3017,16 @@ function wireColor(id, onChange) { const el = document.getElementById(id); if (e
 function wireTextInput(id, onChange) { const el = document.getElementById(id); if (el) el.addEventListener('input', (e) => onChange(e.target.value)) }
 function wireSelect(id, onChange) { const el = document.getElementById(id); if (el) el.addEventListener('change', (e) => onChange(e.target.value)) }
 
-// =======================================================================
-// Reactive Arm Length — custom curve-editor and dual-handle range
-// widgets, ported from HANDY DANDIES (its own generic engine has no
-// equivalent control type, so these are hand-built DOM/SVG on top of a
-// plain devPanel.js 'text' control, same convention as this project's
-// other custom widgets). Genericized into 2 parametrized builders
-// (originally shared with Responsive Wrist Splay too, removed 2026-09-21
-// per direct request — kept generic since a future feature may reuse
-// them; HANDY DANDIES itself has 4 near-duplicate functions; behavior here
-// is identical, just DRY'd) rather than duplicated per feature.
-// =======================================================================
-function elLocal(tag, styles, attrs) {
-  const node = document.createElement(tag)
-  if (styles) Object.assign(node.style, styles)
-  if (attrs) Object.entries(attrs).forEach(([k, v]) => { if (k === 'text') node.textContent = v; else node.setAttribute(k, v) })
-  return node
-}
-function commitTextControl(input, value) {
-  input.value = value
-  input.dispatchEvent(new Event('input', { bubbles: true }))
-}
-// Dual-handle range bar. opts: {trackMin, trackMax, isPercent, crossClamp, minLabel, maxLabel}
-function buildReactiveRangeWidget(row, opts) {
-  const input = row.querySelector('.dev-text-input')
-  if (!input) return
-  input.style.display = 'none'
-  row.style.flexDirection = 'column'
-  row.style.alignItems = 'stretch'
-  const toPct = opts.isPercent ? (v) => v : (v) => THREE.MathUtils.clamp((v - opts.trackMin) / (opts.trackMax - opts.trackMin) * 100, 0, 100)
-  const fromPct = opts.isPercent ? (p) => Math.round(p) : (p) => Math.round(opts.trackMin + (p / 100) * (opts.trackMax - opts.trackMin))
-
-  const wrap = elLocal('div', { flex: '1', padding: '6px 4px 2px' })
-  const track = elLocal('div', { position: 'relative', height: '18px', margin: '0 9px', background: 'rgba(255,255,255,0.12)', borderRadius: '9px' })
-  const fill = elLocal('div', { position: 'absolute', top: '0', bottom: '0', background: 'var(--dev-accent-color, #7d8cff)', opacity: '0.5', borderRadius: '9px' })
-  const zeroTick = !opts.isPercent ? elLocal('div', { position: 'absolute', top: '-2px', bottom: '-2px', width: '1px', background: 'rgba(255,255,255,0.35)' }) : null
-  const minHandle = elLocal('div', { position: 'absolute', top: '-3px', width: '18px', height: '24px', marginLeft: '-9px', background: 'var(--dev-accent-color, #7d8cff)', borderRadius: '4px', cursor: 'ew-resize', touchAction: 'none' })
-  const maxHandle = elLocal('div', { position: 'absolute', top: '-3px', width: '18px', height: '24px', marginLeft: '-9px', background: 'var(--dev-accent-color, #7d8cff)', borderRadius: '4px', cursor: 'ew-resize', touchAction: 'none' })
-  const readout = elLocal('div', { fontSize: '11px', textAlign: 'center', marginTop: '4px', opacity: '0.85' })
-  track.appendChild(fill); if (zeroTick) track.appendChild(zeroTick)
-  track.appendChild(minHandle); track.appendChild(maxHandle)
-  wrap.appendChild(track); wrap.appendChild(readout)
-  row.appendChild(wrap)
-
-  let current = { min: opts.trackMin, max: opts.trackMax }
-  try { current = JSON.parse(input.value) } catch (e) { /* keep default */ }
-  let lastSeenValue = input.value
-
-  function redraw() {
-    const minPct = toPct(current.min), maxPct = toPct(current.max)
-    const leftPct = Math.min(minPct, maxPct), rightPct = Math.max(minPct, maxPct)
-    fill.style.left = leftPct + '%'
-    fill.style.right = (100 - rightPct) + '%'
-    if (zeroTick) zeroTick.style.left = toPct(0) + '%'
-    minHandle.style.left = minPct + '%'
-    maxHandle.style.left = maxPct + '%'
-    readout.textContent = `${opts.minLabel}: ${current.min}${opts.unit}  ${opts.maxLabel}: ${current.max}${opts.unit}`
-  }
-  redraw()
-  curveWidgetResyncs.push(() => {
-    if (input.value === lastSeenValue) return
-    lastSeenValue = input.value
-    try { current = JSON.parse(input.value); redraw(); if (opts.onExternalChange) opts.onExternalChange(input.value) } catch (e) { /* leave displayed state as-is */ }
-  })
-
-  function startDrag(handleKey, otherKey) {
-    return (downEv) => {
-      downEv.preventDefault()
-      function onMove(moveEv) {
-        const rect = track.getBoundingClientRect()
-        if (rect.width <= 0) return // hidden/mid-collapse-transition -- avoid committing a NaN-derived value
-        let pct = THREE.MathUtils.clamp((moveEv.clientX - rect.left) / rect.width, 0, 1) * 100
-        let v = fromPct(pct)
-        if (opts.crossClamp) v = handleKey === 'min' ? Math.min(v, current[otherKey]) : Math.max(v, current[otherKey])
-        current[handleKey] = v
-        redraw()
-      }
-      function onUp() {
-        window.removeEventListener('pointermove', onMove)
-        window.removeEventListener('pointerup', onUp)
-        commitTextControl(input, JSON.stringify(current))
-      }
-      window.addEventListener('pointermove', onMove)
-      window.addEventListener('pointerup', onUp)
-    }
-  }
-  minHandle.addEventListener('pointerdown', startDrag('min', 'max'))
-  maxHandle.addEventListener('pointerdown', startDrag('max', 'min'))
-}
-// Draggable-point curve editor (SVG), 0-1 x 0-1 domain, Catmull-Rom
-// spline (evaluateReactiveCurve) with optional per-point bezier handles.
-// opts: {caption}
-function buildReactiveCurveWidget(row, opts) {
-  const input = row.querySelector('.dev-text-input')
-  if (!input) return
-  input.style.display = 'none'
-  row.style.flexDirection = 'column'
-  row.style.alignItems = 'stretch'
-
-  const W = 240, H = 120
-  const svgNS = 'http://www.w3.org/2000/svg'
-  const svg = document.createElementNS(svgNS, 'svg')
-  svg.setAttribute('width', W); svg.setAttribute('height', H)
-  Object.assign(svg.style, { background: 'rgba(255,255,255,0.06)', borderRadius: '4px', marginTop: '6px', touchAction: 'none', cursor: 'crosshair' })
-  const axisX = document.createElementNS(svgNS, 'line')
-  axisX.setAttribute('x1', 0); axisX.setAttribute('y1', H - 1); axisX.setAttribute('x2', W); axisX.setAttribute('y2', H - 1)
-  axisX.setAttribute('stroke', 'rgba(255,255,255,0.25)')
-  const axisY = document.createElementNS(svgNS, 'line')
-  axisY.setAttribute('x1', 1); axisY.setAttribute('y1', 0); axisY.setAttribute('x2', 1); axisY.setAttribute('y2', H)
-  axisY.setAttribute('stroke', 'rgba(255,255,255,0.25)')
-  const curvePath = document.createElementNS(svgNS, 'path')
-  curvePath.setAttribute('fill', 'none'); curvePath.setAttribute('stroke', 'var(--dev-accent-color, #7d8cff)'); curvePath.setAttribute('stroke-width', '2')
-  svg.appendChild(axisX); svg.appendChild(axisY); svg.appendChild(curvePath)
-  const caption = elLocal('div', { fontSize: '10px', opacity: '0.7', marginTop: '3px', textAlign: 'center' }, { text: opts.caption })
-  row.appendChild(svg)
-  row.appendChild(caption)
-
-  let points = [{ x: 0, y: 1 }, { x: 1, y: 0 }]
-  try {
-    const parsed = JSON.parse(input.value)
-    if (Array.isArray(parsed) && parsed.length >= 2) points = parsed.sort((a, b) => a.x - b.x)
-  } catch (e) { /* keep default */ }
-
-  const toPx = (p) => ({ x: p.x * W, y: (1 - p.y) * H })
-  const fromPx = (px, py) => ({ x: THREE.MathUtils.clamp(px / W, 0, 1), y: THREE.MathUtils.clamp(1 - py / H, 0, 1) })
-  let circles = []
-
-  function commitPoints() {
-    points.sort((a, b) => a.x - b.x)
-    commitTextControl(input, JSON.stringify(points))
-  }
-  const CURVE_SAMPLES = 48
-  function redraw() {
-    let d = ''
-    for (let i = 0; i <= CURVE_SAMPLES; i++) {
-      const x = i / CURVE_SAMPLES
-      const y = THREE.MathUtils.clamp(evaluateReactiveCurve(points, x), 0, 1)
-      const px = toPx({ x, y })
-      d += (i === 0 ? 'M' : 'L') + px.x.toFixed(2) + ',' + px.y.toFixed(2) + ' '
-    }
-    curvePath.setAttribute('d', d.trim())
-    circles.forEach((c) => svg.removeChild(c))
-    circles = points.map((p, i) => {
-      const px = toPx(p)
-      const c = document.createElementNS(svgNS, 'circle')
-      c.setAttribute('cx', px.x); c.setAttribute('cy', px.y); c.setAttribute('r', 5)
-      c.setAttribute('fill', 'var(--dev-accent-color, #7d8cff)')
-      Object.assign(c.style, { cursor: 'grab' })
-      let dragged = false
-      c.addEventListener('pointerdown', (downEv) => {
-        downEv.stopPropagation()
-        dragged = false
-        const isEndpoint = i === 0 || i === points.length - 1
-        function onMove(moveEv) {
-          const rect = svg.getBoundingClientRect()
-          if (rect.width <= 0 || rect.height <= 0) return
-          dragged = true
-          const np = fromPx(moveEv.clientX - rect.left, moveEv.clientY - rect.top)
-          if (isEndpoint) { p.y = np.y } else { p.x = np.x; p.y = np.y }
-          redraw()
-        }
-        function onUp() {
-          window.removeEventListener('pointermove', onMove)
-          window.removeEventListener('pointerup', onUp)
-          if (dragged) commitPoints()
-        }
-        window.addEventListener('pointermove', onMove)
-        window.addEventListener('pointerup', onUp)
-      })
-      function deletePointIfRemovable() {
-        if (points.length > 2 && i !== 0 && i !== points.length - 1) {
-          points.splice(points.indexOf(p), 1)
-          redraw()
-          commitPoints()
-        }
-      }
-      c.addEventListener('dblclick', (dblEv) => { dblEv.stopPropagation(); deletePointIfRemovable() })
-      c.addEventListener('contextmenu', (ctxEv) => { ctxEv.preventDefault(); ctxEv.stopPropagation(); deletePointIfRemovable() })
-      svg.appendChild(c)
-      return c
-    })
-  }
-  svg.addEventListener('click', (clickEv) => {
-    if (clickEv.target.tagName === 'circle') return
-    const rect = svg.getBoundingClientRect()
-    const np = fromPx(clickEv.clientX - rect.left, clickEv.clientY - rect.top)
-    if (np.x <= 0 || np.x >= 1) return
-    points.push(np)
-    redraw()
-    commitPoints()
-  })
-  redraw()
-  let lastSeenValue = input.value
-  curveWidgetResyncs.push(() => {
-    if (input.value === lastSeenValue) return
-    lastSeenValue = input.value
-    try {
-      const parsed = JSON.parse(input.value)
-      if (Array.isArray(parsed) && parsed.length >= 2) { points = parsed.sort((a, b) => a.x - b.x); redraw(); if (opts.onExternalChange) opts.onExternalChange(input.value) }
-    } catch (e) { /* leave displayed state as-is */ }
-  })
-}
+// REMOVED 2026-09-28 -- elLocal/commitTextControl/buildReactiveRangeWidget/
+// buildReactiveCurveWidget (the hand-built dual-handle range bar and
+// draggable-point SVG curve editor this project ported from HANDY
+// DANDIES) are dead code now that all 12 curve/range fields (Reactive
+// Arm Length, Responsive Wrist Splay, the 3 wrist-axis clamps,
+// Responsive Arm Rotation at Base, Responsive Pose Tween, Phone
+// Responsive Rotation) are migrated to devPanel.js's own generic
+// type:'curve-editor'/'range-bar' controls (CLAUDE.md §12 template
+// re-sync, 2026-09-28) -- see each field's own "MIGRATED 2026-09-28"
+// comment for the replacement registration pattern.
 
 // ---------------------------------------------------------------------
 // Mobile/Landscape mirroring for the Phone Tilt group's own min/max
@@ -3230,88 +3053,23 @@ function buildReactiveCurveWidget(row, opts) {
 // per-device variant anywhere else in this file, so "independent"
 // wouldn't mean anything real for them).
 //
-// Polled every frame via curveWidgetResyncs (the SAME mechanism this
-// file already uses to detect devPanel.js state changes that don't
-// fire a clean event, e.g. a Reset/Restore writing straight to
-// input.value) rather than wired to one specific trigger -- the
-// checkbox can change via a direct click, a Sync/Reset restore, OR a
-// tab switch recreating the group structure, and polling handles all 3
-// uniformly without needing to hook each one separately. Also handles
-// the 3-way sync a shared value needs: every frame, the Desktop input's
-// own value AND both mirrors' own values are forced to match the
-// canonical cfg field -- each widget's OWN internal resync (pushed by
-// buildReactiveRangeWidget/buildReactiveCurveWidget above, watching its
-// own input's value) then picks up the write and redraws, so dragging
-// ANY of the 3 (Desktop, Mobile, Landscape) correctly updates the other
-// 2 as well.
-const PHONE_TILT_MIRROR_WIDGETS = [
-  { textId: 'textBaseArmRotationRange', groupSid: 'Responsive Arm Rotation at Base', kind: 'range',
-    label: 'Min / Max Rotation (Deg)', trackMin: -180, trackMax: 180, isPercent: false, minLabel: 'Min', maxLabel: 'Max', unit: '°',
-    cfgKey: 'baseArmRotationRange', parseFn: () => parseBaseArmRotationConfig() },
-  { textId: 'textBaseArmRotationCurve', groupSid: 'Responsive Arm Rotation at Base', kind: 'curve',
-    label: 'Rotation Curve (Distance -> Rotation)', caption: 'X: Cursor Distance From Arm Base / Phone Tilt (0-1)  ·  Y: Rotation Fraction (0=Min, 1=Max)',
-    cfgKey: 'baseArmRotationCurve', parseFn: () => parseBaseArmRotationConfig() },
-  { textId: 'textPoseTweenCurve', groupSid: 'Responsive Pose Tween', kind: 'curve',
-    label: 'Tween Curve (Distance -> Tween Progress)', caption: 'X: Cursor Distance From Arm Base / Phone Tilt (0-1)  ·  Y: Tween Progress (0=Default Pose, 1=Target Pose)',
-    cfgKey: 'poseTweenCurve', parseFn: () => parsePoseTweenConfig() }
-]
-// window.findGroupContent() (devPanel.js) only matches a group that's a
-// DIRECT CHILD of the tab content (its own selector uses a `>`
-// combinator) -- it can't find "Responsive Arm Rotation at Base" or
-// "Responsive Pose Tween", both nested one level inside the top-level
-// "Phone Tilt" group. Confirmed live: findGroupContent logged repeated
-// "group not found" console.warn calls even though a plain, any-depth
-// querySelector for the same data-sid found the element without issue.
-// This is a HANDYSET-owned lookup used in its place, identical except
-// for dropping that `>` restriction.
-function findNestedGroupContent(tabId, groupSid) {
-  const title = document.querySelector('#' + tabId + 'TabContent .dev-section-title[data-sid="' + groupSid.replace(/"/g, '\\"') + '"]')
-  return title ? title.nextElementSibling : null
-}
-function syncPhoneTiltWidgetMirrors() {
-  if (typeof window.isDevRowVisible !== 'function') return
-  PHONE_TILT_MIRROR_WIDGETS.forEach((spec) => {
-    const canonicalValue = cfg[spec.cfgKey]
-    const desktopInput = document.getElementById(spec.textId)
-    if (desktopInput && desktopInput.value !== canonicalValue) desktopInput.value = canonicalValue
-    const visible = window.isDevRowVisible(spec.textId)
-    ;['mobile', 'landscape'].forEach((tab) => {
-      const devicePrefix = tab === 'landscape' ? 'Landscape' : 'Mobile'
-      const mirrorId = spec.textId + devicePrefix
-      const existingInput = document.getElementById(mirrorId)
-      if (!visible) {
-        if (existingInput) existingInput.closest('.dev-row').remove()
-        return
-      }
-      if (existingInput) {
-        if (existingInput.value !== canonicalValue) existingInput.value = canonicalValue
-        return
-      }
-      const content = findNestedGroupContent(tab, spec.groupSid)
-      if (!content) return // group not mirrored to this tab yet (user hasn't switched there) -- retry next frame
-      const row = document.createElement('div')
-      row.className = 'dev-row'
-      const label = document.createElement('span')
-      label.className = 'dev-label'
-      label.textContent = spec.label
-      row.appendChild(label)
-      const input = document.createElement('input')
-      input.type = 'text'
-      input.id = mirrorId
-      input.className = 'dev-text-input'
-      input.value = canonicalValue
-      row.appendChild(input)
-      content.appendChild(row)
-      input.addEventListener('input', (e) => { cfg[spec.cfgKey] = e.target.value; spec.parseFn() })
-      if (spec.kind === 'range') {
-        buildReactiveRangeWidget(row, { trackMin: spec.trackMin, trackMax: spec.trackMax, isPercent: spec.isPercent, crossClamp: false, minLabel: spec.minLabel, maxLabel: spec.maxLabel, unit: spec.unit, onExternalChange: (v) => { cfg[spec.cfgKey] = v; spec.parseFn() } })
-      } else {
-        buildReactiveCurveWidget(row, { caption: spec.caption, onExternalChange: (v) => { cfg[spec.cfgKey] = v; spec.parseFn() } })
-      }
-    })
-  })
-}
-curveWidgetResyncs.push(syncPhoneTiltWidgetMirrors)
+// REMOVED 2026-09-28 -- this whole Mobile/Landscape mirroring mechanism
+// (formerly PHONE_TILT_MIRROR_WIDGETS/findNestedGroupContent/
+// syncPhoneTiltWidgetMirrors) existed solely to hand-roll a "Show in
+// Mobile/Landscape" equivalent for textBaseArmRotationRange/
+// textBaseArmRotationCurve/textPoseTweenCurve, back when those 3 fields
+// were plain type:'text' rows with no device-checkbox support of their
+// own. All 3 (and every other curve/range field in this file) are now
+// migrated to the template's generic type:'range-bar'/'curve-editor'
+// controls (see each one's own "MIGRATED 2026-09-28" comment), which
+// set ctrl.skipDeviceCheckbox = true internally -- these control types
+// are desktop-only by design, the same precedent as Mouse Log (see the
+// workspace CLAUDE.md's own §12f-1 gotcha note). Disclosed trade-off:
+// these 3 fields (and every other migrated curve/range field) lose
+// their prior Mobile/Landscape mirroring capability as a direct,
+// deliberate consequence of adopting the template's generic engine --
+// consistent with every other curve/range/list-picker control in the
+// dev panel, none of which have ever had a device-specific variant.
 
 // Labels match HANDY DANDIES' own DEV_GROUPS exactly (grepped from its
 // main.js, not reconstructed) — including the thumb's own 2 irregular
@@ -3613,17 +3371,33 @@ function renderPoseGroup(content) {
   // contribution can sum past any anatomical limit (e.g. -55 + -71 =
   // -126) with nothing capping the total. Each clamps the FINAL combined
   // angle actually applied to that axis (applyWristPoseToSkeleton()),
-  // not either contributing source alone. Same dual-handle range-bar
-  // widget already used for Reactive Arm Length/Wrist Splay's own curve
-  // range above/below -- reused for consistency, not rebuilt.
+  // not either contributing source alone.
+  // MIGRATED 2026-09-28 to devPanel.js's own generic 'range-bar' control
+  // type (CLAUDE.md §12r) -- same {min,max} JSON value format the old
+  // HANDYSET-owned buildReactiveRangeWidget() already used, so the SAME
+  // control id carries the existing saved value across with zero
+  // transformation. cfg[key] is kept in sync via the same
+  // curveWidgetResyncs polling pattern used elsewhere in this file
+  // (the generic range-bar widget itself has no onExternalChange hook --
+  // it just sets its own hidden input's value, on both a live drag AND a
+  // Reset/Sync/Undo restore).
   ;[
     ['wristRotationClampRange', 'Min / Max Wrist Rotation (Deg)', -360, 360, parseWristClampConfig],
     ['wristBendClampRange', 'Min / Max Wrist Bend (Deg)', -90, 90, parseWristClampConfig],
     ['wristSplayClampRange', 'Min / Max Wrist Splay (Deg, Combined)', -180, 180, parseWristClampConfig]
   ].forEach(([key, label, trackMin, trackMax, parseFn]) => {
-    const row = addRow(subWrist, { id: 'text' + key, label, type: 'text', inputType: 'text', value: cfg[key] })
-    wireTextInput('text' + key, (v) => { cfg[key] = v; parseFn(); applyPoseValuesToHand(cfg) })
-    buildReactiveRangeWidget(row, { trackMin, trackMax, isPercent: false, crossClamp: false, minLabel: 'Min', maxLabel: 'Max', unit: '°', onExternalChange: (v) => { cfg[key] = v; parseFn(); applyPoseValuesToHand(cfg) } })
+    let defaultValue = { min: trackMin, max: trackMax }
+    try { defaultValue = JSON.parse(cfg[key]) } catch (e) { /* keep fallback */ }
+    addRow(subWrist, { id: 'text' + key, label, type: 'range-bar', trackMin, trackMax, unit: '°', defaultValue })
+    let lastSeen = document.getElementById('text' + key).value
+    curveWidgetResyncs.push(() => {
+      const el = document.getElementById('text' + key)
+      if (!el || el.value === lastSeen) return
+      lastSeen = el.value
+      cfg[key] = el.value
+      parseFn()
+      applyPoseValuesToHand(cfg)
+    })
   })
   // Reactive Arm Length -- ported from HANDY DANDIES (see cfg's own
   // declaration comment for the single-hand distance-input adaptation:
@@ -3638,12 +3412,37 @@ function renderPoseGroup(content) {
   addRow(subWrist, { id: 'checkboxReactiveArmLengthEnabled', label: 'Reactive Arm Length (By Cursor Distance)', type: 'checkbox' })
   document.getElementById('checkboxReactiveArmLengthEnabled').checked = cfg.reactiveArmLengthEnabled
   wireCheckbox('checkboxReactiveArmLengthEnabled', (v) => { cfg.reactiveArmLengthEnabled = v; updateWristCrop() })
-  const armRangeRow = addRow(subWrist, { id: 'textArmLengthRange', label: 'Min / Max Arm Length (Crop %)', type: 'text', inputType: 'text', value: cfg.armLengthRange })
-  wireTextInput('textArmLengthRange', (v) => { cfg.armLengthRange = v; parseArmLengthConfig() })
-  buildReactiveRangeWidget(armRangeRow, { trackMin: 0, trackMax: 100, isPercent: true, crossClamp: false, minLabel: 'Min', maxLabel: 'Max', unit: '%', onExternalChange: (v) => { cfg.armLengthRange = v; parseArmLengthConfig() } })
-  const armCurveRow = addRow(subWrist, { id: 'textArmLengthCurve', label: 'Length Scaling Curve (Distance -> Crop)', type: 'text', inputType: 'text', value: cfg.armLengthCurve })
-  wireTextInput('textArmLengthCurve', (v) => { cfg.armLengthCurve = v; parseArmLengthConfig() })
-  buildReactiveCurveWidget(armCurveRow, { caption: 'X: Tilt/Cursor Distance From Center (0-1)  ·  Y: Crop (0=None, 1=Full)', onExternalChange: (v) => { cfg.armLengthCurve = v; parseArmLengthConfig() } })
+  // MIGRATED 2026-09-28 to devPanel.js's own generic 'range-bar'/
+  // 'curve-editor' control types (CLAUDE.md §12r) -- same ids preserve
+  // the existing saved values (range: identical {min,max} format;
+  // curve: existing array wrapped into {points,method:'catmullrom'} at
+  // the cfg-default and settings-file level, matching HANDYSET's own
+  // pre-existing Catmull-Rom evaluation exactly). cfg.armLength* is kept
+  // in sync via curveWidgetResyncs polling (see the wrist-clamp loop
+  // above for why -- these generic widgets have no onExternalChange hook).
+  {
+    let rangeDefault = { min: 0, max: 100 }
+    try { rangeDefault = JSON.parse(cfg.armLengthRange) } catch (e) { /* keep fallback */ }
+    addRow(subWrist, { id: 'textArmLengthRange', label: 'Min / Max Arm Length (Crop %)', type: 'range-bar', trackMin: 0, trackMax: 100, unit: '%', defaultValue: rangeDefault })
+    let lastSeenRange = document.getElementById('textArmLengthRange').value
+    curveWidgetResyncs.push(() => {
+      const el = document.getElementById('textArmLengthRange')
+      if (!el || el.value === lastSeenRange) return
+      lastSeenRange = el.value
+      cfg.armLengthRange = el.value
+      parseArmLengthConfig()
+    })
+    const curveParsed = JSON.parse(cfg.armLengthCurve)
+    addRow(subWrist, { id: 'textArmLengthCurve', label: 'Length Scaling Curve (Distance -> Crop)', type: 'curve-editor', defaultPoints: curveParsed.points, defaultMethod: curveParsed.method, caption: 'X: Tilt/Cursor Distance From Center (0-1)  ·  Y: Crop (0=None, 1=Full)' })
+    let lastSeenCurve = document.getElementById('textArmLengthCurve').value
+    curveWidgetResyncs.push(() => {
+      const el = document.getElementById('textArmLengthCurve')
+      if (!el || el.value === lastSeenCurve) return
+      lastSeenCurve = el.value
+      cfg.armLengthCurve = el.value
+      parseArmLengthConfig()
+    })
+  }
 
   ;['index', 'middle', 'ring', 'pinky'].forEach((f) => {
     const sub = addSubgroup(content, f.charAt(0).toUpperCase() + f.slice(1))
@@ -3677,12 +3476,30 @@ function renderResponsiveWristSplayGroup(content) {
   addRow(content, { id: 'checkboxWristSplayReactiveEnabled', label: 'Reactive Wrist Splay (By Cursor Distance)', type: 'checkbox' })
   document.getElementById('checkboxWristSplayReactiveEnabled').checked = cfg.wristSplayReactiveEnabled
   wireCheckbox('checkboxWristSplayReactiveEnabled', (v) => { cfg.wristSplayReactiveEnabled = v; applyPoseValuesToHand(cfg) })
-  const splayRangeRow = addRow(content, { id: 'textWristSplayRange', label: 'Min / Max Wrist Splay (Deg)', type: 'text', inputType: 'text', value: cfg.wristSplayRange })
-  wireTextInput('textWristSplayRange', (v) => { cfg.wristSplayRange = v; parseWristSplayConfig() })
-  buildReactiveRangeWidget(splayRangeRow, { trackMin: -180, trackMax: 180, isPercent: false, crossClamp: false, minLabel: 'Min (Near Arm Base)', maxLabel: 'Max (Far / Full Tilt)', unit: '°', onExternalChange: (v) => { cfg.wristSplayRange = v; parseWristSplayConfig() } })
-  const splayCurveRow = addRow(content, { id: 'textWristSplayCurve', label: 'Splay Scaling Curve (Distance -> Splay)', type: 'text', inputType: 'text', value: cfg.wristSplayCurve })
-  wireTextInput('textWristSplayCurve', (v) => { cfg.wristSplayCurve = v; parseWristSplayConfig() })
-  buildReactiveCurveWidget(splayCurveRow, { caption: 'X: Cursor Distance From Arm Base / Phone Tilt (0-1)  ·  Y: Splay Fraction (0=Min End, 1=Max End)', onExternalChange: (v) => { cfg.wristSplayCurve = v; parseWristSplayConfig() } })
+  // MIGRATED 2026-09-28 -- see Reactive Arm Length's own matching comment.
+  {
+    let rangeDefault = { min: -180, max: 180 }
+    try { rangeDefault = JSON.parse(cfg.wristSplayRange) } catch (e) { /* keep fallback */ }
+    addRow(content, { id: 'textWristSplayRange', label: 'Min / Max Wrist Splay (Deg)', type: 'range-bar', trackMin: -180, trackMax: 180, unit: '°', defaultValue: rangeDefault })
+    let lastSeenRange = document.getElementById('textWristSplayRange').value
+    curveWidgetResyncs.push(() => {
+      const el = document.getElementById('textWristSplayRange')
+      if (!el || el.value === lastSeenRange) return
+      lastSeenRange = el.value
+      cfg.wristSplayRange = el.value
+      parseWristSplayConfig()
+    })
+    const curveParsed = JSON.parse(cfg.wristSplayCurve)
+    addRow(content, { id: 'textWristSplayCurve', label: 'Splay Scaling Curve (Distance -> Splay)', type: 'curve-editor', defaultPoints: curveParsed.points, defaultMethod: curveParsed.method, caption: 'X: Cursor Distance From Arm Base / Phone Tilt (0-1)  ·  Y: Splay Fraction (0=Min End, 1=Max End)' })
+    let lastSeenCurve = document.getElementById('textWristSplayCurve').value
+    curveWidgetResyncs.push(() => {
+      const el = document.getElementById('textWristSplayCurve')
+      if (!el || el.value === lastSeenCurve) return
+      lastSeenCurve = el.value
+      cfg.wristSplayCurve = el.value
+      parseWristSplayConfig()
+    })
+  }
 }
 
 function renderCameraGroup(content) {
@@ -3798,12 +3615,30 @@ function renderPhoneTiltGroup(content) {
   wireCheckbox('checkboxBaseArmRotationResponsiveEnabled', (v) => { cfg.baseArmRotationResponsiveEnabled = v; applyBaseArmRotation(computeResponsiveBaseArmRotationDeg(armBaseDistanceT)) })
   addRow(subBaseArmRotation, { id: 'sliderBaseArmRotationFineTune', label: 'Rotation Fine-Tune (Deg)', type: 'slider', min: -90, max: 90, step: 1, value: cfg.baseArmRotationFineTune })
   wireSlider('sliderBaseArmRotationFineTune', (v) => { cfg.baseArmRotationFineTune = v; applyBaseArmRotation(computeResponsiveBaseArmRotationDeg(armBaseDistanceT)) })
-  const baseArmRangeRow = addRow(subBaseArmRotation, { id: 'textBaseArmRotationRange', label: 'Min / Max Rotation (Deg)', type: 'text', inputType: 'text', value: cfg.baseArmRotationRange })
-  wireTextInput('textBaseArmRotationRange', (v) => { cfg.baseArmRotationRange = v; parseBaseArmRotationConfig() })
-  buildReactiveRangeWidget(baseArmRangeRow, { trackMin: -180, trackMax: 180, isPercent: false, crossClamp: false, minLabel: 'Min', maxLabel: 'Max', unit: '°', onExternalChange: (v) => { cfg.baseArmRotationRange = v; parseBaseArmRotationConfig() } })
-  const baseArmCurveRow = addRow(subBaseArmRotation, { id: 'textBaseArmRotationCurve', label: 'Rotation Curve (Distance -> Rotation)', type: 'text', inputType: 'text', value: cfg.baseArmRotationCurve })
-  wireTextInput('textBaseArmRotationCurve', (v) => { cfg.baseArmRotationCurve = v; parseBaseArmRotationConfig() })
-  buildReactiveCurveWidget(baseArmCurveRow, { caption: 'X: Cursor Distance From Arm Base / Phone Tilt (0-1)  ·  Y: Rotation Fraction (0=Min, 1=Max)', onExternalChange: (v) => { cfg.baseArmRotationCurve = v; parseBaseArmRotationConfig() } })
+  // MIGRATED 2026-09-28 -- see Reactive Arm Length's own matching comment.
+  {
+    let rangeDefault = { min: -180, max: 180 }
+    try { rangeDefault = JSON.parse(cfg.baseArmRotationRange) } catch (e) { /* keep fallback */ }
+    addRow(subBaseArmRotation, { id: 'textBaseArmRotationRange', label: 'Min / Max Rotation (Deg)', type: 'range-bar', trackMin: -180, trackMax: 180, unit: '°', defaultValue: rangeDefault })
+    let lastSeenRange = document.getElementById('textBaseArmRotationRange').value
+    curveWidgetResyncs.push(() => {
+      const el = document.getElementById('textBaseArmRotationRange')
+      if (!el || el.value === lastSeenRange) return
+      lastSeenRange = el.value
+      cfg.baseArmRotationRange = el.value
+      parseBaseArmRotationConfig()
+    })
+    const curveParsed = JSON.parse(cfg.baseArmRotationCurve)
+    addRow(subBaseArmRotation, { id: 'textBaseArmRotationCurve', label: 'Rotation Curve (Distance -> Rotation)', type: 'curve-editor', defaultPoints: curveParsed.points, defaultMethod: curveParsed.method, caption: 'X: Cursor Distance From Arm Base / Phone Tilt (0-1)  ·  Y: Rotation Fraction (0=Min, 1=Max)' })
+    let lastSeenCurve = document.getElementById('textBaseArmRotationCurve').value
+    curveWidgetResyncs.push(() => {
+      const el = document.getElementById('textBaseArmRotationCurve')
+      if (!el || el.value === lastSeenCurve) return
+      lastSeenCurve = el.value
+      cfg.baseArmRotationCurve = el.value
+      parseBaseArmRotationConfig()
+    })
+  }
 
   // Responsive Pose Tween -- direct request 2026-09-27, see cfg's own
   // declaration comment (Default pose = DEFAULT_POSE_NAME, Target pose
@@ -3816,9 +3651,19 @@ function renderPhoneTiltGroup(content) {
   addRow(subPoseTween, { id: 'selectPoseTweenTargetPoseName', label: 'Target Pose', type: 'select', options: poseTweenOptions, value: cfg.poseTweenTargetPoseName })
   document.getElementById('selectPoseTweenTargetPoseName').value = cfg.poseTweenTargetPoseName
   wireSelect('selectPoseTweenTargetPoseName', (v) => { cfg.poseTweenTargetPoseName = v })
-  const poseTweenCurveRow = addRow(subPoseTween, { id: 'textPoseTweenCurve', label: 'Tween Curve (Distance -> Tween Progress)', type: 'text', inputType: 'text', value: cfg.poseTweenCurve })
-  wireTextInput('textPoseTweenCurve', (v) => { cfg.poseTweenCurve = v; parsePoseTweenConfig() })
-  buildReactiveCurveWidget(poseTweenCurveRow, { caption: 'X: Cursor Distance From Arm Base / Phone Tilt (0-1)  ·  Y: Tween Progress (0=Default Pose, 1=Target Pose)', onExternalChange: (v) => { cfg.poseTweenCurve = v; parsePoseTweenConfig() } })
+  // MIGRATED 2026-09-28 -- see Reactive Arm Length's own matching comment.
+  {
+    const curveParsed = JSON.parse(cfg.poseTweenCurve)
+    addRow(subPoseTween, { id: 'textPoseTweenCurve', label: 'Tween Curve (Distance -> Tween Progress)', type: 'curve-editor', defaultPoints: curveParsed.points, defaultMethod: curveParsed.method, caption: 'X: Cursor Distance From Arm Base / Phone Tilt (0-1)  ·  Y: Tween Progress (0=Default Pose, 1=Target Pose)' })
+    let lastSeenCurve = document.getElementById('textPoseTweenCurve').value
+    curveWidgetResyncs.push(() => {
+      const el = document.getElementById('textPoseTweenCurve')
+      if (!el || el.value === lastSeenCurve) return
+      lastSeenCurve = el.value
+      cfg.poseTweenCurve = el.value
+      parsePoseTweenConfig()
+    })
+  }
 }
 
 // PHONE MODEL -- direct request 2026-09-27, a loadable smartphone GLB
@@ -3880,12 +3725,30 @@ function renderPhoneModelGroup(content) {
   wireCheckbox('checkboxPhoneResponsiveRotationEnabled', (v) => { cfg.phoneResponsiveRotationEnabled = v })
   addRow(subResponsiveRotation, { id: 'sliderPhoneResponsiveRotationFineTune', label: 'Rotation Fine-Tune (Deg)', type: 'slider', min: -90, max: 90, step: 1, value: cfg.phoneResponsiveRotationFineTune })
   wireSlider('sliderPhoneResponsiveRotationFineTune', (v) => { cfg.phoneResponsiveRotationFineTune = v })
-  const phoneRangeRow = addRow(subResponsiveRotation, { id: 'textPhoneResponsiveRotationRange', label: 'Min / Max Rotation (Deg)', type: 'text', inputType: 'text', value: cfg.phoneResponsiveRotationRange })
-  wireTextInput('textPhoneResponsiveRotationRange', (v) => { cfg.phoneResponsiveRotationRange = v; parsePhoneResponsiveRotationConfig() })
-  buildReactiveRangeWidget(phoneRangeRow, { trackMin: -180, trackMax: 180, isPercent: false, crossClamp: false, minLabel: 'Min', maxLabel: 'Max', unit: '°', onExternalChange: (v) => { cfg.phoneResponsiveRotationRange = v; parsePhoneResponsiveRotationConfig() } })
-  const phoneCurveRow = addRow(subResponsiveRotation, { id: 'textPhoneResponsiveRotationCurve', label: 'Rotation Curve (Tilt -> Rotation)', type: 'text', inputType: 'text', value: cfg.phoneResponsiveRotationCurve })
-  wireTextInput('textPhoneResponsiveRotationCurve', (v) => { cfg.phoneResponsiveRotationCurve = v; parsePhoneResponsiveRotationConfig() })
-  buildReactiveCurveWidget(phoneCurveRow, { caption: 'X: Per-Axis Tilt Magnitude (0-1)  ·  Y: Rotation Fraction (0=Min, 1=Max)', onExternalChange: (v) => { cfg.phoneResponsiveRotationCurve = v; parsePhoneResponsiveRotationConfig() } })
+  // MIGRATED 2026-09-28 -- see Reactive Arm Length's own matching comment.
+  {
+    let rangeDefault = { min: 0, max: 30 }
+    try { rangeDefault = JSON.parse(cfg.phoneResponsiveRotationRange) } catch (e) { /* keep fallback */ }
+    addRow(subResponsiveRotation, { id: 'textPhoneResponsiveRotationRange', label: 'Min / Max Rotation (Deg)', type: 'range-bar', trackMin: -180, trackMax: 180, unit: '°', defaultValue: rangeDefault })
+    let lastSeenRange = document.getElementById('textPhoneResponsiveRotationRange').value
+    curveWidgetResyncs.push(() => {
+      const el = document.getElementById('textPhoneResponsiveRotationRange')
+      if (!el || el.value === lastSeenRange) return
+      lastSeenRange = el.value
+      cfg.phoneResponsiveRotationRange = el.value
+      parsePhoneResponsiveRotationConfig()
+    })
+    const curveParsed = JSON.parse(cfg.phoneResponsiveRotationCurve)
+    addRow(subResponsiveRotation, { id: 'textPhoneResponsiveRotationCurve', label: 'Rotation Curve (Tilt -> Rotation)', type: 'curve-editor', defaultPoints: curveParsed.points, defaultMethod: curveParsed.method, caption: 'X: Per-Axis Tilt Magnitude (0-1)  ·  Y: Rotation Fraction (0=Min, 1=Max)' })
+    let lastSeenCurve = document.getElementById('textPhoneResponsiveRotationCurve').value
+    curveWidgetResyncs.push(() => {
+      const el = document.getElementById('textPhoneResponsiveRotationCurve')
+      if (!el || el.value === lastSeenCurve) return
+      lastSeenCurve = el.value
+      cfg.phoneResponsiveRotationCurve = el.value
+      parsePhoneResponsiveRotationConfig()
+    })
+  }
 }
 
 function renderLightingGroup(content) {
@@ -4194,6 +4057,15 @@ function renderDebugExtras() {
   addRow(sensorSub, { id: 'checkboxSensorLogCompass', label: 'Log Compass', type: 'checkbox' })
   document.getElementById('checkboxSensorLogCompass').checked = cfg.sensorLogCompass
   wireCheckbox('checkboxSensorLogCompass', (v) => { cfg.sensorLogCompass = v })
+  // Absolute orientation angle (deviceorientation.beta/gamma), NOT the
+  // same as Gyro's rotationRate alpha/beta/gamma above -- direct request
+  // 2026-09-28, added after the user asked what the difference was.
+  addRow(sensorSub, { id: 'checkboxSensorLogOrientBeta', label: 'Log Beta (Front/Back Tilt Angle)', type: 'checkbox' })
+  document.getElementById('checkboxSensorLogOrientBeta').checked = cfg.sensorLogOrientBeta
+  wireCheckbox('checkboxSensorLogOrientBeta', (v) => { cfg.sensorLogOrientBeta = v })
+  addRow(sensorSub, { id: 'checkboxSensorLogOrientGamma', label: 'Log Gamma (Left/Right Tilt Angle)', type: 'checkbox' })
+  document.getElementById('checkboxSensorLogOrientGamma').checked = cfg.sensorLogOrientGamma
+  wireCheckbox('checkboxSensorLogOrientGamma', (v) => { cfg.sensorLogOrientGamma = v })
   const sensorBtnRow = document.createElement('div')
   sensorBtnRow.className = 'dev-buttons'
   const sensorCopyBtn = document.createElement('button')
