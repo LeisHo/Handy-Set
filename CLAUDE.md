@@ -2265,3 +2265,47 @@ wiring, and are still open:
   reproducible empirical report from actually testing on the real
   device is stronger evidence than any amount of geometric reasoning
   done without one.
+- **CORRECTED 2026-09-28, 4th round on this same feature: the "3-way
+  cyclic relabeling" diagnosis directly above (36th entry) was itself an
+  OVERCOMPLICATION.** A follow-up report using an unambiguous physical
+  description ("Z sticks out perpendicular to the screen" = spin;
+  "top/bottom edge oscillate" = pitch) showed pitch was ALREADY landing
+  correctly wherever it was coded — there was never a code-to-visual
+  scramble at all; the target mapping is simply the IDENTITY (pitch->X,
+  roll->Y, spin->Z). The real, much narrower bug:
+  `devicemotion.rotationRate.alpha` and `.gamma` are CROSSED relative to
+  what `deviceorientation`'s same-named fields would suggest — `rr.alpha`
+  is the ROLL rate, `rr.gamma` is the SPIN rate. **If a future feature
+  reads BOTH `deviceorientation`'s alpha/beta/gamma AND
+  `devicemotion.rotationRate`'s alpha/beta/gamma, do NOT assume the same
+  letter means the same physical axis across the two interfaces — this
+  project has now directly observed a real device where `rotationRate`'s
+  alpha and gamma are swapped relative to `deviceorientation`'s
+  convention.** This is disclosed as an OBSERVATION from one real device
+  (Android/Chrome, this project's own target), not a verified universal
+  spec fact — if a future project or device shows the opposite, that's
+  new evidence to weigh, not proof this entry was wrong.
+- **`integratePhoneGyroRotation()`'s 3 per-tick local variables are
+  named for their PHYSICAL ROLE (`dPitchDeg`/`dRollDeg`/`dSpinDeg`), not
+  their raw `rotationRate` property name (`beta`/`gamma`/`alpha`) —
+  keep it this way in any future edit.** The mismatch between "which raw
+  property a variable is named after" and "which physical motion it
+  actually carries" (e.g. a variable called `dGammaDeg` that doesn't
+  hold gamma's real-world role) is exactly what made the alpha/gamma-
+  crossing bug above hard to track across 3 correction rounds on this
+  one feature. If the raw-property-to-role mapping ever needs to change
+  again, update the ASSIGNMENT (which `rr.*` field feeds which
+  physical-role variable), not the variable names.
+- **This feature (Phone Model's mobile rotation) has now needed 4
+  correction rounds in one session (29th/33rd/36th/37th CHANGELOG
+  entries) — when a future report on it arrives, ask for (or write
+  toward) an UNAMBIGUOUS PHYSICAL DESCRIPTION before assuming a fix,
+  not axis letters alone.** Every round that used bare axis letters
+  ("real X/Y/Z rotation") required a follow-up round to fully resolve;
+  the round that finally succeeded used concrete physical landmarks
+  ("Z sticks out perpendicular to the screen," "top/bottom edge
+  oscillate"). Axis letters alone have proven ambiguous ACROSS
+  MESSAGES in this same conversation — the same letter may not have
+  meant the same physical motion in 2 different reports from the same
+  user, simply because there was no fixed, restated physical anchor
+  each time.

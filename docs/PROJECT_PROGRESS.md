@@ -7,31 +7,48 @@ append-only history.
 
 ## Currently working on
 
-Nothing in progress — a cyclic axis-permutation fix for the new
-gyroscope-integrated mobile rotation (2026-09-28, direct report right
-after the switch shipped: "you crossed some wires") is pushed, on top
-of the gyroscope-integration switch itself (also 2026-09-28, "I want
-the rotation to continue forever"), a Rotation Reset baseline bug fix
-plus 6 per-axis enable/scale controls (also 2026-09-28), 3 more real-
-device-testing fixes (also 2026-09-28: touch/mouse conflict, camera-
-lock/slider sync, Y/Z world-axis swap), the mobile-vs-desktop rotation
+Nothing in progress — a 4th-round axis fix for the gyroscope-integrated
+mobile rotation (2026-09-28: `rotationRate.alpha`/`.gamma` were
+CROSSED relative to `deviceorientation`'s same-named fields; the target
+mapping is a plain identity, pitch->X/roll->Y/spin->Z, no permutation
+needed) is pushed, on top of a 3rd-round cyclic-permutation attempt
+(also 2026-09-28, since superseded/simplified by this round), the
+gyroscope-integration switch itself (also 2026-09-28, "I want the
+rotation to continue forever"), a Rotation Reset baseline bug fix plus
+6 per-axis enable/scale controls (also 2026-09-28), 3 more real-device-
+testing fixes (also 2026-09-28: touch/mouse conflict, camera-lock/
+slider sync, Y/Z world-axis swap), the mobile-vs-desktop rotation
 redesign (also 2026-09-28), the Rotation Reset feature (also
 2026-09-28), the curve-inversion fix (also 2026-09-28), the rotation-
 node/damping/log follow-up (also 2026-09-28), the dev panel template
 re-sync (also 2026-09-28), and the 6-part Palm Rotation/Responsive-
 features request (2026-09-27). See Recently completed below for the
-full account. **Still needs real device re-verification** — the latest
-axis fix is a direct application of the user's own empirical report,
-not new math with its own standalone proof; if any ONE axis is still
-off on the next real test, naming that one axis specifically (not
-re-describing the whole permutation) is the fastest path to a final
-fix, since the underlying tilt/spin structure is now confirmed sound.
+full account. **Still needs real device re-verification** — this
+feature has now needed 4 correction rounds in one session; if the next
+real test still shows one axis wrong, describing it with a concrete
+physical landmark (e.g. "perpendicular to the screen," not just an
+axis letter) is what actually got this round right, and should be used
+again rather than axis letters alone.
 
 Pushed to `https://github.com/LeisHo/Handy-Set`
 (deployed via the Vercel project at `https://vercel.com/lpeis/handy-set`).
 
 ## Recently completed
 
+- **RESOLVED (2026-09-28): Gyroscope rotation's real bug was a 2-sensor
+  crossing, not the 3-axis cycle the previous round diagnosed.** A
+  follow-up report using an unambiguous physical description ("Z sticks
+  out perpendicular to the screen" = spin, "top/bottom edge oscillate" =
+  pitch) showed pitch was already landing correctly — there was no
+  code-to-visual scramble at all, the target is a plain identity mapping
+  (pitch->X, roll->Y, spin->Z). The actual bug:
+  `devicemotion.rotationRate.alpha` and `.gamma` are crossed relative to
+  `deviceorientation`'s same-named fields on this device — `rr.alpha` is
+  really the roll rate, `rr.gamma` is really the spin rate. Fixed by
+  reading them accordingly; renamed the 3 local variables to their
+  physical role instead of their raw property name, specifically because
+  that mismatch is what made the bug hard to track across rounds. See
+  `docs/CHANGELOG.txt`'s matching 2026-09-28 (37th) entry.
 - **RESOLVED (2026-09-28): Gyroscope-integrated mobile rotation had a
   clean 3-way cyclic axis mix-up right after shipping — "real Z rotates
   the model's Y, real Y rotates X, real X rotates Z."** Independently

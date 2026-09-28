@@ -4160,6 +4160,64 @@ only a single-axis relabel would be needed.
 `index.html`'s cache-buster bumped `?v=119` -> `?v=120`.
 
 --------------------------------------------------------------------------------
+2026-09-28  -  (37th)
+
+Direct follow-up, same day, using an UNAMBIGUOUS physical description
+for the first time on this feature: "Real world Z rotation, as in
+perpendicular to the screen face. Z axis sticks out perpendicular to
+the screen, that rotates the model around the x axis... Real world X
+rotation, where my real phone is flipping such that the top edge and
+bottom edge oscillate, is now rotating the model around Y axis. and
+real world Y is rotating the model around the z axis." Also clarified
+mid-diagnosis: "X axis is right and left... if im looking at the phone
+face, its a horizontal line" (confirming X = the pitch rotation axis,
+matching what the fix below already assumed).
+
+Traced this precisely against the actual shipped code instead of
+re-deriving from scratch a 4th time: pitch (beta) was ALREADY landing
+correctly wherever it was coded to land -- there is no hidden code-to-
+visual scramble at all. This means the 36th entry's "3-way cyclic
+relabeling" diagnosis was an OVERCOMPLICATION, likely because it was
+built on a LESS PRECISE earlier report whose "real X/Y/Z" labels may
+not have meant exactly what this session assumed. The TARGET mapping is
+simply the IDENTITY -- pitch->X, roll->Y, spin->Z, no permutation
+needed at all once the right raw value feeds each role.
+
+The real, much narrower bug: `devicemotion.rotationRate.alpha` and
+`.gamma` are CROSSED relative to what `deviceorientation`'s same-named
+alpha/gamma fields would suggest -- `rr.alpha` is actually the ROLL
+rate (not spin, as assumed since the 35th entry), `rr.gamma` is
+actually the SPIN rate (not roll). Fixed in
+`integratePhoneGyroRotation()` by reading `rr.alpha` for roll and
+`rr.gamma` for spin, with the downstream axis SLOTS left completely
+unchanged from the 36th entry's own structure (pitch+roll still combine
+into one axis-angle rotation on X/Y, spin stays the separate rotation
+on Z). Renamed the 3 per-tick local variables from their raw property
+name (`dBetaDeg`/`dGammaDeg`/`dAlphaDeg`) to their PHYSICAL role
+(`dPitchDeg`/`dRollDeg`/`dSpinDeg`) -- the mismatch between "which raw
+property a variable was named after" and "which physical motion it
+actually carried" is exactly what made this bug hard to track across 3
+rounds on one feature, and the renaming is meant to prevent that same
+confusion recurring on the 5th round if there is one.
+
+Desktop's cursor-driven rotation remains untouched -- still no evidence
+it's affected, since all reports so far have come from real device
+testing specifically.
+
+Not independently browser/device-verified this round (same standing
+instruction) -- this is a targeted, traced correction to a specific,
+now well-understood mismatch (2 named sensor properties reporting
+swapped roles), not new math requiring its own standalone numeric
+proof. If a single axis is STILL wrong on the next real test, the
+fastest path is describing that ONE axis using the same unambiguous
+physical-description style this entry's report used (naming a real,
+concrete landmark like "perpendicular to the screen" or "top/bottom
+edge oscillate"), not axis letters alone -- letters alone are what led
+this feature through 2 extra, partially-wrong correction rounds.
+
+`index.html`'s cache-buster bumped `?v=120` -> `?v=121`.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
