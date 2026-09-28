@@ -1560,20 +1560,28 @@ const _phoneGyroSpinQuat = new THREE.Quaternion()
 // CORRECTED 2026-09-28 (same day as gyro integration shipped), direct
 // report: "you crossed some wires. real world Z rotation now rotates
 // the model around its Y. real world Y rotation now rotates the model
-// around X. real world x rotation is now Z." That's a clean, consistent
-// 3-way CYCLIC relabeling between what this file calls local X/Y/Z and
-// what the RENDERED MODEL actually shows -- independent of which sensor
-// drives it (beta's motion visually landed on Z, gamma's on Y, alpha's
-// on X, no matter that the code put them on X/Z/Y respectively). Rather
-// than re-deriving the W3C rotationRate axis spec from memory a 5th
-// time, applied the user's own precise empirical correction directly:
-// whichever code-axis previously visually produced a given letter is
-// now fed the signal that SHOULD produce that letter. Concretely: beta
-// (was axis.x) now goes in the combined tilt axis's Y-slot; gamma (was
-// axis.z) now goes in the X-slot; alpha (was this constant, world Y)
-// now targets Z instead. See integratePhoneGyroRotation()'s own
-// `_phoneGyroTiltAxis.set(dGammaDeg, dBetaDeg, 0)` line for the tilt
-// half of this remap.
+// around X. real world x rotation is now Z." Treated as a 3-way cyclic
+// code-to-visual relabeling and fixed by relabeling the axis slots.
+//
+// SUPERSEDED the same day, 3rd round: a follow-up report using an
+// UNAMBIGUOUS physical description ("Z axis sticks out perpendicular to
+// the screen" = spin; "top/bottom edge oscillate" = pitch; the
+// remaining motion = roll) showed pitch was ALREADY landing correctly
+// wherever it was coded (no hidden code-to-visual scramble after all --
+// the "3-way cycle" diagnosis above was based on a less precise earlier
+// report and turned out to be an overcomplication). The TARGET mapping
+// is simply the IDENTITY: pitch->X, roll->Y, spin->Z, no permutation at
+// all. The real, narrower bug: `rotationRate.alpha` and
+// `rotationRate.gamma` are CROSSED relative to what
+// `deviceorientation`'s same-named fields would suggest -- `rr.alpha`
+// is actually the ROLL rate, `rr.gamma` is actually the SPIN rate. Fixed
+// in `integratePhoneGyroRotation()` by reading `rr.alpha` for roll and
+// `rr.gamma` for spin (slots unchanged: pitch+roll combine into one
+// axis-angle on X/Y, spin stays separate on Z) -- see that function's
+// own `dPitchDeg`/`dRollDeg`/`dSpinDeg` variables, named for their
+// PHYSICAL role rather than their raw property name specifically
+// because the mismatch between "variable name" and "actual role" is
+// what made this bug hard to track across 3 rounds.
 const PHONE_GYRO_SPIN_LOCAL_AXIS = new THREE.Vector3(0, 0, 1)
 let phoneNxBaseline = 0
 let phoneNyBaseline = 0
@@ -2113,17 +2121,36 @@ function integratePhoneGyroRotation(e) {
   if (phoneGyroLastTimestamp !== null) {
     const dt = Math.min((now - phoneGyroLastTimestamp) / 1000, 0.1) // seconds; capped so a backgrounded tab can't integrate one huge jump on resume
     const rr = e.rotationRate
-    const dBetaDeg = (cfg.phoneAxisXEnabled ? (rr.beta || 0) * cfg.phoneRotationScaleX : 0) * dt
-    const dGammaDeg = (cfg.phoneAxisZEnabled ? -(rr.gamma || 0) * cfg.phoneRotationScaleZ : 0) * dt
-    const dAlphaDeg = (cfg.phoneAxisYEnabled ? (rr.alpha || 0) * cfg.phoneRotationScaleY : 0) * dt
-    const combinedTiltDeg = Math.hypot(dBetaDeg, dGammaDeg)
+    // CORRECTED 2026-09-28 (3rd round on this feature, same day): direct
+    // report using an unambiguous physical description this time --
+    // "Z axis sticks out perpendicular to the screen" (spin) currently
+    // rotates the model around X; "top/bottom edge oscillate" (pitch,
+    // real X) currently rotates around Y; the remaining motion (roll,
+    // real Y) currently rotates around Z. Tracing this precisely against
+    // the actual code (not a fresh guess) showed pitch (beta) was
+    // ALREADY correctly landing wherever it was coded to land (no
+    // hidden code-to-visual scramble), which means the TARGET mapping is
+    // simply the IDENTITY (pitch->X, roll->Y, spin->Z, no permutation at
+    // all) -- and the only real error is that `rotationRate.alpha` and
+    // `rotationRate.gamma` are CROSSED relative to what
+    // `deviceorientation`'s same-named alpha/gamma would suggest: `rr.alpha`
+    // is actually the ROLL-rate (not spin), `rr.gamma` is actually the
+    // SPIN-rate (not roll). Renamed these 3 to their physical role
+    // (pitch/roll/spin) instead of their raw property name, specifically
+    // BECAUSE "dBetaDeg holds beta but dGammaDeg doesn't hold what you'd
+    // call gamma's role" is exactly the kind of mismatch that made this
+    // bug hard to track across 3 rounds.
+    const dPitchDeg = (cfg.phoneAxisXEnabled ? (rr.beta || 0) * cfg.phoneRotationScaleX : 0) * dt
+    const dRollDeg = (cfg.phoneAxisYEnabled ? -(rr.alpha || 0) * cfg.phoneRotationScaleY : 0) * dt
+    const dSpinDeg = (cfg.phoneAxisZEnabled ? (rr.gamma || 0) * cfg.phoneRotationScaleZ : 0) * dt
+    const combinedTiltDeg = Math.hypot(dPitchDeg, dRollDeg)
     if (combinedTiltDeg > 1e-8) {
-      _phoneGyroTiltAxis.set(dGammaDeg, dBetaDeg, 0).normalize()
+      _phoneGyroTiltAxis.set(dPitchDeg, dRollDeg, 0).normalize()
       _phoneGyroTiltQuat.setFromAxisAngle(_phoneGyroTiltAxis, THREE.MathUtils.degToRad(combinedTiltDeg))
       phoneGyroQuat.multiply(_phoneGyroTiltQuat)
     }
-    if (Math.abs(dAlphaDeg) > 1e-8) {
-      _phoneGyroSpinQuat.setFromAxisAngle(PHONE_GYRO_SPIN_LOCAL_AXIS, THREE.MathUtils.degToRad(dAlphaDeg))
+    if (Math.abs(dSpinDeg) > 1e-8) {
+      _phoneGyroSpinQuat.setFromAxisAngle(PHONE_GYRO_SPIN_LOCAL_AXIS, THREE.MathUtils.degToRad(dSpinDeg))
       phoneGyroQuat.multiply(_phoneGyroSpinQuat)
     }
     phoneGyroQuat.normalize() // guard against floating-point drift accumulating over a long session
