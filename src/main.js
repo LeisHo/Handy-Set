@@ -2116,12 +2116,15 @@ function computePhoneCombinedQuat() {
 // -- so there is no gimbal lock, no representational range limit, and
 // no "jump then rotate 180," at any accumulated total angle.
 //
-// beta/gamma's combine-into-one-axis-angle technique (and gamma's own
-// inversion) is reused verbatim from the tilt logic above, just in the
-// LOCAL/body frame (right-multiply) instead of the WORLD frame desktop
-// uses -- same reasoning, avoids Euler cross-coupling for a compound
-// tilt-while-spinning motion too. alpha (compass/spin) composes
-// separately on top, around the LOCAL Y axis.
+// The combine-into-one-axis-angle technique for 2 of the 3 roles (and
+// the separate-mechanism composition for the 3rd) is reused verbatim
+// from the tilt logic above, just in the LOCAL/body frame (right-
+// multiply) instead of the WORLD frame desktop uses -- same reasoning,
+// avoids Euler cross-coupling for a compound multi-axis motion. See the
+// 10th-round comment inside this function for which raw property and
+// which slot each physical role actually uses -- it is NOT the
+// beta=X/gamma=Y/alpha=Z-in-slot-order assumption this comment
+// originally described.
 function integratePhoneGyroRotation(e) {
   if (!cfg.trackingEnabled || !cfg.phoneResponsiveRotationEnabled || !e.rotationRate) {
     phoneGyroLastTimestamp = null // clean restart, no big jump, whenever this resumes
@@ -2131,39 +2134,50 @@ function integratePhoneGyroRotation(e) {
   if (phoneGyroLastTimestamp !== null) {
     const dt = Math.min((now - phoneGyroLastTimestamp) / 1000, 0.1) // seconds; capped so a backgrounded tab can't integrate one huge jump on resume
     const rr = e.rotationRate
-    // CORRECTED 2026-09-28 (9th round on this feature, same day) --
-    // 3 CONSECUTIVE reports (rounds 6/7/8) each gave a DIFFERENT clean
-    // permutation for the SAME kind of test, and algebraic cross-checking
-    // proved NO single fixed code-level mapping explains all 3 at once.
-    // That specific pattern (fix -> different-but-still-clean permutation,
-    // repeatedly, never converging) is the signature of something OTHER
-    // than the slot/sign wiring changing between tests -- most likely the
-    // phone's own STARTING accumulated rotation isn't identical at the
-    // start of each test (this integration is body-frame/relative to
-    // wherever the phone currently points, not a fixed reference), so
-    // re-testing from a different starting orientation can make the exact
-    // same code look like a different permutation. Reverted this
-    // function's own axis wiring to the plainest, most defensible,
-    // spec-standard mapping (no swaps, no extra negations beyond gamma's
-    // already-established inversion) -- pitch(beta)=x-component,
-    // roll(gamma, inverted)=y-component, spin(alpha)=separate local Z --
-    // and REMOVED the 8th round's output-conjugation layer entirely (see
-    // computePhoneCombinedQuat(), which no longer applies
-    // PHONE_GYRO_OUTPUT_FIX_QUAT). The real fix this round is forcing a
-    // GUARANTEED clean starting state for every test automatically (see
-    // the new auto-reset in the tracking-enabled checkbox handler) rather
-    // than another slot/sign guess.
-    const dPitchDeg = (cfg.phoneAxisXEnabled ? (rr.beta || 0) * cfg.phoneRotationScaleX : 0) * dt
-    const dRollDeg = (cfg.phoneAxisYEnabled ? -(rr.gamma || 0) * cfg.phoneRotationScaleY : 0) * dt
-    const dSpinDeg = (cfg.phoneAxisZEnabled ? (rr.alpha || 0) * cfg.phoneRotationScaleZ : 0) * dt
-    const combinedTiltDeg = Math.hypot(dPitchDeg, dRollDeg)
+    // CORRECTED 2026-09-28 (10th round on this feature, same day) --
+    // solved directly from 3 CLEAN, ISOLATED, one-checkbox-at-a-time
+    // tests (each with the other 2 axes' checkboxes off, so only ONE of
+    // the 3 variables below could be nonzero at all) -- by far the most
+    // reliable data this feature has had, since it removes both the
+    // combined-axis-angle's own cross-talk AND the previously-suspected
+    // starting-orientation confound as variables. Results: with only the
+    // X checkbox on (gating rr.beta), physical Y motion produced a
+    // response, reading as model X. With only Y on (gating -rr.gamma),
+    // physical Z motion produced a response, reading as model Z
+    // (inverted sign). With only Z on (gating rr.alpha), physical X
+    // motion produced a response, reading as model Y. This reveals TWO
+    // independent scrambles that were previously conflated: (1) which
+    // RAW rotationRate property actually correlates with which PHYSICAL
+    // axis (beta<->Y, gamma<->Z, alpha<->X -- none of beta/gamma/alpha
+    // means what its W3C-spec-standard letter would suggest), and (2)
+    // which CODE SLOT reads as which VISUAL letter (the combined axis-
+    // angle's own x-component reads correctly as X, but its y-component
+    // reads as Z, and the separate single-axis mechanism reads as Y).
+    // Solved for both simultaneously below, rather than patching one at
+    // a time as prior rounds did: physical X needs alpha routed into the
+    // x-component (the one slot that reads correctly), physical Z needs
+    // gamma routed into the y-component (which reads as Z), and physical
+    // Y needs beta routed into the separate mechanism (which reads as
+    // Y). Variables are named for the PHYSICAL role directly
+    // (dRoleXDeg/dRoleYDeg/dRoleZDeg) rather than pitch/roll/spin, since
+    // that naming baked in an unverified beta=pitch/gamma=roll/alpha=spin
+    // assumption that turned out to be wrong. Gamma's existing negation
+    // is REMOVED (test 2 reported "inverted" despite already being
+    // negated, so removing it is the direct fix) -- beta and alpha's
+    // signs are unverified in their NEW slots (mechanism changes have
+    // affected sign before) and may need one more round if reported
+    // backwards.
+    const dRoleXDeg = (cfg.phoneAxisXEnabled ? (rr.alpha || 0) * cfg.phoneRotationScaleX : 0) * dt
+    const dRoleYDeg = (cfg.phoneAxisYEnabled ? (rr.beta || 0) * cfg.phoneRotationScaleY : 0) * dt
+    const dRoleZDeg = (cfg.phoneAxisZEnabled ? (rr.gamma || 0) * cfg.phoneRotationScaleZ : 0) * dt
+    const combinedTiltDeg = Math.hypot(dRoleXDeg, dRoleZDeg)
     if (combinedTiltDeg > 1e-8) {
-      _phoneGyroTiltAxis.set(dPitchDeg, dRollDeg, 0).normalize()
+      _phoneGyroTiltAxis.set(dRoleXDeg, dRoleZDeg, 0).normalize()
       _phoneGyroTiltQuat.setFromAxisAngle(_phoneGyroTiltAxis, THREE.MathUtils.degToRad(combinedTiltDeg))
       phoneGyroQuat.multiply(_phoneGyroTiltQuat)
     }
-    if (Math.abs(dSpinDeg) > 1e-8) {
-      _phoneGyroSpinQuat.setFromAxisAngle(PHONE_GYRO_SPIN_LOCAL_AXIS, THREE.MathUtils.degToRad(dSpinDeg))
+    if (Math.abs(dRoleYDeg) > 1e-8) {
+      _phoneGyroSpinQuat.setFromAxisAngle(PHONE_GYRO_SPIN_LOCAL_AXIS, THREE.MathUtils.degToRad(dRoleYDeg))
       phoneGyroQuat.multiply(_phoneGyroSpinQuat)
     }
     phoneGyroQuat.normalize() // guard against floating-point drift accumulating over a long session
