@@ -1582,7 +1582,7 @@ const _phoneGyroSpinQuat = new THREE.Quaternion()
 // PHYSICAL role rather than their raw property name specifically
 // because the mismatch between "variable name" and "actual role" is
 // what made this bug hard to track across 3 rounds.
-const PHONE_GYRO_SPIN_LOCAL_AXIS = new THREE.Vector3(0, 0, 1)
+const PHONE_GYRO_SPIN_LOCAL_AXIS = new THREE.Vector3(1, 0, 0)
 let phoneNxBaseline = 0
 let phoneNyBaseline = 0
 let lastInputSource = 'device' // 'device' | 'mouse' — which path updateTiltTarget() should use this frame
@@ -2121,31 +2121,35 @@ function integratePhoneGyroRotation(e) {
   if (phoneGyroLastTimestamp !== null) {
     const dt = Math.min((now - phoneGyroLastTimestamp) / 1000, 0.1) // seconds; capped so a backgrounded tab can't integrate one huge jump on resume
     const rr = e.rotationRate
-    // CORRECTED 2026-09-28 (3rd round on this feature, same day): direct
-    // report using an unambiguous physical description this time --
-    // "Z axis sticks out perpendicular to the screen" (spin) currently
-    // rotates the model around X; "top/bottom edge oscillate" (pitch,
-    // real X) currently rotates around Y; the remaining motion (roll,
-    // real Y) currently rotates around Z. Tracing this precisely against
-    // the actual code (not a fresh guess) showed pitch (beta) was
-    // ALREADY correctly landing wherever it was coded to land (no
-    // hidden code-to-visual scramble), which means the TARGET mapping is
-    // simply the IDENTITY (pitch->X, roll->Y, spin->Z, no permutation at
-    // all) -- and the only real error is that `rotationRate.alpha` and
-    // `rotationRate.gamma` are CROSSED relative to what
-    // `deviceorientation`'s same-named alpha/gamma would suggest: `rr.alpha`
-    // is actually the ROLL-rate (not spin), `rr.gamma` is actually the
-    // SPIN-rate (not roll). Renamed these 3 to their physical role
-    // (pitch/roll/spin) instead of their raw property name, specifically
-    // BECAUSE "dBetaDeg holds beta but dGammaDeg doesn't hold what you'd
-    // call gamma's role" is exactly the kind of mismatch that made this
-    // bug hard to track across 3 rounds.
+    // CORRECTED 2026-09-28 (4th round on this feature, same day): the 3rd
+    // round's "identity, just alpha/gamma crossed" fix was itself still
+    // wrong -- direct follow-up report, again with an unambiguous physical
+    // description: spin(Z) was landing on visual Y, pitch(X) on visual Z,
+    // roll(Y) on visual X. Direct instruction this round: "just switch the
+    // outputs" -- apply that report as a literal output permutation, not a
+    // new theory. Every incremental rotation this function builds is an
+    // axis-angle; relabeling "whatever used to rotate around visual-A now
+    // rotates around visual-B" for EVERY case is exactly what conjugating
+    // the whole accumulated quaternion by a fixed permutation rotation P
+    // does (P*Q*P^-1 rotates around P(axis of Q), same angle) -- and since
+    // conjugation distributes over composition, that whole-quaternion
+    // conjugation is equivalent to just applying P to each individual
+    // increment's OWN axis vector before building it, which is far simpler
+    // than conjugating the accumulator every frame. The desired mapping
+    // (old-visual-Z->new-visual-X for pitch, old-X->new-Y for roll,
+    // old-Y->new-Z for spin) IS a 3-cycle, so P is the fixed permutation
+    // X->Y->Z->X: P*(x,y,z) = (z,x,y). Applying P to the 2 axis vectors
+    // this function already uses: the combined-tilt vector
+    // (dPitchDeg,dRollDeg,0) -> (0,dPitchDeg,dRollDeg); the separate-spin
+    // axis (0,0,1) -> (1,0,0). Implemented below exactly as that permuted
+    // pair -- no change to the alpha/gamma raw-property assignment, which
+    // is a separate question from this output relabeling.
     const dPitchDeg = (cfg.phoneAxisXEnabled ? (rr.beta || 0) * cfg.phoneRotationScaleX : 0) * dt
     const dRollDeg = (cfg.phoneAxisYEnabled ? -(rr.alpha || 0) * cfg.phoneRotationScaleY : 0) * dt
     const dSpinDeg = (cfg.phoneAxisZEnabled ? (rr.gamma || 0) * cfg.phoneRotationScaleZ : 0) * dt
     const combinedTiltDeg = Math.hypot(dPitchDeg, dRollDeg)
     if (combinedTiltDeg > 1e-8) {
-      _phoneGyroTiltAxis.set(dPitchDeg, dRollDeg, 0).normalize()
+      _phoneGyroTiltAxis.set(0, dPitchDeg, dRollDeg).normalize()
       _phoneGyroTiltQuat.setFromAxisAngle(_phoneGyroTiltAxis, THREE.MathUtils.degToRad(combinedTiltDeg))
       phoneGyroQuat.multiply(_phoneGyroTiltQuat)
     }
