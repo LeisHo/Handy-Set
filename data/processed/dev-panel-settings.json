@@ -334,6 +334,32 @@
           {
             "type": "group",
             "section": {
+              "key": "desktop:PHONE ROTATION",
+              "items": [
+                {
+                  "type": "row",
+                  "key": "sliderPhoneModelRotX"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderPhoneModelRotY"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderPhoneModelRotZ"
+                }
+              ],
+              "rowKeys": [
+                "sliderPhoneModelRotX",
+                "sliderPhoneModelRotY",
+                "sliderPhoneModelRotZ"
+              ],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "group",
+            "section": {
               "key": "desktop:RESPONSIVE BEHAVIOUR - PHONE",
               "items": [
                 {
@@ -568,8 +594,25 @@
                   "type": "group",
                   "section": {
                     "key": "desktop:ROTATION",
-                    "items": [],
-                    "rowKeys": [],
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "slidermodelRotX"
+                      },
+                      {
+                        "type": "row",
+                        "key": "slidermodelRotY"
+                      },
+                      {
+                        "type": "row",
+                        "key": "slidermodelRotZ"
+                      }
+                    ],
+                    "rowKeys": [
+                      "slidermodelRotX",
+                      "slidermodelRotY",
+                      "slidermodelRotZ"
+                    ],
                     "subgroups": []
                   }
                 },
@@ -595,47 +638,6 @@
                       "sliderbaseRotationX",
                       "sliderbaseRotationY",
                       "sliderbaseRotationZ"
-                    ],
-                    "subgroups": []
-                  }
-                },
-                {
-                  "type": "group",
-                  "section": {
-                    "key": "desktop:ROTATION",
-                    "items": [
-                      {
-                        "type": "row",
-                        "key": "sliderPhoneModelRotX"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderPhoneModelRotY"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderPhoneModelRotZ"
-                      },
-                      {
-                        "type": "row",
-                        "key": "slidermodelRotX"
-                      },
-                      {
-                        "type": "row",
-                        "key": "slidermodelRotY"
-                      },
-                      {
-                        "type": "row",
-                        "key": "slidermodelRotZ"
-                      }
-                    ],
-                    "rowKeys": [
-                      "sliderPhoneModelRotX",
-                      "sliderPhoneModelRotY",
-                      "sliderPhoneModelRotZ",
-                      "slidermodelRotX",
-                      "slidermodelRotY",
-                      "slidermodelRotZ"
                     ],
                     "subgroups": []
                   }
@@ -4595,7 +4597,7 @@
                 {
                   "type": "group",
                   "section": {
-                    "key": "mobile:Whole-Hand Rotation at Base",
+                    "key": "mobile:ROTATION",
                     "items": [],
                     "rowKeys": [],
                     "subgroups": []
@@ -4604,7 +4606,7 @@
                 {
                   "type": "group",
                   "section": {
-                    "key": "mobile:ROTATION",
+                    "key": "mobile:Whole-Hand Rotation at Base",
                     "items": [],
                     "rowKeys": [],
                     "subgroups": []
@@ -6084,7 +6086,7 @@
                 {
                   "type": "group",
                   "section": {
-                    "key": "landscape:Whole-Hand Rotation at Base",
+                    "key": "landscape:ROTATION",
                     "items": [],
                     "rowKeys": [],
                     "subgroups": []
@@ -6093,7 +6095,7 @@
                 {
                   "type": "group",
                   "section": {
-                    "key": "landscape:ROTATION",
+                    "key": "landscape:Whole-Hand Rotation at Base",
                     "items": [],
                     "rowKeys": [],
                     "subgroups": []

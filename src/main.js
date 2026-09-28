@@ -1781,19 +1781,19 @@ function renderObjectAxesPicker() {
 // human-readable relative path (so a Copy/Save dump of this setting stays
 // readable), not a pre-encoded one.
 // =======================================================================
+// Matches the real current contents of data/processed/SMARTPHONE
+// MODELS/ exactly -- corrected 2026-09-27 after the user added/removed
+// files directly in that folder (6 of the original 8 removed, 1 new
+// one added: Iphone17MaxPro.glb). Keep this list in sync whenever that
+// folder's own *.glb contents change; there is no directory-listing
+// mechanism, it has to be updated here by hand.
 const PHONE_MODEL_OPTIONS = [
   { value: 'data/processed/SMARTPHONE MODELS/P5_Project_1.glb', text: 'P5 Project 1' },
   { value: 'data/processed/SMARTPHONE MODELS/Pixel 9A.glb', text: 'Pixel 9A' },
-  { value: 'data/processed/SMARTPHONE MODELS/google_pixel_5.glb', text: 'Google Pixel 5' },
-  { value: 'data/processed/SMARTPHONE MODELS/google_pixel_phone.glb', text: 'Google Pixel Phone' },
-  { value: 'data/processed/SMARTPHONE MODELS/iphone 17_4.glb', text: 'iPhone 17 (v4)' },
-  { value: 'data/processed/SMARTPHONE MODELS/iphone_17_pro.glb', text: 'iPhone 17 Pro' },
-  { value: 'data/processed/SMARTPHONE MODELS/iphone_17_pro_max.glb', text: 'iPhone 17 Pro Max' },
-  { value: 'data/processed/SMARTPHONE MODELS/pixel_9a_rumored_design.glb', text: 'Pixel 9A (Rumored Design)' }
+  { value: 'data/processed/SMARTPHONE MODELS/Iphone17MaxPro.glb', text: 'iPhone 17 Max Pro' }
 ]
 let phoneModelWrapper = null // THREE.Group at world origin + Offset sliders, added to `scene`
 let phoneModelRaw = null // the loaded gltf.scene, child of phoneModelWrapper -- rotation/scale/pivot-compensated position
-const phoneModelCentroidLocal = new THREE.Vector3()
 let phoneModelLoadToken = 0 // guards a stale async load callback from applying after a newer selection superseded it
 
 let phoneResponsiveRotationRangeParsed = { min: 0, max: 30 }
@@ -1845,18 +1845,26 @@ function computePhoneCombinedQuat() {
   ))
   return _phoneCombinedQuat.copy(_phoneManualQuat).multiply(_phoneResponsiveQuat)
 }
-const _phoneRotatedPivot = new THREE.Vector3()
+// CORRECTED 2026-09-27, direct report: "responsive phone rotation
+// should be anchored by the phone models OWN geoemtr origin... its
+// currently rotating around some world origin." The original version
+// pivoted on a COMPUTED bounding-box centroid (phoneModelCentroidLocal,
+// via Box3().setFromObject()) -- a reasonable-sounding approximation,
+// but not what was asked for, and not guaranteed to land anywhere near
+// the model's own authored pivot (a GLB's local (0,0,0) is whatever
+// point the artist chose, e.g. the back face or a corner -- it doesn't
+// have to coincide with the mesh's geometric bounding-box center at
+// all). Fixed by pivoting on the model's own true local origin instead
+// -- `phoneModelRaw.position` simply stays (0,0,0) always, so it
+// rotates purely in place around its own geometry origin, and
+// `phoneModelWrapper.position` (the Offset sliders) is what actually
+// moves it through world space.
 function applyPhoneModelTransform() {
   if (!phoneModelRaw || !phoneModelWrapper) return
   phoneModelWrapper.position.set(cfg.phoneModelOffsetX, cfg.phoneModelOffsetY, cfg.phoneModelOffsetZ)
-  const scale = cfg.phoneModelScale
-  phoneModelRaw.scale.setScalar(scale)
-  const combinedQuat = computePhoneCombinedQuat()
-  phoneModelRaw.quaternion.copy(combinedQuat)
-  // Rotate-about-centroid, exactly applyModelRootTransform()'s own
-  // `position = pivot - rotation*(scale*pivot)` formula.
-  _phoneRotatedPivot.copy(phoneModelCentroidLocal).multiplyScalar(scale).applyQuaternion(combinedQuat)
-  phoneModelRaw.position.copy(phoneModelCentroidLocal).multiplyScalar(scale).sub(_phoneRotatedPivot)
+  phoneModelRaw.scale.setScalar(cfg.phoneModelScale)
+  phoneModelRaw.quaternion.copy(computePhoneCombinedQuat())
+  phoneModelRaw.position.set(0, 0, 0)
 }
 function ensurePhoneModelWrapper() {
   if (!phoneModelWrapper) {
@@ -1888,11 +1896,6 @@ function loadPhoneModel(relativePath) {
     disposePhoneModelRaw()
     phoneModelRaw = gltf.scene
     phoneModelWrapper.add(phoneModelRaw)
-    // Centroid measured in the model's own local space, BEFORE any
-    // scale/rotation is applied -- same "measure at bind pose, before
-    // posing touches anything" discipline as modelRotationPivot's own
-    // comment documents for the hand.
-    new THREE.Box3().setFromObject(phoneModelRaw).getCenter(phoneModelCentroidLocal)
     applyPhoneModelTransform()
   }, undefined, (err) => { console.error('Phone model failed to load:', relativePath, err) })
 }
@@ -1905,6 +1908,17 @@ function removePhoneModel() {
     phoneModelWrapper = null
   }
 }
+// 2 checkboxes both drive this (the PHONE MODEL group's own, and a
+// convenience duplicate directly in HAND MODEL per direct request) --
+// both need to reflect cfg.phoneModelEnabled regardless of which one
+// was actually clicked, since checking one doesn't automatically
+// update the other DOM element on its own.
+function syncPhoneModelEnabledCheckboxes() {
+  const a = document.getElementById('checkboxPhoneModelEnabled')
+  const b = document.getElementById('checkboxPhoneModelEnabledHandModel')
+  if (a) a.checked = cfg.phoneModelEnabled
+  if (b) b.checked = cfg.phoneModelEnabled
+}
 function setPhoneModelEnabled(enabled) {
   cfg.phoneModelEnabled = enabled
   if (enabled) {
@@ -1912,6 +1926,7 @@ function setPhoneModelEnabled(enabled) {
   } else {
     removePhoneModel()
   }
+  syncPhoneModelEnabledCheckboxes()
 }
 // Called every animate() frame (unconditionally within !isPaused, same as
 // updateAllFingerGizmos()) -- Responsive Rotation depends on live
@@ -2638,7 +2653,7 @@ window.__debug = {
   get tiltTarget() { return tiltTarget }, get tiltOriginGround() { return tiltOriginGround },
   get handLengthRaw() { return handLengthRaw }, get handCenterLocal() { return handCenterLocal },
   get phoneModelRaw() { return phoneModelRaw }, get phoneModelWrapper() { return phoneModelWrapper },
-  get phoneModelCentroidLocal() { return phoneModelCentroidLocal }, get sceneObjectEntries() { return sceneObjectEntries },
+  get sceneObjectEntries() { return sceneObjectEntries },
   get tiltMagnitude() { return tiltMagnitude }, get tiltAngle() { return tiltAngle },
   get phoneTiltAxisXRaw() { return phoneTiltAxisXRaw }, get lastInputSource() { return lastInputSource },
   getHandCenterWorld, updateWristCrop, computeBaseScale
@@ -3763,7 +3778,19 @@ function renderPhoneModelGroup(content) {
   addRow(subOffset, { id: 'sliderPhoneModelOffsetZ', label: 'Z Offset (World Units)', type: 'slider', min: -200, max: 200, step: 0.5, value: cfg.phoneModelOffsetZ })
   wireSlider('sliderPhoneModelOffsetZ', (v) => { cfg.phoneModelOffsetZ = v; applyPhoneModelTransform() })
 
-  const subRotation = addSubgroup(content, 'ROTATION')
+  // Named "PHONE ROTATION", not "ROTATION" -- direct report 2026-09-27:
+  // the plain name literally collided with Pose's own pre-existing
+  // "ROTATION" subgroup (modelRotX/Y/Z, renderPoseGroup() above).
+  // data-sid identity is flat per device tab, not scoped by parent, so
+  // 2 subgroups sharing one name anywhere in the same tab is a real
+  // bug, not just a cosmetic clash -- it confused devPanel.js's own
+  // sectionOrder reconciliation badly enough that this group's real
+  // rows ended up missing while an empty phantom "ROTATION" appeared
+  // elsewhere in HAND MODEL. Any future subgroup name should be
+  // checked against every OTHER addGroup()/addSubgroup() call in this
+  // file first (grep for the literal string), not assumed safe just
+  // because it reads fine in isolation.
+  const subRotation = addSubgroup(content, 'PHONE ROTATION')
   addRow(subRotation, { id: 'sliderPhoneModelRotX', label: 'X Rotation (Deg)', type: 'slider', min: -180, max: 180, step: 1, value: cfg.phoneModelRotX })
   wireSlider('sliderPhoneModelRotX', (v) => { cfg.phoneModelRotX = v; applyPhoneModelTransform() })
   addRow(subRotation, { id: 'sliderPhoneModelRotY', label: 'Y Rotation (Deg)', type: 'slider', min: -180, max: 180, step: 1, value: cfg.phoneModelRotY })
@@ -4128,6 +4155,14 @@ function renderHandysetDevGroups() {
   // function (renderPhoneTiltGroup), just built into a subgroup instead
   // of a top-level group and titled differently.
   const handModelContent = addGroup('HAND MODEL')
+
+  // Convenience duplicate of the PHONE MODEL group's own On/Off
+  // checkbox, direct request 2026-09-27 -- both checkboxes drive the
+  // exact same cfg.phoneModelEnabled and stay in sync with each other
+  // (see setPhoneModelEnabled()/syncPhoneModelEnabledCheckboxes()).
+  addRow(handModelContent, { id: 'checkboxPhoneModelEnabledHandModel', label: 'Phone Model On/Off', type: 'checkbox' })
+  document.getElementById('checkboxPhoneModelEnabledHandModel').checked = cfg.phoneModelEnabled
+  wireCheckbox('checkboxPhoneModelEnabledHandModel', (v) => { setPhoneModelEnabled(v) })
 
   const fieldContent = addSubgroup(handModelContent, 'Field Layout')
   addRow(fieldContent, { id: 'sliderFieldRows', label: 'Rows (Count)', type: 'slider', min: 1, max: 40, step: 1, value: cfg.fieldRows })
