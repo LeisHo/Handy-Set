@@ -7,40 +7,64 @@ append-only history.
 
 ## Currently working on
 
-Nothing in progress — a 5th-round axis fix for the gyroscope-integrated
-mobile rotation (2026-09-28: the 4th round's "alpha/gamma crossed"
-theory still reproduced the same 3-way cyclic permutation; this round
-applied the user's literal reported before/after mapping as a direct
-output permutation instead of re-deriving another theory — see
-Recently completed for the exact mechanism and an unresolved
-isolated-math-vs-real-device discrepancy found while verifying it) is
-pushed, on top of the 4th-round "alpha/gamma crossed" attempt (also
-2026-09-28, since superseded by this round), a 3rd-round cyclic-
-permutation attempt (also 2026-09-28, superseded), the gyroscope-
-integration switch itself (also 2026-09-28, "I want the rotation to
-continue forever"), a Rotation Reset baseline bug fix plus 6 per-axis
-enable/scale controls (also 2026-09-28), 3 more real-device-testing
-fixes (also 2026-09-28: touch/mouse conflict, camera-lock/slider sync,
-Y/Z world-axis swap), the mobile-vs-desktop rotation redesign (also
-2026-09-28), the Rotation Reset feature (also 2026-09-28), the
-curve-inversion fix (also 2026-09-28), the rotation-node/damping/log
-follow-up (also 2026-09-28), the dev panel template re-sync (also
-2026-09-28), and the 6-part Palm Rotation/Responsive-features request
-(2026-09-27). See Recently completed below for the full account.
-**Still needs real device re-verification** — this feature has now
-needed 5 correction rounds in one session, and even an unambiguous
-physical description didn't prevent the 4th round's regression; if a
-6th round is needed, don't guess another permutation — instrument
-`phoneGyroQuat`'s live value on the real device at known orientations
-and compare against isolated-script predictions to find where they
-actually diverge (see the CLAUDE.md gotcha and the 38th CHANGELOG
-entry).
+Nothing in progress — a 6th-round axis fix for the gyroscope-integrated
+mobile rotation (2026-09-28: root cause finally identified — every
+prior round verified the fix using the WRONG measurement, "which world
+axis stays fixed," when the real ground truth is the Phone Model Log's
+Euler('XYZ')-decomposed `Rot x/y/z`. Replicated three.js's own
+quaternion->Euler math directly, confirmed it reproduces the 5th
+round's reported bug exactly, then brute-forced the correct slot
+arrangement against that same measurement — see Recently completed for
+the mechanism) is pushed, on top of the 5th-round literal-permutation
+attempt (also 2026-09-28, superseded by this round), the 4th-round
+"alpha/gamma crossed" attempt (also 2026-09-28, superseded), a 3rd-round
+cyclic-permutation attempt (also 2026-09-28, superseded), the
+gyroscope-integration switch itself (also 2026-09-28, "I want the
+rotation to continue forever"), a Rotation Reset baseline bug fix plus
+6 per-axis enable/scale controls (also 2026-09-28), 3 more real-device-
+testing fixes (also 2026-09-28: touch/mouse conflict, camera-lock/
+slider sync, Y/Z world-axis swap), the mobile-vs-desktop rotation
+redesign (also 2026-09-28), the Rotation Reset feature (also
+2026-09-28), the curve-inversion fix (also 2026-09-28), the
+rotation-node/damping/log follow-up (also 2026-09-28), the dev panel
+template re-sync (also 2026-09-28), and the 6-part Palm Rotation/
+Responsive-features request (2026-09-27). See Recently completed below
+for the full account. **Still needs real device re-verification** —
+this feature has now needed 6 correction rounds in one session; this
+round is the first grounded in a methodology actually validated against
+real reported data (the Euler-XYZ script reproduced the 5th round's
+exact bug before this fix was derived), rather than an assumption about
+which measurement the report corresponds to. If a 7th round is needed,
+reuse the SAME Euler-XYZ script methodology against the new numbers —
+do not revert to axis-invariance reasoning (see the CLAUDE.md gotcha
+and the 39th CHANGELOG entry).
 
 Pushed to `https://github.com/LeisHo/Handy-Set`
 (deployed via the Vercel project at `https://vercel.com/lpeis/handy-set`).
 
 ## Recently completed
 
+- **RESOLVED (2026-09-28, 6th round): Root cause found — every prior
+  round verified the fix using the wrong measurement.** The 5th round's
+  literal-permutation fix still reproduced a cyclic permutation ("123
+  to YZX," the user's own precise notation: 1/2/3 = phone's physical
+  axes, X/Y/Z = model's). Every round including this session's 4th and
+  5th verified via axis invariance ("which world axis stays fixed") —
+  but the real ground truth is the Phone Model Log's `Rot x/y/z`, an
+  Euler('XYZ')-decomposed quaternion. Replicated three.js's own
+  quaternion->Euler('XYZ') math in a standalone script (matrix form,
+  cross-checked, not reconstructed from memory) and confirmed it
+  reproduces "123->YZX" EXACTLY for the 5th round's shipped code —
+  finally matching real-device behavior. Brute-forced all 6
+  (pitch,roll)-axis placements against that same measurement and found
+  exactly one clean match: the plain, un-permuted structure (combined
+  tilt = pitch+roll on X/Y, spin separate on local Z) — literally the
+  original structure from before any permutation fix. Also reverted the
+  3rd-round "alpha/gamma crossed" raw-property theory back to
+  W3C-spec-standard, since it was built on the same discredited
+  measurement. Confirmed (via source) the Object Axes gizmo is
+  correctly parented to `phoneModelWrapper` and not a contributing
+  factor. See `docs/CHANGELOG.txt`'s matching 2026-09-28 (39th) entry.
 - **RESOLVED (2026-09-28, 5th round): The 4th round's "alpha/gamma
   crossed" fix still reproduced the exact same 3-way cyclic
   permutation.** Direct instruction: "just switch the outputs I told

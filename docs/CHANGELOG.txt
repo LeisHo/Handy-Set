@@ -4279,6 +4279,67 @@ than reasoning about the code in isolation again.
 `index.html`'s cache-buster bumped `?v=121` -> `?v=122`.
 
 --------------------------------------------------------------------------------
+2026-09-28  -  (39th)
+
+Direct follow-up, same day: the 38th entry's permutation fix (also based
+on axis-invariance testing) still didn't match the real device --
+"bro what the fuck its still broken." The user then gave the single
+most precise specification of this whole feature: physical axes 1/2/3
+map onto model axes X/Y/Z, with 1(X)=left-right, 2(Y)=bottom(charging
+port)-to-top, 3(Z)=back-to-face -- and stated the CURRENT bug precisely
+as "123 to YZX," wanting "123 to XYZ."
+
+ROOT CAUSE FINALLY FOUND: every round's own verification (this
+session's 4th/5th/38th-round fixes included) tested the code's output
+via AXIS INVARIANCE ("which world axis stays fixed under the
+rotation"). But the actual ground truth the user reads is the Phone
+Model Log's `Rot x/y/z`, an Euler('XYZ')-DECOMPOSED quaternion (see
+`restartPhoneModelLogTimer()`). These are NOT the same measurement --
+axis-invariance permutes cleanly under a change of basis; Euler-XYZ
+decomposition does not, which is exactly why 2 different
+algebraically-sound "permute the axis vector" fixes both still failed
+once actually read off Rot x/y/z.
+
+Verified by replicating three.js's own quaternion->Euler('XYZ')
+extraction (matrix form, cross-checked against
+Matrix4.makeRotationFromQuaternion + Euler.setFromRotationMatrix, not
+reconstructed from memory of the formula alone) in a standalone script:
+the 38th entry's shipped code reproduces "123->YZX" EXACTLY under this
+measurement, confirming it as the correct methodology. A brute-force
+search of all 6 (pitch-axis, roll-axis) placements against this same
+Euler-XYZ measurement found exactly one clean, zero-cross-talk match:
+the plain, UN-permuted structure -- combined tilt = pitch+roll on X/Y,
+spin separate on local Z. This is literally the ORIGINAL slot structure
+from when gyro integration first shipped, before any of the 4
+subsequent permutation attempts.
+
+Also reverted the 37th entry's "alpha/gamma crossed" raw-property
+theory back to the W3C-spec-standard reading (`rr.beta`=pitch rate,
+`rr.gamma`=roll rate, `rr.alpha`=spin rate) -- that theory was built
+entirely on the same now-discredited axis-invariance measurement, so it
+has no remaining support once the measurement itself is known to be
+wrong. Kept gamma's existing inversion (matches the sign convention
+already established for gamma in the old absolute-angle system).
+
+Mid-fix, the user separately flagged "i even asked you to change the
+object axes to rotate with the phone" -- checked `createFatAxesVisualization()`/
+`ensureObjectAxesFor()` directly: the Object Axes gizmo IS correctly
+parented onto `phoneModelWrapper` and draws its 3 lines along the
+group's own local X/Y/Z (confirmed via source, not just assumed), so
+that earlier fix is intact and not a contributing factor here.
+
+Not independently browser/device-verified this round (same standing
+limitation -- no physical device in this sandbox). This is the first
+round grounded in a methodology that's actually been validated against
+one real data point (the 38th entry's own reported bug), rather than
+an assumption about which measurement the report corresponds to -- if
+this is STILL wrong on the next real test, re-verify using the SAME
+Euler-XYZ script methodology against the NEW reported numbers rather
+than reverting to axis-invariance reasoning.
+
+`index.html`'s cache-buster bumped `?v=122` -> `?v=123`.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

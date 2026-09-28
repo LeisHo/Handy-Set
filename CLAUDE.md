@@ -2330,10 +2330,34 @@ wiring, and are still open:
   source (no extra remap exists between `phoneGyroQuat` and the
   rendered `phoneModelWrapper.quaternion` — just a damped slerp). This
   fix trusted the real-device report over the isolated simulation
-  rather than waiting to reconcile them. **If a 6th round is ever
-  needed, don't reach for another permutation guess — instrument
-  `phoneGyroQuat`'s live value on the real device at known physical
-  orientations (e.g. via the Sensors/Phone Model logs) and compare
-  directly against what an isolated script predicts for those same
-  raw inputs, to actually find where the isolated math and the real
-  rendered result diverge.**
+  rather than waiting to reconcile them. **CORRECTED 2026-09-28 (6th
+  round, same day) — the "unexplained discrepancy" above is now
+  explained, and this was the real root cause all along.** The 5th
+  round's fix still reproduced the same cyclic permutation ("123 to
+  YZX" — the user's own precise real-vs-model axis notation, established
+  this round: 1/2/3 = the phone's own physical axes, X/Y/Z = the
+  model's). Every round's verification, including the 4th and 5th,
+  tested via AXIS INVARIANCE ("which world axis stays fixed") — but the
+  actual ground truth is the Phone Model Log's `Rot x/y/z`, an
+  Euler('XYZ')-decomposed quaternion (`restartPhoneModelLogTimer()`).
+  These are NOT the same measurement past a tiny angle. Replicating
+  three.js's own quaternion->Euler('XYZ') extraction (matrix form, not
+  reconstructed from memory alone) confirmed the 5th round's shipped
+  code reproduces "123->YZX" EXACTLY under Euler-XYZ — finally matching
+  reality — and a brute-force search of all 6 (pitch,roll)-axis
+  placements against that same measurement found exactly one clean,
+  zero-cross-talk match: the plain, UN-permuted structure (combined
+  tilt = pitch+roll on X/Y, spin separate on local Z) — literally the
+  ORIGINAL structure from when gyro integration first shipped, before
+  any permutation fix. Also reverted the 3rd-round "alpha/gamma
+  crossed" raw-property theory back to W3C-spec-standard
+  (`rr.beta`=pitch, `rr.gamma`=roll, `rr.alpha`=spin), since it was
+  built on the same discredited measurement. **If a 7th round is ever
+  needed: verify using this SAME Euler-XYZ script methodology against
+  the new reported numbers — do not revert to axis-invariance
+  reasoning, and do not guess a permutation without a script
+  reproducing the CURRENT bug's exact numbers first.** Separately
+  confirmed (checked `createFatAxesVisualization()`/
+  `ensureObjectAxesFor()` directly): the Object Axes gizmo is correctly
+  parented onto `phoneModelWrapper` and draws along its own local
+  X/Y/Z, so it is NOT a contributing factor to this bug.
