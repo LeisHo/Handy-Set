@@ -176,7 +176,12 @@ const cfg = {
   // the Responsive Rotation section below for the full design).
   phoneModelEnabled: false,
   phoneModelFile: '',
-  phoneModelScale: 1,
+  // Default/range corrected 2026-09-27 after the user re-exported all 3
+  // models at a much smaller native scale (~0.07-0.16 world units at
+  // scale=1, vs the hand's own ~115x80x35) -- the old 1/max-5 default
+  // rendered as an invisible speck, and the old slider max (5) couldn't
+  // reach a visible size at all without the click-to-type escape hatch.
+  phoneModelScale: 300,
   phoneModelOffsetX: 0, phoneModelOffsetY: 0, phoneModelOffsetZ: 0,
   phoneModelRotX: 0, phoneModelRotY: 0, phoneModelRotZ: 0,
   // Responsive Behaviour - Phone > Responsive Rotation -- same 4-control
@@ -3767,7 +3772,7 @@ function renderPhoneModelGroup(content) {
   document.getElementById('selectPhoneModelFile').value = cfg.phoneModelFile
   wireSelect('selectPhoneModelFile', (v) => { cfg.phoneModelFile = v; if (cfg.phoneModelEnabled) loadPhoneModel(v) })
 
-  addRow(content, { id: 'sliderPhoneModelScale', label: 'Model Scale (x)', type: 'slider', min: 0.01, max: 5, step: 0.01, value: cfg.phoneModelScale })
+  addRow(content, { id: 'sliderPhoneModelScale', label: 'Model Scale (x)', type: 'slider', min: 0.01, max: 2000, step: 1, value: cfg.phoneModelScale })
   wireSlider('sliderPhoneModelScale', (v) => { cfg.phoneModelScale = v; applyPhoneModelTransform() })
 
   const subOffset = addSubgroup(content, 'OFFSET')
