@@ -1,5 +1,6 @@
 {
   "controls": {
+    "checkboxPhoneModelEnabledHandModel": true,
     "sliderFieldRows": 1,
     "sliderFieldCols": 1,
     "sliderRowSpacing": 9.5,
@@ -87,14 +88,14 @@
     "textPoseTweenCurve": "[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}]",
     "checkboxPhoneModelEnabled": true,
     "selectPhoneModelFile": "data/processed/SMARTPHONE MODELS/P5_Project_1.glb",
-    "sliderPhoneModelScale": 75,
+    "sliderPhoneModelScale": 75.01,
     "sliderPhoneModelOffsetX": 0,
     "sliderPhoneModelOffsetY": 31,
     "sliderPhoneModelOffsetZ": 0,
     "sliderPhoneModelRotX": 0,
     "sliderPhoneModelRotY": 0,
     "sliderPhoneModelRotZ": 0,
-    "checkboxPhoneResponsiveRotationEnabled": false,
+    "checkboxPhoneResponsiveRotationEnabled": true,
     "sliderPhoneResponsiveRotationFineTune": 0,
     "textPhoneResponsiveRotationRange": "{\"min\":0,\"max\":30}",
     "textPhoneResponsiveRotationCurve": "[{\"x\":0,\"y\":1},{\"x\":1,\"y\":0}]",
@@ -103,16 +104,16 @@
     "checkboxWristSplayReactiveEnabled": true,
     "textWristSplayRange": "{\"min\":5,\"max\":-71}",
     "textWristSplayCurve": "[{\"x\":0,\"y\":1},{\"x\":0.31833343505859374,\"y\":0.6961458841959636},{\"x\":1,\"y\":0.042812347412109375}]",
-    "sliderCameraX": -13,
-    "sliderCameraY": 45,
-    "sliderCameraZ": -35,
+    "sliderCameraX": 1,
+    "sliderCameraY": 130,
+    "sliderCameraZ": 5,
     "sliderCameraFov": 15,
-    "sliderCameraZoom": 54,
+    "sliderCameraZoom": 99.5,
     "checkboxLockCameraPan": false,
     "checkboxLockCameraZoom": false,
     "checkboxLockCameraRotate": false,
-    "sliderCameraYaw": 21,
-    "sliderCameraPitch": -26,
+    "sliderCameraYaw": -174,
+    "sliderCameraPitch": -87,
     "checkboxCameraMaxExtentsEnabled": false,
     "sliderKeyAzimuth": 360,
     "sliderKeyElevation": -3,
@@ -458,6 +459,29 @@
             "subgroups": []
           },
           {
+            "key": "desktop:PHONE ROTATION",
+            "items": [
+              {
+                "type": "row",
+                "key": "sliderPhoneModelRotX"
+              },
+              {
+                "type": "row",
+                "key": "sliderPhoneModelRotY"
+              },
+              {
+                "type": "row",
+                "key": "sliderPhoneModelRotZ"
+              }
+            ],
+            "rowKeys": [
+              "sliderPhoneModelRotX",
+              "sliderPhoneModelRotY",
+              "sliderPhoneModelRotZ"
+            ],
+            "subgroups": []
+          },
+          {
             "key": "desktop:RESPONSIVE BEHAVIOUR - PHONE",
             "items": [
               {
@@ -529,6 +553,10 @@
       {
         "key": "desktop:HAND MODEL",
         "items": [
+          {
+            "type": "row",
+            "key": "checkboxPhoneModelEnabledHandModel"
+          },
           {
             "type": "group",
             "section": {
@@ -983,8 +1011,25 @@
               "subgroups": [
                 {
                   "key": "desktop:ROTATION",
-                  "items": [],
-                  "rowKeys": [],
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "slidermodelRotX"
+                    },
+                    {
+                      "type": "row",
+                      "key": "slidermodelRotY"
+                    },
+                    {
+                      "type": "row",
+                      "key": "slidermodelRotZ"
+                    }
+                  ],
+                  "rowKeys": [
+                    "slidermodelRotX",
+                    "slidermodelRotY",
+                    "slidermodelRotZ"
+                  ],
                   "subgroups": []
                 },
                 {
@@ -1007,44 +1052,6 @@
                     "sliderbaseRotationX",
                     "sliderbaseRotationY",
                     "sliderbaseRotationZ"
-                  ],
-                  "subgroups": []
-                },
-                {
-                  "key": "desktop:ROTATION",
-                  "items": [
-                    {
-                      "type": "row",
-                      "key": "sliderPhoneModelRotX"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderPhoneModelRotY"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderPhoneModelRotZ"
-                    },
-                    {
-                      "type": "row",
-                      "key": "slidermodelRotX"
-                    },
-                    {
-                      "type": "row",
-                      "key": "slidermodelRotY"
-                    },
-                    {
-                      "type": "row",
-                      "key": "slidermodelRotZ"
-                    }
-                  ],
-                  "rowKeys": [
-                    "sliderPhoneModelRotX",
-                    "sliderPhoneModelRotY",
-                    "sliderPhoneModelRotZ",
-                    "slidermodelRotX",
-                    "slidermodelRotY",
-                    "slidermodelRotZ"
                   ],
                   "subgroups": []
                 },
@@ -1747,7 +1754,9 @@
             }
           }
         ],
-        "rowKeys": [],
+        "rowKeys": [
+          "checkboxPhoneModelEnabledHandModel"
+        ],
         "subgroups": [
           {
             "key": "desktop:Field Layout",
@@ -1809,8 +1818,25 @@
                 "type": "group",
                 "section": {
                   "key": "desktop:ROTATION",
-                  "items": [],
-                  "rowKeys": [],
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "slidermodelRotX"
+                    },
+                    {
+                      "type": "row",
+                      "key": "slidermodelRotY"
+                    },
+                    {
+                      "type": "row",
+                      "key": "slidermodelRotZ"
+                    }
+                  ],
+                  "rowKeys": [
+                    "slidermodelRotX",
+                    "slidermodelRotY",
+                    "slidermodelRotZ"
+                  ],
                   "subgroups": []
                 }
               },
@@ -1836,47 +1862,6 @@
                     "sliderbaseRotationX",
                     "sliderbaseRotationY",
                     "sliderbaseRotationZ"
-                  ],
-                  "subgroups": []
-                }
-              },
-              {
-                "type": "group",
-                "section": {
-                  "key": "desktop:ROTATION",
-                  "items": [
-                    {
-                      "type": "row",
-                      "key": "sliderPhoneModelRotX"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderPhoneModelRotY"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderPhoneModelRotZ"
-                    },
-                    {
-                      "type": "row",
-                      "key": "slidermodelRotX"
-                    },
-                    {
-                      "type": "row",
-                      "key": "slidermodelRotY"
-                    },
-                    {
-                      "type": "row",
-                      "key": "slidermodelRotZ"
-                    }
-                  ],
-                  "rowKeys": [
-                    "sliderPhoneModelRotX",
-                    "sliderPhoneModelRotY",
-                    "sliderPhoneModelRotZ",
-                    "slidermodelRotX",
-                    "slidermodelRotY",
-                    "slidermodelRotZ"
                   ],
                   "subgroups": []
                 }
@@ -2222,8 +2207,25 @@
             "subgroups": [
               {
                 "key": "desktop:ROTATION",
-                "items": [],
-                "rowKeys": [],
+                "items": [
+                  {
+                    "type": "row",
+                    "key": "slidermodelRotX"
+                  },
+                  {
+                    "type": "row",
+                    "key": "slidermodelRotY"
+                  },
+                  {
+                    "type": "row",
+                    "key": "slidermodelRotZ"
+                  }
+                ],
+                "rowKeys": [
+                  "slidermodelRotX",
+                  "slidermodelRotY",
+                  "slidermodelRotZ"
+                ],
                 "subgroups": []
               },
               {
@@ -2246,44 +2248,6 @@
                   "sliderbaseRotationX",
                   "sliderbaseRotationY",
                   "sliderbaseRotationZ"
-                ],
-                "subgroups": []
-              },
-              {
-                "key": "desktop:ROTATION",
-                "items": [
-                  {
-                    "type": "row",
-                    "key": "sliderPhoneModelRotX"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderPhoneModelRotY"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderPhoneModelRotZ"
-                  },
-                  {
-                    "type": "row",
-                    "key": "slidermodelRotX"
-                  },
-                  {
-                    "type": "row",
-                    "key": "slidermodelRotY"
-                  },
-                  {
-                    "type": "row",
-                    "key": "slidermodelRotZ"
-                  }
-                ],
-                "rowKeys": [
-                  "sliderPhoneModelRotX",
-                  "sliderPhoneModelRotY",
-                  "sliderPhoneModelRotZ",
-                  "slidermodelRotX",
-                  "slidermodelRotY",
-                  "slidermodelRotZ"
                 ],
                 "subgroups": []
               },
@@ -4520,6 +4484,15 @@
           {
             "type": "group",
             "section": {
+              "key": "mobile:PHONE ROTATION",
+              "items": [],
+              "rowKeys": [],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "group",
+            "section": {
               "key": "mobile:RESPONSIVE BEHAVIOUR - PHONE",
               "items": [
                 {
@@ -4548,6 +4521,12 @@
         "subgroups": [
           {
             "key": "mobile:OFFSET",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
+          {
+            "key": "mobile:PHONE ROTATION",
             "items": [],
             "rowKeys": [],
             "subgroups": []
@@ -4688,13 +4667,13 @@
               "rowKeys": [],
               "subgroups": [
                 {
-                  "key": "mobile:Whole-Hand Rotation at Base",
+                  "key": "mobile:ROTATION",
                   "items": [],
                   "rowKeys": [],
                   "subgroups": []
                 },
                 {
-                  "key": "mobile:ROTATION",
+                  "key": "mobile:Whole-Hand Rotation at Base",
                   "items": [],
                   "rowKeys": [],
                   "subgroups": []
@@ -4964,7 +4943,7 @@
               {
                 "type": "group",
                 "section": {
-                  "key": "mobile:Whole-Hand Rotation at Base",
+                  "key": "mobile:ROTATION",
                   "items": [],
                   "rowKeys": [],
                   "subgroups": []
@@ -4973,7 +4952,7 @@
               {
                 "type": "group",
                 "section": {
-                  "key": "mobile:ROTATION",
+                  "key": "mobile:Whole-Hand Rotation at Base",
                   "items": [],
                   "rowKeys": [],
                   "subgroups": []
@@ -5055,13 +5034,13 @@
             "rowKeys": [],
             "subgroups": [
               {
-                "key": "mobile:Whole-Hand Rotation at Base",
+                "key": "mobile:ROTATION",
                 "items": [],
                 "rowKeys": [],
                 "subgroups": []
               },
               {
-                "key": "mobile:ROTATION",
+                "key": "mobile:Whole-Hand Rotation at Base",
                 "items": [],
                 "rowKeys": [],
                 "subgroups": []
@@ -6009,6 +5988,15 @@
           {
             "type": "group",
             "section": {
+              "key": "landscape:PHONE ROTATION",
+              "items": [],
+              "rowKeys": [],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "group",
+            "section": {
               "key": "landscape:RESPONSIVE BEHAVIOUR - PHONE",
               "items": [
                 {
@@ -6037,6 +6025,12 @@
         "subgroups": [
           {
             "key": "landscape:OFFSET",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
+          {
+            "key": "landscape:PHONE ROTATION",
             "items": [],
             "rowKeys": [],
             "subgroups": []
@@ -6177,13 +6171,13 @@
               "rowKeys": [],
               "subgroups": [
                 {
-                  "key": "landscape:Whole-Hand Rotation at Base",
+                  "key": "landscape:ROTATION",
                   "items": [],
                   "rowKeys": [],
                   "subgroups": []
                 },
                 {
-                  "key": "landscape:ROTATION",
+                  "key": "landscape:Whole-Hand Rotation at Base",
                   "items": [],
                   "rowKeys": [],
                   "subgroups": []
@@ -6453,7 +6447,7 @@
               {
                 "type": "group",
                 "section": {
-                  "key": "landscape:Whole-Hand Rotation at Base",
+                  "key": "landscape:ROTATION",
                   "items": [],
                   "rowKeys": [],
                   "subgroups": []
@@ -6462,7 +6456,7 @@
               {
                 "type": "group",
                 "section": {
-                  "key": "landscape:ROTATION",
+                  "key": "landscape:Whole-Hand Rotation at Base",
                   "items": [],
                   "rowKeys": [],
                   "subgroups": []
@@ -6544,13 +6538,13 @@
             "rowKeys": [],
             "subgroups": [
               {
-                "key": "landscape:Whole-Hand Rotation at Base",
+                "key": "landscape:ROTATION",
                 "items": [],
                 "rowKeys": [],
                 "subgroups": []
               },
               {
-                "key": "landscape:ROTATION",
+                "key": "landscape:Whole-Hand Rotation at Base",
                 "items": [],
                 "rowKeys": [],
                 "subgroups": []
@@ -7486,9 +7480,10 @@
   "sectionCollapseState": {
     "desktop:Saved Dev Settings": false,
     "desktop:PHONE MODEL": false,
-    "desktop:OFFSET": false,
-    "desktop:RESPONSIVE BEHAVIOUR - PHONE": true,
-    "desktop:Responsive Rotation": true,
+    "desktop:OFFSET": true,
+    "desktop:PHONE ROTATION": true,
+    "desktop:RESPONSIVE BEHAVIOUR - PHONE": false,
+    "desktop:Responsive Rotation": false,
     "desktop:HAND MODEL": true,
     "desktop:Field Layout": true,
     "desktop:Pose": false,
@@ -7536,13 +7531,14 @@
     "desktop:Background": true,
     "mobile:PHONE MODEL": false,
     "mobile:OFFSET": false,
+    "mobile:PHONE ROTATION": false,
     "mobile:RESPONSIVE BEHAVIOUR - PHONE": false,
     "mobile:Responsive Rotation": false,
     "mobile:HAND MODEL": false,
     "mobile:Field Layout": false,
     "mobile:Pose": true,
-    "mobile:Whole-Hand Rotation at Base": false,
     "mobile:ROTATION": false,
+    "mobile:Whole-Hand Rotation at Base": false,
     "mobile:THUMB": false,
     "mobile:Wrist": false,
     "mobile:Index": false,
@@ -7585,13 +7581,14 @@
     "mobile:Background": false,
     "landscape:PHONE MODEL": false,
     "landscape:OFFSET": false,
+    "landscape:PHONE ROTATION": false,
     "landscape:RESPONSIVE BEHAVIOUR - PHONE": false,
     "landscape:Responsive Rotation": false,
     "landscape:HAND MODEL": false,
     "landscape:Field Layout": true,
     "landscape:Pose": true,
-    "landscape:Whole-Hand Rotation at Base": false,
     "landscape:ROTATION": true,
+    "landscape:Whole-Hand Rotation at Base": false,
     "landscape:THUMB": true,
     "landscape:Wrist": true,
     "landscape:Index": true,
@@ -7891,7 +7888,9 @@
     "landscape:RESPONSIVE BEHAVIOUR - PHONE": null,
     "landscape:PHONE MODEL": null,
     "landscape:HAND MODEL": null,
-    "landscape:Object Axes": null
+    "landscape:Object Axes": null,
+    "mobile:PHONE ROTATION": null,
+    "landscape:PHONE ROTATION": null
   },
   "devTextOverridesManual": [
     "desktop:New Group",
