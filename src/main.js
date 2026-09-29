@@ -2086,6 +2086,7 @@ let phoneModelLoadToken = 0 // guards a stale async load callback from applying 
 // is index-parallel to phoneScreenMeshes.
 let phoneScreenMeshes = [] // the mesh(es) found inside phoneModelRaw, or [] if this model has none
 let phoneScreenOriginalMaterials = [] // each mesh's own real glTF material -- restored whenever Screen Render is off or the model reloads
+let phoneScreenUvCenter = { x: 0.5, y: 0.5 } // real UV midpoint of phoneScreenMeshes[0], recomputed on every model load -- see loadPhoneModel()'s own comment
 let phoneScreenRenderMaterial = null // shared unlit MeshBasicMaterial driving the screen while Screen Render is on; only its .map is swapped per pass -- never disposed/recreated per model, so a model switch doesn't need to rebuild it
 let screenRenderTargets = null // [RT_A, RT_B], created once and reused -- ping-ponged across up to 10 recursion passes per frame (see renderVirtualScreen())
 
@@ -2583,6 +2584,36 @@ function loadPhoneModel(relativePath) {
     // today isn't guaranteed to stay that way if its own transform
     // values change.
     phoneScreenMeshes.forEach((m) => { m.frustumCulled = false })
+    // Real per-mesh UV center, NOT hardcoded (0.5, 0.5) -- direct
+    // request 2026-09-29: "i want you to put the scale and mirror
+    // origin on the center of te SCREEN FACE mesh." A hardcoded 0.5,0.5
+    // assumes every model's Screen Face UV island is perfectly centered
+    // in the full [0,1] texture space -- even Pixel 9A, whose UV range
+    // measures very close to [0,1] (min ~0.008/0.006, max ~0.989/0.995),
+    // has a REAL midpoint of (0.498, 0.500), not exactly (0.5, 0.5).
+    // That small a pivot error is invisible at shallow recursion depth,
+    // but Recursive Render feeds each pass's own output back in as the
+    // NEXT pass's input -- a pivot error compounds/amplifies through
+    // repeated recursive scale+mirror, which is a coherent explanation
+    // for the exact reported pattern ("1st/2nd good, 3rd+ wrong") and
+    // for why different models (each with their own real, ungauranteed
+    // UV centering) showed inconsistent results. Computed once here,
+    // from phoneScreenMeshes[0]'s own real UV attribute (the
+    // representative mesh when there's more than one primitive) --
+    // falls back to (0.5, 0.5) only if the mesh has no UV data at all.
+    phoneScreenUvCenter = { x: 0.5, y: 0.5 }
+    const uvAttr = phoneScreenMeshes[0]?.geometry?.attributes?.uv
+    if (uvAttr && uvAttr.count) {
+      let minU = Infinity, maxU = -Infinity, minV = Infinity, maxV = -Infinity
+      for (let i = 0; i < uvAttr.count; i++) {
+        const u = uvAttr.getX(i), v = uvAttr.getY(i)
+        if (u < minU) minU = u
+        if (u > maxU) maxU = u
+        if (v < minV) minV = v
+        if (v > maxV) maxV = v
+      }
+      phoneScreenUvCenter = { x: (minU + maxU) / 2, y: (minV + maxV) / 2 }
+    }
     if (!phoneScreenMeshes.length) console.warn(ts() + ' Phone model has no "Screen Face" mesh -- Virtual Screen render will have no effect:', relativePath)
     applyPhoneModelTransform()
   }, undefined, (err) => { console.error(ts() + ' Phone model failed to load:', relativePath, err) })
@@ -2775,7 +2806,7 @@ function applyScreenTextureTransform(texture, passIndex) {
   // actual runtime sequence can be read from the console instead of
   // guessed a 4th time. Remove once this is resolved.
   if (window.__mirrorDebug) console.log(ts() + ' [mirrorDebug] passIndex=' + passIndex + ' levels=' + levels + ' alternateParity=' + alternateParity + ' mirrorX=' + mirrorX)
-  texture.center.set(0.5, 0.5)
+  texture.center.set(phoneScreenUvCenter.x, phoneScreenUvCenter.y)
   texture.repeat.set(mirrorX / (overall * scaleX), mirrorY / (overall * scaleY))
   texture.rotation = THREE.MathUtils.degToRad(cfg.screenTextureRotation || 0)
   texture.offset.set(cfg.screenTextureOffsetX || 0, cfg.screenTextureOffsetY || 0)
