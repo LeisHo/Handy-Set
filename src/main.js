@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js'
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
@@ -282,6 +283,16 @@ const cfg = {
   // locks their sliders, instead of the user tuning them by hand.
   screenTextureScale: 1, screenTextureRotation: 0,
   screenTextureScaleX: 1, screenTextureScaleY: 1,
+  // Emission Intensity -- direct report 2026-09-29: "When i use the
+  // Pixel 9A model, the screen is very dim." phoneScreenRenderMaterial
+  // is an unlit MeshBasicMaterial (its .map is the recursive render's
+  // own captured texture) -- true .emissive/.emissiveIntensity don't
+  // exist on that material type at all (that's a MeshStandard/Physical/
+  // Lambert/Phong-only property), so this multiplies MeshBasicMaterial's
+  // own .color instead, which has the same practical effect (brightens
+  // the rendered texture, can exceed 1x since color multiplication isn't
+  // clamped to the source texture's own captured brightness).
+  screenEmissionIntensity: 1,
   // "To Scale" -- direct report: "whenever my actual browser size is
   // different from the model mesh size, the rendered image gets scaled
   // incorrectly." Root cause: the off-screen capture always renders
@@ -2516,6 +2527,13 @@ function loadPhoneModel(relativePath) {
   ensurePhoneModelWrapper()
   const phoneLoader = new GLTFLoader()
   phoneLoader.setDRACOLoader(dracoLoader)
+  // Nothing2.glb requires BOTH KHR_draco_mesh_compression AND
+  // EXT_meshopt_compression (confirmed via its own extensionsRequired,
+  // parsed directly from the raw GLB) -- direct report: "the recurrsive
+  // rendering isnt working for hte Nothing2 model." Without a
+  // MeshoptDecoder registered, GLTFLoader fails to load the whole
+  // model, not just its Screen Face mesh.
+  phoneLoader.setMeshoptDecoder(MeshoptDecoder)
   phoneLoader.load(encodeURI(relativePath), (gltf) => {
     if (token !== phoneModelLoadToken) return // superseded by a newer selection/reload before this one finished
     disposePhoneModelRaw()
@@ -2690,6 +2708,7 @@ function renderVirtualScreen() {
   const targets = ensureScreenRenderTargets()
   const levels = THREE.MathUtils.clamp(Math.round(cfg.screenRecursionLevels || 1), 1, 10)
   if (!phoneScreenRenderMaterial) phoneScreenRenderMaterial = new THREE.MeshBasicMaterial()
+  phoneScreenRenderMaterial.color.setScalar(cfg.screenEmissionIntensity ?? 1)
   for (let i = 0; i < levels; i++) {
     if (i === 0) {
       phoneScreenMeshes.forEach((mesh) => { mesh.visible = false })
@@ -3071,6 +3090,7 @@ function getHandCenterWorld() {
 // =======================================================================
 const handLoader = new GLTFLoader()
 handLoader.setDRACOLoader(dracoLoader)
+handLoader.setMeshoptDecoder(MeshoptDecoder)
 handLoader.load(MODEL_URL, async (gltf) => {
   const root = gltf.scene
   const skinned = findSkinnedMesh(root)
@@ -4890,6 +4910,13 @@ function renderRecursiveRenderGroup(content) {
   wireSlider('sliderScreenTextureScaleX', (v) => { cfg.screenTextureScaleX = v })
   addRow(content, { id: 'sliderScreenTextureScaleY', label: 'Texture Y Scale (x)', type: 'slider', min: 0.1, max: 5, step: 0.05, value: cfg.screenTextureScaleY })
   wireSlider('sliderScreenTextureScaleY', (v) => { cfg.screenTextureScaleY = v })
+  // Emission Intensity -- direct report: "When i use the Pixel 9A
+  // model, the screen is very dim." See cfg.screenEmissionIntensity's
+  // own comment for why this multiplies .color rather than a real
+  // .emissiveIntensity (phoneScreenRenderMaterial is an unlit
+  // MeshBasicMaterial, which has no emissive property at all).
+  addRow(content, { id: 'sliderScreenEmissionIntensity', label: 'Screen Emission Intensity (x)', type: 'slider', min: 0, max: 5, step: 0.05, value: cfg.screenEmissionIntensity })
+  wireSlider('sliderScreenEmissionIntensity', (v) => { cfg.screenEmissionIntensity = v })
   // "To Scale" -- direct report: "whenever my actual browser size is
   // different from the model mesh size, the rendered image gets scaled
   // incorrectly." Locks the X/Y Scale sliders (setSliderLocked(), same
