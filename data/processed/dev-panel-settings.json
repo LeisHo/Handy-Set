@@ -115,12 +115,12 @@
     "sliderScreenTextureRotation": 180,
     "sliderScreenTextureOffsetX": -0.02,
     "sliderScreenTextureOffsetY": -0.03,
-    "sliderScreenTextureScaleX": 0.1,
-    "sliderScreenTextureScaleY": 1,
+    "sliderScreenTextureScaleX": 1.1,
+    "sliderScreenTextureScaleY": 0.95,
     "sliderScreenEmissionIntensity": 1,
     "checkboxScreenMirrorAlternatingX": false,
     "checkboxScreenMirrorAlternatingY": false,
-    "checkboxScreenToScale": true,
+    "checkboxScreenToScale": false,
     "checkboxWristSplayResponsiveEnabled": false,
     "sliderWristSplayDefault": -25,
     "checkboxWristSplayReactiveEnabled": true,
@@ -185,7 +185,7 @@
     "left": 70,
     "top": 18,
     "width": 315,
-    "height": 502
+    "height": 144
   },
   "devPanelStyle": {
     "titleFontSize": 17,
@@ -8317,7 +8317,7 @@
     "desktop:PHONE ROTATION": true,
     "desktop:RESPONSIVE BEHAVIOUR - PHONE": false,
     "desktop:Responsive Rotation": false,
-    "desktop:RECURSIVE RENDER": true,
+    "desktop:RECURSIVE RENDER": false,
     "desktop:HAND MODEL": true,
     "desktop:Field Layout": true,
     "desktop:Pose": true,
