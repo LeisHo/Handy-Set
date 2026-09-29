@@ -2784,13 +2784,36 @@ function setScreenRenderEnabled(enabled) {
 // Face should be mirrored" -- i.e. depth counted from the VIEWER's own
 // perspective, where depth 1 is the texture painted directly on the
 // real Screen Face mesh (the outermost, most-immediately-visible
-// layer -- what `renderVirtualScreen()` computes LAST, at
-// passIndex = levels-1, then displays via
-// renderer.setRenderTarget(null)), depth 2 is the first reflection
-// nested inside that, etc. Viewer-depth d relates to passIndex i by
-// d = levels - i, so "mirror when d is odd" becomes "mirror when
-// (levels - i) is odd", i.e. levels and i have DIFFERENT parities.
-function applyScreenTextureTransform(texture, passIndex) {
+// layer), depth 2 is the first reflection nested inside that, etc.
+//
+// REWRITTEN 2026-09-29 (per-depth approach abandoned) -- direct
+// insight: "i suspect that it may have to do with the alternating
+// order recursively applying instead of just applying globally...
+// for each rendered image, its applying another layer of mirror
+// alternating... so depending on my mirror order, sometimes the
+// multiple mirroring will overlap." Correct: this function is called
+// once per recursion pass, and each pass's transform doesn't just set
+// THAT depth's own appearance in isolation -- it flips the ENTIRE
+// image being captured, including whatever nested content from
+// earlier passes is already embedded inside it. So depth d's real
+// perceived mirror state is the PRODUCT of every pass's flip from the
+// outermost display down to d, not a value that can be picked
+// independently per depth (picking per-depth values, as the previous
+// version did, fights this compounding instead of using it -- hence
+// "sometimes the multiple mirroring will overlap"). The fix: stop
+// computing a depth/passIndex-dependent value entirely. Loop calls
+// (embedding one pass's capture into the next) all use the SAME
+// constant flip when Alternating is checked; the alternation by depth
+// then falls out automatically from compounding one more constant
+// flip per nesting step -- no depth math needed. The FINAL display
+// call (the one real call not followed by further embedding) gets its
+// own, separately-chosen constant flip, controlled by the new Order
+// checkbox -- since that call's flip multiplies EVERY depth
+// uniformly (it flips the whole final image, nested content and
+// all), it alone determines the whole chain's starting phase:
+// Order off -> depth 1 unmirrored, Order on -> depth 1 mirrored, with
+// every deeper depth alternating cleanly from there via compounding.
+function applyScreenTextureTransform(texture, isFinalDisplay) {
   if (!texture) return
   let scaleX = cfg.screenTextureScaleX || 1
   let scaleY = cfg.screenTextureScaleY || 1
@@ -2802,41 +2825,30 @@ function applyScreenTextureTransform(texture, passIndex) {
     scaleY = 1
   }
   const overall = cfg.screenTextureScale || 1
-  const levels = THREE.MathUtils.clamp(Math.round(cfg.screenRecursionLevels || 1), 1, 10)
-  // REMOVED 2026-09-29 -- the unconditional `baseFlipX` per-pass
-  // correction (present regardless of either checkbox's state) is
-  // gone entirely, per direct instruction ("remove baseflip. i
-  // believe that might be the issue") after a direct report that
-  // mirroring was still visibly occurring with BOTH mirror checkboxes
-  // off. With it removed, `mirrorX`/`mirrorY` are now purely
-  // checkbox-driven: both boxes off means both terms are exactly 1,
-  // every pass, with nothing else in this function able to introduce
-  // a flip.
-  //
-  // MIRROR ORDER/PHASE, added 2026-09-29 -- direct request: "under
-  // the X and Y mirror checkboxes, add 2 checkboxes, 1 for each axis.
-  // It will determine the mirroring order. so if off, it maybe
-  // 010101, when on it will be 101010 etc." `depthOdd` is the shared
-  // depth-parity signal (see the 2026-09-29 depth-parity fix for the
-  // reasoning: viewer depth, not raw pass index, since each recursion
-  // pass embeds the previous pass's capture, compounding per-pass
-  // flips as a product across nesting depth). Each axis's own Phase
-  // checkbox picks which parity is "mirrored": off -> mirrored on
-  // EVEN depths (matches 0,1,0,1,... starting unmirrored at depth 1);
-  // on -> mirrored on ODD depths (1,0,1,0,...). Only has a visible
-  // effect while that axis's own Alternating checkbox is also on.
-  const viewerDepth = levels - passIndex // 1 = outermost/direct view, increases with nesting
-  const depthOdd = typeof passIndex === 'number' && (viewerDepth % 2 === 1)
-  const mirroredX = cfg.screenMirrorPhaseX ? depthOdd : !depthOdd
-  const mirroredY = cfg.screenMirrorPhaseY ? depthOdd : !depthOdd
-  const mirrorX = (cfg.screenMirrorAlternatingX && mirroredX) ? -1 : 1
-  const mirrorY = (cfg.screenMirrorAlternatingY && mirroredY) ? -1 : 1
+  // MIRROR ORDER/PHASE, REWRITTEN 2026-09-29 (no depth/passIndex math
+  // at all now -- see this function's own leading comment for the
+  // full reasoning). `isFinalDisplay` is the only thing distinguishing
+  // the two call sites: a LOOP call (embedding one pass's capture into
+  // the next) always uses the SAME constant flip when Alternating is
+  // checked, letting the depth-by-depth alternation emerge purely
+  // from compounding through nesting; the FINAL display call (the one
+  // call not followed by further embedding, since it flips the whole
+  // outermost image -- everything nested inside it included) gets its
+  // own separately-chosen constant, picked by the Order checkbox, and
+  // that single choice is what sets the whole chain's starting phase.
+  // CORRECTED 2026-09-29, direct request ("your mirror defaults ot
+  // 010101, can you flip that. so it defaults to 101010 when mirror
+  // order is not checked"): Order OFF -> depth 1 MIRRORED (1010...),
+  // Order ON -> depth 1 unmirrored (0101...) -- the opposite of the
+  // first cut above.
+  const mirrorX = !cfg.screenMirrorAlternatingX ? 1 : (isFinalDisplay ? (cfg.screenMirrorPhaseX ? 1 : -1) : -1)
+  const mirrorY = !cfg.screenMirrorAlternatingY ? 1 : (isFinalDisplay ? (cfg.screenMirrorPhaseY ? 1 : -1) : -1)
   // TEMPORARY diagnostic, 2026-09-29 -- direct report "it didint
   // work" after 2 failed theories (constant flip, texture-matrix
-  // timing). Logs the real computed parity/mirror per pass so the
-  // actual runtime sequence can be read from the console instead of
-  // guessed a 4th time. Remove once this is resolved.
-  if (window.__mirrorDebug) console.log(ts() + ' [mirrorDebug] passIndex=' + passIndex + ' levels=' + levels + ' depthOdd=' + depthOdd + ' mirrorX=' + mirrorX + ' mirrorY=' + mirrorY)
+  // timing). Logs the real computed mirror per call so the actual
+  // runtime sequence can be read from the console instead of guessed
+  // a 4th time. Remove once this is resolved.
+  if (window.__mirrorDebug) console.log(ts() + ' [mirrorDebug] isFinalDisplay=' + isFinalDisplay + ' mirrorX=' + mirrorX + ' mirrorY=' + mirrorY)
   texture.center.set(phoneScreenUvCenter.x, phoneScreenUvCenter.y)
   texture.repeat.set(mirrorX / (overall * scaleX), mirrorY / (overall * scaleY))
   texture.rotation = THREE.MathUtils.degToRad(cfg.screenTextureRotation || 0)
@@ -2880,29 +2892,23 @@ function renderVirtualScreen() {
       phoneScreenMeshes.forEach((mesh) => { mesh.visible = false })
     } else {
       phoneScreenRenderMaterial.map = targets[(i - 1) % 2].texture
-      // CORRECTED 2026-09-29 -- was `applyScreenTextureTransform(map, i)`.
-      // Direct report: "the 2nd rendered image never mirrors regardless
-      // of my x checkbox." Root cause: this call and the POST-LOOP final
-      // display call below both used passIndex=levels-1 on the loop's
-      // last iteration (i=levels-1), so the outermost view (depth 1)
-      // and the content nested just inside it (depth 2) were always
-      // computed from the IDENTICAL passIndex -- forced to always share
-      // the same mirror state, while the deepest level (depth=levels)
-      // never got a transform computed at all. Passing `i-1` here (the
-      // final display call below is unchanged, still `levels-1`) gives
-      // every one of the `levels` positions its own distinct depth --
-      // verified by hand for levels=4: old passIndex sequence was
-      // 1,2,3,3 (viewerDepth 3,2,1,1 -- depth 1 duplicated, depth 4
-      // never used); new sequence is 0,1,2,3 (viewerDepth 4,3,2,1 --
-      // every depth hit exactly once).
-      applyScreenTextureTransform(phoneScreenRenderMaterial.map, i - 1)
+      // REWRITTEN 2026-09-29 -- superseding an earlier passIndex-based
+      // fix for a duplicate-depth bug (see git history), itself
+      // superseded once the whole depth/passIndex model was dropped
+      // (see applyScreenTextureTransform()'s own leading comment). A
+      // LOOP call always embeds one pass's capture into the next, so
+      // it's never the final display -- pass isFinalDisplay=false.
+      applyScreenTextureTransform(phoneScreenRenderMaterial.map, false)
       phoneScreenMeshes.forEach((mesh) => { mesh.visible = true; mesh.material = phoneScreenRenderMaterial })
     }
     renderer.setRenderTarget(targets[i % 2])
     renderer.render(scene, camera)
   }
   phoneScreenRenderMaterial.map = targets[(levels - 1) % 2].texture
-  applyScreenTextureTransform(phoneScreenRenderMaterial.map, levels - 1)
+  // This is the one call not followed by further embedding -- it
+  // flips the whole outermost image, everything nested inside it
+  // included -- so isFinalDisplay=true (see the leading comment).
+  applyScreenTextureTransform(phoneScreenRenderMaterial.map, true)
   phoneScreenMeshes.forEach((mesh) => { mesh.visible = true; mesh.material = phoneScreenRenderMaterial })
   renderer.setRenderTarget(null)
 }
