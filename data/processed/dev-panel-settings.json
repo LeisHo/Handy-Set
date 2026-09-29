@@ -113,6 +113,8 @@
     "sliderScreenRenderResolution": 200,
     "sliderScreenTextureScale": 0.95,
     "sliderScreenTextureRotation": 180,
+    "sliderScreenTextureOffsetX": 0,
+    "sliderScreenTextureOffsetY": 0,
     "sliderScreenTextureScaleX": 1,
     "sliderScreenTextureScaleY": 1,
     "sliderScreenEmissionIntensity": 0.85,
@@ -582,6 +584,14 @@
                 {
                   "type": "row",
                   "key": "checkboxScreenMirrorAlternatingY"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderScreenTextureOffsetX"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderScreenTextureOffsetY"
                 }
               ],
               "rowKeys": [
@@ -594,7 +604,9 @@
                 "checkboxScreenToScale",
                 "sliderScreenEmissionIntensity",
                 "checkboxScreenMirrorAlternatingX",
-                "checkboxScreenMirrorAlternatingY"
+                "checkboxScreenMirrorAlternatingY",
+                "sliderScreenTextureOffsetX",
+                "sliderScreenTextureOffsetY"
               ],
               "subgroups": []
             }
@@ -840,6 +852,14 @@
               {
                 "type": "row",
                 "key": "checkboxScreenMirrorAlternatingY"
+              },
+              {
+                "type": "row",
+                "key": "sliderScreenTextureOffsetX"
+              },
+              {
+                "type": "row",
+                "key": "sliderScreenTextureOffsetY"
               }
             ],
             "rowKeys": [
@@ -852,7 +872,9 @@
               "checkboxScreenToScale",
               "sliderScreenEmissionIntensity",
               "checkboxScreenMirrorAlternatingX",
-              "checkboxScreenMirrorAlternatingY"
+              "checkboxScreenMirrorAlternatingY",
+              "sliderScreenTextureOffsetX",
+              "sliderScreenTextureOffsetY"
             ],
             "subgroups": []
           }
