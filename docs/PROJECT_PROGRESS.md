@@ -7,38 +7,44 @@ append-only history.
 
 ## Currently working on
 
-**Phone Model's gyroscope-integrated mobile rotation axis mapping —
-fixed 2026-09-28 (10th round), pending real-device confirmation.** This
-single feature needed 10 correction rounds in one session. The
-breakthrough: rather than testing the full combined rotation (which
-mixes 2 values together and can't isolate a single cause), the user
-tested each of the 3 per-axis enable checkboxes ONE AT A TIME (the
-other 2 off), revealing 2 independent, previously-conflated scrambles —
-(1) `rotationRate.beta/gamma/alpha` don't correlate with physical X/Y/Z
-the way their W3C-spec letters suggest (actual: `beta`<->Y, `gamma`<->Z,
-`alpha`<->X), and (2) the code's own 2 rotation mechanisms (combined
-axis-angle vs. separate single-axis) don't read out as their own
-component names (combined-x reads correctly, combined-y reads as Z, the
-separate mechanism reads as Y). Solved both simultaneously in
-`integratePhoneGyroRotation()`. Full round-by-round history (10 rounds)
-is in `docs/CHANGELOG.txt`'s 35th-43rd entries and the matching
-CLAUDE.md gotcha (search "Phone Model's mobile rotation"). **If an 11th
-round is needed and it's a sign-only issue (letters correct, direction
-backwards): fix that one role's own raw-value sign — don't revisit the
-letter/slot solve, it's independently confirmed via isolated
-single-checkbox testing, the strongest evidence this feature has had.**
-If letters are somehow still wrong, lean on that same isolated
-single-checkbox testing technique again, not whole-rotation permutation
-guessing.
+Nothing in progress. Phone Model's mobile rotation axis mapping saga
+(10+ rounds, see CHANGELOG's 35th-44th entries and the matching
+CLAUDE.md gotcha) is settled per real isolated-checkbox testing.
+Desktop's own axis gating (X/Y/Z Rotation on/off + scale) was corrected
+2026-09-29 the same way — see Recently completed below.
+
+**Not independently verified in-browser this round (2026-09-29)** —
+the sandbox's local static server hit sustained `net::ERR_CONNECTION_RESET`
+failures across ~20+ retries (confirmed, via the server's own request
+log, to be serving every file with a real `200` every time — an
+environment-layer issue, not a code problem). Per direct instruction,
+browser-pane verification is now skipped for this project entirely
+going forward.
 
 Pushed to `https://github.com/LeisHo/Handy-Set`
 (deployed via the Vercel project at `https://vercel.com/lpeis/handy-set`).
 
 ## Recently completed
 
-- **IN PROGRESS (2026-09-28): Phone Model's gyroscope-integrated mobile
-  rotation axis mapping — 8 correction rounds so far, not yet confirmed
-  fixed.** Round 1 replaced the previous `deviceorientation`-based
+- **NEW (2026-09-29): Virtual Screen** — renders the app's own live 3D
+  scene onto the phone GLB's own 'Screen Face' mesh (found by name at
+  load time; only `Iphone17MaxPro.glb` currently has one). Recursion
+  is bounded by construction — a fixed number of sequential off-screen
+  passes each frame (1-10, dev-panel slider), never a live feedback
+  loop, so it cannot recurse infinitely regardless of the slider value.
+  New top-level, toggleable **RECURSIVE RENDER** group (Recursive
+  Render On/Off, Recursion Levels, Render Resolution %). Also fixed,
+  per direct reports on the existing Phone Model rotation controls:
+  Rotation Scale sliders now allow negative values (flips direction at
+  the same magnitude); desktop's Y axis (spin) is wired for the first
+  time (previously mobile-only); desktop's Y/Z checkbox-to-motion
+  gating was swapped per a real isolated one-checkbox-at-a-time test
+  ("what is labeled as Z is Y, and vice versa") — X is unaffected,
+  mobile's own gating is untouched. **Not independently browser-
+  verified** — see "Currently working on" above for why. See
+  `docs/CHANGELOG.txt`'s matching 2026-09-29 (45th) entry.
+- **RESOLVED (2026-09-28, 10 rounds): Phone Model's gyroscope-integrated
+  mobile rotation axis mapping.** Round 1 replaced the previous `deviceorientation`-based
   absolute-angle system (which hit a hard gimbal-lock-style limit around
   ±180°) with `devicemotion.rotationRate` integrated onto a persistent
   accumulating quaternion — the representational-limit problem itself

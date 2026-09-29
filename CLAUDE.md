@@ -2394,3 +2394,81 @@ wiring, and are still open:
   wrong even after this, the isolated single-checkbox testing technique
   itself (not full-rotation testing) is the thing to lean on again, not
   whole-rotation permutation guessing.
+
+- **`computePhoneCombinedQuat()`'s DESKTOP branch had its own SEPARATE
+  Y/Z mislabeling bug, fixed 2026-09-29 — this is the mobile-side
+  scramble's own distinct desktop counterpart, not a re-occurrence of
+  the same underlying cause.** Found via `AskUserQuestion` + a direct
+  isolated one-checkbox-at-a-time report ("the current what is labeled
+  as Z is Y, and vice versa" — desktop specifically). The combined-tilt
+  contribution (`gammaDeg`, feeding the same axis-angle as X) is now
+  gated by `cfg.phoneAxisYEnabled`/`cfg.phoneRotationScaleY`; the
+  separate spin-around-world-UP contribution (`alphaDeg`, composed on
+  top via `.multiply()`) is now gated by `cfg.phoneAxisZEnabled`/
+  `cfg.phoneRotationScaleZ` — swapped from Y/Z's initial, un-tested
+  assignment when desktop's Y axis was first wired the same day (it
+  previously only existed on mobile at all). X's own gating
+  (`cfg.phoneAxisXEnabled`/`cfg.phoneRotationScaleX` on `betaDeg`) is
+  UNCHANGED — not reported as wrong. Mobile's own gating lives in a
+  completely separate function (`integratePhoneGyroRotation()`) and is
+  untouched by this. **If a future report says a desktop axis checkbox
+  still doesn't match its own label, get an isolated one-checkbox-at-
+  a-time test first (same methodology that resolved both this and the
+  mobile scramble) before touching the gating again — do not guess
+  another swap cold.**
+- **Rotation Scale sliders (`sliderPhoneRotationScaleX/Y/Z`) now allow
+  negative values (-3 to 3, was 0 to 3) — direct request 2026-09-29:
+  "-1... rotate in the other direction at the same scale."** No other
+  code change was needed: every consumer (`betaDeg * cfg.phoneRotationScaleX`,
+  etc.) is already a plain multiply, so a negative scale already
+  flipped direction correctly the moment the slider's own range allowed
+  it through.
+- **Virtual Screen (RECURSIVE RENDER group) renders the app's own scene
+  onto the phone GLB's 'Screen Face' mesh via a FIXED N-pass ping-pong
+  render-to-texture pipeline (`renderVirtualScreen()`), bounded by
+  construction — pass 0 always renders with the screen mesh hidden (the
+  recursion floor), and the loop always runs exactly
+  `cfg.screenRecursionLevels` (1-10) times per frame, never a live
+  feedback loop.** Only `Iphone17MaxPro.glb` currently has a mesh named
+  'Screen Face' (confirmed by checking all 3 models via the console
+  warning `findPhoneScreenMesh()` logs when a loaded model has none) —
+  P5 Project 1 and Pixel 9A do not, so Screen Render has no visible
+  effect on those until a future model export adds one. If a future
+  model swap ever silently "loses" the virtual screen, check this
+  console warning before assuming the render pipeline itself broke.
+  **`disposePhoneModelRaw()` swaps the screen mesh back to its own
+  ORIGINAL material before the generic material/texture disposal
+  traversal runs** — without this, switching phone models while Screen
+  Render is on would dispose the shared render target's own texture
+  (still referenced by the reusable `phoneScreenRenderMaterial`) out
+  from under every model loaded afterward. If a future feature adds
+  another render-to-texture consumer on a phone-model submesh, this
+  same swap-before-dispose pattern is required, not optional.
+- **`RECURSIVE RENDER` is a deliberately TOP-LEVEL dev-panel group (a
+  sibling of PHONE MODEL, not nested inside it), specifically because
+  devPanel.js's own `makeDevGroupToggleable()` looks up its title via a
+  direct-child selector (`#tabTabContent > .dev-section > .dev-section-title[...]`)
+  — the exact same restriction `findNestedGroupContent()` elsewhere in
+  this file already works around for group CONTENT lookups.** Rather
+  than reimplement that restriction away a 2nd time for a toggle
+  checkbox, this group was kept top-level, which is exactly the shape
+  `makeDevGroupToggleable()` is designed for (matching the template's
+  own built-in Dev Panel/Debug groups' usage). If a future toggleable
+  group is added and someone reaches for nesting it inside another
+  group instead, either follow this same top-level precedent or write
+  a `findNestedGroupContent()`-style any-depth replacement deliberately
+  — don't assume `makeDevGroupToggleable()` works on a nested group
+  without checking its own selector first.
+- **Live browser-pane verification is SKIPPED for this project entirely,
+  per direct instruction 2026-09-29** ("from now on you dont need to
+  attempt sandbox verification. just skip that step"), after ~20+
+  retries across 3 different local-server ports and both reused and
+  fresh tabs all hit `net::ERR_CONNECTION_RESET` on `main.js`/
+  `devPanel.js` — confirmed via the Python static server's own request
+  log to be serving every file with a real `200` every single time,
+  meaning the failure was in the sandbox's own browser-proxy layer, not
+  the code or the file server. Go straight from `node --check` +
+  careful manual code review to committing/pushing; do not attempt
+  `preview_start`/`navigate`/screenshot verification for this project
+  going forward, and say so plainly in the final report rather than
+  claiming something was tested.

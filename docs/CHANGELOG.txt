@@ -4526,6 +4526,115 @@ Not independently browser/device-verified this round (same standing
 limitation). `index.html`'s cache-buster bumped `?v=127` -> `?v=128`.
 
 --------------------------------------------------------------------------------
+2026-09-29  -  (45th)
+
+Direct request: "I want to render the 3js screen space onto the
+virtual screen within the app... In my phone glb file, the phone
+screen face is in its own layer called 'Screen Face'... Make sure its
+not recursive infinitely. Provide me a slider to control the levels of
+recursion. Say make it 1-10."
+
+New Virtual Screen feature: renders the app's own live 3D scene onto
+the phone GLB's own 'Screen Face' mesh, found at load time by
+`findPhoneScreenMesh()` (case/whitespace-tolerant name match, logs a
+console warning if a loaded model has no such mesh -- confirmed only
+`Iphone17MaxPro.glb` currently has one; P5 Project 1 and Pixel 9A do
+not). Recursion is bounded BY CONSTRUCTION, not by a runtime guard:
+`renderVirtualScreen()` runs a FIXED number of sequential off-screen
+passes each frame (`cfg.screenRecursionLevels`, 1-10), ping-ponging
+between 2 `THREE.WebGLRenderTarget`s -- pass 0 renders with the screen
+mesh hidden entirely (the recursion's base case, guaranteeing no
+screen-in-screen at the floor), each later pass textures the screen
+with the PRIOR pass's own capture. The final pass's capture becomes
+the screen's texture for the real, visible frame. Since no render call
+ever reads a target it's currently writing to, and the loop always
+terminates after exactly `levels` iterations, this cannot loop forever
+regardless of the slider's value. The screen uses a dedicated, reused
+`THREE.MeshBasicMaterial` (self-lit, matching a real display) rather
+than the mesh's own PBR material while the feature is on;
+`resetPhoneScreenMaterial()` restores the real glTF material when off
+or when no model is loaded. `disposePhoneModelRaw()` is guarded so
+switching phone models (or reloading the same one) swaps the screen
+mesh back to its own original material BEFORE the generic per-model
+material/texture disposal traversal runs -- without this, disposal
+would have torn down the shared render target's own texture (still
+referenced by the reusable screen material) the first time a model was
+switched while Screen Render was on.
+
+Follow-up direct request, same day: "provide a render resolution or
+quality slider... place them in a new toggleable group called
+'RECURSIVE RENDER'." Added `cfg.screenRenderResolution` (%, 10-200,
+default 100) -- `ensureScreenRenderTargets()` now lazily recreates the
+2 render targets (disposing the old pair) only when the resolution has
+actually changed, scaling a 384x768 base capture size. Moved the 3
+controls (On/Off, Recursion Levels, Render Resolution) out of PHONE
+MODEL's own body into a NEW top-level dev-panel group, 'RECURSIVE
+RENDER', made toggleable via devPanel.js's own
+`makeDevGroupToggleable()` -- deliberately a TOP-LEVEL group (a sibling
+of PHONE MODEL, not nested inside it) because that function's own
+title lookup uses a direct-child selector
+(`#tabTabContent > .dev-section > .dev-section-title[...]`), the exact
+same restriction `findNestedGroupContent()` elsewhere in this file was
+written to work around for group CONTENT lookups -- rather than
+reimplement that restriction away a 2nd time for a toggle checkbox,
+making this its own top-level group was the simpler, equally-correct
+fix, matching how the template's own built-in Dev Panel/Debug groups
+use the same mechanism.
+
+Separately, 3 direct reports on Phone Model's existing Rotation Scale/
+per-axis controls:
+1. "allow me to go negative [on Rotation Scale]... -1 means rotate the
+   other direction at the same scale" -- widened all 3 sliders'
+   min from 0 to -3 (max unchanged at 3). No other code change needed:
+   every consumer already just multiplies by the scale, so a negative
+   value already flips direction correctly.
+2. "I was wrong [that desktop didn't need all 3 axes] -- make all 3
+   appliable, I will set it with the on/off." Desktop's Y axis
+   (spin) was wired for the first time -- it previously only existed
+   on mobile (see the 26th-region entries for that history). Desktop
+   has no 3rd independent input channel the way a real gyroscope does
+   (a 2D cursor position is only 2 DOF), so it reuses the SAME
+   horizontal cursor offset that already, separately, drives the X/Z
+   combined tilt -- through the same shared curve/range/fine-tune
+   system every other axis uses -- composed as its own rotation around
+   world UP on top of the tilt, mirroring the separate-mechanism
+   pattern mobile's own spin axis already uses.
+3. Direct follow-up, real isolated-testing report: "the current what
+   is labeled as Z is Y, and vice versa" (desktop only -- confirmed via
+   AskUserQuestion that this was specifically about desktop, and
+   specifically an isolated one-checkbox-at-a-time test, the same
+   methodology that previously resolved the identical bug class on
+   mobile per the 10th-round entry above). Swapped which cfg field
+   gates which contribution: the combined-tilt contribution (feeding
+   the same axis-angle as X) is now gated by `phoneAxisYEnabled`/
+   `phoneRotationScaleY`; the separate spin-around-UP contribution is
+   now gated by `phoneAxisZEnabled`/`phoneRotationScaleZ` -- swapped
+   from the initial, un-tested guess. X's own gating is unchanged (not
+   reported as wrong). Mobile's own gating is untouched -- it lives in
+   a completely separate function (`integratePhoneGyroRotation()`),
+   already independently verified via the same methodology.
+
+Live browser verification could not be completed this round despite
+~20+ retries across 3 different local-server ports and both reused and
+brand-new tabs -- every attempt hit `net::ERR_CONNECTION_RESET` on
+`main.js` and/or `devPanel.js`, confirmed via the Python static
+server's own request log to be serving every file with a real `200`
+every single time, meaning the failure is in the sandbox's own
+browser-proxy layer, not the code or the file server (the same
+documented flaky-delivery issue this project's CLAUDE.md already
+describes, just unusually persistent this round). Verified instead via
+`node --check` (syntax) and a careful manual read-through of the full
+diff, including re-deriving the axis-angle math by hand. Per direct
+instruction ("from now on you dont need to attempt sandbox
+verification. just skip that step"), browser-pane verification is
+skipped entirely for this project going forward -- saved as a standing
+memory.
+
+`index.html`'s cache-buster bumped `?v=128` -> `?v=133` across this
+round's several edits (each edit bumped it once; the final committed
+value is what matters).
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
