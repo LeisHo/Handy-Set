@@ -87,8 +87,8 @@
     "selectPoseTweenTargetPoseName": "Big Open Palm",
     "textPoseTweenCurve": "{\"points\": [{\"x\": 0, \"y\": 0}, {\"x\": 1, \"y\": 1}], \"method\": \"catmullrom\"}",
     "checkboxPhoneModelEnabled": true,
-    "hiddenPhoneModelFile": "data/processed/SMARTPHONE MODELS/Galaxy S2.glb",
-    "hiddenPhoneModelPerModelSettings": "{\"data/processed/SMARTPHONE MODELS/P5_Project_1.glb\":{\"sliderPhoneModelScale\":\"1\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"0\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":false,\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"-1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"1\",\"textPhoneResponsiveRotationRange\":\"{\\\"min\\\":-57,\\\"max\\\":45}\",\"textPhoneResponsiveRotationCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"natural\\\"}\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"5\",\"sliderScreenRenderResolution\":\"100\",\"sliderScreenTextureScale\":\"1\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"1\",\"sliderScreenTextureScaleY\":\"1\",\"checkboxScreenToScale\":true,\"sliderScreenEmissionIntensity\":\"1\"},\"data/processed/SMARTPHONE MODELS/Nothing2.glb\":{\"sliderPhoneModelScale\":\"1\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"0\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":false,\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"-1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"1\",\"textPhoneResponsiveRotationRange\":\"{\\\"min\\\":-57,\\\"max\\\":45}\",\"textPhoneResponsiveRotationCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"natural\\\"}\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"10\",\"sliderScreenRenderResolution\":\"200\",\"sliderScreenTextureScale\":\"0.95\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"1\",\"sliderScreenTextureScaleY\":\"1\",\"checkboxScreenToScale\":true,\"sliderScreenEmissionIntensity\":\"1\"},\"data/processed/SMARTPHONE MODELS/Pixel 9A.glb\":{\"sliderPhoneModelScale\":\"1\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"0\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":true,\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"-1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"1\",\"textPhoneResponsiveRotationRange\":\"{\\\"min\\\":-57,\\\"max\\\":45}\",\"textPhoneResponsiveRotationCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"natural\\\"}\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"8\",\"sliderScreenRenderResolution\":\"150\",\"sliderScreenTextureScale\":\"0.95\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"1\",\"sliderScreenTextureScaleY\":\"1\",\"checkboxScreenToScale\":true,\"sliderScreenTextureOffsetX\":\"0.02\",\"sliderScreenTextureOffsetY\":\"-0.09\",\"sliderScreenEmissionIntensity\":\"0.85\",\"checkboxScreenMirrorAlternatingX\":false,\"checkboxScreenMirrorAlternatingY\":false},\"data/processed/SMARTPHONE MODELS/Iphone17MaxPro.glb\":{\"sliderPhoneModelScale\":\"1\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"0\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":false,\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"-1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"1\",\"textPhoneResponsiveRotationRange\":\"{\\\"min\\\":-57,\\\"max\\\":45}\",\"textPhoneResponsiveRotationCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"natural\\\"}\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"5\",\"sliderScreenRenderResolution\":\"100\",\"sliderScreenTextureScale\":\"1\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"1\",\"sliderScreenTextureScaleY\":\"1\",\"checkboxScreenToScale\":true,\"sliderScreenTextureOffsetX\":\"0.02\",\"sliderScreenTextureOffsetY\":\"-0.09\",\"sliderScreenEmissionIntensity\":\"1\",\"checkboxScreenMirrorAlternatingX\":false,\"checkboxScreenMirrorAlternatingY\":false},\"data/processed/SMARTPHONE MODELS/Galaxy S2.glb\":{\"sliderPhoneModelScale\":\"1\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"0\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":false,\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"-1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"1\",\"textPhoneResponsiveRotationRange\":\"{\\\"min\\\":-57,\\\"max\\\":45}\",\"textPhoneResponsiveRotationCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"natural\\\"}\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"5\",\"sliderScreenRenderResolution\":\"100\",\"sliderScreenTextureScale\":\"0.85\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"1\",\"sliderScreenTextureScaleY\":\"1\",\"checkboxScreenToScale\":true,\"sliderScreenEmissionIntensity\":\"1\",\"checkboxScreenMirrorAlternatingX\":false,\"checkboxScreenMirrorAlternatingY\":false},\"data/processed/SMARTPHONE MODELS/Motorola Razr.glb\":{\"sliderPhoneModelScale\":\"1\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"0\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":false,\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"-1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"1\",\"textPhoneResponsiveRotationRange\":\"{\\\"min\\\":-57,\\\"max\\\":45}\",\"textPhoneResponsiveRotationCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"natural\\\"}\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"5\",\"sliderScreenRenderResolution\":\"100\",\"sliderScreenTextureScale\":\"1\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"1\",\"sliderScreenTextureScaleY\":\"1\",\"checkboxScreenToScale\":true,\"sliderScreenEmissionIntensity\":\"3.3\",\"checkboxScreenMirrorAlternatingX\":false,\"checkboxScreenMirrorAlternatingY\":false},\"data/processed/SMARTPHONE MODELS/Samsung Galaxy S26.glb\":{\"sliderPhoneModelScale\":\"1\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"0\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":true,\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"-1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"0.21\",\"textPhoneResponsiveRotationRange\":\"{\\\"min\\\":-57,\\\"max\\\":45}\",\"textPhoneResponsiveRotationCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"natural\\\"}\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"5\",\"sliderScreenRenderResolution\":\"100\",\"sliderScreenTextureScale\":\"1\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"0.6\",\"sliderScreenTextureScaleY\":\"1\",\"checkboxScreenToScale\":false,\"sliderScreenTextureOffsetX\":\"0.02\",\"sliderScreenTextureOffsetY\":\"-0.86\",\"sliderScreenEmissionIntensity\":\"0.95\",\"checkboxScreenMirrorAlternatingX\":true,\"checkboxScreenMirrorAlternatingY\":true}}",
+    "hiddenPhoneModelFile": "data/processed/SMARTPHONE MODELS/Nothing2.glb",
+    "hiddenPhoneModelPerModelSettings": "{\"data/processed/SMARTPHONE MODELS/P5_Project_1.glb\":{\"sliderPhoneModelScale\":\"1\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"0\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":false,\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"-1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"1\",\"textPhoneResponsiveRotationRange\":\"{\\\"min\\\":-57,\\\"max\\\":45}\",\"textPhoneResponsiveRotationCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"natural\\\"}\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"5\",\"sliderScreenRenderResolution\":\"100\",\"sliderScreenTextureScale\":\"1\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"1\",\"sliderScreenTextureScaleY\":\"1\",\"checkboxScreenToScale\":true,\"sliderScreenEmissionIntensity\":\"1\"},\"data/processed/SMARTPHONE MODELS/Nothing2.glb\":{\"sliderPhoneModelScale\":\"1\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"0\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":false,\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"-1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"1\",\"textPhoneResponsiveRotationRange\":\"{\\\"min\\\":-57,\\\"max\\\":45}\",\"textPhoneResponsiveRotationCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"natural\\\"}\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"10\",\"sliderScreenRenderResolution\":\"200\",\"sliderScreenTextureScale\":\"0.95\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"1\",\"sliderScreenTextureScaleY\":\"1\",\"checkboxScreenToScale\":true,\"sliderScreenTextureOffsetX\":\"0.02\",\"sliderScreenTextureOffsetY\":\"-0.09\",\"sliderScreenEmissionIntensity\":\"1\",\"checkboxScreenMirrorAlternatingX\":false,\"checkboxScreenMirrorAlternatingY\":false},\"data/processed/SMARTPHONE MODELS/Pixel 9A.glb\":{\"sliderPhoneModelScale\":\"1\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"0\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":true,\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"-1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"1\",\"textPhoneResponsiveRotationRange\":\"{\\\"min\\\":-57,\\\"max\\\":45}\",\"textPhoneResponsiveRotationCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"natural\\\"}\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"8\",\"sliderScreenRenderResolution\":\"150\",\"sliderScreenTextureScale\":\"0.95\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"1\",\"sliderScreenTextureScaleY\":\"1\",\"checkboxScreenToScale\":true,\"sliderScreenTextureOffsetX\":\"0.02\",\"sliderScreenTextureOffsetY\":\"-0.09\",\"sliderScreenEmissionIntensity\":\"0.85\",\"checkboxScreenMirrorAlternatingX\":false,\"checkboxScreenMirrorAlternatingY\":false},\"data/processed/SMARTPHONE MODELS/Iphone17MaxPro.glb\":{\"sliderPhoneModelScale\":\"1\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"0\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":false,\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"-1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"1\",\"textPhoneResponsiveRotationRange\":\"{\\\"min\\\":-57,\\\"max\\\":45}\",\"textPhoneResponsiveRotationCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"natural\\\"}\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"5\",\"sliderScreenRenderResolution\":\"100\",\"sliderScreenTextureScale\":\"1\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"1\",\"sliderScreenTextureScaleY\":\"1\",\"checkboxScreenToScale\":true,\"sliderScreenTextureOffsetX\":\"0.02\",\"sliderScreenTextureOffsetY\":\"-0.09\",\"sliderScreenEmissionIntensity\":\"1\",\"checkboxScreenMirrorAlternatingX\":false,\"checkboxScreenMirrorAlternatingY\":false},\"data/processed/SMARTPHONE MODELS/Galaxy S2.glb\":{\"sliderPhoneModelScale\":\"1\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"0\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":true,\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"-1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"1\",\"textPhoneResponsiveRotationRange\":\"{\\\"min\\\":-57,\\\"max\\\":45}\",\"textPhoneResponsiveRotationCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"natural\\\"}\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"5\",\"sliderScreenRenderResolution\":\"100\",\"sliderScreenTextureScale\":\"0.85\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"1\",\"sliderScreenTextureScaleY\":\"1\",\"checkboxScreenToScale\":true,\"sliderScreenTextureOffsetX\":\"0.08\",\"sliderScreenTextureOffsetY\":\"-0.13\",\"sliderScreenEmissionIntensity\":\"1\",\"checkboxScreenMirrorAlternatingX\":false,\"checkboxScreenMirrorAlternatingY\":false},\"data/processed/SMARTPHONE MODELS/Motorola Razr.glb\":{\"sliderPhoneModelScale\":\"1\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"0\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":false,\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"-1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"1\",\"textPhoneResponsiveRotationRange\":\"{\\\"min\\\":-57,\\\"max\\\":45}\",\"textPhoneResponsiveRotationCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"natural\\\"}\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"5\",\"sliderScreenRenderResolution\":\"100\",\"sliderScreenTextureScale\":\"1\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"1\",\"sliderScreenTextureScaleY\":\"1\",\"checkboxScreenToScale\":true,\"sliderScreenEmissionIntensity\":\"3.3\",\"checkboxScreenMirrorAlternatingX\":false,\"checkboxScreenMirrorAlternatingY\":false},\"data/processed/SMARTPHONE MODELS/Samsung Galaxy S26.glb\":{\"sliderPhoneModelScale\":\"1\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"0\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":true,\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"-1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"0.21\",\"textPhoneResponsiveRotationRange\":\"{\\\"min\\\":-57,\\\"max\\\":45}\",\"textPhoneResponsiveRotationCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"natural\\\"}\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"5\",\"sliderScreenRenderResolution\":\"100\",\"sliderScreenTextureScale\":\"1\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"0.6\",\"sliderScreenTextureScaleY\":\"1\",\"checkboxScreenToScale\":false,\"sliderScreenTextureOffsetX\":\"0.02\",\"sliderScreenTextureOffsetY\":\"-0.86\",\"sliderScreenEmissionIntensity\":\"0.95\",\"checkboxScreenMirrorAlternatingX\":true,\"checkboxScreenMirrorAlternatingY\":true}}",
     "sliderPhoneModelScale": 1,
     "sliderPhoneModelOffsetX": 0,
     "sliderPhoneModelOffsetY": 31,
@@ -97,7 +97,7 @@
     "sliderPhoneModelRotY": 0,
     "sliderPhoneModelRotZ": 0,
     "checkboxPhoneResponsiveRotationEnabled": true,
-    "checkboxPhoneRotationResetEnabled": false,
+    "checkboxPhoneRotationResetEnabled": true,
     "checkboxPhoneAxisXEnabled": true,
     "sliderPhoneRotationScaleX": -1,
     "checkboxPhoneAxisYEnabled": true,
@@ -109,12 +109,12 @@
     "textPhoneResponsiveRotationRange": "{\"min\":-57,\"max\":45}",
     "textPhoneResponsiveRotationCurve": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"natural\"}",
     "checkboxScreenRenderEnabled": true,
-    "sliderScreenRecursionLevels": 5,
-    "sliderScreenRenderResolution": 100,
-    "sliderScreenTextureScale": 0.85,
+    "sliderScreenRecursionLevels": 10,
+    "sliderScreenRenderResolution": 200,
+    "sliderScreenTextureScale": 0.95,
     "sliderScreenTextureRotation": 180,
-    "sliderScreenTextureOffsetX": 0.08,
-    "sliderScreenTextureOffsetY": -0.13,
+    "sliderScreenTextureOffsetX": 0.01,
+    "sliderScreenTextureOffsetY": 0.02,
     "sliderScreenTextureScaleX": 1,
     "sliderScreenTextureScaleY": 1,
     "sliderScreenEmissionIntensity": 1,
@@ -185,7 +185,7 @@
     "left": 26,
     "top": 6,
     "width": 350,
-    "height": 76
+    "height": 521
   },
   "devPanelStyle": {
     "titleFontSize": 17,
@@ -4889,8 +4889,15 @@
             "type": "group",
             "section": {
               "key": "mobile:RECURSIVE RENDER",
-              "items": [],
-              "rowKeys": [],
+              "items": [
+                {
+                  "type": "row",
+                  "key": "sliderMobileScreenTextureOffsetX"
+                }
+              ],
+              "rowKeys": [
+                "sliderMobileScreenTextureOffsetX"
+              ],
               "subgroups": []
             }
           }
@@ -4958,8 +4965,15 @@
           },
           {
             "key": "mobile:RECURSIVE RENDER",
-            "items": [],
-            "rowKeys": [],
+            "items": [
+              {
+                "type": "row",
+                "key": "sliderMobileScreenTextureOffsetX"
+              }
+            ],
+            "rowKeys": [
+              "sliderMobileScreenTextureOffsetX"
+            ],
             "subgroups": []
           }
         ]
@@ -6623,8 +6637,15 @@
             "type": "group",
             "section": {
               "key": "landscape:RECURSIVE RENDER",
-              "items": [],
-              "rowKeys": [],
+              "items": [
+                {
+                  "type": "row",
+                  "key": "sliderLandscapeScreenTextureOffsetX"
+                }
+              ],
+              "rowKeys": [
+                "sliderLandscapeScreenTextureOffsetX"
+              ],
               "subgroups": []
             }
           }
@@ -6692,8 +6713,15 @@
           },
           {
             "key": "landscape:RECURSIVE RENDER",
-            "items": [],
-            "rowKeys": [],
+            "items": [
+              {
+                "type": "row",
+                "key": "sliderLandscapeScreenTextureOffsetX"
+              }
+            ],
+            "rowKeys": [
+              "sliderLandscapeScreenTextureOffsetX"
+            ],
             "subgroups": []
           }
         ]
@@ -8713,7 +8741,9 @@
     "mobile:Phone Model Log": null,
     "landscape:Phone Model Log": null,
     "mobile:RECURSIVE RENDER": null,
-    "landscape:RECURSIVE RENDER": null
+    "landscape:RECURSIVE RENDER": null,
+    "sliderMobileScreenTextureOffsetX": null,
+    "sliderLandscapeScreenTextureOffsetX": null
   },
   "devTextOverridesManual": [
     "desktop:New Group",
@@ -8790,7 +8820,8 @@
     "textWristSplayRange": false,
     "textWristSplayCurve": false,
     "textArmLengthRange": false,
-    "textArmLengthCurve": false
+    "textArmLengthCurve": false,
+    "sliderScreenTextureOffsetX": true
   },
   "devIndependence": {
     "mobile": {},
