@@ -96,7 +96,7 @@
     "sliderPhoneModelRotX": 0,
     "sliderPhoneModelRotY": 0,
     "sliderPhoneModelRotZ": 0,
-    "checkboxPhoneResponsiveRotationEnabled": false,
+    "checkboxPhoneResponsiveRotationEnabled": true,
     "checkboxPhoneRotationResetEnabled": true,
     "checkboxPhoneAxisXEnabled": true,
     "sliderPhoneRotationScaleX": 1,
@@ -118,7 +118,7 @@
     "sliderScreenTextureScaleX": 1.1,
     "sliderScreenTextureScaleY": 0.95,
     "sliderScreenEmissionIntensity": 0.85,
-    "checkboxScreenMirrorAlternatingX": false,
+    "checkboxScreenMirrorAlternatingX": true,
     "checkboxScreenMirrorAlternatingY": false,
     "checkboxScreenMirrorPhaseX": false,
     "checkboxScreenMirrorPhaseY": false,
@@ -185,9 +185,9 @@
   },
   "layout": {
     "left": 35,
-    "top": 182,
+    "top": 27,
     "width": 350,
-    "height": 521
+    "height": 676
   },
   "devPanelStyle": {
     "titleFontSize": 17,
