@@ -2880,7 +2880,22 @@ function renderVirtualScreen() {
       phoneScreenMeshes.forEach((mesh) => { mesh.visible = false })
     } else {
       phoneScreenRenderMaterial.map = targets[(i - 1) % 2].texture
-      applyScreenTextureTransform(phoneScreenRenderMaterial.map, i)
+      // CORRECTED 2026-09-29 -- was `applyScreenTextureTransform(map, i)`.
+      // Direct report: "the 2nd rendered image never mirrors regardless
+      // of my x checkbox." Root cause: this call and the POST-LOOP final
+      // display call below both used passIndex=levels-1 on the loop's
+      // last iteration (i=levels-1), so the outermost view (depth 1)
+      // and the content nested just inside it (depth 2) were always
+      // computed from the IDENTICAL passIndex -- forced to always share
+      // the same mirror state, while the deepest level (depth=levels)
+      // never got a transform computed at all. Passing `i-1` here (the
+      // final display call below is unchanged, still `levels-1`) gives
+      // every one of the `levels` positions its own distinct depth --
+      // verified by hand for levels=4: old passIndex sequence was
+      // 1,2,3,3 (viewerDepth 3,2,1,1 -- depth 1 duplicated, depth 4
+      // never used); new sequence is 0,1,2,3 (viewerDepth 4,3,2,1 --
+      // every depth hit exactly once).
+      applyScreenTextureTransform(phoneScreenRenderMaterial.map, i - 1)
       phoneScreenMeshes.forEach((mesh) => { mesh.visible = true; mesh.material = phoneScreenRenderMaterial })
     }
     renderer.setRenderTarget(targets[i % 2])
