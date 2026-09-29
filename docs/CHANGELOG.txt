@@ -4916,6 +4916,75 @@ rather than live rendering, the same methodology that resolved the
 buster bumped `?v=136` -> `?v=137`.
 
 --------------------------------------------------------------------------------
+2026-09-29  -  (51st)
+
+Direct report, same day as the 50th entry's per-model scale fix: "Um, I
+currently see none of the models. I'm not sure why. I'm pretty sure
+it's with the scaling thing. Um, the hand is scaled correctly, so
+could you just scale everything to the hand instead?" -- a request for
+a 3rd approach after the 50th entry's per-model manifest correction
+apparently didn't resolve things. Started building an automatic
+scale-to-hand-length computation (measure each model's own bounding
+box via THREE.Box3().setFromObject() at load time, target the hand's
+own real reference length, `8 * cfg.handScale` -- see
+computeBaseScale()'s own formula), but the user interrupted mid-build
+with 2 direct corrections:
+
+1. "in the Blender models themselves, I have all the phones centered
+   to the world space origin. So if you place it in world space, it
+   should still show up, right?" -- a genuine question, answered
+   directly: yes, structurally, but at native scale the models measure
+   far smaller than the hand's own reference length, so "shows up" in
+   principle doesn't mean "visible at a normal camera distance."
+2. "No, I don't want you to override my personal settings, but make
+   by default scale to one and placed at world origin." -- REVERTED
+   both the 50th entry's per-model manifest.json `scale` field AND the
+   in-progress automatic computation entirely. Any per-model or
+   automatic scale adjustment silently changes what a given
+   cfg.phoneModelScale slider value renders as -- exactly the kind of
+   "override" this instruction rules out. cfg.phoneModelScale is the
+   ONLY thing controlling scale again, uniformly, for every model.
+
+Then, direct follow-up diagnosis: "Okay, and then in that case, it's
+just a model scaling issue. The hand is probably in meters. So just
+scale up all my phones by 100, but set that as default." -- changed
+the default to 100 (a single global value, not a per-model
+correction). Immediately after, a further request: "for the hand and
+phone scale sliders... make the minimum 0.5 and the maximum 5" --
+directly conflicted with a default of 100 (a slider can't display a
+default outside its own min/max without clamping), surfaced via
+`AskUserQuestion` rather than silently picking one side. Final
+resolution, direct: "I wanted you to scale it up to 100 but on the
+sliders that will read as one... 100 is one now." Implemented as a
+plain, ALWAYS-applied `PHONE_MODEL_SCALE_BASE = 100` constant
+(uniform for every model, matching the earlier "don't override my
+personal settings" instruction just as much as a flat 100 did) --
+`cfg.phoneModelScale` is now a small fine-tune multiplier on TOP of
+that fixed base, 0.5-5 range, default 1 (= actual scale 100). Hand
+Scale's own slider range widened to match (0.5-5, was 0.1-3 -- its
+own default of 1.55 already fits, unchanged).
+
+Separately, while checking the LIVE git-tracked settings file to see
+whether an old saved `sliderPhoneModelScale` value would collide badly
+with the new semantics (it didn't -- the saved value, 1.01, happened
+to already be close to the new neutral default), found a REAL,
+separate bug: `selectPhoneModelFile: null` in that same file despite
+real Sync round-trips, meaning the Item Selector's own click-to-select
+rows were NEVER actually persisted -- they're plain `<div>`s, never
+registered with devPanel.js's generic capture/restore pipeline the
+old `<select>` participated in automatically (every `addRow()` call
+auto-registers). Every fresh page load was silently resetting to
+`PHONE_MODEL_OPTIONS[0]` regardless of what the user had selected --
+a second, real contributor to "it isn't working like before," not
+just the scale issue. Fixed with a hidden, Sync-participating text
+control (`hiddenPhoneModelFile`) mirroring the current selection,
+reacting to both user clicks and external restores (Reset/Undo/a
+Sync-load) the same way this file's other custom widgets already do.
+
+Not independently verified against the real device/browser (standing
+limitation). `index.html`'s cache-buster bumped `?v=137` -> `?v=138`.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

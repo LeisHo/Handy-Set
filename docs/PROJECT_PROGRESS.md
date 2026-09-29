@@ -14,10 +14,14 @@ Desktop's own axis gating (X/Y/Z Rotation on/off + scale) was corrected
 2026-09-29 the same way. Virtual Screen's mesh-lookup bug is fixed
 (multi-primitive Group case), the Recursive Render alternating-mirror
 bug is fixed (UV-mirror compensation, unverified against the real
-device), the Phone Model selector is now a real Item Selector with GLB
-import listing 8 models, and 2 of those 8 (P5 Project 1, Samsung
-Galaxy S26) had a real, measured ~13-30x scale mismatch that's now
-fixed via a per-model `scale` override — see Recently completed below.
+device), and the Phone Model selector is now a real Item Selector with
+GLB import listing 8 models. Phone Model's own scale went through 3
+approaches in one session (per-model correction → reverted per direct
+instruction → a plain `PHONE_MODEL_SCALE_BASE=100` constant with the
+slider as a 0.5-5 fine-tune) — see Recently completed below for the
+final state. Also fixed: the Item Selector's own model selection was
+never actually persisted through Sync (a real, separate bug, not just
+the scale issue).
 
 Noticed, not yet added: a new untracked `S4.glb` appeared on disk
 under `data/processed/SMARTPHONE MODELS/` after the scale fix — left
@@ -44,21 +48,32 @@ Pushed to `https://github.com/LeisHo/Handy-Set`
 
 ## Recently completed
 
-- **RESOLVED (2026-09-29): 2 of 8 phone models rendered 13-30x
-  oversized (invisible in practice).** Direct report: "i cant see the
-  phone model right now." Measured (not guessed) by parsing all 8
-  GLBs' raw JSON and walking each real scene graph (full matrix
-  accumulation, not just a root node's own scale) to compute true
-  world-space bounding boxes. 6 of 8 models cluster tightly
-  (maxDim ~0.06-0.23) confirming they ARE consistently scaled as the
-  user believed; P5 Project 1 (2.0, the default/first model) and
-  Samsung Galaxy S26 (5.27) are real outliers. New per-model `scale`
-  field in `manifest.json` (0.0834 and 0.0316 respectively) brings
-  both to ~0.167, matching the cluster — the other 6 are untouched.
-  Also confirmed no bug in the new Item Selector's click-to-select
-  behavior (identical to the old dropdown) — the "nothing happens"
-  confusion was the same scale bug making even a successful switch
-  look broken. See `docs/CHANGELOG.txt`'s matching 2026-09-29 (50th)
+- **SUPERSEDED, same day — the per-model `manifest.json` `scale` field
+  bullet that used to sit here is REVERTED, per direct instruction:
+  "No, I don't want you to override my personal settings, but make by
+  default scale to one and placed at world origin."** `manifest.json`
+  entries carry no `scale` field any more (plain `{file, name}` only,
+  8 models). Final resolution, after 2 more rounds of direct feedback
+  ("the hand is probably in meters, so just scale up all my phones by
+  100, but set that as default" → a slider-range conflict at
+  min 0.5/max 5 surfaced via `AskUserQuestion` → "I wanted you to scale
+  it up to 100 but on the sliders that will read as one... 100 is one
+  now"): a new `PHONE_MODEL_SCALE_BASE = 100` constant is always
+  applied uniformly to every model, with `cfg.phoneModelScale` (default
+  `1`, slider range 0.5-5) as a fine-tune multiplier on top — so the
+  slider itself reads "1" at the effective x100 baseline instead of
+  showing "100." `sliderHandScale`'s own range was also widened to
+  0.5-5 in the same pass (was 0.1-3). Separately, found while
+  double-checking the settings file for this change: the Item
+  Selector's own model selection was never actually persisted through
+  Sync (`selectPhoneModelFile: null` in the live git-tracked settings,
+  confirmed directly) — its plain `<div>` rows were never registered
+  with devPanel.js's Sync pipeline. Fixed with a hidden `type:'text'`
+  control (`hiddenPhoneModelFile`) that mirrors the current selection
+  and reacts to Sync/Reset/Undo restores, the same fix shape already
+  used for this project's curve/range fields and list-pickers earlier
+  this session. Not independently browser-verified (standing
+  limitation). See `docs/CHANGELOG.txt`'s matching 2026-09-29 (51st)
   entry.
 - **RESOLVED (2026-09-29): Recursive Render's alternating left-right
   mirror.** Direct report: odd recursion levels flipped, even ones

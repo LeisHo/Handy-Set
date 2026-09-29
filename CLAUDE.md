@@ -2595,34 +2595,66 @@ wiring, and are still open:
   fair game to commit just because it's physically present there;
   check `manifest.json` and this note for what's actually meant to be
   tracked.
-- **`manifest.json` entries can carry an optional `scale` field
-  (added 2026-09-29) — a per-model multiplier applied ON TOP of
-  `cfg.phoneModelScale` in `applyPhoneModelTransform()`, via
-  `currentPhoneModelScaleMultiplier` (set in `loadPhoneModel()` by
-  looking up the just-selected option's own `.scale`).** Exists
-  because `cfg.phoneModelScale` is ONE global value shared by every
-  model, but different phone GLBs (even ones the user believes are
-  "all scaled the same") can have real, measured native-scale
-  mismatches — confirmed via a direct GLB-parsing measurement (full
-  scene-graph matrix accumulation, not just a root node's own `scale`
-  in isolation — that naive version was wrong for models with more
-  than one root node) that P5 Project 1 and Samsung Galaxy S26 were
-  ~13x and ~30x larger than the other 6 models' own tight cluster.
-  Defaults to 1 when absent (every existing model without an explicit
-  override, and every imported model via the Item Selector, which has
-  no measured data of its own). **If a future model looks wildly
-  over- or under-sized, measure it the same way before guessing a
-  scale value** — a small Node script parsing the GLB's raw JSON
-  directly and walking the real node hierarchy (see this session's own
-  `inspect_glb_world_bounds.js` for the pattern, not saved in the repo
-  but easy to recreate: accumulate each node's TRS/matrix from every
-  scene root down to each mesh-bearing node, transform that mesh's own
-  accessor min/max corners by the accumulated world matrix, merge into
-  a global bounding box) gives a ground-truth number to compute the
-  right multiplier from, rather than trial-and-error in the dev panel.
-  Separately noted, not acted on: Samsung Galaxy S26's own root node
-  also carries a `[-1,-1,-1]` scale (a full point-inversion) — unlike
-  the recursive-render mirror bug above, this is a property of that
-  ONE model's own file, unrelated to Recursive Render, and not
-  something this scale fix touches — flag it if a future report
-  describes that specific model looking mirrored/inside-out.
+- **CORRECTED 2026-09-29, same day — the per-model `manifest.json`
+  `scale` field this entry originally described is REMOVED, not just
+  unused.** Direct instruction after it shipped: "No, I don't want you
+  to override my personal settings, but make by default scale to one
+  and placed at world origin." `manifest.json` entries are back to
+  plain `{file, name}` — no `.scale` field, no
+  `currentPhoneModelScaleMultiplier` lookup in `loadPhoneModel()`. Do
+  NOT reintroduce a per-model or automatically-measured scale override
+  without a new, explicit request — this was tried once and reverted.
+  The underlying measurement technique (a small Node script parsing a
+  GLB's raw JSON, accumulating each node's TRS/matrix from every scene
+  root down to each mesh-bearing node, transforming accessor min/max
+  corners by the accumulated world matrix) is still the right way to
+  get a ground-truth bounding box for a phone model if ever needed
+  again for some OTHER purpose — just not for a silent per-model scale
+  correction. Samsung Galaxy S26's own root node separately carries a
+  `[-1,-1,-1]` scale (a full point-inversion) — a property of that ONE
+  model's own file, unrelated to Recursive Render's own mirror bug
+  above; flag it if a future report describes that specific model
+  looking mirrored/inside-out.
+- **`PHONE_MODEL_SCALE_BASE = 100` (main.js, a fixed constant) is
+  ALWAYS multiplied into every phone model's scale, uniformly — this
+  is what actually replaced the reverted per-model scale field above.**
+  `applyPhoneModelTransform()` sets
+  `phoneModelRaw.scale.setScalar(PHONE_MODEL_SCALE_BASE * cfg.phoneModelScale)`.
+  `cfg.phoneModelScale` itself defaults to `1` with a `0.5-5` slider
+  range (label "Model Scale (x100)") — a pure FINE-TUNE multiplier on
+  top of the fixed base, not the real scale by itself. Exists because
+  the hand's own reference scale
+  (`computeBaseScale() = (8 / handLengthRaw) * cfg.handScale`) puts it
+  in roughly meter-scale units, while these phone GLBs are natively
+  much smaller — confirmed by direct user instruction ("the hand is
+  probably in meters, so just scale up all my phones by 100") after a
+  slider-range request (0.5-5) conflicted with a scale=100 default,
+  resolved via `AskUserQuestion`: "I wanted you to scale it up to 100
+  but on the sliders that will read as one... 100 is one now."
+  `sliderHandScale`'s own range was widened to 0.5-5 (was 0.1-3) in the
+  same pass. **If a future report says a phone model looks wrong-sized
+  again, adjust `cfg.phoneModelScale` (the slider) first — do not touch
+  `PHONE_MODEL_SCALE_BASE` itself unless the user explicitly asks to
+  change the baseline for every model at once**, and do not reintroduce
+  a per-model override (see the entry directly above).
+- **The Item Selector's own model selection was never actually
+  persisted through Sync until fixed 2026-09-29 — a 4th recurrence of
+  this project's own recurring "hand-built dev-panel widget invisible
+  to Sync" bug class** (previously hit by the curve/range fields and
+  the 5 list-pickers, both documented elsewhere in this file).
+  `renderPhoneModelItemSelector()`'s clickable rows are plain `<div>`s,
+  never registered via `addRow()`/`HANDYSET_CONTROLS.push()`, so
+  devPanel.js's fully-generic `captureAllRegisteredControlValues()`/
+  `applyControlValues()` never saw `cfg.phoneModelFile` at all —
+  confirmed directly from the real git-tracked settings file
+  (`selectPhoneModelFile: null`). Fixed with a hidden
+  `type:'text'` control (`id: 'hiddenPhoneModelFile'`, `skipDeviceCheckbox:
+  true`, `display:'none'`) that mirrors the current selection both ways:
+  clicking an item updates the hidden input's `.value`; the hidden
+  input's own `input` listener (guarded against redundant firing,
+  matching this file's other Sync-restore listeners) applies a
+  Sync/Reset/Undo-restored value back onto `cfg.phoneModelFile` and
+  reloads the model. **Any FUTURE hand-built dev-panel widget in this
+  project (not built via `addRow()`) needs this exact same hidden-
+  input-mirror treatment to survive Sync — this bug class has now
+  recurred 4 times in this one project alone.**
