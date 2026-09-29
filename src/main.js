@@ -2559,6 +2559,64 @@ function findPhoneScreenMeshes(root) {
   })
   return pass2
 }
+// Measures the Screen Face mesh's REAL physical width:height ratio from
+// its actual geometry, instead of assuming a UV bounding box's aspect
+// reflects real-world shape (see loadPhoneModel()'s own comment for why
+// that assumption was wrong -- UV islands are commonly packed into a
+// texture atlas without preserving proportions). For each triangle,
+// solves the 2x2 linear system relating a UV-space edge pair to its
+// corresponding world-space edge pair, giving the world-space distance
+// covered by one unit of U and one unit of V at that triangle; averages
+// this (UV-area-weighted, so tiny/degenerate triangles don't dominate)
+// across the whole mesh, then scales by the mesh's actual UV range
+// (uvW/uvH, passed in -- already computed by the caller) to get the
+// real physical width:height ratio. Returns null if the mesh has no
+// index/position/uv data usable for this, or if every triangle turned
+// out UV-degenerate (caller falls back to the plain UV-bounding-box
+// ratio in that case).
+function computeScreenGeometryUvAspect(mesh, uvW, uvH) {
+  const geo = mesh?.geometry
+  const posAttr = geo?.attributes?.position
+  const uvAttr = geo?.attributes?.uv
+  if (!posAttr || !uvAttr || uvW <= 0 || uvH <= 0) return null
+  const index = geo.index
+  const triCount = Math.floor((index ? index.count : posAttr.count) / 3)
+  if (!triCount) return null
+  let worldPerUSum = 0, worldPerVSum = 0, weightSum = 0
+  const p0 = new THREE.Vector3(), p1 = new THREE.Vector3(), p2 = new THREE.Vector3()
+  const dp1 = new THREE.Vector3(), dp2 = new THREE.Vector3()
+  for (let t = 0; t < triCount; t++) {
+    const i0 = index ? index.getX(t * 3) : t * 3
+    const i1 = index ? index.getX(t * 3 + 1) : t * 3 + 1
+    const i2 = index ? index.getX(t * 3 + 2) : t * 3 + 2
+    const du1 = uvAttr.getX(i1) - uvAttr.getX(i0), dv1 = uvAttr.getY(i1) - uvAttr.getY(i0)
+    const du2 = uvAttr.getX(i2) - uvAttr.getX(i0), dv2 = uvAttr.getY(i2) - uvAttr.getY(i0)
+    const det = du1 * dv2 - du2 * dv1
+    if (Math.abs(det) < 1e-9) continue // UV-degenerate triangle (zero UV area) -- skip
+    p0.fromBufferAttribute(posAttr, i0); p1.fromBufferAttribute(posAttr, i1); p2.fromBufferAttribute(posAttr, i2)
+    dp1.subVectors(p1, p0); dp2.subVectors(p2, p0)
+    const invDet = 1 / det
+    // [worldPerU | worldPerV] = [dp1 | dp2] * inverse([[du1,dv1],[du2,dv2]])
+    const worldPerULen = Math.hypot(
+      dp1.x * dv2 * invDet - dp2.x * dv1 * invDet,
+      dp1.y * dv2 * invDet - dp2.y * dv1 * invDet,
+      dp1.z * dv2 * invDet - dp2.z * dv1 * invDet
+    )
+    const worldPerVLen = Math.hypot(
+      dp2.x * du1 * invDet - dp1.x * du2 * invDet,
+      dp2.y * du1 * invDet - dp1.y * du2 * invDet,
+      dp2.z * du1 * invDet - dp1.z * du2 * invDet
+    )
+    const uvArea = Math.abs(det) / 2
+    worldPerUSum += worldPerULen * uvArea
+    worldPerVSum += worldPerVLen * uvArea
+    weightSum += uvArea
+  }
+  if (weightSum === 0 || worldPerVSum === 0) return null
+  const realWidth = (worldPerUSum / weightSum) * uvW
+  const realHeight = (worldPerVSum / weightSum) * uvH
+  return realHeight > 0 ? realWidth / realHeight : null
+}
 function loadPhoneModel(relativePath) {
   if (!relativePath) return
   const token = ++phoneModelLoadToken
@@ -2629,12 +2687,31 @@ function loadPhoneModel(relativePath) {
         if (v > maxV) maxV = v
       }
       phoneScreenUvCenter = { x: (minU + maxU) / 2, y: (minV + maxV) / 2 }
-      // Real per-model screen aspect ratio, added 2026-09-29 -- see
-      // applyScreenTextureTransform()'s own "To Scale" comment for why
-      // this replaces the fixed render-target aspect the correction
-      // used before.
+      // Real per-model screen aspect ratio, CORRECTED 2026-09-29 (2nd
+      // round) -- direct report: "To Scale" was still visibly wrong on
+      // EVERY device, EVERY model, right after a refresh, with no code
+      // change to the formula itself. Live console diagnostic
+      // (window.__mirrorDebug) on 2 real models showed
+      // phoneScreenUvAspect computing 0.99 and 0.999 -- nearly perfectly
+      // SQUARE for a real phone screen (physically implausible, should
+      // be roughly 0.4-0.5, much taller than wide). Root cause: a UV
+      // BOUNDING BOX's own aspect ratio does NOT necessarily reflect the
+      // mesh's real physical shape at all -- UV islands are commonly
+      // packed into a texture atlas without preserving real-world
+      // proportions, which is clearly what's happening on these assets.
+      // The uW/uvH bounding-box approach below is replaced with a
+      // proper measurement: for each triangle, solve for the WORLD-SPACE
+      // distance covered by one unit of U and one unit of V (a 2x2
+      // linear solve per triangle, UV-area-weighted across the mesh),
+      // then combine with the mesh's actual UV range to get the real
+      // physical width:height ratio -- this is correct regardless of
+      // whether the UV unwrap preserves proportions or not, since it
+      // measures the REAL geometry directly instead of assuming UV
+      // shape mirrors world shape.
       const uvW = maxU - minU, uvH = maxV - minV
-      if (uvW > 0 && uvH > 0) phoneScreenUvAspect = uvW / uvH
+      const measuredAspect = computeScreenGeometryUvAspect(phoneScreenMeshes[0], uvW, uvH)
+      if (measuredAspect) phoneScreenUvAspect = measuredAspect
+      else if (uvW > 0 && uvH > 0) phoneScreenUvAspect = uvW / uvH // fallback if geometry measurement fails
     }
     if (!phoneScreenMeshes.length) console.warn(ts() + ' Phone model has no "Screen Face" mesh -- Virtual Screen render will have no effect:', relativePath)
     applyPhoneModelTransform()
