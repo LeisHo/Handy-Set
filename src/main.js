@@ -2327,15 +2327,41 @@ function disposePhoneModelRaw() {
   phoneScreenMesh = null
   phoneScreenOriginalMaterial = null
 }
-// Finds the mesh the phone GLB's own author named 'Screen Face' (Virtual
-// Screen render-to-texture target) -- case/whitespace-tolerant since glTF
-// export can alter exact capitalization. Returns null if this particular
-// model has no such mesh (not every phone model is guaranteed to have one).
+// Finds the mesh representing the phone's screen (Virtual Screen
+// render-to-texture target), by the name 'Screen Face' -- case/
+// whitespace-tolerant since glTF export can alter exact capitalization.
+// CORRECTED 2026-09-29, direct report ("I dont see the Recursive Render
+// image. I still see the original material") -- ground-truth-checked by
+// parsing all 3 phone GLBs' raw JSON chunk directly (node/mesh/material
+// names), not by trusting an earlier session's own in-app "no console
+// warning" observation, which turned out to be a false negative from a
+// broken page load during this sandbox's own documented script-delivery
+// flakiness, not a real confirmation. Real findings: P5 Project 1 has a
+// MESH literally named 'Screen Face' (matched by pass 1 below); Pixel
+// 9A has NO mesh/node with that name at all -- its screen is one
+// PRIMITIVE inside a combined 'Front' mesh, distinguished only by a
+// MATERIAL named 'Screen Face' (glTF splits multi-material primitives
+// into separate THREE.Mesh objects on load, each with a single
+// material, but that object's own NAME still comes from the shared
+// parent node/mesh, not the material -- so pass 1 alone can never find
+// it; matched by pass 2 below instead). iPhone 17 Max Pro has NEITHER
+// a matching mesh/node name NOR a matching material name (its screen
+// asset is named 'screen.001'/'Cube.010_screen.001_0', from what looks
+// like an FBX-converted, differently-authored asset) -- this project's
+// own earlier documentation claiming iPhone 17 was "the only model
+// with a Screen Face mesh" was WRONG and has been corrected. Returns
+// null if a model genuinely has neither (not every phone model is
+// guaranteed to have a usable screen target).
 function findPhoneScreenMesh(root) {
   let found = null
   root.traverse((obj) => {
     if (found || !obj.isMesh || typeof obj.name !== 'string') return
     if (obj.name.trim().toLowerCase() === 'screen face') found = obj
+  })
+  if (found) return found
+  root.traverse((obj) => {
+    if (found || !obj.isMesh || !obj.material || typeof obj.material.name !== 'string') return
+    if (obj.material.name.trim().toLowerCase() === 'screen face') found = obj
   })
   return found
 }
