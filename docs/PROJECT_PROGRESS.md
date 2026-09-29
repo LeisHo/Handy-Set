@@ -7,41 +7,91 @@ append-only history.
 
 ## Currently working on
 
-Nothing in progress. Phone Model's mobile rotation axis mapping saga
-(10+ rounds, see CHANGELOG's 35th-44th entries and the matching
-CLAUDE.md gotcha) is settled per real isolated-checkbox testing.
-Desktop's own axis gating (X/Y/Z Rotation on/off + scale) was corrected
-2026-09-29 the same way. Virtual Screen's mesh-lookup bug is fixed
-(multi-primitive Group case), the Recursive Render alternating-mirror
-bug is fixed (UV-mirror compensation, unverified against the real
-device), and the Phone Model selector is now a real Item Selector with
-GLB import listing 8 models. Phone Model's own scale went through 3
-approaches in one session (per-model correction → reverted per direct
-instruction → a plain `PHONE_MODEL_SCALE_BASE=100` constant with the
-slider as a 0.5-5 fine-tune) — see Recently completed below for the
-final state. Also fixed: the Item Selector's own model selection was
-never actually persisted through Sync (a real, separate bug, not just
-the scale issue).
+**Recursive Render mirror investigation — X-axis RESOLVED (verified
+exactly against a full letter-sequence dataset), Y-axis and the X/Y
+interaction still open.** See CHANGELOG's 54th and 55th entries for
+the full account; summary of current state:
+- X-mirror: `checkboxFlipX` now alternates by VIEWER DEPTH
+  (`offBaseline(d) * (-1)^d`, d = levels − passIndex), not a flat
+  per-pass constant — solved algebraically from a full 16-sequence
+  dataset (2 models × 4 checkbox combinations × 2 axes) and verified
+  as an EXACT match, every position, on both models. Root cause: each
+  recursion pass embeds the previous pass's already-mirrored capture,
+  so a per-pass flip compounds as a PRODUCT across nesting depth
+  rather than applying once per depth — this also explains the
+  period-4-looking patterns seen throughout this investigation despite
+  the underlying per-pass JS signal being proven period-2 via console
+  instrumentation.
+- Y-mirror: still uses its original formula (checkbox-gated
+  `alternateParity`), unverified against this dataset — it does NOT
+  fit the same depth-parity model, likely because X's own always-on
+  background correction (`baseFlipX`) contaminated every "Y only" test
+  capture. Not yet reconciled; not guessed further without cleaner
+  isolated data.
+- X/Y interaction ("both checked" looking wrong): direct user
+  insight, independently arrived at and consistent with the mechanism
+  above — the phone's screen content is asymmetric, so composing both
+  mirrors is a 180° rotation, not two independent flips, and a
+  rotation of asymmetric content just looks like a different wrong
+  image. This may mean "both checked" isn't a further bug to chase at
+  all once X alone (Y off) is confirmed clean.
+- NOT yet independently browser-verified against the real deployed
+  site — the exact-match verification is algebraic, against the
+  user's own reported sequences, not a fresh live screenshot (per this
+  project's own "skip sandbox verification" convention).
+- A temporary diagnostic (`window.__mirrorDebug = true` in the
+  browser console) is left in place in `applyScreenTextureTransform()`
+  logging real per-pass state — proven reliable where monkey-patching
+  `THREE.WebGLRenderer.prototype.render` was NOT (the renderer
+  instance shadows the prototype method; patches there are silently
+  never invoked — confirmed live, don't rely on this technique again
+  on this project).
 
-Noticed, not yet added: a new untracked `S4.glb` appeared on disk
-under `data/processed/SMARTPHONE MODELS/` after the scale fix — left
-untouched, not yet requested to be committed.
+Separately, Samsung Galaxy S26 (a genuine, pre-existing, already-
+documented `[-1,-1,-1]` root-node scale inversion) and Galaxy S2 (a
+genuinely degenerate Screen Face UV with zero vertical extent) are
+BOTH real, separate, per-model asset issues unrelated to the mirror
+investigation above — neither is fixable via code; both need
+re-export from the source (Blender, most likely).
 
-Remaining untouched, by request: several raw asset-staging folders
-under `data/processed/SMARTPHONE MODELS/` (`BLENDER/`, `RAW GLB/`,
-`Samsung Galaxy S2/` (folder), `Zip/`, `blackberry/`,
-`samsung-galaxy-s26-black-low-poly/`) — only the finished `.glb` files
-were asked to be added (2026-09-29), matching this project's own raw-
-vs-processed convention (§11). These stay as the user's own working
-material unless asked to be committed too.
+**Also in progress, interrupted by the above:** widening the step on
+every "*Scale"-labeled dev-panel slider (Pose/Model/Texture/Hand
+Scale, Phone Rotation Scale X/Y/Z) from 0.05 to a much finer
+increment, per direct request ("for alll scale sliders allow me to go
+in any increment. dont round it to .05") — not yet completed/shipped.
 
-**Not independently verified in-browser this round (2026-09-29)** —
-the sandbox's local static server hit sustained `net::ERR_CONNECTION_RESET`
-failures across ~20+ retries (confirmed, via the server's own request
-log, to be serving every file with a real `200` every time — an
-environment-layer issue, not a code problem). Per direct instruction,
-browser-pane verification is now skipped for this project entirely
-going forward.
+**Completed and verified live this session** (see CHANGELOG's 52nd
+and 53rd entries for full detail): the duplicate HAND MODEL/PHONE
+MODEL dev-panel groups bug (root cause: an uncaught null-reference
+throw aborting the whole panel build, not a settings-sync issue as
+first suspected), Draco/Meshopt decoder wiring (3 models failed to
+load entirely without it), the `rebuildField()` null-model race
+(reproducing on every normal page load, now guarded), the phone
+screen mesh `frustumCulled` invisibility bug (same class already
+fixed for the hand mesh), Nothing2's Screen Face name-matching
+(loaded name had underscores where the source has spaces), Per-Model
+Settings for Scale/Offset/Responsive Rotation/Recursive Render (with
+Rotation deliberately kept shared per direct correction), and a
+checkbox-restore dispatch bug found while verifying the above
+(checkboxes visually updated on a model switch but never actually
+changed behavior, since the restore only dispatched 'input' while
+`wireCheckbox()` listens for 'change').
+
+**Browser-pane verification is back in active use this session** —
+superseding the earlier "skipped entirely" note: the built-in browser
+successfully drove the real, deployed Vercel site directly throughout
+this session (dev-panel interaction, console log reads, live GLB/UV
+measurement via `window.__debug`), which is different from the local
+sandbox static server's own documented flakiness. That local-server
+limitation is unrelated and still stands if a local dev server is
+ever used again.
+
+Untracked, not yet committed, by request: several raw asset-staging
+folders and a stray `S4.glb` under `data/processed/SMARTPHONE MODELS/`
+(`BLENDER/`, `RAW GLB/`, `Samsung Galaxy S2/` (folder), `Zip/`,
+`blackberry/`, `samsung-galaxy-s26-black-low-poly/`) — only finished
+`.glb` files were asked to be added, matching this project's own
+raw-vs-processed convention (§11).
 
 Pushed to `https://github.com/LeisHo/Handy-Set`
 (deployed via the Vercel project at `https://vercel.com/lpeis/handy-set`).

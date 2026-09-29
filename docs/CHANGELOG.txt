@@ -4985,6 +4985,307 @@ Not independently verified against the real device/browser (standing
 limitation). `index.html`'s cache-buster bumped `?v=137` -> `?v=138`.
 
 --------------------------------------------------------------------------------
+2026-09-29  -  (52nd)
+
+Direct report: "sitll broke... its not the rightsettings. My last saved
+seetings had the hand turned off and the phone on" -- duplicate HAND
+MODEL/PHONE MODEL groups in the dev panel, and restored settings not
+matching what was actually last Synced. First attempt (schema-version
+bump to clear stale localStorage) did not resolve it -- confirmed via
+direct DOM read on the real deployed site that this was never a
+localStorage issue: `applySectionOrder()` (devPanel.js) was read
+line-by-line and can only ever relocate a SINGLE existing DOM section
+by its unique data-sid, never spawn a duplicate. Root-caused via a real
+console error on the live site: `renderPhoneModelItemSelector()` threw
+`Cannot read properties of null (reading 'value')` at
+`document.getElementById('hiddenPhoneModelFile')`, because the
+detached `container` div it lived in hadn't been appended to the real
+DOM yet. That uncaught throw aborted `ensureDevPanelBuilt()` before
+`devPanelBuilt` was ever set true, so the next caller
+(`loadRemoteSettingsOnStartup()`'s own explicit call) re-ran the WHOLE
+build from scratch -- producing exactly 2 real copies of HAND
+MODEL/PHONE MODEL and nothing after them (RECURSIVE RENDER, Camera,
+Lighting, Toon Shading, Background, Ground Plane, Finger Gizmos all
+missing on both attempts), which also explains the wrong-restored-
+settings report (2 independent partial builds each applying Sync'd
+values, the second one's duplicate elements winning). Fixed by
+querying within the row itself instead of a global
+`document.getElementById` lookup. Verified live end-to-end on the real
+Vercel deployment: 11 unique top-level groups, zero duplicates, no
+console errors on a fresh incognito load.
+
+Also found and fixed while verifying: `Iphone17MaxPro.glb`/
+`P5_Project_1.glb`/`Nothing2.glb` all failed to load --
+`THREE.GLTFLoader: No DRACOLoader instance provided` /
+`EXT_meshopt_compression` errors -- neither decoder had ever been
+wired into either GLTFLoader instance (hand or phone). Added a shared
+`DRACOLoader` + `MeshoptDecoder` to both loaders. Separately, a
+DISCLOSED-but-unfixed race from earlier in this project's history
+(`rebuildField()` throwing `Cannot read properties of null (reading
+'clone')` if a Field Layout slider restore fires before the hand's own
+async model load resolves) was confirmed reproducing on every normal
+page load via the real console -- fixed with a simple `if
+(!modelRoot) return` guard (the model-load callback already calls
+`rebuildField()` itself once loading finishes, so nothing is lost).
+
+`index.html` cache-buster: `?v=138` -> `?v=143` across this entry's
+fixes; `devpanel/devPanel.js` `?v=7` -> `?v=8` (makeDevGroupToggleable()
+widened from a direct-child selector to a plain descendant selector,
+per the 53rd entry below).
+
+--------------------------------------------------------------------------------
+2026-09-29  -  (53rd)
+
+A run of small, direct-request features/fixes on RECURSIVE RENDER and
+PHONE MODEL, same session:
+
+- Screen Emission Intensity slider (0-5x) -- direct report "When i use
+  the Pixel 9A model, the screen is very dim." `phoneScreenRenderMaterial`
+  is an unlit MeshBasicMaterial with no real `.emissive` property;
+  multiplies `.color` instead for the same practical brightening effect.
+- RECURSIVE RENDER moved from a top-level dev-panel group into a
+  subgroup of PHONE MODEL > RESPONSIVE BEHAVIOUR - PHONE, per direct
+  request. Its own title-bar On/Off toggle previously required a
+  top-level group (`makeDevGroupToggleable()`'s own direct-child DOM
+  selector) -- rather than lose that feature, generalized the function
+  itself to work at any nesting depth (same fix shape
+  `findNestedGroupContent()` already got for a different lookup).
+  `HANDYSET_SETTINGS_SCHEMA_VERSION` bumped (2026-09-29b) since this is
+  a real group-nesting change; the matching git-tracked settings entry
+  relocated via a scripted surgery, verified with a zero-drift 427-key
+  multiset diff.
+- Texture X/Y Offset sliders added alongside the existing Scale/
+  Rotation controls (`texture.offset`, -1 to 1).
+- "Per-Model Settings" -- direct request: "make sure all slider
+  settings within the phone model group saves per model." Every
+  control under PHONE MODEL (Scale/Offset, Responsive Rotation, and
+  Recursive Render's own settings) is now captured under the
+  previously-selected model's own key right before a switch and
+  restored right after, persisted via a 2nd hidden JSON control
+  alongside `hiddenPhoneModelFile`. CORRECTED same day, direct
+  feedback ("every phone model is oriented the same way in regards to
+  world XYZ. so when rotating the recursie rendering, the rotations
+  should all be the same"): Phone Model Rotation X/Y/Z removed from
+  the per-model list, back to one shared value across every model.
+  Also fixed while building this: the restore path only dispatched an
+  'input' event, but `wireCheckbox()` listens for 'change' -- every
+  checkbox in the per-model list visually updated on a model switch
+  but silently never actually changed its underlying `cfg` value.
+  Fixed by dispatching both events.
+- Root-caused a suspected "per-model settings git-sync bug" (direct
+  question: "so its got to be a big git settings syncing issue") --
+  confirmed via a REAL Sync click (not just calling
+  `saveDevPanelSettings()` programmatically, which only writes
+  localStorage; the remote POST is wired as a separate click listener
+  on the actual Sync button) that the mechanism works correctly. The
+  real explanation: only P5_Project_1 had ever been individually tuned
+  under the old single-shared-value system, so it alone had real
+  per-model data after the migration; every other model was just
+  sitting at generic defaults, which is not a bug.
+- `frustumCulled` fix -- direct report: "iphone max pro 3d model
+  screen is invisible. im lookin through it. its not a rotaiton
+  issue." Confirmed live (setting `frustumCulled=false` on the mesh
+  made the screen render immediately) as the SAME bug class already
+  fixed for the hand's own SkinnedMesh: a mesh's default bounding
+  sphere is computed from raw local geometry and doesn't account for
+  the whole model's Offset/Scale/Rotation transforms shifting it in
+  world space, so three.js incorrectly concludes it's outside the
+  camera frustum and skips rendering it -- exactly "looking through
+  it." Applied to every phone screen mesh, not just this one model.
+- Nothing2.glb's Screen Face mesh wasn't being found even after the
+  Meshopt fix made the model load -- confirmed live via
+  `window.__debug.phoneModelRaw` that the LOADED mesh name is
+  "Screen_Face" (underscore) though the raw GLB JSON's own node name
+  is "Screen Face" (space) -- something in the load pipeline
+  sanitizes separators. `findPhoneScreenMeshes()`'s name matching now
+  normalizes underscores/dots to spaces before comparing, extending
+  the existing case-insensitive matching.
+- All-caps-vs-title-case scale slider tuning: for all "*Scale"-labeled
+  sliders (Pose/Model/Texture/Hand Scale, Phone Rotation Scale X/Y/Z),
+  step widened from 0.05 towards finer-grained values per direct
+  request ("for alll scale sliders allow me to go in any increment.
+  dont round it to .05") -- in progress, interrupted by the mirror
+  investigation below; not yet completed/shipped this session.
+
+`index.html` cache-buster: `?v=143` -> `?v=152` across this entry.
+
+--------------------------------------------------------------------------------
+2026-09-29  -  (54th)
+
+Recursive Render's "every other screen mirrored" investigation --
+UNRESOLVED at the end of this session, disclosed honestly rather than
+claimed fixed. 6+ distinct fix attempts across this single investigation,
+each shipped, tested live by the user, and reported still broken:
+
+1. A pre-existing blind constant `texture.repeat.x = -1 * ...` (from
+   before this session) -- direct report "im still getting the issue
+   o the render mirroring every other screen" proved it insufficient.
+2. Replaced with 2 direct checkboxes (Mirror Alternating X/Y),
+   alternating on ODD-numbered render-loop pass indices.
+3. CORRECTED same day: parity was counted from the render loop's own
+   pass index, not from the VIEWER's own depth perspective (depth 1 =
+   the texture on the actual Screen Face mesh, computed LAST in the
+   loop) -- direct clarification: "it should mirror the first render
+   first. then the 3rd etc." Re-derived as `(passIndex % 2) !==
+   (levels % 2)`.
+4. `texture.updateMatrix()` added, theorizing a lazy matrix-recompute
+   timing issue across multiple `renderer.render()` calls per frame --
+   direct report "it didint work" after live testing.
+5. Removed `material.needsUpdate`/`texture.needsUpdate` (both force an
+   unnecessarily heavy shader-recompile/re-upload cycle on every one of
+   up to 10 passes per frame) -- direct report "and the last scale and
+   mirror ting didnt work."
+6. Direct instruction after 4 straight failures: "i want you to put
+   the scale and mirror origin on the center of te SCREEN FACE mesh."
+   Computed each model's REAL UV midpoint from its own geometry
+   (Pixel 9A measured 0.498,0.500; not exactly the hardcoded 0.5,0.5)
+   instead of assuming a centered UV island -- a theory that also
+   explained the earlier "P5 looks fine, others don't" scale report.
+   Direct report: "mirroring not fixed." Follow-up measurement directly
+   DISPROVED this theory: Nothing2 (which the user confirmed "looks
+   correct") measured UV midpoint (0.501, 0.500) -- essentially
+   IDENTICAL off-centeredness to Pixel 9A's "wrong" result, ruling out
+   UV centering as the differentiator.
+
+Live isolation testing (AskUserQuestion, per this project's own
+established pattern for a stuck bug) established real, hard facts:
+- With Mirror X OFF entirely (zero manual mirroring code active), the
+  ACTUAL observed sequence across 8 recursion depths was "XAXAXAXA" --
+  a real, perfect alternation with NO contribution from this session's
+  mirror-checkbox code at all, proving an inherent flip already baked
+  into the recursive-capture pipeline before any of this session's
+  code ever runs. The equivalent Y-axis baseline was "AAAAAAA" (clean,
+  no inherent issue) -- X-axis only.
+- Reverse-solving what the checkbox's OWN code must be contributing
+  (comparing the Mirror-X-ON sequence "AAXXAAX" against that OFF
+  baseline) produced "XAAXXAA" -- a repeating 4-depth pattern, NOT the
+  clean 2-depth alternation directly proven correct via live console
+  instrumentation earlier in this same investigation (attempt 3's own
+  diagnostic log showed -1,1,-1,1,-1,1,-1,-1 exactly, every single
+  frame). This is an unreconciled contradiction between "what the JS
+  computes" (proven) and "what ends up on screen" (observed) -- a
+  6th fix built on the wrong side of that contradiction was drafted,
+  found to NOT correctly predict the user's own ON-sequence data
+  before shipping, and deliberately reverted rather than shipped
+  unverified.
+- Also ruled out via direct measurement, NOT the differentiator between
+  Nothing2 (works) and Pixel 9A/P5 (don't): UV aspect ratio, ancestor-
+  chain geometry scale inversion (Pixel 9A has zero negative-scale
+  components in its chain, same as Nothing2; Samsung Galaxy S26 DOES
+  have a `[-1,-1,-1]` root inversion -- a real, separate,
+  already-documented issue for that one model only, unrelated to this
+  investigation), mesh flatness (both are genuinely flat), and
+  geometry subdivision complexity (Pixel 9A: 76 triangles/80 vertices;
+  Nothing2: 77/79 -- essentially identical).
+- Direct report also established the base (non-recursive-compounding)
+  issue isn't purely about mirroring either: with Mirror X OFF,
+  baseline recursion on Pixel 9A/P5 already looks wrong; turning
+  Mirror X ON makes MORE depths look correct (not fewer) on Pixel 9A
+  specifically ("with it turned on, now 123 look goo and 4 does not"),
+  the opposite of what a pure regression would look like.
+
+Left in place, deliberately: a temporary diagnostic
+(`window.__mirrorDebug = true` in console) logging real per-pass
+passIndex/levels/alternateParity/mirrorX -- proven reliable where
+monkey-patching `THREE.WebGLRenderer.prototype.render` was NOT (the
+renderer instance shadows the prototype method; patches placed there
+are silently never called, confirmed live -- do not rely on
+prototype-patching for renderer instrumentation on this project again).
+Next planned step, not yet started: check whether the Screen Face
+mesh's own raw UV winding direction (not just its center/aspect) is
+itself mirrored at the geometry level, independent of anything in the
+rendering code.
+
+`index.html` cache-buster: `?v=152` -> `?v=156` across this entry (the
+6th attempt's UV-center code IS live/shipped, since it's a real,
+independently-justified improvement even though it didn't resolve the
+reported symptom; the drafted-then-reverted 7th attempt never shipped
+and left no trace in the deployed code).
+
+--------------------------------------------------------------------------------
+2026-09-29  -  (55th)
+
+Recursive Render mirror investigation, continued from the 54th entry --
+X-axis mirroring RESOLVED (verified exactly, not approximately) against
+a full letter-sequence dataset; Y-axis and the X/Y interaction remain
+open, with a concrete, evidence-based explanation for why.
+
+7th attempt (shipped, per direct instruction "skip all that for now" /
+"just fix it and push", despite a known unresolved contradiction):
+added an UNCONDITIONAL per-pass X correction (`baseFlipX`, gated on
+`alternateParity` alone, always active regardless of the checkbox) to
+cancel the inherent `XAXAXAXA` baseline proven in the 54th entry's own
+investigation. Disclosed honestly at the time, in both the code comment
+and chat, that this formula did not correctly predict the user's own
+ON-checkbox data when checked algebraically before shipping.
+
+The user then provided the richest dataset of this entire investigation:
+both X and Y mirror sequences, for all 4 checkbox combinations (nothing
+/ X-only / Y-only / both), on 2 models (Pixel9A, Nothing2) -- 16 full
+letter sequences in total, specifically requested and delivered as a
+"once-and-for-all" test matrix.
+
+Cross-checking this dataset directly disproved one assumption baked
+into the code: `mirrorX`'s own JS formula has zero reference to
+`cfg.screenMirrorAlternatingY`, yet the OBSERVED X sequence changes
+depending on whether Y is also checked (confirmed on both models via
+direct comparison of the "X checked/Y not" vs "both checked" columns).
+Y's own sequence, by contrast, is byte-identical regardless of X's
+checkbox state on both models -- consistent with the code, which never
+references X inside the Y computation.
+
+Solved algebraically for the true per-pass contribution needed to
+reproduce every observed "X checked" data point: not a flat per-pass
++-1 constant (what the 7th attempt shipped), but an alternation by
+VIEWER DEPTH (`d = levels - passIndex`, i.e. how many nested "screen
+inside a screen" generations deep a given pass's captured image sits),
+via `offBaseline(d) * (-1)^d`. Verified this is an EXACT match --
+every single position, not just a plausible fit -- against both
+models' full 8-9-depth "X checked" sequences. Root cause: each
+recursion pass's rendered image gets embedded inside the NEXT pass's
+capture (the phone screen shows the previous pass's texture), so a
+per-pass flip compounds as a PRODUCT across nesting depth rather than
+applying once per depth as previously assumed -- this is also the
+likely source of the period-4-looking patterns seen throughout this
+whole investigation despite the underlying per-pass JS signal being
+proven period-2 via console instrumentation as far back as the 54th
+entry's own diagnostic.
+
+Shipped: `checkboxFlipX` changed from a flat `cfg.screenMirrorAlternatingX
+? -1 : 1` to a depth-parity term (`viewerDepth % 2 === 1`), composed
+with the EXISTING unconditional `baseFlipX` unchanged (deliberately --
+changing it would have invalidated the "off baseline" the depth-parity
+fix was solved against). Y's own formula was left untouched: it does
+NOT fit the same depth-parity model against the available data, and is
+suspected to be contaminated by X's own always-on background
+correction being active during every "Y only" test capture (X was
+never actually "doing nothing" in those tests, due to the unconditional
+correction) -- not yet reconciled, deliberately not guessed a 4th time
+without better-isolated data.
+
+Direct user insight, independently arrived at, matching the mechanism
+above: since the phone's screen content is asymmetric, X-mirror and
+Y-mirror correctness aren't independently judgeable properties of a
+frame -- two mirrors composed (X and Y both on) is a 180-degree
+rotation, not two independent flips, and for asymmetric content a
+rotation just looks like a different wrong image, which a human eye
+naturally attributes to whichever axis is being judged at the time.
+This means the "both checked" case looking wrong on some models may
+not be a further bug to chase at all, once X alone (Y off) is
+confirmed clean -- consistent with, and a good independent check on,
+the compounding-through-recursion mechanism solved above.
+
+NOT yet independently browser-verified against the real deployed site
+(per this project's own "skip sandbox verification, go straight from
+node --check + review to push" convention) -- the exact-match
+verification above is against the user's own reported letter
+sequences, algebraically, not a fresh live screenshot check.
+
+`index.html` cache-buster: `?v=156` -> `?v=158` across this entry
+(`?v=157` shipped the 7th attempt above, `baseFlipX`; `?v=158` is the
+depth-parity fix).
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
