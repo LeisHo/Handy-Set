@@ -2798,24 +2798,37 @@ function applyScreenTextureTransform(texture, passIndex) {
   const overall = cfg.screenTextureScale || 1
   const levels = THREE.MathUtils.clamp(Math.round(cfg.screenRecursionLevels || 1), 1, 10)
   const alternateParity = typeof passIndex === 'number' && (passIndex % 2) !== (levels % 2)
-  // UNCONDITIONAL X base correction, 2026-09-29 -- direct empirical
-  // proof: with Mirror Alternating X fully UNCHECKED (zero manual
-  // mirroring code active), the real observed sequence across
-  // recursion depths was "XAXAXAXA" -- a genuine, perfect alternation
-  // baked into the recursive-capture pipeline itself, present before
-  // any of this session's mirror-checkbox code ever runs. The
-  // equivalent Y-axis baseline was clean ("AAAAAAA"), so this
-  // correction is X-axis only. Applying this SAME alternating pattern
-  // unconditionally cancels it at the source (2 applications of an
-  // identical alternation = no net flip), fixing the baseline
-  // regardless of the checkbox. The checkbox's own contribution on
-  // top of this corrected baseline was NOT fully reconciled against
-  // every observed data point before shipping (see CHANGELOG's 54th
-  // entry) -- if the checkbox itself still looks wrong after this,
-  // that is real, separate, not-yet-understood behavior to investigate
-  // next, distinct from this baseline fix.
+  // UNCONDITIONAL X base correction (unchanged since 2026-09-29 --
+  // cancels a genuine per-pass alternation baked into the recursive
+  // capture pipeline itself, present with the checkbox off). Kept
+  // exactly as-is below: it's what produced the "checkbox off"
+  // baseline the depth-parity fix directly below was solved against,
+  // and changing it would invalidate that verified fit.
   const baseFlipX = alternateParity ? -1 : 1
-  const checkboxFlipX = cfg.screenMirrorAlternatingX ? -1 : 1
+  // CHECKBOX contribution, CORRECTED 2026-09-29 (3rd round) -- was a
+  // flat per-pass +-1 constant, independent of depth. Solved
+  // algebraically from the user's own full letter-sequence dataset
+  // (Pixel9A + Nothing2, "X checked" columns): the checkbox's real
+  // per-pass contribution isn't constant, it alternates by VIEWER
+  // DEPTH (d = levels-passIndex, i.e. how many nested "screen inside
+  // a screen" generations deep this pass's captured image sits), not
+  // by raw pass index. Root cause: each recursion pass's rendered
+  // image gets embedded inside the NEXT pass's capture (the phone
+  // screen shows the previous pass's texture), so a per-pass flip
+  // compounds as a PRODUCT across every embedding step down to a
+  // given depth -- not a simple per-pass toggle. Verified EXACTLY
+  // (not approximately) against both models' full 8-9-depth
+  // sequences: predicted = offBaseline(d) * (-1)^d matched every
+  // single position. Y's own checkbox (below, UNCHANGED) does NOT fit
+  // this same depth-based model against the available data -- left
+  // as-is rather than guessed a 4th time; likely contaminated by
+  // this same X correction being unconditionally active during every
+  // "Y only" test capture (see this file's own CLAUDE.md gotcha for
+  // the fuller account of why X and Y reads cross-contaminate for an
+  // asymmetric screen image, independent of any remaining formula gap).
+  const viewerDepth = levels - passIndex // 1 = outermost/direct view, increases with nesting
+  const depthOdd = typeof passIndex === 'number' && (viewerDepth % 2 === 1)
+  const checkboxFlipX = cfg.screenMirrorAlternatingX ? (depthOdd ? -1 : 1) : 1
   const mirrorX = baseFlipX * checkboxFlipX
   const mirrorY = (cfg.screenMirrorAlternatingY && alternateParity) ? -1 : 1
   // TEMPORARY diagnostic, 2026-09-29 -- direct report "it didint
