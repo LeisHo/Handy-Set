@@ -96,17 +96,20 @@
     "sliderPhoneModelRotY": 0,
     "sliderPhoneModelRotZ": 0,
     "checkboxPhoneResponsiveRotationEnabled": true,
-    "checkboxPhoneRotationResetEnabled": true,
+    "checkboxPhoneRotationResetEnabled": false,
     "checkboxPhoneAxisXEnabled": true,
-    "sliderPhoneRotationScaleX": 0.9,
+    "sliderPhoneRotationScaleX": -1,
     "checkboxPhoneAxisYEnabled": true,
-    "sliderPhoneRotationScaleY": 0.8,
+    "sliderPhoneRotationScaleY": 1,
     "checkboxPhoneAxisZEnabled": true,
-    "sliderPhoneRotationScaleZ": 0.5,
-    "sliderPhoneResponsiveRotationFineTune": 0,
+    "sliderPhoneRotationScaleZ": 1,
+    "sliderPhoneResponsiveRotationFineTune": 43,
     "sliderPhoneRotationDamping": 1,
     "textPhoneResponsiveRotationRange": "{\"min\":-57,\"max\":45}",
     "textPhoneResponsiveRotationCurve": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"natural\"}",
+    "checkboxScreenRenderEnabled": false,
+    "sliderScreenRecursionLevels": 3,
+    "sliderScreenRenderResolution": 100,
     "checkboxWristSplayResponsiveEnabled": false,
     "sliderWristSplayDefault": -25,
     "checkboxWristSplayReactiveEnabled": true,
@@ -171,7 +174,7 @@
     "left": 35,
     "top": 108,
     "width": 350,
-    "height": 76
+    "height": 598
   },
   "devPanelStyle": {
     "titleFontSize": 17,
@@ -4663,6 +4666,24 @@
           "colorBgColor"
         ],
         "subgroups": []
+      },
+      {
+        "key": "desktop:RECURSIVE RENDER",
+        "items": [
+          {
+            "type": "row",
+            "key": "sliderScreenRecursionLevels"
+          },
+          {
+            "type": "row",
+            "key": "sliderScreenRenderResolution"
+          }
+        ],
+        "rowKeys": [
+          "sliderScreenRecursionLevels",
+          "sliderScreenRenderResolution"
+        ],
+        "subgroups": []
       }
     ],
     "mobileTabContent": [
@@ -6379,6 +6400,12 @@
       },
       {
         "key": "mobile:Background",
+        "items": [],
+        "rowKeys": [],
+        "subgroups": []
+      },
+      {
+        "key": "mobile:RECURSIVE RENDER",
         "items": [],
         "rowKeys": [],
         "subgroups": []
@@ -8101,6 +8128,12 @@
         "items": [],
         "rowKeys": [],
         "subgroups": []
+      },
+      {
+        "key": "landscape:RECURSIVE RENDER",
+        "items": [],
+        "rowKeys": [],
+        "subgroups": []
       }
     ]
   },
@@ -8157,6 +8190,7 @@
     "desktop:Toon Shading": true,
     "desktop:Saved Toon Shading": true,
     "desktop:Background": true,
+    "desktop:RECURSIVE RENDER": false,
     "mobile:PHONE MODEL": false,
     "mobile:OFFSET": false,
     "mobile:PHONE ROTATION": false,
@@ -8208,6 +8242,7 @@
     "mobile:Toon Shading": false,
     "mobile:Saved Toon Shading": false,
     "mobile:Background": false,
+    "mobile:RECURSIVE RENDER": false,
     "landscape:PHONE MODEL": false,
     "landscape:OFFSET": false,
     "landscape:PHONE ROTATION": false,
@@ -8258,7 +8293,8 @@
     "landscape:Saved Lighting": true,
     "landscape:Toon Shading": true,
     "landscape:Saved Toon Shading": true,
-    "landscape:Background": true
+    "landscape:Background": true,
+    "landscape:RECURSIVE RENDER": false
   },
   "devTextOverrides": {
     "sliderMobileDevPanelScrollStrength": null,
@@ -8530,7 +8566,9 @@
     "textBaseArmRotationCurve": null,
     "textPoseTweenCurve": null,
     "mobile:Phone Model Log": null,
-    "landscape:Phone Model Log": null
+    "landscape:Phone Model Log": null,
+    "mobile:RECURSIVE RENDER": null,
+    "landscape:RECURSIVE RENDER": null
   },
   "devTextOverridesManual": [
     "desktop:New Group",
