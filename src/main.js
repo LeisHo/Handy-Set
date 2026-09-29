@@ -31,7 +31,19 @@ function ts() { return '[' + new Date().toISOString() + ']' }
 // this simply clears the stale local save; it does not touch the
 // separate git-tracked save (data/processed/dev-panel-settings.json,
 // reset directly when this was first found).
-const HANDYSET_SETTINGS_SCHEMA_VERSION = '2026-09-27a'
+//
+// Bumped again 2026-09-29: direct report of duplicate "Hand Model" and
+// "Phone Model" top-level groups (and Phone Model's own settings
+// appearing missing) on a real desktop browser -- the live git-tracked
+// settings file was checked directly and is clean (exactly one HAND
+// MODEL / one PHONE MODEL entry each), so the stale layout could only
+// be sitting in that browser's own localStorage, left over from before
+// several un-bumped structural changes since 2026-09-27a (the
+// 2026-09-28 curve/range widget migration removing the old hand-built
+// text-control ids, and this same day's Item Selector/hiddenPhoneModelFile
+// additions). This bump is the designed fix for exactly this symptom --
+// it does not touch the git-tracked file, which never needed resetting.
+const HANDYSET_SETTINGS_SCHEMA_VERSION = '2026-09-29a'
 try {
   if (localStorage.getItem('handysetSettingsSchemaVersion') !== HANDYSET_SETTINGS_SCHEMA_VERSION) {
     localStorage.removeItem('devPanelSettings')
