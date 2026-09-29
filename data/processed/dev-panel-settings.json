@@ -109,15 +109,15 @@
     "textPhoneResponsiveRotationRange": "{\"min\":-57,\"max\":45}",
     "textPhoneResponsiveRotationCurve": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"natural\"}",
     "checkboxScreenRenderEnabled": true,
-    "sliderScreenRecursionLevels": 7,
+    "sliderScreenRecursionLevels": 10,
     "sliderScreenRenderResolution": 100,
-    "sliderScreenTextureScale": 1,
+    "sliderScreenTextureScale": 0.85,
     "sliderScreenTextureRotation": 180,
     "sliderScreenTextureOffsetX": -0.02,
     "sliderScreenTextureOffsetY": -0.03,
-    "sliderScreenTextureScaleX": 1.1,
-    "sliderScreenTextureScaleY": 0.95,
-    "sliderScreenEmissionIntensity": 1,
+    "sliderScreenTextureScaleX": 1.35,
+    "sliderScreenTextureScaleY": 1.25,
+    "sliderScreenEmissionIntensity": 1.1,
     "checkboxScreenMirrorAlternatingX": false,
     "checkboxScreenMirrorAlternatingY": false,
     "checkboxScreenToScale": false,
@@ -183,9 +183,9 @@
   },
   "layout": {
     "left": 70,
-    "top": 18,
+    "top": 134,
     "width": 315,
-    "height": 144
+    "height": 126
   },
   "devPanelStyle": {
     "titleFontSize": 17,
