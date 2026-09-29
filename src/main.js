@@ -282,6 +282,7 @@ const cfg = {
   // center. "To Scale" (see below) computes X/Y Scale automatically and
   // locks their sliders, instead of the user tuning them by hand.
   screenTextureScale: 1, screenTextureRotation: 0,
+  screenTextureOffsetX: 0, screenTextureOffsetY: 0,
   screenTextureScaleX: 1, screenTextureScaleY: 1,
   // Emission Intensity -- direct report 2026-09-29: "When i use the
   // Pixel 9A model, the screen is very dim." phoneScreenRenderMaterial
@@ -2751,6 +2752,7 @@ function applyScreenTextureTransform(texture, passIndex) {
   texture.center.set(0.5, 0.5)
   texture.repeat.set(mirrorX / (overall * scaleX), mirrorY / (overall * scaleY))
   texture.rotation = THREE.MathUtils.degToRad(cfg.screenTextureRotation || 0)
+  texture.offset.set(cfg.screenTextureOffsetX || 0, cfg.screenTextureOffsetY || 0)
   texture.needsUpdate = true
 }
 function renderVirtualScreen() {
@@ -4665,6 +4667,7 @@ const PHONE_MODEL_PER_MODEL_CONTROL_IDS = [
   'sliderScreenRenderResolution', 'sliderScreenTextureScale',
   'sliderScreenTextureRotation', 'sliderScreenTextureScaleX',
   'sliderScreenTextureScaleY', 'checkboxScreenToScale',
+  'sliderScreenTextureOffsetX', 'sliderScreenTextureOffsetY',
   'sliderScreenEmissionIntensity',
   'checkboxScreenMirrorAlternatingX', 'checkboxScreenMirrorAlternatingY',
 ]
@@ -5087,6 +5090,10 @@ function renderRecursiveRenderGroup(content) {
   wireSlider('sliderScreenTextureScale', (v) => { cfg.screenTextureScale = v })
   addRow(content, { id: 'sliderScreenTextureRotation', label: 'Texture Rotation (Deg)', type: 'slider', min: -180, max: 180, step: 1, value: cfg.screenTextureRotation })
   wireSlider('sliderScreenTextureRotation', (v) => { cfg.screenTextureRotation = v })
+  addRow(content, { id: 'sliderScreenTextureOffsetX', label: 'Texture X Offset', type: 'slider', min: -1, max: 1, step: 0.01, value: cfg.screenTextureOffsetX })
+  wireSlider('sliderScreenTextureOffsetX', (v) => { cfg.screenTextureOffsetX = v })
+  addRow(content, { id: 'sliderScreenTextureOffsetY', label: 'Texture Y Offset', type: 'slider', min: -1, max: 1, step: 0.01, value: cfg.screenTextureOffsetY })
+  wireSlider('sliderScreenTextureOffsetY', (v) => { cfg.screenTextureOffsetY = v })
   addRow(content, { id: 'sliderScreenTextureScaleX', label: 'Texture X Scale (x)', type: 'slider', min: 0.1, max: 5, step: 0.05, value: cfg.screenTextureScaleX })
   wireSlider('sliderScreenTextureScaleX', (v) => { cfg.screenTextureScaleX = v })
   addRow(content, { id: 'sliderScreenTextureScaleY', label: 'Texture Y Scale (x)', type: 'slider', min: 0.1, max: 5, step: 0.05, value: cfg.screenTextureScaleY })
