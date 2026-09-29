@@ -115,12 +115,12 @@
     "sliderScreenTextureRotation": 180,
     "sliderScreenTextureOffsetX": -0.02,
     "sliderScreenTextureOffsetY": -0.03,
-    "sliderScreenTextureScaleX": 1,
+    "sliderScreenTextureScaleX": 1.1,
     "sliderScreenTextureScaleY": 1,
     "sliderScreenEmissionIntensity": 1,
     "checkboxScreenMirrorAlternatingX": false,
     "checkboxScreenMirrorAlternatingY": false,
-    "checkboxScreenToScale": true,
+    "checkboxScreenToScale": false,
     "checkboxWristSplayResponsiveEnabled": false,
     "sliderWristSplayDefault": -25,
     "checkboxWristSplayReactiveEnabled": true,
@@ -183,9 +183,9 @@
   },
   "layout": {
     "left": 70,
-    "top": 317,
+    "top": 293,
     "width": 315,
-    "height": 311
+    "height": 76
   },
   "devPanelStyle": {
     "titleFontSize": 17,
