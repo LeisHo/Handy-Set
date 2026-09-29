@@ -109,7 +109,7 @@
     "textPhoneResponsiveRotationRange": "{\"min\":-57,\"max\":45}",
     "textPhoneResponsiveRotationCurve": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"natural\"}",
     "checkboxScreenRenderEnabled": true,
-    "sliderScreenRecursionLevels": 5,
+    "sliderScreenRecursionLevels": 10,
     "sliderScreenRenderResolution": 100,
     "sliderScreenTextureScale": 0.1,
     "sliderScreenTextureRotation": 180,
@@ -185,7 +185,7 @@
     "left": 26,
     "top": 6,
     "width": 350,
-    "height": 197
+    "height": 76
   },
   "devPanelStyle": {
     "titleFontSize": 17,
