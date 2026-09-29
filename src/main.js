@@ -293,6 +293,12 @@ const cfg = {
   // the rendered texture, can exceed 1x since color multiplication isn't
   // clamped to the source texture's own captured brightness).
   screenEmissionIntensity: 1,
+  // Mirror Alternating X/Y -- direct request 2026-09-29, replacing a
+  // blind constant UV-mirror fix that a direct follow-up report
+  // confirmed didn't actually resolve it: "im still getting the issue
+  // o the render mirroring every other screen." See
+  // applyScreenTextureTransform()'s own comment for the parity logic.
+  screenMirrorAlternatingX: false, screenMirrorAlternatingY: false,
   // "To Scale" -- direct report: "whenever my actual browser size is
   // different from the model mesh size, the rendered image gets scaled
   // incorrectly." Root cause: the off-screen capture always renders
@@ -2696,12 +2702,28 @@ function setScreenRenderEnabled(enabled) {
 // flipped-of-a-flip = back to normal, level 3 flipped again, etc.
 // `-1 *` below cancels that single per-application mirror at its
 // source, which fixes every level uniformly rather than needing a
-// per-level correction. NOT independently verified against the real
-// mesh/device (this session's own standing limitation) -- if this
-// makes it worse instead of better, the mirror is evidently NOT the
-// cause and this line should be reverted (remove the `-1 *`) rather
-// than flipped to the Y axis on a 2nd guess.
-function applyScreenTextureTransform(texture) {
+// per-level correction.
+//
+// SUPERSEDED 2026-09-29, direct report: "im still getting the issue o
+// the render mirroring every other screen." The blind constant `-1 *`
+// above evidently did NOT fix it (this session's own standing
+// limitation -- never independently verified against the real
+// device/mesh, and this is now the 2nd report confirming it wasn't
+// enough). Rather than guess a 3rd theory cold (this project's own
+// documented failure pattern on this exact bug class -- see the Phone
+// Model mobile-rotation-axis saga elsewhere in this file for how badly
+// that goes when repeated), REPLACED with 2 direct user-facing
+// checkboxes (Mirror Alternating X/Y) so the user can toggle exactly
+// what's needed per model, instead of a hardcoded guess. Flips ONLY on
+// ODD-numbered passes (passIndex % 2 === 1) -- a flip applied
+// UNIFORMLY to every pass actually COMPOUNDS across recursion depth
+// (cancels on an even-numbered generation, mirrors on an odd one),
+// which is the more likely explanation for why the old constant `-1 *`
+// didn't resolve an ALTERNATING symptom: it wasn't parity-aware, so it
+// couldn't fix (or could even reproduce) an alternating pattern either
+// way. Registered per-model (PHONE_MODEL_PER_MODEL_CONTROL_IDS) since
+// this may genuinely vary by each model's own mesh/export.
+function applyScreenTextureTransform(texture, passIndex) {
   if (!texture) return
   let scaleX = cfg.screenTextureScaleX || 1
   let scaleY = cfg.screenTextureScaleY || 1
@@ -2713,8 +2735,11 @@ function applyScreenTextureTransform(texture) {
     scaleY = 1
   }
   const overall = cfg.screenTextureScale || 1
+  const alternateParity = typeof passIndex === 'number' && passIndex % 2 === 1
+  const mirrorX = (cfg.screenMirrorAlternatingX && alternateParity) ? -1 : 1
+  const mirrorY = (cfg.screenMirrorAlternatingY && alternateParity) ? -1 : 1
   texture.center.set(0.5, 0.5)
-  texture.repeat.set(-1 / (overall * scaleX), 1 / (overall * scaleY))
+  texture.repeat.set(mirrorX / (overall * scaleX), mirrorY / (overall * scaleY))
   texture.rotation = THREE.MathUtils.degToRad(cfg.screenTextureRotation || 0)
   texture.needsUpdate = true
 }
@@ -2729,7 +2754,7 @@ function renderVirtualScreen() {
       phoneScreenMeshes.forEach((mesh) => { mesh.visible = false })
     } else {
       phoneScreenRenderMaterial.map = targets[(i - 1) % 2].texture
-      applyScreenTextureTransform(phoneScreenRenderMaterial.map)
+      applyScreenTextureTransform(phoneScreenRenderMaterial.map, i)
       phoneScreenRenderMaterial.needsUpdate = true
       phoneScreenMeshes.forEach((mesh) => { mesh.visible = true; mesh.material = phoneScreenRenderMaterial })
     }
@@ -2737,7 +2762,7 @@ function renderVirtualScreen() {
     renderer.render(scene, camera)
   }
   phoneScreenRenderMaterial.map = targets[(levels - 1) % 2].texture
-  applyScreenTextureTransform(phoneScreenRenderMaterial.map)
+  applyScreenTextureTransform(phoneScreenRenderMaterial.map, levels - 1)
   phoneScreenRenderMaterial.needsUpdate = true
   phoneScreenMeshes.forEach((mesh) => { mesh.visible = true; mesh.material = phoneScreenRenderMaterial })
   renderer.setRenderTarget(null)
@@ -4631,6 +4656,7 @@ const PHONE_MODEL_PER_MODEL_CONTROL_IDS = [
   'sliderScreenTextureRotation', 'sliderScreenTextureScaleX',
   'sliderScreenTextureScaleY', 'checkboxScreenToScale',
   'sliderScreenEmissionIntensity',
+  'checkboxScreenMirrorAlternatingX', 'checkboxScreenMirrorAlternatingY',
 ]
 let phoneModelPerModelSettings = {} // { [modelFile]: { [controlId]: value } } -- persisted via hiddenPhoneModelPerModelSettings below
 
@@ -5049,6 +5075,16 @@ function renderRecursiveRenderGroup(content) {
   // MeshBasicMaterial, which has no emissive property at all).
   addRow(content, { id: 'sliderScreenEmissionIntensity', label: 'Screen Emission Intensity (x)', type: 'slider', min: 0, max: 5, step: 0.05, value: cfg.screenEmissionIntensity })
   wireSlider('sliderScreenEmissionIntensity', (v) => { cfg.screenEmissionIntensity = v })
+  // Mirror Alternating X/Y -- direct request: "provide me 2 checkboxes.
+  // If checked it will mirror alternating in the x axis, and another
+  // for the y axis." See applyScreenTextureTransform()'s own comment
+  // for the parity logic these actually drive.
+  addRow(content, { id: 'checkboxScreenMirrorAlternatingX', label: 'Mirror Alternating (X Axis)', type: 'checkbox' })
+  document.getElementById('checkboxScreenMirrorAlternatingX').checked = cfg.screenMirrorAlternatingX
+  wireCheckbox('checkboxScreenMirrorAlternatingX', (v) => { cfg.screenMirrorAlternatingX = v })
+  addRow(content, { id: 'checkboxScreenMirrorAlternatingY', label: 'Mirror Alternating (Y Axis)', type: 'checkbox' })
+  document.getElementById('checkboxScreenMirrorAlternatingY').checked = cfg.screenMirrorAlternatingY
+  wireCheckbox('checkboxScreenMirrorAlternatingY', (v) => { cfg.screenMirrorAlternatingY = v })
   // "To Scale" -- direct report: "whenever my actual browser size is
   // different from the model mesh size, the rendered image gets scaled
   // incorrectly." Locks the X/Y Scale sliders (setSliderLocked(), same
