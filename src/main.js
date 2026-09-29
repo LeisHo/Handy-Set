@@ -2097,6 +2097,7 @@ let phoneScreenOriginalMaterials = [] // each mesh's own real glTF material -- r
 let phoneScreenUvCenter = { x: 0.5, y: 0.5 } // real UV midpoint of phoneScreenMeshes[0], recomputed on every model load -- see loadPhoneModel()'s own comment
 let phoneScreenUvAspect = 1 // real UV width/height of phoneScreenMeshes[0]'s own screen area, recomputed on every model load -- see applyScreenTextureTransform()'s "To Scale" comment
 let phoneScreenRenderMaterial = null // shared unlit MeshBasicMaterial driving the screen while Screen Render is on; only its .map is swapped per pass -- never disposed/recreated per model, so a model switch doesn't need to rebuild it
+let phoneScreenWhiteMaterial = null // shared plain white MeshBasicMaterial, no .map -- shown ONLY on the deepest recursion pass (pass 0, the recursion floor), which has no captured image yet -- see renderVirtualScreen()'s own comment
 let screenRenderTargets = null // [RT_A, RT_B], created once and reused -- ping-ponged across up to 10 recursion passes per frame (see renderVirtualScreen())
 
 let phoneResponsiveRotationRangeParsed = { min: 0, max: 30 }
@@ -2469,9 +2470,14 @@ function disposePhoneModelRaw() {
   // render target's texture, not a real glTF asset, and disposing it
   // would break the render target for every model loaded afterward.
   // Swap each mesh back to its own real original material first so only
-  // that gets disposed, same as every other mesh.
+  // that gets disposed, same as every other mesh. Also checks
+  // phoneScreenWhiteMaterial (added 2026-09-29, the recursion-floor
+  // placeholder) for the same reason -- it has no .map to break, but
+  // disposing the shared material OBJECT itself would leave the next
+  // model reusing an already-disposed material, since the variable
+  // holding it is never nulled out on disposal.
   phoneScreenMeshes.forEach((mesh, i) => {
-    if (mesh.material === phoneScreenRenderMaterial) mesh.material = phoneScreenOriginalMaterials[i]
+    if (mesh.material === phoneScreenRenderMaterial || mesh.material === phoneScreenWhiteMaterial) mesh.material = phoneScreenOriginalMaterials[i]
   })
   phoneModelWrapper.remove(phoneModelRaw)
   phoneModelRaw.traverse((obj) => {
@@ -2910,10 +2916,21 @@ function renderVirtualScreen() {
   const targets = ensureScreenRenderTargets()
   const levels = THREE.MathUtils.clamp(Math.round(cfg.screenRecursionLevels || 1), 1, 10)
   if (!phoneScreenRenderMaterial) phoneScreenRenderMaterial = new THREE.MeshBasicMaterial()
+  if (!phoneScreenWhiteMaterial) phoneScreenWhiteMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff })
   phoneScreenRenderMaterial.color.setScalar(cfg.screenEmissionIntensity ?? 1)
   for (let i = 0; i < levels; i++) {
     if (i === 0) {
-      phoneScreenMeshes.forEach((mesh) => { mesh.visible = false })
+      // CORRECTED 2026-09-29, direct report: "for the last screen face
+      // which will not have a rendered image, default the material to
+      // white. It is currently showing up as invisible when no render
+      // is applied." Pass 0 is the recursion floor -- it's captured
+      // with nothing on the phone screen yet, since there's no prior
+      // pass's texture to show. Hiding the mesh entirely (the old
+      // behavior) left the deepest nested screen looking like a hole;
+      // showing it with a plain white material instead reads as a
+      // blank/lit screen, matching what an OFF or not-yet-rendered
+      // real phone screen actually looks like.
+      phoneScreenMeshes.forEach((mesh) => { mesh.visible = true; mesh.material = phoneScreenWhiteMaterial })
     } else {
       phoneScreenRenderMaterial.map = targets[(i - 1) % 2].texture
       // REWRITTEN 2026-09-29 -- superseding an earlier passIndex-based
@@ -3672,6 +3689,7 @@ window.__debug = {
   get handLengthRaw() { return handLengthRaw }, get handCenterLocal() { return handCenterLocal },
   get phoneModelRaw() { return phoneModelRaw }, get phoneModelWrapper() { return phoneModelWrapper },
   get phoneScreenMeshes() { return phoneScreenMeshes }, get screenRenderTargets() { return screenRenderTargets },
+  get phoneScreenUvAspect() { return phoneScreenUvAspect }, get phoneScreenUvCenter() { return phoneScreenUvCenter },
   get sceneObjectEntries() { return sceneObjectEntries },
   get tiltMagnitude() { return tiltMagnitude }, get tiltAngle() { return tiltAngle },
   get phoneGyroQuat() { return phoneGyroQuat }, get lastInputSource() { return lastInputSource },

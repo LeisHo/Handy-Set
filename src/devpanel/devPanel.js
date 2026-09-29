@@ -4254,7 +4254,25 @@
                     const minLabelEl = document.querySelector('.dev-slider-bound-editable[data-slider-id="' + slider.id + '"][data-bound="min"]');
                     if (minLabelEl) minLabelEl.textContent = slider.min;
                 }
+                // FIXED 2026-09-29 -- a plain `slider.value = val` was
+                // silently rounding the typed value to the nearest
+                // multiple of the slider's own `step` (e.g. can't type
+                // 0.001 into a step=0.05 slider and have it stick) --
+                // an HTML5 range input's own "value sanitization
+                // algorithm" snaps to the nearest step-aligned value on
+                // EVERY assignment, not just user drag, unless step is
+                // 'any'. Direct report: "make sure you dont cap the
+                // selectable value by rounding it. I currently cant set
+                // scale to 0.001 uits." Toggling step to 'any' only for
+                // this one assignment preserves the slider's normal drag
+                // granularity afterward (the sanitization only runs at
+                // assignment time, not continuously, so restoring the
+                // real step immediately after doesn't re-snap the value
+                // that was just set).
+                const realStep = slider.step;
+                slider.step = 'any';
                 slider.value = val;
+                slider.step = realStep;
                 // Remove the temporary <input> BEFORE dispatching -
                 // otherwise the value-readout update your own 'input'
                 // listener does (if any) can't repaint this span, since
