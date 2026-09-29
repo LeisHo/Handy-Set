@@ -1,15 +1,15 @@
 {
   "controls": {
-    "checkboxHandModelEnabled": false,
+    "checkboxHandModelEnabled": true,
     "sliderFieldRows": 1,
     "sliderFieldCols": 1,
     "sliderRowSpacing": 9.5,
     "sliderColumnSpacing": 14,
-    "sliderHandScale": 1.55,
+    "sliderHandScale": 1,
     "sliderAlternateRowOffset": -5.5,
     "sliderProgressiveRowOffset": 0,
     "checkboxUseProgressiveOffset": false,
-    "checkboxHideHands": true,
+    "checkboxHideHands": false,
     "slidermodelRotX": 90,
     "slidermodelRotY": 0,
     "slidermodelRotZ": 0,
@@ -177,8 +177,8 @@
   "layout": {
     "left": 35,
     "top": 108,
-    "width": 524,
-    "height": 598
+    "width": 350,
+    "height": 76
   },
   "devPanelStyle": {
     "titleFontSize": 17,
@@ -8227,14 +8227,14 @@
   },
   "sectionCollapseState": {
     "desktop:Saved Dev Settings": false,
-    "desktop:PHONE MODEL": false,
+    "desktop:PHONE MODEL": true,
     "desktop:OFFSET": true,
     "desktop:PHONE ROTATION": true,
     "desktop:RESPONSIVE BEHAVIOUR - PHONE": true,
     "desktop:Responsive Rotation": false,
     "desktop:RECURSIVE RENDER": false,
     "desktop:HAND MODEL": false,
-    "desktop:Field Layout": true,
+    "desktop:Field Layout": false,
     "desktop:Pose": false,
     "desktop:ROTATION": true,
     "desktop:Whole-Hand Rotation at Base": true,
