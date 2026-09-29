@@ -2779,25 +2779,32 @@ function applyScreenTextureTransform(texture, passIndex) {
   texture.repeat.set(mirrorX / (overall * scaleX), mirrorY / (overall * scaleY))
   texture.rotation = THREE.MathUtils.degToRad(cfg.screenTextureRotation || 0)
   texture.offset.set(cfg.screenTextureOffsetX || 0, cfg.screenTextureOffsetY || 0)
-  texture.needsUpdate = true
-  // updateMatrix() added 2026-09-29, direct report on Pixel 9A with
-  // Mirror X checked: "The 1st render is good, 2nd is good 3rd is
-  // wrong, then alternating wrong." renderVirtualScreen() calls
-  // renderer.render() MULTIPLE TIMES in a single animation frame,
-  // reusing only 2 actual THREE.Texture objects (ensureScreenRenderTargets()'s
-  // ping-pong pair) across every pass -- this function mutates
-  // whichever one is currently assigned as `texture`, then relies on
-  // THREE.Texture's default matrixAutoUpdate to recompute .matrix (the
-  // actual uniform the shader samples with) before the next render.
-  // That recomputation is normally lazy/renderer-driven, and this
-  // project has already hit texture/render-target caching surprises
-  // once this session (the WebGL-canvas-readback gotcha elsewhere in
-  // this file) -- calling updateMatrix() here forces the repeat/
-  // offset/rotation/center values just set above to be baked into
-  // .matrix SYNCHRONOUSLY, before renderer.render() runs for this
-  // exact pass, removing any dependency on the renderer's own internal
-  // per-frame caching/update timing for a texture object that's reused
-  // several times within one frame.
+  // CORRECTED 2026-09-29 (2nd round), direct report "it didint work"
+  // after the updateMatrix() fix (kept below) shipped and was tested
+  // live. Live console instrumentation on Pixel 9A (8 levels, Mirror X
+  // on) PROVED the JS-side parity/mirror computation is mathematically
+  // correct -1,1,-1,1,-1,1,-1,-1 on every single pass, every frame,
+  // consistently -- ruling out the formula and this function's own
+  // math entirely. The remaining explanation is a well-known three.js
+  // pitfall: `texture.needsUpdate = true` (removed here) and
+  // `material.needsUpdate = true` (removed in renderVirtualScreen()
+  // below) both signal "this needs a full shader/texture
+  // upload PIPELINE refresh", not "just re-read my current uniform
+  // values" -- routine, since a changed `.map` reference or `.matrix`
+  // is already picked up automatically by three.js's own per-draw-call
+  // uniform sync, with NO flag needed. Forcing `needsUpdate` on EVERY
+  // one of up to 10 passes, MULTIPLE TIMES PER FRAME, asks for a much
+  // heavier recompile/re-upload cycle than the situation calls for --
+  // in some browsers shader program compilation can be deferred/
+  // pipelined by the driver, so a backlog of unnecessary recompile
+  // requests queuing up within one frame is a plausible, well-
+  // supported explanation for "the first couple of passes look right,
+  // then it gets stuck wrong" (early requests complete in time, later
+  // ones in the same frame don't catch up before the frame is
+  // displayed). texture.updateMatrix() (kept below) is still correct
+  // and harmless -- it's what actually keeps `.matrix` synchronous;
+  // the bug was specifically the 2 `needsUpdate` flags requesting far
+  // more work than a routine per-pass texture/uniform change needs.
   texture.updateMatrix()
 }
 function renderVirtualScreen() {
@@ -2812,7 +2819,6 @@ function renderVirtualScreen() {
     } else {
       phoneScreenRenderMaterial.map = targets[(i - 1) % 2].texture
       applyScreenTextureTransform(phoneScreenRenderMaterial.map, i)
-      phoneScreenRenderMaterial.needsUpdate = true
       phoneScreenMeshes.forEach((mesh) => { mesh.visible = true; mesh.material = phoneScreenRenderMaterial })
     }
     renderer.setRenderTarget(targets[i % 2])
@@ -2820,7 +2826,6 @@ function renderVirtualScreen() {
   }
   phoneScreenRenderMaterial.map = targets[(levels - 1) % 2].texture
   applyScreenTextureTransform(phoneScreenRenderMaterial.map, levels - 1)
-  phoneScreenRenderMaterial.needsUpdate = true
   phoneScreenMeshes.forEach((mesh) => { mesh.visible = true; mesh.material = phoneScreenRenderMaterial })
   renderer.setRenderTarget(null)
 }
