@@ -1,12 +1,12 @@
 {
   "models": [
-    { "file": "P5_Project_1.glb", "name": "P5 Project 1", "scale": 0.0834 },
+    { "file": "P5_Project_1.glb", "name": "P5 Project 1" },
     { "file": "Pixel 9A.glb", "name": "Pixel 9A" },
     { "file": "Iphone17MaxPro.glb", "name": "iPhone 17 Max Pro" },
     { "file": "Galaxy S2.glb", "name": "Galaxy S2" },
     { "file": "Motorola Razr.glb", "name": "Motorola Razr" },
     { "file": "Nothing2.glb", "name": "Nothing2" },
-    { "file": "Samsung Galaxy S26.glb", "name": "Samsung Galaxy S26", "scale": 0.0316 },
+    { "file": "Samsung Galaxy S26.glb", "name": "Samsung Galaxy S26" },
     { "file": "iPhone 17 Max.glb", "name": "iPhone 17 Max" }
   ]
 }

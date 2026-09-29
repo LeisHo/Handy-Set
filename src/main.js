@@ -188,12 +188,25 @@ const cfg = {
   // the Responsive Rotation section below for the full design).
   phoneModelEnabled: false,
   phoneModelFile: '',
-  // Default/range corrected 2026-09-27 after the user re-exported all 3
-  // models at a much smaller native scale (~0.07-0.16 world units at
-  // scale=1, vs the hand's own ~115x80x35) -- the old 1/max-5 default
-  // rendered as an invisible speck, and the old slider max (5) couldn't
-  // reach a visible size at all without the click-to-type escape hatch.
-  phoneModelScale: 300,
+  // CORRECTED 2026-09-29 (3rd pass, same day) -- after 2 earlier
+  // attempts at an automatic per-model/scale-to-hand-length correction
+  // (both reverted: "I don't want you to override my personal
+  // settings"), then a plain default of 100 ("The hand is probably in
+  // meters. So just scale up all my phones by 100, but set that as
+  // default") -- the user then also asked for the slider's own range
+  // to be a small 0.5-5, which can't display a default of 100 without
+  // clamping. Final resolution, direct: "I wanted you to scale it up
+  // to 100 but on the sliders that will read as one... 100 is one
+  // now." PHONE_MODEL_SCALE_BASE (100, a plain constant, defined near
+  // applyPhoneModelTransform()) is now ALWAYS multiplied in -- uniform
+  // for every model, no per-model/automatic adjustment, matching the
+  // "don't override my personal settings" instruction just as much as
+  // the flat 100 did. cfg.phoneModelScale itself goes back to being a
+  // small FINE-TUNE multiplier on top of that base (0.5-5 slider
+  // range, default 1 = the 100 baseline, unchanged from what "set that
+  // as default" established) -- so slider=1 means actual scale=100,
+  // slider=5 means actual scale=500, etc.
+  phoneModelScale: 1,
   phoneModelOffsetX: 0, phoneModelOffsetY: 0, phoneModelOffsetZ: 0,
   phoneModelRotX: 0, phoneModelRotY: 0, phoneModelRotZ: 0,
   // Responsive Behaviour - Phone > Responsive Rotation -- same 4-control
@@ -1961,34 +1974,29 @@ function renderObjectAxesPicker() {
 const PHONE_MODEL_DIR = 'data/processed/SMARTPHONE MODELS'
 const PHONE_MODEL_MANIFEST_ENDPOINT = '/api/upload-phone-model'
 let PHONE_MODEL_OPTIONS = [
-  { value: 'data/processed/SMARTPHONE MODELS/P5_Project_1.glb', text: 'P5 Project 1', scale: 0.0834 },
-  { value: 'data/processed/SMARTPHONE MODELS/Pixel 9A.glb', text: 'Pixel 9A', scale: 1 },
-  { value: 'data/processed/SMARTPHONE MODELS/Iphone17MaxPro.glb', text: 'iPhone 17 Max Pro', scale: 1 }
-] // hardcoded fallback, used only if BOTH the live manifest fetch (GitHub, via the API endpoint) AND the static same-origin manifest.json fail (e.g. fully offline) -- P5's own scale correction kept in sync with manifest.json's own value so even the offline fallback doesn't render it 13x oversized
-// `scale` -- direct report 2026-09-29: "i cant see the phone model right
-// now" -- root-caused by directly parsing all 8 GLBs' raw JSON and
-// walking their own scene graphs to compute each one's TRUE world-space
-// bounding box (full matrix accumulation, not just a root node's own
-// scale in isolation -- a naive first pass at this exact measurement was
-// wrong for models with multiple root nodes). 6 of 8 models cluster
-// tightly (maxDim ~0.06-0.23, confirming the user's own belief that
-// their models ARE consistently scaled); P5 Project 1 (maxDim 2.0) and
-// Samsung Galaxy S26 (maxDim 5.27) are real, measured outliers -- ~13x
-// and ~30x larger respectively, most likely from whatever re-export/
-// decimation step produced them. cfg.phoneModelScale is ONE global
-// value shared by every model, tuned for the consistent cluster, so
-// these 2 render enormous (P5 alone: 2.0 * 300 = 600 world units, vs
-// the hand's own ~115-unit scale) -- not a missing/broken model, just
-// wildly oversized and likely positioned such that the camera ends up
-// effectively inside it. This per-model multiplier (manifest.json's own
-// optional `scale` field, defaults to 1 when absent -- including for
-// every imported model, which has no measured data) is applied ON TOP
-// of cfg.phoneModelScale in applyPhoneModelTransform(), correcting only
-// the 2 outliers without touching the 6 already-consistent models.
+  { value: 'data/processed/SMARTPHONE MODELS/P5_Project_1.glb', text: 'P5 Project 1' },
+  { value: 'data/processed/SMARTPHONE MODELS/Pixel 9A.glb', text: 'Pixel 9A' },
+  { value: 'data/processed/SMARTPHONE MODELS/Iphone17MaxPro.glb', text: 'iPhone 17 Max Pro' }
+] // hardcoded fallback, used only if BOTH the live manifest fetch (GitHub, via the API endpoint) AND the static same-origin manifest.json fail (e.g. fully offline)
+// REMOVED 2026-09-29 -- a per-model `scale` field (manifest.json) plus
+// an automatic scale-to-hand-length computation were both tried here
+// the same day, in response to real reports that models were
+// invisible/oversized. Direct correction from the user: "No, I don't
+// want you to override my personal settings, but make by default
+// scale to one and placed at world origin." Any per-model or automatic
+// scale adjustment silently changes what a given cfg.phoneModelScale
+// slider value actually renders as, which is exactly the kind of
+// "override" that direct instruction rules out -- cfg.phoneModelScale
+// is now the ONLY thing controlling scale, uniformly, for every model
+// (see its own cfg declaration comment for the new default). If a
+// future report says a specific model is oversized/undersized again,
+// that's the user's own call to make via that one slider (or their own
+// Blender export), not something this file should compensate for
+// automatically behind the scenes.
 function manifestModelsToOptions(models) {
   return (Array.isArray(models) ? models : [])
     .filter((m) => m && typeof m.file === 'string')
-    .map((m) => ({ value: PHONE_MODEL_DIR + '/' + m.file, text: m.name || m.file, scale: typeof m.scale === 'number' ? m.scale : 1 }))
+    .map((m) => ({ value: PHONE_MODEL_DIR + '/' + m.file, text: m.name || m.file }))
 }
 // Tries the LIVE manifest first (GitHub Contents API via our own
 // endpoint -- reflects an import from moments ago, same reasoning
@@ -2018,7 +2026,6 @@ async function loadPhoneModelManifest() {
   } catch (e) { /* keep the hardcoded fallback */ }
 }
 let phoneModelWrapper = null // THREE.Group at world origin + Offset sliders, added to `scene`
-let currentPhoneModelScaleMultiplier = 1 // the currently-selected model's own PHONE_MODEL_OPTIONS.scale, set by loadPhoneModel() -- see that field's own declaration comment
 let phoneModelRaw = null // the loaded gltf.scene, child of phoneModelWrapper -- rotation/scale/pivot-compensated position
 let phoneModelLoadToken = 0 // guards a stale async load callback from applying after a newer selection superseded it
 // Virtual Screen (render-to-texture onto the phone's own 'Screen Face'
@@ -2368,11 +2375,20 @@ function resetPhoneModelRotationBaseline() {
 // wrapper, so Object Axes' gizmo lines keep a fixed visual size
 // regardless of Phone Model Scale (the same reason Finger Gizmos don't
 // scale with the hand).
+// A plain, ALWAYS-applied constant -- direct instruction 2026-09-29:
+// "The hand is probably in meters. So just scale up all my phones by
+// 100, but set that as default... on the sliders that will read as
+// one... 100 is one now." Uniform for every model (no per-model/
+// automatic adjustment, matching the user's own "don't override my
+// personal settings" instruction from earlier the same round) --
+// cfg.phoneModelScale is the small, user-facing fine-tune multiplier
+// on top of this fixed base (0.5-5 slider range, default 1).
+const PHONE_MODEL_SCALE_BASE = 100
 function applyPhoneModelTransform() {
   if (!phoneModelRaw || !phoneModelWrapper) return
   phoneModelWrapper.position.set(cfg.phoneModelOffsetX, cfg.phoneModelOffsetY, cfg.phoneModelOffsetZ)
   phoneModelWrapper.quaternion.slerp(computePhoneCombinedQuat(), cfg.phoneRotationDamping)
-  phoneModelRaw.scale.setScalar(cfg.phoneModelScale * currentPhoneModelScaleMultiplier)
+  phoneModelRaw.scale.setScalar(PHONE_MODEL_SCALE_BASE * cfg.phoneModelScale)
   phoneModelRaw.quaternion.identity()
   phoneModelRaw.position.set(0, 0, 0)
 }
@@ -2466,13 +2482,6 @@ function loadPhoneModel(relativePath) {
   if (!relativePath) return
   const token = ++phoneModelLoadToken
   ensurePhoneModelWrapper()
-  // Looked up by VALUE, not passed as a separate argument -- every
-  // existing call site already only passes the path, and this keeps it
-  // that way. An imported model (a blob: URL, not in PHONE_MODEL_OPTIONS
-  // by the time this runs) falls back to 1 -- no measured data exists
-  // for it yet.
-  const matchedOption = PHONE_MODEL_OPTIONS.find((o) => o.value === relativePath)
-  currentPhoneModelScaleMultiplier = (matchedOption && typeof matchedOption.scale === 'number') ? matchedOption.scale : 1
   new GLTFLoader().load(encodeURI(relativePath), (gltf) => {
     if (token !== phoneModelLoadToken) return // superseded by a newer selection/reload before this one finished
     disposePhoneModelRaw()
@@ -4508,12 +4517,43 @@ function renderPhoneModelItemSelector(parentContent) {
   container.appendChild(listEl)
 
   if (!cfg.phoneModelFile && PHONE_MODEL_OPTIONS.length) cfg.phoneModelFile = PHONE_MODEL_OPTIONS[0].value
+  // Hidden, Sync-participating control for the CURRENT selection --
+  // found missing 2026-09-29 while investigating "it isn't working
+  // like before": the Item Selector's own rows are plain clickable
+  // <div>s, never registered with devPanel.js's generic capture/
+  // restore pipeline the way the old <select> automatically was (every
+  // addRow() call auto-registers into HANDYSET_CONTROLS) -- confirmed
+  // live via the real git-tracked settings file, which had
+  // `selectPhoneModelFile: null` even after real Sync round-trips,
+  // meaning the selected model was NEVER actually persisted and every
+  // fresh load silently fell back to PHONE_MODEL_OPTIONS[0]. This
+  // hidden text row rides the exact same generic pipeline every other
+  // custom widget in this file uses for the same reason (see the
+  // curve/range fields' own "MIGRATED"/20th-CHANGELOG-entry history).
+  const hiddenRow = addRow(container, { id: 'hiddenPhoneModelFile', label: 'Model File (internal)', type: 'text', inputType: 'text', value: cfg.phoneModelFile, skipDeviceCheckbox: true })
+  hiddenRow.style.display = 'none'
+  const hiddenInput = document.getElementById('hiddenPhoneModelFile')
+  let lastSeenPhoneModelFile = hiddenInput.value
+  // Fires on BOTH a user-driven change (the row click handler below
+  // also sets .value directly) and an EXTERNAL restore (Reset/Undo/a
+  // Sync-load, which devPanel.js applies by setting .value then
+  // dispatching a real 'input' event) -- covers both without needing 2
+  // separate code paths.
+  hiddenInput.addEventListener('input', () => {
+    if (hiddenInput.value === lastSeenPhoneModelFile) return
+    lastSeenPhoneModelFile = hiddenInput.value
+    cfg.phoneModelFile = hiddenInput.value
+    if (cfg.phoneModelEnabled) loadPhoneModel(cfg.phoneModelFile)
+    renderPhoneModelItemSelector()
+  })
   PHONE_MODEL_OPTIONS.forEach((opt) => {
     const row = document.createElement('div')
     row.className = 'dp-list-picker-item' + (opt.value === cfg.phoneModelFile ? ' dp-list-picker-item-selected' : '')
     row.textContent = opt.text
     row.addEventListener('click', () => {
       cfg.phoneModelFile = opt.value
+      lastSeenPhoneModelFile = opt.value
+      hiddenInput.value = opt.value
       if (cfg.phoneModelEnabled) loadPhoneModel(opt.value)
       renderPhoneModelItemSelector()
     })
@@ -4622,7 +4662,7 @@ function renderPhoneModelGroup(content) {
   // importPhoneModelFile() below.
   renderPhoneModelItemSelector(content)
 
-  addRow(content, { id: 'sliderPhoneModelScale', label: 'Model Scale (x)', type: 'slider', min: 0.01, max: 2000, step: 1, value: cfg.phoneModelScale })
+  addRow(content, { id: 'sliderPhoneModelScale', label: 'Model Scale (x100)', type: 'slider', min: 0.5, max: 5, step: 0.05, value: cfg.phoneModelScale })
   wireSlider('sliderPhoneModelScale', (v) => { cfg.phoneModelScale = v; applyPhoneModelTransform() })
 
   const subOffset = addSubgroup(content, 'OFFSET')
@@ -5201,7 +5241,7 @@ function renderHandysetDevGroups() {
   wireSlider('sliderRowSpacing', (v) => { cfg.rowSpacing = v; relayoutField() })
   addRow(fieldContent, { id: 'sliderColumnSpacing', label: 'Column Spacing (World Units)', type: 'slider', min: 2, max: 40, step: 0.5, value: cfg.columnSpacing })
   wireSlider('sliderColumnSpacing', (v) => { cfg.columnSpacing = v; relayoutField() })
-  addRow(fieldContent, { id: 'sliderHandScale', label: 'Hand Scale (x)', type: 'slider', min: 0.1, max: 3, step: 0.05, value: cfg.handScale })
+  addRow(fieldContent, { id: 'sliderHandScale', label: 'Hand Scale (x)', type: 'slider', min: 0.5, max: 5, step: 0.05, value: cfg.handScale })
   wireSlider('sliderHandScale', (v) => { cfg.handScale = v; relayoutField(); applyPoseValuesToHand(cfg) })
   addRow(fieldContent, { id: 'sliderAlternateRowOffset', label: 'Alternate Row Offset (World Units)', type: 'slider', min: -20, max: 20, step: 0.5, value: cfg.alternateRowOffset })
   wireSlider('sliderAlternateRowOffset', (v) => { cfg.alternateRowOffset = v; relayoutField() })
