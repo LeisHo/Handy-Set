@@ -96,7 +96,7 @@
     "sliderPhoneModelRotX": 0,
     "sliderPhoneModelRotY": 0,
     "sliderPhoneModelRotZ": 0,
-    "checkboxPhoneResponsiveRotationEnabled": true,
+    "checkboxPhoneResponsiveRotationEnabled": false,
     "checkboxPhoneRotationResetEnabled": false,
     "checkboxPhoneAxisXEnabled": true,
     "sliderPhoneRotationScaleX": -1,
@@ -113,10 +113,12 @@
     "sliderScreenRenderResolution": 100,
     "sliderScreenTextureScale": 1,
     "sliderScreenTextureRotation": 0,
+    "sliderScreenTextureOffsetX": 0.02,
+    "sliderScreenTextureOffsetY": 0,
     "sliderScreenTextureScaleX": 2.35,
     "sliderScreenTextureScaleY": 1,
     "sliderScreenEmissionIntensity": 0.95,
-    "checkboxScreenMirrorAlternatingX": false,
+    "checkboxScreenMirrorAlternatingX": true,
     "checkboxScreenMirrorAlternatingY": false,
     "checkboxScreenToScale": false,
     "checkboxWristSplayResponsiveEnabled": false,
@@ -582,6 +584,14 @@
                 {
                   "type": "row",
                   "key": "checkboxScreenMirrorAlternatingY"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderScreenTextureOffsetX"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderScreenTextureOffsetY"
                 }
               ],
               "rowKeys": [
@@ -594,7 +604,9 @@
                 "checkboxScreenToScale",
                 "sliderScreenEmissionIntensity",
                 "checkboxScreenMirrorAlternatingX",
-                "checkboxScreenMirrorAlternatingY"
+                "checkboxScreenMirrorAlternatingY",
+                "sliderScreenTextureOffsetX",
+                "sliderScreenTextureOffsetY"
               ],
               "subgroups": []
             }
@@ -840,6 +852,14 @@
               {
                 "type": "row",
                 "key": "checkboxScreenMirrorAlternatingY"
+              },
+              {
+                "type": "row",
+                "key": "sliderScreenTextureOffsetX"
+              },
+              {
+                "type": "row",
+                "key": "sliderScreenTextureOffsetY"
               }
             ],
             "rowKeys": [
@@ -852,7 +872,9 @@
               "checkboxScreenToScale",
               "sliderScreenEmissionIntensity",
               "checkboxScreenMirrorAlternatingX",
-              "checkboxScreenMirrorAlternatingY"
+              "checkboxScreenMirrorAlternatingY",
+              "sliderScreenTextureOffsetX",
+              "sliderScreenTextureOffsetY"
             ],
             "subgroups": []
           }
@@ -8265,8 +8287,8 @@
     "desktop:PHONE MODEL": false,
     "desktop:OFFSET": true,
     "desktop:PHONE ROTATION": true,
-    "desktop:RESPONSIVE BEHAVIOUR - PHONE": true,
-    "desktop:Responsive Rotation": true,
+    "desktop:RESPONSIVE BEHAVIOUR - PHONE": false,
+    "desktop:Responsive Rotation": false,
     "desktop:RECURSIVE RENDER": false,
     "desktop:HAND MODEL": true,
     "desktop:Field Layout": true,
