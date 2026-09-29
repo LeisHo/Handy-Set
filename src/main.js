@@ -2563,6 +2563,26 @@ function loadPhoneModel(relativePath) {
     phoneModelWrapper.add(phoneModelRaw)
     phoneScreenMeshes = findPhoneScreenMeshes(phoneModelRaw)
     phoneScreenOriginalMaterials = phoneScreenMeshes.map((m) => m.material)
+    // frustumCulled = false -- direct report 2026-09-29: "iphone max
+    // pro 3d model screen is invisible. im lookin through it. its not
+    // a rotaiton issue." Confirmed live: setting frustumCulled=false on
+    // the mesh made the screen render immediately. Same bug class
+    // already fixed for the hand's own SkinnedMesh elsewhere in this
+    // file -- three.js's default frustum check uses a bounding sphere
+    // computed once from the mesh's own raw LOCAL geometry, which
+    // doesn't account for the whole model's Offset/Scale/Rotation
+    // transforms (phoneModelWrapper/phoneModelRaw) shifting it far
+    // from where that local-space sphere assumes it sits in world
+    // space -- three.js then incorrectly concludes the mesh is outside
+    // the camera frustum and skips rendering it entirely, which reads
+    // exactly as "looking through it" (nothing drawn there at all, so
+    // whatever's behind shows through). Applies to every model, not
+    // just iPhone 17 Max Pro -- this mesh's own local geometry/pivot
+    // is what determines whether the bug is visible for a given
+    // Scale/Offset combination, so a model that happens to look fine
+    // today isn't guaranteed to stay that way if its own transform
+    // values change.
+    phoneScreenMeshes.forEach((m) => { m.frustumCulled = false })
     if (!phoneScreenMeshes.length) console.warn(ts() + ' Phone model has no "Screen Face" mesh -- Virtual Screen render will have no effect:', relativePath)
     applyPhoneModelTransform()
   }, undefined, (err) => { console.error(ts() + ' Phone model failed to load:', relativePath, err) })
