@@ -87,7 +87,8 @@
     "selectPoseTweenTargetPoseName": "Big Open Palm",
     "textPoseTweenCurve": "{\"points\": [{\"x\": 0, \"y\": 0}, {\"x\": 1, \"y\": 1}], \"method\": \"catmullrom\"}",
     "checkboxPhoneModelEnabled": true,
-    "hiddenPhoneModelFile": "data/processed/SMARTPHONE MODELS/P5_Project_1.glb",
+    "hiddenPhoneModelFile": "data/processed/SMARTPHONE MODELS/Nothing2.glb",
+    "hiddenPhoneModelPerModelSettings": "{\"data/processed/SMARTPHONE MODELS/P5_Project_1.glb\":{\"sliderPhoneModelScale\":\"1\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"0\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":false,\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"-1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"1\",\"textPhoneResponsiveRotationRange\":\"{\\\"min\\\":-57,\\\"max\\\":45}\",\"textPhoneResponsiveRotationCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"natural\\\"}\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"10\",\"sliderScreenRenderResolution\":\"200\",\"sliderScreenTextureScale\":\"1.6\",\"sliderScreenTextureRotation\":\"-9\",\"sliderScreenTextureScaleX\":\"1\",\"sliderScreenTextureScaleY\":\"1\",\"checkboxScreenToScale\":false,\"sliderScreenEmissionIntensity\":\"1\"}}",
     "sliderPhoneModelScale": 1,
     "sliderPhoneModelOffsetX": 0,
     "sliderPhoneModelOffsetY": 31,
@@ -109,11 +110,12 @@
     "textPhoneResponsiveRotationCurve": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"natural\"}",
     "checkboxScreenRenderEnabled": true,
     "sliderScreenRecursionLevels": 10,
-    "sliderScreenRenderResolution": 500,
+    "sliderScreenRenderResolution": 200,
     "sliderScreenTextureScale": 1.6,
     "sliderScreenTextureRotation": -9,
     "sliderScreenTextureScaleX": 1,
     "sliderScreenTextureScaleY": 1,
+    "sliderScreenEmissionIntensity": 1,
     "checkboxScreenToScale": false,
     "checkboxWristSplayResponsiveEnabled": false,
     "sliderWristSplayDefault": -25,
@@ -121,10 +123,10 @@
     "textWristSplayRange": "{\"min\":5,\"max\":-71}",
     "textWristSplayCurve": "{\"points\":[{\"x\":0,\"y\":1},{\"x\":0.31833343505859374,\"y\":0.6961458841959636},{\"x\":1,\"y\":0.042812347412109375}],\"method\":\"catmullrom\"}",
     "sliderCameraX": 0,
-    "sliderCameraY": 95.5,
+    "sliderCameraY": 102,
     "sliderCameraZ": 0,
     "sliderCameraFov": 15,
-    "sliderCameraZoom": 7.5,
+    "sliderCameraZoom": 14,
     "checkboxLockCameraPan": true,
     "checkboxLockCameraZoom": true,
     "checkboxLockCameraRotate": true,
@@ -178,7 +180,7 @@
   "layout": {
     "left": 35,
     "top": 108,
-    "width": 350,
+    "width": 257,
     "height": 486
   },
   "devPanelStyle": {
@@ -566,6 +568,10 @@
                 {
                   "type": "row",
                   "key": "checkboxScreenToScale"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderScreenEmissionIntensity"
                 }
               ],
               "rowKeys": [
@@ -575,7 +581,8 @@
                 "sliderScreenTextureRotation",
                 "sliderScreenTextureScaleX",
                 "sliderScreenTextureScaleY",
-                "checkboxScreenToScale"
+                "checkboxScreenToScale",
+                "sliderScreenEmissionIntensity"
               ],
               "subgroups": []
             }
@@ -809,6 +816,10 @@
               {
                 "type": "row",
                 "key": "checkboxScreenToScale"
+              },
+              {
+                "type": "row",
+                "key": "sliderScreenEmissionIntensity"
               }
             ],
             "rowKeys": [
@@ -818,7 +829,8 @@
               "sliderScreenTextureRotation",
               "sliderScreenTextureScaleX",
               "sliderScreenTextureScaleY",
-              "checkboxScreenToScale"
+              "checkboxScreenToScale",
+              "sliderScreenEmissionIntensity"
             ],
             "subgroups": []
           }
@@ -4828,6 +4840,15 @@
                 }
               ]
             }
+          },
+          {
+            "type": "group",
+            "section": {
+              "key": "mobile:RECURSIVE RENDER",
+              "items": [],
+              "rowKeys": [],
+              "subgroups": []
+            }
           }
         ],
         "rowKeys": [],
@@ -4890,6 +4911,12 @@
                 "subgroups": []
               }
             ]
+          },
+          {
+            "key": "mobile:RECURSIVE RENDER",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
           }
         ]
       },
@@ -6474,12 +6501,6 @@
         "items": [],
         "rowKeys": [],
         "subgroups": []
-      },
-      {
-        "key": "mobile:RECURSIVE RENDER",
-        "items": [],
-        "rowKeys": [],
-        "subgroups": []
       }
     ],
     "landscapeTabContent": [
@@ -6553,6 +6574,15 @@
                 }
               ]
             }
+          },
+          {
+            "type": "group",
+            "section": {
+              "key": "landscape:RECURSIVE RENDER",
+              "items": [],
+              "rowKeys": [],
+              "subgroups": []
+            }
           }
         ],
         "rowKeys": [],
@@ -6615,6 +6645,12 @@
                 "subgroups": []
               }
             ]
+          },
+          {
+            "key": "landscape:RECURSIVE RENDER",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
           }
         ]
       },
@@ -8199,12 +8235,6 @@
         "items": [],
         "rowKeys": [],
         "subgroups": []
-      },
-      {
-        "key": "landscape:RECURSIVE RENDER",
-        "items": [],
-        "rowKeys": [],
-        "subgroups": []
       }
     ]
   },
@@ -8267,6 +8297,7 @@
     "mobile:PHONE ROTATION": false,
     "mobile:RESPONSIVE BEHAVIOUR - PHONE": false,
     "mobile:Responsive Rotation": false,
+    "mobile:RECURSIVE RENDER": false,
     "mobile:HAND MODEL": false,
     "mobile:Field Layout": false,
     "mobile:Pose": true,
@@ -8313,12 +8344,12 @@
     "mobile:Toon Shading": false,
     "mobile:Saved Toon Shading": false,
     "mobile:Background": false,
-    "mobile:RECURSIVE RENDER": false,
     "landscape:PHONE MODEL": false,
     "landscape:OFFSET": false,
     "landscape:PHONE ROTATION": false,
     "landscape:RESPONSIVE BEHAVIOUR - PHONE": false,
     "landscape:Responsive Rotation": false,
+    "landscape:RECURSIVE RENDER": false,
     "landscape:HAND MODEL": false,
     "landscape:Field Layout": true,
     "landscape:Pose": true,
@@ -8364,8 +8395,7 @@
     "landscape:Saved Lighting": true,
     "landscape:Toon Shading": true,
     "landscape:Saved Toon Shading": true,
-    "landscape:Background": true,
-    "landscape:RECURSIVE RENDER": false
+    "landscape:Background": true
   },
   "devTextOverrides": {
     "sliderMobileDevPanelScrollStrength": null,
