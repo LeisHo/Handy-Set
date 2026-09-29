@@ -1950,17 +1950,53 @@ function renderObjectAxesPicker() {
 // human-readable relative path (so a Copy/Save dump of this setting stays
 // readable), not a pre-encoded one.
 // =======================================================================
-// Matches the real current contents of data/processed/SMARTPHONE
-// MODELS/ exactly -- corrected 2026-09-27 after the user added/removed
-// files directly in that folder (6 of the original 8 removed, 1 new
-// one added: Iphone17MaxPro.glb). Keep this list in sync whenever that
-// folder's own *.glb contents change; there is no directory-listing
-// mechanism, it has to be updated here by hand.
-const PHONE_MODEL_OPTIONS = [
+// CORRECTED 2026-09-29: this used to be a hardcoded const array, kept in
+// sync with data/processed/SMARTPHONE MODELS/'s real contents by hand
+// (a real, recurring maintenance burden -- see the git history for how
+// often it drifted). Now a mutable list populated at startup from
+// data/processed/SMARTPHONE MODELS/manifest.json (loadPhoneModelManifest()
+// below), with the Item Selector's own "Import GLB" feature able to add
+// to it live. `.value`/`.text` shape kept identical to the old array so
+// every existing PHONE_MODEL_OPTIONS-reading call site is unaffected.
+const PHONE_MODEL_DIR = 'data/processed/SMARTPHONE MODELS'
+const PHONE_MODEL_MANIFEST_ENDPOINT = '/api/upload-phone-model'
+let PHONE_MODEL_OPTIONS = [
   { value: 'data/processed/SMARTPHONE MODELS/P5_Project_1.glb', text: 'P5 Project 1' },
   { value: 'data/processed/SMARTPHONE MODELS/Pixel 9A.glb', text: 'Pixel 9A' },
   { value: 'data/processed/SMARTPHONE MODELS/Iphone17MaxPro.glb', text: 'iPhone 17 Max Pro' }
-]
+] // hardcoded fallback, used only if BOTH the live manifest fetch (GitHub, via the API endpoint) AND the static same-origin manifest.json fail (e.g. fully offline)
+function manifestModelsToOptions(models) {
+  return (Array.isArray(models) ? models : [])
+    .filter((m) => m && typeof m.file === 'string')
+    .map((m) => ({ value: PHONE_MODEL_DIR + '/' + m.file, text: m.name || m.file }))
+}
+// Tries the LIVE manifest first (GitHub Contents API via our own
+// endpoint -- reflects an import from moments ago, same reasoning
+// save-settings.js's own GET already documents for settings), then the
+// static same-origin file (whatever was live at the last Vercel
+// deploy), then gives up and keeps the hardcoded fallback above.
+// Re-renders the Item Selector's own list afterward if anything changed.
+async function loadPhoneModelManifest() {
+  try {
+    const resp = await fetch(PHONE_MODEL_MANIFEST_ENDPOINT, { cache: 'no-store' })
+    const body = await resp.json().catch(() => ({}))
+    if (resp.ok && body.ok === true && body.manifest && Array.isArray(body.manifest.models) && body.manifest.models.length) {
+      PHONE_MODEL_OPTIONS = manifestModelsToOptions(body.manifest.models)
+      renderPhoneModelItemSelector()
+      return
+    }
+  } catch (e) { /* fall through to the static file */ }
+  try {
+    const resp = await fetch(PHONE_MODEL_DIR + '/manifest.json', { cache: 'no-store' })
+    if (resp.ok) {
+      const manifest = await resp.json()
+      if (manifest && Array.isArray(manifest.models) && manifest.models.length) {
+        PHONE_MODEL_OPTIONS = manifestModelsToOptions(manifest.models)
+        renderPhoneModelItemSelector()
+      }
+    }
+  } catch (e) { /* keep the hardcoded fallback */ }
+}
 let phoneModelWrapper = null // THREE.Group at world origin + Offset sliders, added to `scene`
 let phoneModelRaw = null // the loaded gltf.scene, child of phoneModelWrapper -- rotation/scale/pivot-compensated position
 let phoneModelLoadToken = 0 // guards a stale async load callback from applying after a newer selection superseded it
@@ -4384,6 +4420,135 @@ function renderPhoneTiltGroup(content) {
   }
 }
 
+// Item Selector for PHONE MODEL's own model list -- direct request
+// 2026-09-29. Reuses the SAME .dp-list-picker/.dp-list-picker-item CSS
+// classes this file's own hand-built preset pickers (Saved Poses/
+// Cameras/Lighting/Toon/Tween, buildListPicker()) already use, for
+// visual consistency -- but is its OWN, separate, hand-built widget,
+// not that function reused: buildListPicker() is built around
+// capturing/naming/reapplying scalar dev-panel STATE (its own Save
+// button prompts for a name and calls a captureCurrent() callback) --
+// it has no file-import concept at all, which is the entire point of
+// this control, so reusing it would have meant bolting import logic
+// onto a control never designed for it rather than a small purpose-
+// built one.
+let phoneModelItemSelectorParent = null // the PHONE MODEL group's own content div, cached so loadPhoneModelManifest() can re-render in place after an async manifest fetch resolves
+let phoneModelItemSelectorContainer = null // the currently-rendered widget, replaced (not appended twice) on every re-render
+function renderPhoneModelItemSelector(parentContent) {
+  const parent = parentContent || phoneModelItemSelectorParent
+  if (!parent) return // manifest resolved before the dev panel was ever built -- the next real build reads PHONE_MODEL_OPTIONS fresh anyway
+  phoneModelItemSelectorParent = parent
+  if (phoneModelItemSelectorContainer) phoneModelItemSelectorContainer.remove()
+
+  const container = document.createElement('div')
+  container.className = 'dp-list-picker-row-container'
+  const label = document.createElement('span')
+  label.className = 'dev-label'
+  label.textContent = 'Model'
+  container.appendChild(label)
+
+  const listEl = document.createElement('div')
+  listEl.className = 'dp-list-picker'
+  container.appendChild(listEl)
+
+  if (!cfg.phoneModelFile && PHONE_MODEL_OPTIONS.length) cfg.phoneModelFile = PHONE_MODEL_OPTIONS[0].value
+  PHONE_MODEL_OPTIONS.forEach((opt) => {
+    const row = document.createElement('div')
+    row.className = 'dp-list-picker-item' + (opt.value === cfg.phoneModelFile ? ' dp-list-picker-item-selected' : '')
+    row.textContent = opt.text
+    row.addEventListener('click', () => {
+      cfg.phoneModelFile = opt.value
+      if (cfg.phoneModelEnabled) loadPhoneModel(opt.value)
+      renderPhoneModelItemSelector()
+    })
+    listEl.appendChild(row)
+  })
+
+  const btnRow = document.createElement('div')
+  btnRow.className = 'dev-buttons'
+  const importBtn = document.createElement('button')
+  importBtn.type = 'button'
+  importBtn.textContent = 'Import GLB...'
+  const fileInput = document.createElement('input')
+  fileInput.type = 'file'
+  fileInput.accept = '.glb'
+  fileInput.style.display = 'none'
+  importBtn.addEventListener('click', () => fileInput.click())
+  fileInput.addEventListener('change', () => {
+    const file = fileInput.files && fileInput.files[0]
+    fileInput.value = '' // clears the input so importing the SAME filename again later still fires a 'change' event
+    if (file) importPhoneModelFile(file)
+  })
+  btnRow.appendChild(importBtn)
+  btnRow.appendChild(fileInput)
+  container.appendChild(btnRow)
+
+  const statusEl = document.createElement('div')
+  statusEl.id = 'phoneModelImportStatus'
+  statusEl.style.cssText = 'font-size:11px; opacity:0.8; margin-top:4px;'
+  container.appendChild(statusEl)
+
+  parent.appendChild(container)
+  phoneModelItemSelectorContainer = container
+}
+// Import flow, direct request 2026-09-29: "Allow me to import glb
+// models, If I import a glb model with the same name as an existing
+// import, provide a popup to ask if i should overwrite." Loads the
+// imported file LOCALLY and instantly via a blob: URL (GLTFLoader loads
+// from one exactly like any other URL) -- the import "works" for this
+// session even if the upload below fails or the device is offline, a
+// disclosed, deliberate degradation, not a bug. The upload then
+// persists it for real via /api/upload-phone-model (Git Data API, see
+// that file's own comment for why it can't just reuse save-settings.js's
+// simpler Contents-API pattern), and swaps the list entry's value from
+// the temporary blob: URL to the real permanent path once that commit
+// actually succeeds.
+async function importPhoneModelFile(file) {
+  const setStatus = (msg) => { const el = document.getElementById('phoneModelImportStatus'); if (el) el.textContent = msg }
+  const realPath = PHONE_MODEL_DIR + '/' + file.name
+  const existing = PHONE_MODEL_OPTIONS.find((o) => o.value === realPath || o.text === file.name.replace(/\.glb$/i, ''))
+  let overwrite = false
+  if (existing) {
+    overwrite = confirm(`"${file.name}" already exists. Overwrite it?`)
+    if (!overwrite) { setStatus('Import cancelled.'); return }
+  }
+
+  const blobUrl = URL.createObjectURL(file)
+  if (existing) existing.value = blobUrl
+  else PHONE_MODEL_OPTIONS = PHONE_MODEL_OPTIONS.concat([{ value: blobUrl, text: file.name.replace(/\.glb$/i, '') }])
+  cfg.phoneModelFile = blobUrl
+  cfg.phoneModelEnabled = true
+  const enabledCb = document.getElementById('checkboxPhoneModelEnabled')
+  if (enabledCb) enabledCb.checked = true
+  loadPhoneModel(blobUrl)
+  renderPhoneModelItemSelector()
+  setStatus('Loaded locally — uploading to GitHub for permanent storage…')
+
+  try {
+    const buf = await file.arrayBuffer()
+    const resp = await fetch(PHONE_MODEL_MANIFEST_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/octet-stream',
+        'X-Dev-Panel-Secret': DEV_PANEL_SAVE_SECRET,
+        'X-Dev-Panel-Model-Filename': file.name,
+        'X-Dev-Panel-Overwrite': overwrite ? 'true' : 'false'
+      },
+      body: buf
+    })
+    const body = await resp.json().catch(() => ({}))
+    if (!resp.ok || body.ok !== true) throw new Error(body.error || ('HTTP ' + resp.status))
+    const entry = PHONE_MODEL_OPTIONS.find((o) => o.value === blobUrl)
+    if (entry) entry.value = realPath
+    if (cfg.phoneModelFile === blobUrl) cfg.phoneModelFile = realPath
+    setStatus('Saved to GitHub.')
+    setTimeout(() => setStatus(''), 4000)
+    renderPhoneModelItemSelector()
+  } catch (err) {
+    setStatus('GitHub upload failed (still usable locally this session): ' + err.message)
+  }
+}
+
 // PHONE MODEL -- direct request 2026-09-27, a loadable smartphone GLB
 // asset with its own On/Off, Model picker, Scale, Offset, Rotation, and
 // (nested 2 levels: RESPONSIVE BEHAVIOUR - PHONE > Responsive Rotation)
@@ -4395,10 +4560,11 @@ function renderPhoneModelGroup(content) {
   document.getElementById('checkboxPhoneModelEnabled').checked = cfg.phoneModelEnabled
   wireCheckbox('checkboxPhoneModelEnabled', (v) => { setPhoneModelEnabled(v) })
 
-  if (!cfg.phoneModelFile) cfg.phoneModelFile = PHONE_MODEL_OPTIONS[0].value
-  addRow(content, { id: 'selectPhoneModelFile', label: 'Model', type: 'select', options: PHONE_MODEL_OPTIONS, value: cfg.phoneModelFile })
-  document.getElementById('selectPhoneModelFile').value = cfg.phoneModelFile
-  wireSelect('selectPhoneModelFile', (v) => { cfg.phoneModelFile = v; if (cfg.phoneModelEnabled) loadPhoneModel(v) })
+  // Item Selector (was a plain <select>) -- direct request 2026-09-29:
+  // "Make the Object Model Selector a Item Selector actually. Allow me
+  // to import glb models." See renderPhoneModelItemSelector()/
+  // importPhoneModelFile() below.
+  renderPhoneModelItemSelector(content)
 
   addRow(content, { id: 'sliderPhoneModelScale', label: 'Model Scale (x)', type: 'slider', min: 0.01, max: 2000, step: 1, value: cfg.phoneModelScale })
   wireSlider('sliderPhoneModelScale', (v) => { cfg.phoneModelScale = v; applyPhoneModelTransform() })
@@ -5213,3 +5379,8 @@ async function loadRemoteSettingsOnStartup() {
 
 waitForDevPanelGlobal('saveDevPanelSettings').then(wireRemoteSaveButtons).catch((err) => console.warn(ts() + ' ' + err.message))
 loadRemoteSettingsOnStartup()
+// Best-effort, non-blocking -- if this resolves before the dev panel is
+// ever built, renderPhoneModelItemSelector() just no-ops (per its own
+// `if (!parent) return` guard) and the panel's first real build reads
+// PHONE_MODEL_OPTIONS fresh, already updated by then in the common case.
+loadPhoneModelManifest()

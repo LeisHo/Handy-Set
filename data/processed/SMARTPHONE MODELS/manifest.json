@@ -1,0 +1,7 @@
+{
+  "models": [
+    { "file": "P5_Project_1.glb", "name": "P5 Project 1" },
+    { "file": "Pixel 9A.glb", "name": "Pixel 9A" },
+    { "file": "Iphone17MaxPro.glb", "name": "iPhone 17 Max Pro" }
+  ]
+}
