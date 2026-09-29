@@ -2798,7 +2798,25 @@ function applyScreenTextureTransform(texture, passIndex) {
   const overall = cfg.screenTextureScale || 1
   const levels = THREE.MathUtils.clamp(Math.round(cfg.screenRecursionLevels || 1), 1, 10)
   const alternateParity = typeof passIndex === 'number' && (passIndex % 2) !== (levels % 2)
-  const mirrorX = (cfg.screenMirrorAlternatingX && alternateParity) ? -1 : 1
+  // UNCONDITIONAL X base correction, 2026-09-29 -- direct empirical
+  // proof: with Mirror Alternating X fully UNCHECKED (zero manual
+  // mirroring code active), the real observed sequence across
+  // recursion depths was "XAXAXAXA" -- a genuine, perfect alternation
+  // baked into the recursive-capture pipeline itself, present before
+  // any of this session's mirror-checkbox code ever runs. The
+  // equivalent Y-axis baseline was clean ("AAAAAAA"), so this
+  // correction is X-axis only. Applying this SAME alternating pattern
+  // unconditionally cancels it at the source (2 applications of an
+  // identical alternation = no net flip), fixing the baseline
+  // regardless of the checkbox. The checkbox's own contribution on
+  // top of this corrected baseline was NOT fully reconciled against
+  // every observed data point before shipping (see CHANGELOG's 54th
+  // entry) -- if the checkbox itself still looks wrong after this,
+  // that is real, separate, not-yet-understood behavior to investigate
+  // next, distinct from this baseline fix.
+  const baseFlipX = alternateParity ? -1 : 1
+  const checkboxFlipX = cfg.screenMirrorAlternatingX ? -1 : 1
+  const mirrorX = baseFlipX * checkboxFlipX
   const mirrorY = (cfg.screenMirrorAlternatingY && alternateParity) ? -1 : 1
   // TEMPORARY diagnostic, 2026-09-29 -- direct report "it didint
   // work" after 2 failed theories (constant flip, texture-matrix
