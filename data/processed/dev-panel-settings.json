@@ -103,13 +103,13 @@
     "checkboxPhoneAxisYEnabled": true,
     "sliderPhoneRotationScaleY": 1,
     "checkboxPhoneAxisZEnabled": true,
-    "sliderPhoneRotationScaleZ": 1,
+    "sliderPhoneRotationScaleZ": 1.3,
     "sliderPhoneResponsiveRotationFineTune": 43,
     "sliderPhoneRotationDamping": 0.21,
     "textPhoneResponsiveRotationRange": "{\"min\":-57,\"max\":45}",
     "textPhoneResponsiveRotationCurve": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"natural\"}",
     "checkboxScreenRenderEnabled": true,
-    "sliderScreenRecursionLevels": 5,
+    "sliderScreenRecursionLevels": 7,
     "sliderScreenRenderResolution": 100,
     "sliderScreenTextureScale": 0.8,
     "sliderScreenTextureRotation": 0,
@@ -183,9 +183,9 @@
   },
   "layout": {
     "left": 35,
-    "top": 381,
+    "top": 277,
     "width": 350,
-    "height": 398
+    "height": 76
   },
   "devPanelStyle": {
     "titleFontSize": 17,
