@@ -111,15 +111,15 @@
     "checkboxScreenRenderEnabled": true,
     "sliderScreenRecursionLevels": 10,
     "sliderScreenRenderResolution": 200,
-    "sliderScreenTextureScale": 0.95,
+    "sliderScreenTextureScale": 0.9,
     "sliderScreenTextureRotation": 180,
     "sliderScreenTextureOffsetX": 0.01,
-    "sliderScreenTextureOffsetY": 0.02,
+    "sliderScreenTextureOffsetY": 0.05,
     "sliderScreenTextureScaleX": 1,
-    "sliderScreenTextureScaleY": 1,
+    "sliderScreenTextureScaleY": 0.9,
     "sliderScreenEmissionIntensity": 1,
     "checkboxScreenMirrorAlternatingX": false,
-    "checkboxScreenMirrorAlternatingY": false,
+    "checkboxScreenMirrorAlternatingY": true,
     "checkboxScreenToScale": true,
     "checkboxWristSplayResponsiveEnabled": false,
     "sliderWristSplayDefault": -25,
@@ -185,7 +185,7 @@
     "left": 26,
     "top": 6,
     "width": 350,
-    "height": 76
+    "height": 692
   },
   "devPanelStyle": {
     "titleFontSize": 17,
