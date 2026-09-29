@@ -116,7 +116,7 @@
     "sliderScreenTextureOffsetX": 0.01,
     "sliderScreenTextureOffsetY": 0.05,
     "sliderScreenTextureScaleX": 1,
-    "sliderScreenTextureScaleY": 0.85,
+    "sliderScreenTextureScaleY": 0.9,
     "sliderScreenEmissionIntensity": 1,
     "checkboxScreenMirrorAlternatingX": false,
     "checkboxScreenMirrorAlternatingY": true,
@@ -182,10 +182,10 @@
     "checkboxDeviceInfoEnabled": true
   },
   "layout": {
-    "left": 26,
+    "left": 35,
     "top": 6,
     "width": 350,
-    "height": 76
+    "height": 503
   },
   "devPanelStyle": {
     "titleFontSize": 17,
