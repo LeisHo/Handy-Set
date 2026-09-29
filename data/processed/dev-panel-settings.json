@@ -116,7 +116,7 @@
     "sliderScreenTextureOffsetX": 0,
     "sliderScreenTextureOffsetY": -0.09,
     "sliderScreenTextureScaleX": 0.6,
-    "sliderScreenTextureScaleY": 1,
+    "sliderScreenTextureScaleY": 1.1,
     "sliderScreenEmissionIntensity": 0.95,
     "checkboxScreenMirrorAlternatingX": false,
     "checkboxScreenMirrorAlternatingY": false,
@@ -183,9 +183,9 @@
   },
   "layout": {
     "left": 35,
-    "top": 438.7261962890625,
+    "top": 381,
     "width": 350,
-    "height": 340
+    "height": 398
   },
   "devPanelStyle": {
     "titleFontSize": 17,
