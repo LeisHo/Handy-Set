@@ -2569,6 +2569,34 @@ function setScreenRenderEnabled(enabled) {
 // real device, swap `camAspect / targetAspect` for its reciprocal here,
 // the rest of the reasoning (that SOME correction is needed at all,
 // and that it should track camera.aspect live) should still hold.
+// CORRECTED 2026-09-29, direct report: "every other rendered image is
+// mirrored left to right. So the 1st image rendered on the phone model
+// is flipped, the 2nd one in that is not, etc." Confirmed via
+// AskUserQuestion that this reproduces even at Recursion Levels=2 (the
+// simplest possible case, one nested level) -- which rules out a bug
+// that only emerges from repeated compounding across many passes, and
+// points somewhere else: this function itself is called with IDENTICAL
+// cfg values on every single pass (nothing here varies by pass index),
+// so it cannot by itself be the source of a difference between
+// generations. The only thing that genuinely differs between pass 0
+// (screen hidden, a "clean" capture with the Screen Face mesh never
+// actually rendered/textured at all) and every later pass (screen
+// VISIBLE, its own geometry sampled with a texture for the first time)
+// is that the Screen Face mesh's OWN UV winding only ever enters the
+// picture starting from pass 1 onward. A SINGLE, CONSTANT horizontal
+// UV-mirror baked into that one mesh (a common glTF/Blender export
+// quirk on a mirrored/duplicated part) explains the reported pattern
+// exactly: applying a mirror once per recursion level is mathematically
+// identical to two facing mirrors -- level 1 (1 application) reads
+// flipped, level 2 (2 applications, nested one level deeper) reads
+// flipped-of-a-flip = back to normal, level 3 flipped again, etc.
+// `-1 *` below cancels that single per-application mirror at its
+// source, which fixes every level uniformly rather than needing a
+// per-level correction. NOT independently verified against the real
+// mesh/device (this session's own standing limitation) -- if this
+// makes it worse instead of better, the mirror is evidently NOT the
+// cause and this line should be reverted (remove the `-1 *`) rather
+// than flipped to the Y axis on a 2nd guess.
 function applyScreenTextureTransform(texture) {
   if (!texture) return
   let scaleX = cfg.screenTextureScaleX || 1
@@ -2582,7 +2610,7 @@ function applyScreenTextureTransform(texture) {
   }
   const overall = cfg.screenTextureScale || 1
   texture.center.set(0.5, 0.5)
-  texture.repeat.set(1 / (overall * scaleX), 1 / (overall * scaleY))
+  texture.repeat.set(-1 / (overall * scaleX), 1 / (overall * scaleY))
   texture.rotation = THREE.MathUtils.degToRad(cfg.screenTextureRotation || 0)
   texture.needsUpdate = true
 }
