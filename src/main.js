@@ -218,6 +218,17 @@ const cfg = {
   // beta/gamma/alpha readings carry natural high-frequency sensor noise;
   // this damps that out at the rotation level rather than the raw input.
   phoneRotationDamping: 0.25,
+  // Virtual Screen / RECURSIVE RENDER -- direct request 2026-09-29:
+  // render the app's own 3D scene onto the phone GLB's 'Screen Face'
+  // mesh, recursion-capped (see renderVirtualScreen()'s own comment for
+  // the mechanism) so the screen-showing-itself effect can never
+  // actually recurse infinitely.
+  screenRenderEnabled: false,
+  screenRecursionLevels: 3,
+  // Percent of the base 384x768 capture resolution -- direct request
+  // 2026-09-29 for a quality/performance control, since a full N-pass
+  // render every frame at full resolution is real GPU cost. 100 = base.
+  screenRenderResolution: 100,
   phoneResponsiveRotationRange: '{"min":0,"max":30}',
   // CORRECTED 2026-09-28, found via real device log data, not guessed:
   // this default was DECREASING (t=0/no-tilt -> curveY=1/full magnitude,
@@ -1932,6 +1943,12 @@ const PHONE_MODEL_OPTIONS = [
 let phoneModelWrapper = null // THREE.Group at world origin + Offset sliders, added to `scene`
 let phoneModelRaw = null // the loaded gltf.scene, child of phoneModelWrapper -- rotation/scale/pivot-compensated position
 let phoneModelLoadToken = 0 // guards a stale async load callback from applying after a newer selection superseded it
+// Virtual Screen (render-to-texture onto the phone's own 'Screen Face'
+// mesh) -- see findPhoneScreenMesh()/renderVirtualScreen() below.
+let phoneScreenMesh = null // the mesh found inside phoneModelRaw, or null if this model has no such mesh
+let phoneScreenOriginalMaterial = null // the mesh's real glTF material -- restored whenever Screen Render is off or the model reloads
+let phoneScreenRenderMaterial = null // shared unlit MeshBasicMaterial driving the screen while Screen Render is on; only its .map is swapped per pass -- never disposed/recreated per model, so a model switch doesn't need to rebuild it
+let screenRenderTargets = null // [RT_A, RT_B], created once and reused -- ping-ponged across up to 10 recursion passes per frame (see renderVirtualScreen())
 
 let phoneResponsiveRotationRangeParsed = { min: 0, max: 30 }
 let phoneResponsiveRotationCurveParsed = [{ x: 0, y: 1 }, { x: 1, y: 0 }]
@@ -1979,6 +1996,7 @@ const _phoneResponsiveQuat = new THREE.Quaternion()
 // guess -- see integratePhoneGyroRotation()'s own comment.
 const _phoneTiltAxis = new THREE.Vector3()
 const _phoneTiltQuat = new THREE.Quaternion()
+const _phoneDesktopSpinQuat = new THREE.Quaternion() // desktop's own Y-axis (spin) contribution, composed separately -- see computePhoneCombinedQuat()
 // CORRECTED 2026-09-28, direct report after real-device testing: "when i
 // rotate my real phone around the Y axis, the phone model on screen
 // rotates around the z axis. And vice versa as well" (with beta/up-down
@@ -2073,12 +2091,21 @@ function computePhoneCombinedQuat() {
       betaDeg = (ny / combinedT) * combinedDeg
       gammaDeg = (-nx / combinedT) * combinedDeg
     }
-    // Per-axis on/off + scale -- direct request 2026-09-28. Desktop has
-    // no compass equivalent (alphaDeg stays 0), so only X/Z apply here;
-    // mobile's own per-axis gating lives inside integratePhoneGyroRotation()
-    // instead, applied to the raw gyro rate before integration.
+    // Per-axis on/off + scale -- direct request 2026-09-28. X gated here
+    // directly. CORRECTED 2026-09-29, direct report from an isolated
+    // one-checkbox-at-a-time desktop test ("the current what is labeled
+    // as Z is Y, and vice versa"): the combined-tilt contribution
+    // (gammaDeg, below) is gated by the Y checkbox/slider, and the
+    // separate spin-around-UP contribution (the "Y axis (spin)" block
+    // further down) is gated by the Z checkbox/slider -- SWAPPED from
+    // the initial, un-tested guess (which had gammaDeg on Z and spin on
+    // Y) to match what the user actually sees on screen. Mobile's own
+    // per-axis gating is unaffected -- it lives inside
+    // integratePhoneGyroRotation() instead, already independently
+    // verified via the same isolated-checkbox method (see that
+    // function's own 10th-round comment).
     betaDeg = cfg.phoneAxisXEnabled ? betaDeg * cfg.phoneRotationScaleX : 0
-    gammaDeg = cfg.phoneAxisZEnabled ? gammaDeg * cfg.phoneRotationScaleZ : 0
+    gammaDeg = cfg.phoneAxisYEnabled ? gammaDeg * cfg.phoneRotationScaleY : 0
     const combinedTiltDeg = Math.hypot(betaDeg, gammaDeg)
     if (combinedTiltDeg > 1e-6) {
       _phoneTiltAxis.set(betaDeg, 0, gammaDeg).normalize()
@@ -2086,7 +2113,29 @@ function computePhoneCombinedQuat() {
     } else {
       _phoneTiltQuat.identity()
     }
-    _phoneResponsiveQuat.copy(_phoneTiltQuat) // desktop has no spin/alpha axis
+    // Spin-around-UP contribution on desktop -- direct request
+    // 2026-09-29 ("I was wrong [that desktop didn't need all 3 axes] --
+    // make all 3 appliable, I will set it with the on/off"), gating
+    // SWAPPED to the Z checkbox/slider per the correction above. Desktop
+    // has no 3rd independent input channel the way a real gyroscope
+    // does (beta/gamma/alpha are 3 separate physical readings; a 2D
+    // cursor position is only 2 DOF), so this reuses the SAME
+    // horizontal cursor offset (nx) that also, separately, drives the
+    // combined-tilt contribution above -- signed by nx's own sign,
+    // magnitude through the same shared curve/range system every other
+    // axis already uses -- applied as its OWN rotation around world Y
+    // and composed on top rather than folded into the combined
+    // axis-angle, the same separate-mechanism pattern mobile's own
+    // alpha/spin axis already uses.
+    let alphaDeg = 0
+    if (cfg.phoneAxisZEnabled && Math.abs(nx) > 1e-6) {
+      alphaDeg = computePhoneResponsiveAxisDeg(Math.abs(nx)) * Math.sign(nx) * cfg.phoneRotationScaleZ
+    }
+    _phoneResponsiveQuat.copy(_phoneTiltQuat)
+    if (Math.abs(alphaDeg) > 1e-6) {
+      _phoneDesktopSpinQuat.setFromAxisAngle(UP, THREE.MathUtils.degToRad(alphaDeg))
+      _phoneResponsiveQuat.multiply(_phoneDesktopSpinQuat)
+    }
   } else {
     _phoneResponsiveQuat.identity()
   }
@@ -2256,6 +2305,16 @@ function ensurePhoneModelWrapper() {
 }
 function disposePhoneModelRaw() {
   if (!phoneModelRaw) return
+  // The generic material-disposal traversal below would dispose whatever
+  // texture is CURRENTLY on phoneScreenMesh.material -- if that's our own
+  // reusable phoneScreenRenderMaterial, its .map is a render target's
+  // texture, not a real glTF asset, and disposing it would break the
+  // render target for every model loaded afterward. Swap back to the
+  // real original material first so only that gets disposed, same as
+  // every other mesh.
+  if (phoneScreenMesh && phoneScreenMesh.material === phoneScreenRenderMaterial) {
+    phoneScreenMesh.material = phoneScreenOriginalMaterial
+  }
   phoneModelWrapper.remove(phoneModelRaw)
   phoneModelRaw.traverse((obj) => {
     if (obj.geometry) obj.geometry.dispose()
@@ -2265,6 +2324,20 @@ function disposePhoneModelRaw() {
     }
   })
   phoneModelRaw = null
+  phoneScreenMesh = null
+  phoneScreenOriginalMaterial = null
+}
+// Finds the mesh the phone GLB's own author named 'Screen Face' (Virtual
+// Screen render-to-texture target) -- case/whitespace-tolerant since glTF
+// export can alter exact capitalization. Returns null if this particular
+// model has no such mesh (not every phone model is guaranteed to have one).
+function findPhoneScreenMesh(root) {
+  let found = null
+  root.traverse((obj) => {
+    if (found || !obj.isMesh || typeof obj.name !== 'string') return
+    if (obj.name.trim().toLowerCase() === 'screen face') found = obj
+  })
+  return found
 }
 function loadPhoneModel(relativePath) {
   if (!relativePath) return
@@ -2275,6 +2348,9 @@ function loadPhoneModel(relativePath) {
     disposePhoneModelRaw()
     phoneModelRaw = gltf.scene
     phoneModelWrapper.add(phoneModelRaw)
+    phoneScreenMesh = findPhoneScreenMesh(phoneModelRaw)
+    phoneScreenOriginalMaterial = phoneScreenMesh ? phoneScreenMesh.material : null
+    if (!phoneScreenMesh) console.warn(ts() + ' Phone model has no "Screen Face" mesh -- Virtual Screen render will have no effect:', relativePath)
     applyPhoneModelTransform()
   }, undefined, (err) => { console.error(ts() + ' Phone model failed to load:', relativePath, err) })
 }
@@ -2318,6 +2394,81 @@ function syncHandModelEnabledCheckboxes() {
 function updatePhoneModelFrame() {
   if (!cfg.phoneModelEnabled || !phoneModelRaw) return
   applyPhoneModelTransform()
+}
+
+// =======================================================================
+// Virtual Screen -- render the app's own live 3D scene onto the phone
+// GLB's 'Screen Face' mesh, direct request 2026-09-29.
+//
+// Recursion is bounded, not infinite, by construction: the screen shows
+// a snapshot of the scene rendered on a PRIOR pass, not a live view of
+// itself. Each frame runs `cfg.screenRecursionLevels` (1-10) sequential
+// off-screen passes, ping-ponging between 2 render targets:
+//   pass 0 (the floor): the screen mesh is hidden entirely, so this
+//     capture has NO screen-in-screen at all -- the recursion's base case.
+//   pass i>0: the screen mesh is shown, textured with pass (i-1)'s own
+//     capture -- so it displays "the scene, with the screen showing what
+//     the scene looked like one level up."
+// After the loop, the LAST pass's capture becomes the screen's texture
+// for the real, visible frame the user actually sees (composer.render(),
+// called right after this in animate()) -- so on screen the user sees
+// `levels` total layers of nesting (level 1 = a plain flat view, no
+// recursion visible at all, since pass 0's own capture has the screen
+// hidden). No THREE.WebGLRenderer.render() call ever reads a render
+// target it is currently writing to, so this can never loop forever
+// regardless of how high `levels` is set -- it's a fixed number of
+// sequential passes per frame, not a live feedback loop.
+const SCREEN_RENDER_BASE_WIDTH = 384
+const SCREEN_RENDER_BASE_HEIGHT = 768
+// Lazily (re)creates the 2 ping-pong render targets at the CURRENT
+// Render Resolution (%) -- disposes and rebuilds only when the
+// resolution has actually changed since the last call, so dragging the
+// slider doesn't thrash allocations every frame but does take effect
+// within one frame of release.
+function ensureScreenRenderTargets() {
+  const pct = THREE.MathUtils.clamp(cfg.screenRenderResolution || 100, 10, 200) / 100
+  const w = Math.max(1, Math.round(SCREEN_RENDER_BASE_WIDTH * pct))
+  const h = Math.max(1, Math.round(SCREEN_RENDER_BASE_HEIGHT * pct))
+  if (screenRenderTargets && screenRenderTargets[0].width === w && screenRenderTargets[0].height === h) return screenRenderTargets
+  if (screenRenderTargets) screenRenderTargets.forEach((rt) => rt.dispose())
+  screenRenderTargets = [0, 1].map(() => {
+    const rt = new THREE.WebGLRenderTarget(w, h)
+    rt.texture.colorSpace = THREE.SRGBColorSpace
+    return rt
+  })
+  return screenRenderTargets
+}
+function resetPhoneScreenMaterial() {
+  if (!phoneScreenMesh) return
+  if (phoneScreenOriginalMaterial) phoneScreenMesh.material = phoneScreenOriginalMaterial
+  phoneScreenMesh.visible = true
+}
+function setScreenRenderEnabled(enabled) {
+  cfg.screenRenderEnabled = enabled
+  if (!enabled) resetPhoneScreenMaterial()
+}
+function renderVirtualScreen() {
+  if (!cfg.screenRenderEnabled || !cfg.phoneModelEnabled || !phoneScreenMesh) return
+  const targets = ensureScreenRenderTargets()
+  const levels = THREE.MathUtils.clamp(Math.round(cfg.screenRecursionLevels || 1), 1, 10)
+  if (!phoneScreenRenderMaterial) phoneScreenRenderMaterial = new THREE.MeshBasicMaterial()
+  for (let i = 0; i < levels; i++) {
+    if (i === 0) {
+      phoneScreenMesh.visible = false
+    } else {
+      phoneScreenMesh.visible = true
+      phoneScreenMesh.material = phoneScreenRenderMaterial
+      phoneScreenRenderMaterial.map = targets[(i - 1) % 2].texture
+      phoneScreenRenderMaterial.needsUpdate = true
+    }
+    renderer.setRenderTarget(targets[i % 2])
+    renderer.render(scene, camera)
+  }
+  phoneScreenMesh.visible = true
+  phoneScreenMesh.material = phoneScreenRenderMaterial
+  phoneScreenRenderMaterial.map = targets[(levels - 1) % 2].texture
+  phoneScreenRenderMaterial.needsUpdate = true
+  renderer.setRenderTarget(null)
 }
 
 const tiltTarget = new THREE.Vector3()
@@ -3036,6 +3187,7 @@ window.__debug = {
   get tiltTarget() { return tiltTarget }, get tiltOriginGround() { return tiltOriginGround },
   get handLengthRaw() { return handLengthRaw }, get handCenterLocal() { return handCenterLocal },
   get phoneModelRaw() { return phoneModelRaw }, get phoneModelWrapper() { return phoneModelWrapper },
+  get phoneScreenMesh() { return phoneScreenMesh }, get screenRenderTargets() { return screenRenderTargets },
   get sceneObjectEntries() { return sceneObjectEntries },
   get tiltMagnitude() { return tiltMagnitude }, get tiltAngle() { return tiltAngle },
   get phoneGyroQuat() { return phoneGyroQuat }, get lastInputSource() { return lastInputSource },
@@ -3203,6 +3355,7 @@ function animate() {
     }
     updateAllFingerGizmos()
     updatePhoneModelFrame()
+    renderVirtualScreen()
   }
   curveWidgetResyncs.forEach((fn) => fn())
   composer.render()
@@ -4202,21 +4355,29 @@ function renderPhoneModelGroup(content) {
   wireCheckbox('checkboxPhoneRotationResetEnabled', (v) => { cfg.phoneRotationResetEnabled = v })
   // Per-axis on/off + scale -- direct request 2026-09-28. X=beta
   // (up/down), Y=alpha/compass (spin), Z=gamma (left/right) -- matches
-  // computePhoneCombinedQuat()'s own world-axis assignment.
+  // computePhoneCombinedQuat()'s own world-axis assignment. Y now
+  // applies on desktop too (direct request 2026-09-29 -- see that
+  // function's own "Y axis (spin) on desktop" comment), not just
+  // mobile -- same checkbox/slider, no new controls needed.
+  // Scale sliders allow NEGATIVE values (direct request 2026-09-29:
+  // "-1... rotate in the other direction at the same scale") -- every
+  // use of these cfg fields is already a plain multiply against a
+  // signed degree value, so widening the range is the only change
+  // needed; a negative scale already flips direction correctly.
   addRow(subResponsiveRotation, { id: 'checkboxPhoneAxisXEnabled', label: 'X Axis Rotation On/Off', type: 'checkbox' })
   document.getElementById('checkboxPhoneAxisXEnabled').checked = cfg.phoneAxisXEnabled
   wireCheckbox('checkboxPhoneAxisXEnabled', (v) => { cfg.phoneAxisXEnabled = v })
-  addRow(subResponsiveRotation, { id: 'sliderPhoneRotationScaleX', label: 'X Axis Rotation Scale (x)', type: 'slider', min: 0, max: 3, step: 0.05, value: cfg.phoneRotationScaleX })
+  addRow(subResponsiveRotation, { id: 'sliderPhoneRotationScaleX', label: 'X Axis Rotation Scale (x)', type: 'slider', min: -3, max: 3, step: 0.05, value: cfg.phoneRotationScaleX })
   wireSlider('sliderPhoneRotationScaleX', (v) => { cfg.phoneRotationScaleX = v })
   addRow(subResponsiveRotation, { id: 'checkboxPhoneAxisYEnabled', label: 'Y Axis Rotation On/Off', type: 'checkbox' })
   document.getElementById('checkboxPhoneAxisYEnabled').checked = cfg.phoneAxisYEnabled
   wireCheckbox('checkboxPhoneAxisYEnabled', (v) => { cfg.phoneAxisYEnabled = v })
-  addRow(subResponsiveRotation, { id: 'sliderPhoneRotationScaleY', label: 'Y Axis Rotation Scale (x)', type: 'slider', min: 0, max: 3, step: 0.05, value: cfg.phoneRotationScaleY })
+  addRow(subResponsiveRotation, { id: 'sliderPhoneRotationScaleY', label: 'Y Axis Rotation Scale (x)', type: 'slider', min: -3, max: 3, step: 0.05, value: cfg.phoneRotationScaleY })
   wireSlider('sliderPhoneRotationScaleY', (v) => { cfg.phoneRotationScaleY = v })
   addRow(subResponsiveRotation, { id: 'checkboxPhoneAxisZEnabled', label: 'Z Axis Rotation On/Off', type: 'checkbox' })
   document.getElementById('checkboxPhoneAxisZEnabled').checked = cfg.phoneAxisZEnabled
   wireCheckbox('checkboxPhoneAxisZEnabled', (v) => { cfg.phoneAxisZEnabled = v })
-  addRow(subResponsiveRotation, { id: 'sliderPhoneRotationScaleZ', label: 'Z Axis Rotation Scale (x)', type: 'slider', min: 0, max: 3, step: 0.05, value: cfg.phoneRotationScaleZ })
+  addRow(subResponsiveRotation, { id: 'sliderPhoneRotationScaleZ', label: 'Z Axis Rotation Scale (x)', type: 'slider', min: -3, max: 3, step: 0.05, value: cfg.phoneRotationScaleZ })
   wireSlider('sliderPhoneRotationScaleZ', (v) => { cfg.phoneRotationScaleZ = v })
   addRow(subResponsiveRotation, { id: 'sliderPhoneResponsiveRotationFineTune', label: 'Rotation Fine-Tune (Deg)', type: 'slider', min: -90, max: 90, step: 1, value: cfg.phoneResponsiveRotationFineTune })
   wireSlider('sliderPhoneResponsiveRotationFineTune', (v) => { cfg.phoneResponsiveRotationFineTune = v })
@@ -4248,6 +4409,31 @@ function renderPhoneModelGroup(content) {
       parsePhoneResponsiveRotationConfig()
     })
   }
+}
+
+// RECURSIVE RENDER -- own top-level, toggleable group (direct request
+// 2026-09-29: "place them in a new toggleable group called 'RECURSIVE
+// RENDER'"). A TOP-LEVEL group specifically because devPanel.js's own
+// makeDevGroupToggleable() looks up its title via a direct-child
+// selector (`#tabTabContent > .dev-section > .dev-section-title[...]`)
+// -- the same restriction findNestedGroupContent() above was written to
+// work around for group CONTENT lookups; here, rather than reimplement
+// that restriction away for a toggle checkbox too, the simpler and
+// equally correct fix is to just make this its own top-level group,
+// which is exactly the shape that function is designed for (matching
+// the template's own built-in Dev Panel/Debug groups' usage).
+function renderRecursiveRenderGroup(content) {
+  addRow(content, { id: 'checkboxScreenRenderEnabled', label: 'Recursive Render On/Off', type: 'checkbox' })
+  document.getElementById('checkboxScreenRenderEnabled').checked = cfg.screenRenderEnabled
+  wireCheckbox('checkboxScreenRenderEnabled', (v) => { setScreenRenderEnabled(v) })
+  addRow(content, { id: 'sliderScreenRecursionLevels', label: 'Recursion Levels', type: 'slider', min: 1, max: 10, step: 1, value: cfg.screenRecursionLevels })
+  wireSlider('sliderScreenRecursionLevels', (v) => { cfg.screenRecursionLevels = v })
+  addRow(content, { id: 'sliderScreenRenderResolution', label: 'Render Resolution (%)', type: 'slider', min: 10, max: 200, step: 5, value: cfg.screenRenderResolution })
+  wireSlider('sliderScreenRenderResolution', (v) => { cfg.screenRenderResolution = v })
+  // Moves checkboxScreenRenderEnabled into the group's own title bar and
+  // dims the rest of the group while off -- must run after the rows
+  // above are actually in the DOM, which they are by this point.
+  if (typeof window.makeDevGroupToggleable === 'function') window.makeDevGroupToggleable('desktop', 'RECURSIVE RENDER', 'checkboxScreenRenderEnabled')
 }
 
 function renderLightingGroup(content) {
@@ -4685,6 +4871,7 @@ function renderHandysetDevGroups() {
   renderPhoneTiltGroup(addSubgroup(handModelContent, 'RESPONSIVE BEHAVIOUR - HAND'))
 
   renderPhoneModelGroup(addGroup('PHONE MODEL'))
+  renderRecursiveRenderGroup(addGroup('RECURSIVE RENDER'))
 
   renderResponsiveWristSplayGroup(addGroup('Responsive Wrist Splay'))
   renderCameraGroup(addGroup('Camera'))
