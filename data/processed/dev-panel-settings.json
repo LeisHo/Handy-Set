@@ -97,9 +97,9 @@
     "sliderPhoneModelRotY": 0,
     "sliderPhoneModelRotZ": 0,
     "checkboxPhoneResponsiveRotationEnabled": true,
-    "checkboxPhoneRotationResetEnabled": false,
+    "checkboxPhoneRotationResetEnabled": true,
     "checkboxPhoneAxisXEnabled": true,
-    "sliderPhoneRotationScaleX": -1,
+    "sliderPhoneRotationScaleX": 1,
     "checkboxPhoneAxisYEnabled": true,
     "sliderPhoneRotationScaleY": 1,
     "checkboxPhoneAxisZEnabled": true,
@@ -184,8 +184,8 @@
   "layout": {
     "left": 35,
     "top": 108,
-    "width": 589,
-    "height": 486
+    "width": 350,
+    "height": 76
   },
   "devPanelStyle": {
     "titleFontSize": 17,
@@ -8287,9 +8287,9 @@
     "desktop:PHONE MODEL": false,
     "desktop:OFFSET": true,
     "desktop:PHONE ROTATION": true,
-    "desktop:RESPONSIVE BEHAVIOUR - PHONE": true,
-    "desktop:Responsive Rotation": true,
-    "desktop:RECURSIVE RENDER": false,
+    "desktop:RESPONSIVE BEHAVIOUR - PHONE": false,
+    "desktop:Responsive Rotation": false,
+    "desktop:RECURSIVE RENDER": true,
     "desktop:HAND MODEL": true,
     "desktop:Field Layout": true,
     "desktop:Pose": true,
