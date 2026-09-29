@@ -2774,6 +2774,25 @@ function applyScreenTextureTransform(texture, passIndex) {
   texture.rotation = THREE.MathUtils.degToRad(cfg.screenTextureRotation || 0)
   texture.offset.set(cfg.screenTextureOffsetX || 0, cfg.screenTextureOffsetY || 0)
   texture.needsUpdate = true
+  // updateMatrix() added 2026-09-29, direct report on Pixel 9A with
+  // Mirror X checked: "The 1st render is good, 2nd is good 3rd is
+  // wrong, then alternating wrong." renderVirtualScreen() calls
+  // renderer.render() MULTIPLE TIMES in a single animation frame,
+  // reusing only 2 actual THREE.Texture objects (ensureScreenRenderTargets()'s
+  // ping-pong pair) across every pass -- this function mutates
+  // whichever one is currently assigned as `texture`, then relies on
+  // THREE.Texture's default matrixAutoUpdate to recompute .matrix (the
+  // actual uniform the shader samples with) before the next render.
+  // That recomputation is normally lazy/renderer-driven, and this
+  // project has already hit texture/render-target caching surprises
+  // once this session (the WebGL-canvas-readback gotcha elsewhere in
+  // this file) -- calling updateMatrix() here forces the repeat/
+  // offset/rotation/center values just set above to be baked into
+  // .matrix SYNCHRONOUSLY, before renderer.render() runs for this
+  // exact pass, removing any dependency on the renderer's own internal
+  // per-frame caching/update timing for a texture object that's reused
+  // several times within one frame.
+  texture.updateMatrix()
 }
 function renderVirtualScreen() {
   if (!cfg.screenRenderEnabled || !cfg.phoneModelEnabled || !phoneScreenMeshes.length) return
