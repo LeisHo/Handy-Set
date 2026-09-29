@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
@@ -13,6 +14,20 @@ import { detectDeviceInfo } from './deviceInfo.js'
 
 // Timestamp helper for debug logs
 function ts() { return '[' + new Date().toISOString() + ']' }
+
+// Shared DRACOLoader, attached to every GLTFLoader instance (both the
+// hand model and the Phone Model group's own loader). Found 2026-09-29
+// on the real deployed site: P5_Project_1.glb (Phone Model's default
+// selection) is Draco-compressed, and GLTFLoader throws
+// "No DRACOLoader instance provided" for a Draco-compressed file with
+// none attached -- confirmed live via the real console error, not
+// guessed. A GLTFLoader with a DRACOLoader attached that never
+// encounters Draco-compressed geometry (e.g. the hand model, currently
+// not Draco-compressed) is unaffected -- safe to attach everywhere a
+// GLTFLoader is created rather than only where it's known to be needed
+// today, since a future re-export of any GLB could add compression.
+const dracoLoader = new DRACOLoader()
+dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/')
 
 // Dev panel schema-version guard — runs synchronously, before devPanel.js
 // (main.js loads first, see index.html's own script-order comment) ever
@@ -2494,7 +2509,9 @@ function loadPhoneModel(relativePath) {
   if (!relativePath) return
   const token = ++phoneModelLoadToken
   ensurePhoneModelWrapper()
-  new GLTFLoader().load(encodeURI(relativePath), (gltf) => {
+  const phoneLoader = new GLTFLoader()
+  phoneLoader.setDRACOLoader(dracoLoader)
+  phoneLoader.load(encodeURI(relativePath), (gltf) => {
     if (token !== phoneModelLoadToken) return // superseded by a newer selection/reload before this one finished
     disposePhoneModelRaw()
     phoneModelRaw = gltf.scene
@@ -3032,7 +3049,9 @@ function getHandCenterWorld() {
 // =======================================================================
 // Model load
 // =======================================================================
-new GLTFLoader().load(MODEL_URL, async (gltf) => {
+const handLoader = new GLTFLoader()
+handLoader.setDRACOLoader(dracoLoader)
+handLoader.load(MODEL_URL, async (gltf) => {
   const root = gltf.scene
   const skinned = findSkinnedMesh(root)
   if (!skinned) { loadingEl.textContent = 'No skinned mesh found in model.'; return }
