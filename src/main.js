@@ -308,14 +308,16 @@ const cfg = {
   screenMirrorPhaseX: false, screenMirrorPhaseY: false,
   // "To Scale" -- direct report: "whenever my actual browser size is
   // different from the model mesh size, the rendered image gets scaled
-  // incorrectly." Root cause: the off-screen capture always renders
-  // through the SAME camera used for the main view, whose aspect ratio
-  // tracks the live browser window -- but the capture is written into a
-  // FIXED-aspect render target (SCREEN_RENDER_BASE_WIDTH/HEIGHT), so a
-  // browser aspect that doesn't match the target's own aspect leaves the
-  // captured content stretched before it's ever mapped onto the mesh.
-  // When on, X/Y Scale are computed each frame from the LIVE camera
-  // aspect vs. the render target's own fixed aspect (see
+  // incorrectly." CORRECTED 2026-09-29, direct clarification: "When i
+  // said To Scale, i meant that regardless of my browser dimensions
+  // and the displayed model's screen dimensions, the rendered images
+  // will always be correctly scaled in terms of X to Y." The original
+  // fix only corrected for camera-aspect vs. the render target's own
+  // FIXED buffer aspect (SCREEN_RENDER_BASE_WIDTH/HEIGHT) -- it never
+  // accounted for each phone model's own real screen shape at all,
+  // which is what was still visibly stretching the result. When on,
+  // X/Y Scale are computed each frame from the LIVE camera aspect vs.
+  // each model's own real screen UV aspect (phoneScreenUvAspect -- see
   // applyScreenTextureTransform()) instead of the slider values, and
   // those 2 sliders are locked (disabled) in the dev panel.
   screenToScaleEnabled: false,
@@ -2093,6 +2095,7 @@ let phoneModelLoadToken = 0 // guards a stale async load callback from applying 
 let phoneScreenMeshes = [] // the mesh(es) found inside phoneModelRaw, or [] if this model has none
 let phoneScreenOriginalMaterials = [] // each mesh's own real glTF material -- restored whenever Screen Render is off or the model reloads
 let phoneScreenUvCenter = { x: 0.5, y: 0.5 } // real UV midpoint of phoneScreenMeshes[0], recomputed on every model load -- see loadPhoneModel()'s own comment
+let phoneScreenUvAspect = 1 // real UV width/height of phoneScreenMeshes[0]'s own screen area, recomputed on every model load -- see applyScreenTextureTransform()'s "To Scale" comment
 let phoneScreenRenderMaterial = null // shared unlit MeshBasicMaterial driving the screen while Screen Render is on; only its .map is swapped per pass -- never disposed/recreated per model, so a model switch doesn't need to rebuild it
 let screenRenderTargets = null // [RT_A, RT_B], created once and reused -- ping-ponged across up to 10 recursion passes per frame (see renderVirtualScreen())
 
@@ -2608,6 +2611,7 @@ function loadPhoneModel(relativePath) {
     // representative mesh when there's more than one primitive) --
     // falls back to (0.5, 0.5) only if the mesh has no UV data at all.
     phoneScreenUvCenter = { x: 0.5, y: 0.5 }
+    phoneScreenUvAspect = 1
     const uvAttr = phoneScreenMeshes[0]?.geometry?.attributes?.uv
     if (uvAttr && uvAttr.count) {
       let minU = Infinity, maxU = -Infinity, minV = Infinity, maxV = -Infinity
@@ -2619,6 +2623,12 @@ function loadPhoneModel(relativePath) {
         if (v > maxV) maxV = v
       }
       phoneScreenUvCenter = { x: (minU + maxU) / 2, y: (minV + maxV) / 2 }
+      // Real per-model screen aspect ratio, added 2026-09-29 -- see
+      // applyScreenTextureTransform()'s own "To Scale" comment for why
+      // this replaces the fixed render-target aspect the correction
+      // used before.
+      const uvW = maxU - minU, uvH = maxV - minV
+      if (uvW > 0 && uvH > 0) phoneScreenUvAspect = uvW / uvH
     }
     if (!phoneScreenMeshes.length) console.warn(ts() + ' Phone model has no "Screen Face" mesh -- Virtual Screen render will have no effect:', relativePath)
     applyPhoneModelTransform()
@@ -2818,10 +2828,24 @@ function applyScreenTextureTransform(texture, isFinalDisplay) {
   let scaleX = cfg.screenTextureScaleX || 1
   let scaleY = cfg.screenTextureScaleY || 1
   if (cfg.screenToScaleEnabled) {
-    const targets = ensureScreenRenderTargets()
-    const targetAspect = targets[0].width / targets[0].height
-    const camAspect = camera.aspect || targetAspect
-    scaleX = camAspect / targetAspect
+    // CORRECTED 2026-09-29, direct report: "the render still looks
+    // stretched in one of the axes... regardless of my browser
+    // dimensions and the displayed model's screen dimensions, the
+    // rendered images will always be correctly scaled in terms of X
+    // to Y." The old formula (camAspect / the render target's own
+    // FIXED 384:768 buffer aspect) only corrected for ONE of the 2
+    // real stretch sources -- it never accounted for each phone
+    // model's own actual screen shape at all (the buffer aspect is a
+    // single hardcoded constant, same for every model). Working the
+    // full chain through algebraically (camera capture -> fixed
+    // buffer -> mesh's own UV shape), the buffer's own aspect cancels
+    // out completely -- only the camera's aspect and the mesh's real
+    // screen aspect should matter for the final result. Using
+    // phoneScreenUvAspect (real per-model UV width/height, computed
+    // once at load time -- see loadPhoneModel()'s own comment)
+    // directly in place of the fixed buffer aspect.
+    const camAspect = camera.aspect || phoneScreenUvAspect
+    scaleX = camAspect / phoneScreenUvAspect
     scaleY = 1
   }
   const overall = cfg.screenTextureScale || 1
