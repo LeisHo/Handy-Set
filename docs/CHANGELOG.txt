@@ -4635,6 +4635,78 @@ round's several edits (each edit bumped it once; the final committed
 value is what matters).
 
 --------------------------------------------------------------------------------
+2026-09-29  -  (46th)
+
+Direct report: "I dont see the Recursive Render image. I still see the
+original material applied to the screen face geoemtry." Confirmed via
+`AskUserQuestion` the user is on the Pixel 9A model.
+
+**CORRECTS the 45th entry's own claim that "only Iphone17MaxPro.glb
+has a mesh named 'Screen Face'"** -- that was wrong, based on a false-
+negative "no console warning" observation made during the same
+session's own sandbox-flakiness-broken page loads (the check never
+actually ran, since the page never finished loading), not a real
+confirmation. Re-checked properly this time by parsing all 3 GLBs' raw
+JSON chunk directly with a small Node script (no browser needed) --
+real findings: **P5 Project 1** has a MESH literally named 'Screen
+Face' (node[21], `mesh=21`) -- findable by exact mesh-name match
+alone. **Pixel 9A** (what the user is actually using) has NO mesh/node
+named 'Screen Face' at all -- its screen is one PRIMITIVE inside a
+combined 'Front' mesh (`Cube.015`), distinguished only by a MATERIAL
+named 'Screen Face' on that one primitive; a multi-material glTF mesh
+splits into separate `THREE.Mesh` objects per primitive on load (each
+with its own single material), but each object's own `.name` still
+comes from the shared parent node/mesh ("Front"/"Cube.015"), not the
+material -- so a mesh-name-only search could never find it, matching
+exactly what the user saw (the search silently found nothing every
+time, so the original material was never swapped). **iPhone 17 Max
+Pro** has NEITHER a matching mesh/node name NOR a matching material
+name (its screen asset is named `screen.001`/`Cube.010_screen.001_0`,
+from what looks like a differently-authored, FBX-converted asset) --
+this model genuinely has no Screen Render target, contrary to the
+45th entry's claim.
+
+Fixed `findPhoneScreenMesh()` with a 2nd pass: if no mesh/node name
+matches 'screen face' (pass 1, unchanged, still finds P5 Project 1),
+fall back to matching `obj.material.name === 'screen face'` (pass 2,
+new -- finds Pixel 9A's screen primitive directly by its own
+material). CLAUDE.md's own matching gotcha corrected in place (not
+just this changelog entry) since it's a living doc, not append-only.
+
+Not independently browser/device-verified (standing limitation per the
+45th entry's own note) -- verified instead via direct GLB-file
+inspection (ground truth, no rendering involved) and `node --check`.
+`index.html`'s cache-buster bumped `?v=133` -> `?v=134`.
+
+--------------------------------------------------------------------------------
+2026-09-29  -  (47th)
+
+Direct message mid-review: "I UPDATED THE 3 GLBS." Explains the
+uncommitted `Iphone17MaxPro.glb`/`Pixel 9A.glb` changes flagged just
+before this entry (P5 Project 1 was not touched) -- held off staging
+anything until the user confirmed this was their own deliberate work,
+not an unexplained side effect.
+
+**PARTIALLY SUPERSEDES the 46th entry's own ground truth** (re-checked
+the same way, direct GLB parse, on the files as they now exist): Pixel
+9A's screen is no longer just a material on a shared 'Front' mesh --
+it now has its OWN dedicated node/mesh named 'SCREEN FACE'. iPhone 17
+Max Pro's screen mesh was renamed from 'Cube.010_screen.001_0' to
+'Screen Face' directly. P5 Project 1's own 'Screen Face' mesh is
+unchanged. All 3 models now match `findPhoneScreenMesh()`'s pass-1
+exact mesh/node-name lookup directly -- the 46th entry's own pass-2
+material-name fallback is no longer load-bearing for any of the 3
+current models, but is kept as a defensive fallback for a future
+re-export that might revert to the old naming. No code change was
+needed this round -- `findPhoneScreenMesh()` already had both passes
+from the 46th entry's fix.
+
+Not independently browser/device-verified (standing limitation). This
+was verified the same way as the 46th entry -- direct GLB-file
+inspection (ground truth, no rendering involved) -- confirming the
+current on-disk files actually contain what this entry claims.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

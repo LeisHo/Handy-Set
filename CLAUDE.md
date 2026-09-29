@@ -2429,13 +2429,39 @@ wiring, and are still open:
   construction — pass 0 always renders with the screen mesh hidden (the
   recursion floor), and the loop always runs exactly
   `cfg.screenRecursionLevels` (1-10) times per frame, never a live
-  feedback loop.** Only `Iphone17MaxPro.glb` currently has a mesh named
-  'Screen Face' (confirmed by checking all 3 models via the console
-  warning `findPhoneScreenMesh()` logs when a loaded model has none) —
-  P5 Project 1 and Pixel 9A do not, so Screen Render has no visible
-  effect on those until a future model export adds one. If a future
-  model swap ever silently "loses" the virtual screen, check this
-  console warning before assuming the render pipeline itself broke.
+  feedback loop.** **CORRECTED TWICE, both 2026-09-29.** First
+  correction: the claim originally here ("only Iphone17MaxPro.glb has
+  a Screen Face mesh") was WRONG, based on a false-negative "no console
+  warning" observation from a session where the page load itself was
+  silently broken by this sandbox's own documented script-delivery
+  flakiness at the time — not a real confirmation. Re-checked by
+  parsing all 3 GLBs' raw JSON chunk directly (no browser needed, ground
+  truth): at that point, P5 Project 1 had a mesh literally named
+  'Screen Face'; Pixel 9A had no such mesh/node at all — its screen was
+  one PRIMITIVE inside a combined 'Front' mesh, identified only by a
+  MATERIAL named 'Screen Face' (a multi-material glTF mesh splits into
+  separate `THREE.Mesh` objects on load, each with its own single
+  material, but each such object's own NAME still comes from the shared
+  parent node/mesh, not the material); iPhone 17 Max Pro had neither.
+  `findPhoneScreenMesh()` was given a 2nd pass, falling back to
+  `obj.material.name` matching for exactly the Pixel-9A-shaped case.
+  **Second correction, same day: the user then re-exported all 3
+  GLBs**, and the underlying ground truth changed again — re-checked
+  the same way (direct GLB parse). All 3 models now have a mesh/node
+  named 'Screen Face' directly (P5 Project 1 unchanged; Pixel 9A now
+  has its own dedicated 'SCREEN FACE' node, no longer just a shared
+  primitive+material; iPhone 17 Max Pro's screen mesh was renamed from
+  'Cube.010_screen.001_0' to 'Screen Face') — pass 1 alone now finds
+  the screen mesh on every model; pass 2's material-name fallback is
+  no longer load-bearing for any of the 3 current models but is kept
+  as a defensive fallback for a future re-export. **The lesson for next
+  time this needs checking: parse the actual current GLB file's raw
+  JSON directly (a ~30-line Node script, no browser/GLTFLoader needed)
+  rather than inferring from an in-app console warning (or its
+  absence)** — this project hit 2 different false conclusions from
+  exactly that shortcut in one session alone (a broken page load
+  producing a false negative, and a stale earlier read after the model
+  files themselves changed underneath it).
   **`disposePhoneModelRaw()` swaps the screen mesh back to its own
   ORIGINAL material before the generic material/texture disposal
   traversal runs** — without this, switching phone models while Screen

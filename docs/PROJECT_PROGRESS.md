@@ -26,14 +26,29 @@ Pushed to `https://github.com/LeisHo/Handy-Set`
 
 ## Recently completed
 
+- **RESOLVED (2026-09-29): Virtual Screen had no visible effect on
+  Pixel 9A — a real bug in the mesh-finding logic, not a missing
+  feature on that model.** Root cause found by parsing all 3 phone
+  GLBs' raw JSON directly (ground truth, no browser needed): Pixel 9A
+  had no mesh/node named 'Screen Face' at the time — its screen was one
+  primitive inside a combined 'Front' mesh, identified only by a
+  MATERIAL named 'Screen Face'. `findPhoneScreenMesh()` now falls back
+  to matching by material name when no mesh/node name matches. Same
+  day, the user then re-exported all 3 GLBs so every model now has its
+  own dedicated 'Screen Face' mesh/node directly (Pixel 9A's own
+  'SCREEN FACE' node; iPhone 17 Max Pro's screen renamed from
+  'Cube.010_screen.001_0'; P5 Project 1 unchanged) — the material-name
+  fallback is no longer load-bearing for any of the 3 current models
+  but stays as a defensive fallback. See `docs/CHANGELOG.txt`'s
+  matching 2026-09-29 (46th and 47th) entries.
 - **NEW (2026-09-29): Virtual Screen** — renders the app's own live 3D
-  scene onto the phone GLB's own 'Screen Face' mesh (found by name at
-  load time; only `Iphone17MaxPro.glb` currently has one). Recursion
-  is bounded by construction — a fixed number of sequential off-screen
-  passes each frame (1-10, dev-panel slider), never a live feedback
-  loop, so it cannot recurse infinitely regardless of the slider value.
-  New top-level, toggleable **RECURSIVE RENDER** group (Recursive
-  Render On/Off, Recursion Levels, Render Resolution %). Also fixed,
+  scene onto the phone GLB's own 'Screen Face' mesh/material (found at
+  load time). Recursion is bounded by construction — a fixed number of
+  sequential off-screen passes each frame (1-10, dev-panel slider),
+  never a live feedback loop, so it cannot recurse infinitely
+  regardless of the slider value. New top-level, toggleable
+  **RECURSIVE RENDER** group (Recursive Render On/Off, Recursion
+  Levels, Render Resolution %). Also fixed,
   per direct reports on the existing Phone Model rotation controls:
   Rotation Scale sliders now allow negative values (flips direction at
   the same magnitude); desktop's Y axis (spin) is wired for the first
