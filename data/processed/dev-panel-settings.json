@@ -92,11 +92,11 @@
     "sliderPhoneModelScale": 1,
     "sliderPhoneModelOffsetX": 0,
     "sliderPhoneModelOffsetY": 31,
-    "sliderPhoneModelOffsetZ": -1,
+    "sliderPhoneModelOffsetZ": 0,
     "sliderPhoneModelRotX": 0,
     "sliderPhoneModelRotY": 0,
     "sliderPhoneModelRotZ": 0,
-    "checkboxPhoneResponsiveRotationEnabled": true,
+    "checkboxPhoneResponsiveRotationEnabled": false,
     "checkboxPhoneRotationResetEnabled": true,
     "checkboxPhoneAxisXEnabled": true,
     "sliderPhoneRotationScaleX": 1,
@@ -109,8 +109,8 @@
     "textPhoneResponsiveRotationRange": "{\"min\":-57,\"max\":45}",
     "textPhoneResponsiveRotationCurve": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"natural\"}",
     "checkboxScreenRenderEnabled": true,
-    "sliderScreenRecursionLevels": 12,
-    "sliderScreenRenderResolution": 150,
+    "sliderScreenRecursionLevels": 5,
+    "sliderScreenRenderResolution": 175,
     "sliderScreenTextureScale": 0.95,
     "sliderScreenTextureRotation": 180,
     "sliderScreenTextureOffsetX": 0,
@@ -118,9 +118,11 @@
     "sliderScreenTextureScaleX": 1.1,
     "sliderScreenTextureScaleY": 0.95,
     "sliderScreenEmissionIntensity": 0.85,
-    "checkboxScreenMirrorAlternatingX": false,
+    "checkboxScreenMirrorAlternatingX": true,
     "checkboxScreenMirrorAlternatingY": false,
-    "checkboxScreenToScale": false,
+    "checkboxScreenMirrorPhaseX": true,
+    "checkboxScreenMirrorPhaseY": false,
+    "checkboxScreenToScale": true,
     "checkboxWristSplayResponsiveEnabled": false,
     "sliderWristSplayDefault": -25,
     "checkboxWristSplayReactiveEnabled": true,
@@ -183,9 +185,9 @@
   },
   "layout": {
     "left": 35,
-    "top": 583,
+    "top": 182,
     "width": 350,
-    "height": 76
+    "height": 521
   },
   "devPanelStyle": {
     "titleFontSize": 17,
@@ -592,6 +594,14 @@
                 {
                   "type": "row",
                   "key": "sliderScreenTextureOffsetY"
+                },
+                {
+                  "type": "row",
+                  "key": "checkboxScreenMirrorPhaseX"
+                },
+                {
+                  "type": "row",
+                  "key": "checkboxScreenMirrorPhaseY"
                 }
               ],
               "rowKeys": [
@@ -606,7 +616,9 @@
                 "checkboxScreenMirrorAlternatingX",
                 "checkboxScreenMirrorAlternatingY",
                 "sliderScreenTextureOffsetX",
-                "sliderScreenTextureOffsetY"
+                "sliderScreenTextureOffsetY",
+                "checkboxScreenMirrorPhaseX",
+                "checkboxScreenMirrorPhaseY"
               ],
               "subgroups": []
             }
@@ -860,6 +872,14 @@
               {
                 "type": "row",
                 "key": "sliderScreenTextureOffsetY"
+              },
+              {
+                "type": "row",
+                "key": "checkboxScreenMirrorPhaseX"
+              },
+              {
+                "type": "row",
+                "key": "checkboxScreenMirrorPhaseY"
               }
             ],
             "rowKeys": [
@@ -874,7 +894,9 @@
               "checkboxScreenMirrorAlternatingX",
               "checkboxScreenMirrorAlternatingY",
               "sliderScreenTextureOffsetX",
-              "sliderScreenTextureOffsetY"
+              "sliderScreenTextureOffsetY",
+              "checkboxScreenMirrorPhaseX",
+              "checkboxScreenMirrorPhaseY"
             ],
             "subgroups": []
           }
@@ -8315,7 +8337,7 @@
     "desktop:PHONE MODEL": false,
     "desktop:OFFSET": false,
     "desktop:PHONE ROTATION": true,
-    "desktop:RESPONSIVE BEHAVIOUR - PHONE": true,
+    "desktop:RESPONSIVE BEHAVIOUR - PHONE": false,
     "desktop:Responsive Rotation": false,
     "desktop:RECURSIVE RENDER": false,
     "desktop:HAND MODEL": true,
