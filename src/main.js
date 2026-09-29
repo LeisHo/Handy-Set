@@ -2853,6 +2853,16 @@ function applyScreenTextureTransform(texture, isFinalDisplay) {
     const camAspect = camera.aspect || phoneScreenUvAspect
     scaleX = camAspect / phoneScreenUvAspect
     scaleY = 1
+    // TEMPORARY diagnostic, 2026-09-29 -- direct report: desktop now
+    // shows the same "narrow" distortion mobile did, on every model,
+    // after a refresh -- with no code change to this formula since it
+    // last looked correct on desktop. Reuses the same window.__mirrorDebug
+    // flag already used to debug the mirror investigation (the user
+    // already knows how to set it), so the real live camAspect/
+    // phoneScreenUvAspect/scaleX/repeat.x values show up in the console
+    // instead of needing a separate window.__debug lookup. Remove once
+    // this is resolved.
+    if (window.__mirrorDebug) console.log(ts() + ' [toScaleDebug] camAspect=' + camAspect + ' phoneScreenUvAspect=' + phoneScreenUvAspect + ' scaleX=' + scaleX + ' repeat.x=' + (1 / ((cfg.screenTextureScale || 1) * scaleX)))
   }
   const overall = cfg.screenTextureScale || 1
   // MIRROR ORDER/PHASE, REWRITTEN 2026-09-29 (no depth/passIndex math
