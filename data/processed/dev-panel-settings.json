@@ -107,9 +107,9 @@
     "sliderPhoneRotationDamping": 1,
     "textPhoneResponsiveRotationRange": "{\"min\":-57,\"max\":45}",
     "textPhoneResponsiveRotationCurve": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"natural\"}",
-    "checkboxScreenRenderEnabled": false,
-    "sliderScreenRecursionLevels": 3,
-    "sliderScreenRenderResolution": 100,
+    "checkboxScreenRenderEnabled": true,
+    "sliderScreenRecursionLevels": 1,
+    "sliderScreenRenderResolution": 70,
     "checkboxWristSplayResponsiveEnabled": false,
     "sliderWristSplayDefault": -25,
     "checkboxWristSplayReactiveEnabled": true,
@@ -532,6 +532,27 @@
                 }
               ]
             }
+          },
+          {
+            "type": "group",
+            "section": {
+              "key": "desktop:RECURSIVE RENDER",
+              "items": [
+                {
+                  "type": "row",
+                  "key": "sliderScreenRecursionLevels"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderScreenRenderResolution"
+                }
+              ],
+              "rowKeys": [
+                "sliderScreenRecursionLevels",
+                "sliderScreenRenderResolution"
+              ],
+              "subgroups": []
+            }
           }
         ],
         "rowKeys": [
@@ -732,6 +753,24 @@
                 "subgroups": []
               }
             ]
+          },
+          {
+            "key": "desktop:RECURSIVE RENDER",
+            "items": [
+              {
+                "type": "row",
+                "key": "sliderScreenRecursionLevels"
+              },
+              {
+                "type": "row",
+                "key": "sliderScreenRenderResolution"
+              }
+            ],
+            "rowKeys": [
+              "sliderScreenRecursionLevels",
+              "sliderScreenRenderResolution"
+            ],
+            "subgroups": []
           }
         ]
       },
@@ -4666,24 +4705,6 @@
           "colorBgColor"
         ],
         "subgroups": []
-      },
-      {
-        "key": "desktop:RECURSIVE RENDER",
-        "items": [
-          {
-            "type": "row",
-            "key": "sliderScreenRecursionLevels"
-          },
-          {
-            "type": "row",
-            "key": "sliderScreenRenderResolution"
-          }
-        ],
-        "rowKeys": [
-          "sliderScreenRecursionLevels",
-          "sliderScreenRenderResolution"
-        ],
-        "subgroups": []
       }
     ],
     "mobileTabContent": [
@@ -8142,8 +8163,9 @@
     "desktop:PHONE MODEL": false,
     "desktop:OFFSET": true,
     "desktop:PHONE ROTATION": true,
-    "desktop:RESPONSIVE BEHAVIOUR - PHONE": false,
-    "desktop:Responsive Rotation": false,
+    "desktop:RESPONSIVE BEHAVIOUR - PHONE": true,
+    "desktop:Responsive Rotation": true,
+    "desktop:RECURSIVE RENDER": false,
     "desktop:HAND MODEL": true,
     "desktop:Field Layout": true,
     "desktop:Pose": false,
@@ -8190,7 +8212,6 @@
     "desktop:Toon Shading": true,
     "desktop:Saved Toon Shading": true,
     "desktop:Background": true,
-    "desktop:RECURSIVE RENDER": false,
     "mobile:PHONE MODEL": false,
     "mobile:OFFSET": false,
     "mobile:PHONE ROTATION": false,
