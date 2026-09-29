@@ -458,6 +458,52 @@
                     ],
                     "subgroups": []
                   }
+                },
+                {
+                  "type": "group",
+                  "section": {
+                    "key": "desktop:RECURSIVE RENDER",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "sliderScreenRecursionLevels"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderScreenRenderResolution"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderScreenTextureScale"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderScreenTextureRotation"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderScreenTextureScaleX"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderScreenTextureScaleY"
+                      },
+                      {
+                        "type": "row",
+                        "key": "checkboxScreenToScale"
+                      }
+                    ],
+                    "rowKeys": [
+                      "sliderScreenRecursionLevels",
+                      "sliderScreenRenderResolution",
+                      "sliderScreenTextureScale",
+                      "sliderScreenTextureRotation",
+                      "sliderScreenTextureScaleX",
+                      "sliderScreenTextureScaleY",
+                      "checkboxScreenToScale"
+                    ],
+                    "subgroups": []
+                  }
                 }
               ],
               "rowKeys": [],
@@ -4708,49 +4754,6 @@
           "colorBgColor"
         ],
         "subgroups": []
-      },
-      {
-        "key": "desktop:RECURSIVE RENDER",
-        "items": [
-          {
-            "type": "row",
-            "key": "sliderScreenRecursionLevels"
-          },
-          {
-            "type": "row",
-            "key": "sliderScreenRenderResolution"
-          },
-          {
-            "type": "row",
-            "key": "sliderScreenTextureScale"
-          },
-          {
-            "type": "row",
-            "key": "sliderScreenTextureRotation"
-          },
-          {
-            "type": "row",
-            "key": "sliderScreenTextureScaleX"
-          },
-          {
-            "type": "row",
-            "key": "sliderScreenTextureScaleY"
-          },
-          {
-            "type": "row",
-            "key": "checkboxScreenToScale"
-          }
-        ],
-        "rowKeys": [
-          "sliderScreenRecursionLevels",
-          "sliderScreenRenderResolution",
-          "sliderScreenTextureScale",
-          "sliderScreenTextureRotation",
-          "sliderScreenTextureScaleX",
-          "sliderScreenTextureScaleY",
-          "checkboxScreenToScale"
-        ],
-        "subgroups": []
       }
     ],
     "mobileTabContent": [
@@ -4798,6 +4801,15 @@
                       "textPhoneResponsiveRotationRange",
                       "textPhoneResponsiveRotationCurve"
                     ],
+                    "subgroups": []
+                  }
+                },
+                {
+                  "type": "group",
+                  "section": {
+                    "key": "mobile:RECURSIVE RENDER",
+                    "items": [],
+                    "rowKeys": [],
                     "subgroups": []
                   }
                 }
@@ -6476,12 +6488,6 @@
         "items": [],
         "rowKeys": [],
         "subgroups": []
-      },
-      {
-        "key": "mobile:RECURSIVE RENDER",
-        "items": [],
-        "rowKeys": [],
-        "subgroups": []
       }
     ],
     "landscapeTabContent": [
@@ -6529,6 +6535,15 @@
                       "textPhoneResponsiveRotationRange",
                       "textPhoneResponsiveRotationCurve"
                     ],
+                    "subgroups": []
+                  }
+                },
+                {
+                  "type": "group",
+                  "section": {
+                    "key": "landscape:RECURSIVE RENDER",
+                    "items": [],
+                    "rowKeys": [],
                     "subgroups": []
                   }
                 }
@@ -8204,12 +8219,6 @@
       },
       {
         "key": "landscape:Background",
-        "items": [],
-        "rowKeys": [],
-        "subgroups": []
-      },
-      {
-        "key": "landscape:RECURSIVE RENDER",
         "items": [],
         "rowKeys": [],
         "subgroups": []

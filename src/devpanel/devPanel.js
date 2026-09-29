@@ -2618,7 +2618,23 @@
     // that group's settings — this function only owns the UI/visibility
     // side, not the "applied" half.
     function makeDevGroupToggleable(tab, groupSid, ctrlId) {
-        const titleEl = document.querySelector('#' + tab + 'TabContent > .dev-section > .dev-section-title[data-sid="' + groupSid.replace(/"/g, '\\"') + '"]');
+        // Widened 2026-09-29 (HANDYSET) from a direct-child selector
+        // ('#tabTabContent > .dev-section > .dev-section-title[...]') to
+        // a plain descendant selector -- a genuinely generic engine
+        // capability gap, not a project-specific patch: this function
+        // previously only worked on a TOP-LEVEL group (same restriction
+        // window.findGroupContent() had, already fixed the same way via
+        // findNestedGroupContent()). Found live when a project moved a
+        // toggleable group (RECURSIVE RENDER) into a nested subgroup by
+        // direct user request and its own title-bar On/Off checkbox
+        // silently stopped attaching (this function's own console.warn
+        // never fired -- querySelector just returned no match). Safe to
+        // widen: a data-sid is unique per tab regardless of nesting
+        // depth (see the workspace CLAUDE.md's own "check every
+        // addGroup()/addSubgroup() call for a name collision first"
+        // rule), so dropping the direct-child restriction can't match
+        // the wrong element.
+        const titleEl = document.querySelector('#' + tab + 'TabContent .dev-section-title[data-sid="' + groupSid.replace(/"/g, '\\"') + '"]');
         const cb = document.getElementById(ctrlId);
         if (!titleEl || !cb || cb.type !== 'checkbox') { console.warn('makeDevGroupToggleable: group or checkbox control not found', groupSid, ctrlId); return; }
         const section = titleEl.closest('.dev-section');

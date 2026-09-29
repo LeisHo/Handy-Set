@@ -58,7 +58,12 @@ dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5
 // text-control ids, and this same day's Item Selector/hiddenPhoneModelFile
 // additions). This bump is the designed fix for exactly this symptom --
 // it does not touch the git-tracked file, which never needed resetting.
-const HANDYSET_SETTINGS_SCHEMA_VERSION = '2026-09-29a'
+//
+// Bumped again, same day (2026-09-29b): RECURSIVE RENDER moved from a
+// top-level group to a subgroup of PHONE MODEL > RESPONSIVE BEHAVIOUR -
+// PHONE, per direct request -- another real group-nesting change since
+// the 'a' bump above.
+const HANDYSET_SETTINGS_SCHEMA_VERSION = '2026-09-29b'
 try {
   if (localStorage.getItem('handysetSettingsSchemaVersion') !== HANDYSET_SETTINGS_SCHEMA_VERSION) {
     localStorage.removeItem('devPanelSettings')
@@ -4825,19 +4830,34 @@ function renderPhoneModelGroup(content) {
       parsePhoneResponsiveRotationConfig()
     })
   }
+
+  // CORRECTED 2026-09-29, direct request: "The recurrsive render group
+  // should be int he phone model group under the repsonsive behaviour
+  // group" -- moved from a top-level sibling group (its original
+  // placement, see renderRecursiveRenderGroup()'s own header comment
+  // for that history) to a subgroup of RESPONSIVE BEHAVIOUR - PHONE.
+  // Its own title-bar On/Off toggle (makeDevGroupToggleable()) used to
+  // require a top-level group -- rather than silently lose that
+  // feature or refuse the move, devPanel.js's makeDevGroupToggleable()
+  // itself was widened to work at any nesting depth (see its own
+  // comment), the same fix shape window.findGroupContent() already got
+  // via findNestedGroupContent() for a different reason.
+  renderRecursiveRenderGroup(addSubgroup(subResponsiveBehaviour, 'RECURSIVE RENDER'))
 }
 
-// RECURSIVE RENDER -- own top-level, toggleable group (direct request
-// 2026-09-29: "place them in a new toggleable group called 'RECURSIVE
-// RENDER'"). A TOP-LEVEL group specifically because devPanel.js's own
-// makeDevGroupToggleable() looks up its title via a direct-child
-// selector (`#tabTabContent > .dev-section > .dev-section-title[...]`)
-// -- the same restriction findNestedGroupContent() above was written to
-// work around for group CONTENT lookups; here, rather than reimplement
-// that restriction away for a toggle checkbox too, the simpler and
-// equally correct fix is to just make this its own top-level group,
-// which is exactly the shape that function is designed for (matching
-// the template's own built-in Dev Panel/Debug groups' usage).
+// RECURSIVE RENDER -- toggleable group (direct request 2026-09-29:
+// "place them in a new toggleable group called 'RECURSIVE RENDER'").
+// CORRECTED, same day: originally built as its own TOP-LEVEL group
+// specifically because devPanel.js's own makeDevGroupToggleable() only
+// looked up its title via a direct-child selector -- per a later direct
+// request ("The recurrsive render group should be int he phone model
+// group under the repsonsive behaviour group") it's now nested inside
+// PHONE MODEL > RESPONSIVE BEHAVIOUR - PHONE instead (see its own call
+// site, renderPhoneModelGroup()). Rather than lose its title-bar On/Off
+// toggle to make that nesting possible, makeDevGroupToggleable() itself
+// was generalized to work at any depth (its own comment) -- the same
+// fix shape window.findGroupContent() already got via
+// findNestedGroupContent() for group CONTENT lookups.
 function renderRecursiveRenderGroup(content) {
   addRow(content, { id: 'checkboxScreenRenderEnabled', label: 'Recursive Render On/Off', type: 'checkbox' })
   document.getElementById('checkboxScreenRenderEnabled').checked = cfg.screenRenderEnabled
@@ -5310,7 +5330,6 @@ function renderHandysetDevGroups() {
   renderPhoneTiltGroup(addSubgroup(handModelContent, 'RESPONSIVE BEHAVIOUR - HAND'))
 
   renderPhoneModelGroup(addGroup('PHONE MODEL'))
-  renderRecursiveRenderGroup(addGroup('RECURSIVE RENDER'))
 
   renderResponsiveWristSplayGroup(addGroup('Responsive Wrist Splay'))
   renderCameraGroup(addGroup('Camera'))
