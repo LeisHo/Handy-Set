@@ -12,17 +12,19 @@ Nothing in progress. Phone Model's mobile rotation axis mapping saga
 CLAUDE.md gotcha) is settled per real isolated-checkbox testing.
 Desktop's own axis gating (X/Y/Z Rotation on/off + scale) was corrected
 2026-09-29 the same way. Virtual Screen's mesh-lookup bug is fixed
-(multi-primitive Group case, see the 47th/48th CHANGELOG entries), and
-the Phone Model selector is now a real Item Selector with GLB import —
-see Recently completed below.
+(multi-primitive Group case), the Recursive Render alternating-mirror
+bug is fixed (UV-mirror compensation, unverified against the real
+device), and the Phone Model selector is now a real Item Selector with
+GLB import, now listing 8 models total (3 downsized, 5 new) — see
+Recently completed below.
 
-Noticed but not acted on: several new untracked files/folders appeared
-directly on disk under `data/processed/SMARTPHONE MODELS/` (`BLENDER/`,
-`RAW GLB/`, `Samsung Galaxy S2/`, `Samsung Galaxy S26.glb`, `Zip/`,
-`blackberry/`, `iPhone 17 Max.glb`, `samsung-galaxy-s26-black-low-poly/`)
-— the user's own asset staging, left untouched. These could now be
-added via the new Item Selector's own Import feature once ready, rather
-than committed directly.
+Remaining untouched, by request: several raw asset-staging folders
+under `data/processed/SMARTPHONE MODELS/` (`BLENDER/`, `RAW GLB/`,
+`Samsung Galaxy S2/` (folder), `Zip/`, `blackberry/`,
+`samsung-galaxy-s26-black-low-poly/`) — only the finished `.glb` files
+were asked to be added (2026-09-29), matching this project's own raw-
+vs-processed convention (§11). These stay as the user's own working
+material unless asked to be committed too.
 
 **Not independently verified in-browser this round (2026-09-29)** —
 the sandbox's local static server hit sustained `net::ERR_CONNECTION_RESET`
@@ -37,6 +39,24 @@ Pushed to `https://github.com/LeisHo/Handy-Set`
 
 ## Recently completed
 
+- **RESOLVED (2026-09-29): Recursive Render's alternating left-right
+  mirror.** Direct report: odd recursion levels flipped, even ones
+  didn't. Diagnosed via `AskUserQuestion` (reproduces even at
+  Recursion Levels=2, ruling out a compounding-only bug) — since
+  `applyScreenTextureTransform()` uses identical values on every pass,
+  the cause had to be structural: the Screen Face mesh's own UV is
+  never sampled during the screen-hidden base pass, only from pass 1
+  onward, so a single, constant UV-mirror baked into that one mesh
+  (a common glTF/Blender export quirk) explains the exact reported
+  alternation — applying a mirror once per recursion level behaves
+  like two facing mirrors. Fixed by negating `texture.repeat.x`, which
+  corrects every level uniformly. Not independently verified against
+  the real mesh/device — see CLAUDE.md's own matching gotcha for how
+  to revert if this turns out backwards. Also this round: the 3
+  existing phone models downsized (1.8-4MB → 61-315KB) and 5 new ones
+  added (Galaxy S2, Motorola Razr, Nothing2, Samsung Galaxy S26,
+  iPhone 17 Max) — 8 total now listed in `manifest.json`. See
+  `docs/CHANGELOG.txt`'s matching 2026-09-29 (49th) entry.
 - **NEW (2026-09-29): Phone Model Item Selector + GLB import.** The
   plain model `<select>` is now a real Item Selector (a clickable
   list) with an "Import GLB..." button — importing checks for a

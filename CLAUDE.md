@@ -2555,3 +2555,43 @@ wiring, and are still open:
   anywhere in `save-settings.js`, this project's own other, already-
   working Vercel function, and deliberately not adding an unverified
   config export to the new one either).
+- **`applyScreenTextureTransform()` negates `texture.repeat.x`
+  (2026-09-29 fix) to correct a reported alternating left-right mirror
+  in Recursive Render's own nested levels — this is NOT a per-pass bug
+  in that function (it runs with identical `cfg` values on every
+  single pass, confirmed by direct code re-read, so it can't itself be
+  the source of a difference between generations).** The real cause:
+  the Screen Face mesh's own UV is never sampled during pass 0 (screen
+  hidden), only from pass 1 onward — a single, CONSTANT horizontal
+  UV-mirror baked into that ONE mesh (a common glTF/Blender export
+  quirk on a mirrored/duplicated part) reproduces the exact reported
+  pattern on its own: applying a mirror once per recursion level
+  behaves like two facing mirrors, alternating parity by construction
+  (confirmed reproducible even at Recursion Levels=2 via
+  `AskUserQuestion`, ruling out a compounding-only theory). Fixing it
+  at the SOURCE (this one negation) corrects every level uniformly,
+  rather than needing a per-level correction. **NOT independently
+  verified against the real mesh/device** (standing limitation) — if
+  this makes the mirroring WORSE instead of better, the mirror theory
+  itself is disproven and the fix is reverting the `-1 *` (removing
+  the negation entirely), not flipping to the Y axis or `repeat.y` on
+  a 2nd guess — that would repeat this file's own well-documented
+  "guess another axis cold" failure pattern (see the Phone Model
+  mobile-rotation-axis saga elsewhere in this file for exactly what
+  that looks like when it goes wrong repeatedly).
+- **`data/processed/SMARTPHONE MODELS/` now has 8 real, committed
+  `.glb` models (2026-09-29) — P5 Project 1/Pixel 9A/iPhone 17 Max Pro
+  (all downsized to 61-315KB, from 1.8-4MB) plus 5 new ones (Galaxy
+  S2, Motorola Razr, Nothing2, Samsung Galaxy S26, iPhone 17 Max) —
+  all listed in `manifest.json`.** Several OTHER folders/files also
+  live in that same directory (`BLENDER/`, `RAW GLB/`, `Zip/`,
+  `blackberry/`, `Samsung Galaxy S2/` (a folder, distinct from the
+  committed `Galaxy S2.glb` file), `samsung-galaxy-s26-black-low-poly/`)
+  — these are the user's own raw/source asset staging, deliberately
+  LEFT UNCOMMITTED per direct instruction ("please replace and add the
+  new ones" meant the finished `.glb` files specifically, not the
+  staging folders) — matching this project's own §11 raw-vs-processed
+  convention. Don't assume every file/folder under this directory is
+  fair game to commit just because it's physically present there;
+  check `manifest.json` and this note for what's actually meant to be
+  tracked.

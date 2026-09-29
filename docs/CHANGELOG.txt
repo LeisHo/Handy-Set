@@ -4800,6 +4800,57 @@ not committed or referenced by this entry's own work.
 `index.html`'s cache-buster bumped `?v=134` -> `?v=135`.
 
 --------------------------------------------------------------------------------
+2026-09-29  -  (49th)
+
+Direct report: "fome some reason, for the recursion rendering, every
+other rendered image is mirrored left to right. So the 1st image
+rendered on the phone model is flipped, the 2nd one in that is not,
+etc." Raised via `AskUserQuestion` whether this reproduces at
+Recursion Levels=2 (the minimal case) or only compounds at 3+ --
+answered "yes even at 2."
+
+That answer is the key diagnostic: `applyScreenTextureTransform()`
+runs with IDENTICAL `cfg` values on every single pass (nothing in it
+varies by pass index), so it cannot itself be the source of a
+difference BETWEEN generations -- ruling out a per-pass code bug in
+that function. The one real structural difference between pass 0
+(screen hidden -- a clean capture where the Screen Face mesh's own UV
+is never sampled at all) and every pass from 1 onward (screen visible,
+its geometry textured for the first time) is that any UV-orientation
+defect ON THAT ONE MESH only ever enters the picture starting from
+pass 1. A single, CONSTANT horizontal UV-mirror baked into the mesh
+(a common glTF/Blender export quirk on a mirrored/duplicated part)
+reproduces the exact reported pattern by itself: applying a mirror
+once per recursion level is mathematically identical to two facing
+mirrors -- 1 application reads flipped, 2 (one nested level deeper)
+reads flipped-of-a-flip = back to normal, 3 flipped again, etc. Fixed
+by negating `texture.repeat.x` in `applyScreenTextureTransform()`,
+which cancels the mesh's own mirror at its source -- correcting every
+recursion level uniformly rather than needing a per-level fix.
+
+Not independently verified against the real mesh/device (standing
+limitation) -- if this makes it worse instead of better, the mirror
+theory is disproven and the fix is reverting the `-1 *` (see that
+function's own comment), not flipping to the Y axis on a 2nd guess.
+
+Same round, direct request: "i added new glb files and downsized the
+others. please replace and add the new ones." The existing 3 phone
+models (P5 Project 1, Pixel 9A, iPhone 17 Max Pro) are now 61-315KB
+(down from 1.8-4MB); 5 new models added (Galaxy S2, Motorola Razr,
+Nothing2, Samsung Galaxy S26, iPhone 17 Max), all comfortably under
+any size limit discussed for the Item Selector's own import feature
+(the 48th entry). `manifest.json` updated to list all 8. Left the
+user's own raw asset-staging folders (`BLENDER/`, `RAW GLB/`, `Zip/`,
+`blackberry/`, `Samsung Galaxy S2/`, `samsung-galaxy-s26-black-low-poly/`)
+untouched -- only the finished `.glb` files at the top level were
+asked to be added, matching this project's own raw-vs-processed
+convention (§11).
+
+`index.html`'s own cache-buster bump was missed in the same commit as
+the code change (`012b682`) and had to be pushed as an immediate
+follow-up commit (`6a6567f`) -- `?v=135` -> `?v=136`.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
