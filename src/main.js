@@ -4588,22 +4588,38 @@ let phoneModelItemSelectorContainer = null // the currently-rendered widget, rep
 
 // Per-Model Settings -- direct request 2026-09-29: "make sure all
 // slider settings within the phone model group saves per model."
-// Every control under PHONE MODEL (Scale/Offset/Rotation, RESPONSIVE
+// Every control under PHONE MODEL (Scale/Offset, RESPONSIVE
 // BEHAVIOUR - PHONE's Responsive Rotation, and its own nested
 // RECURSIVE RENDER) is captured under the OLD model's own key right
 // before a switch, and the NEW model's own saved values (if any) are
 // restored right after -- so tuning one model's screen brightness/
-// scale/rotation doesn't silently bleed onto the next model selected.
+// scale doesn't silently bleed onto the next model selected.
 // A model never previously tuned simply keeps whatever values are
 // currently showing (no entry to restore), matching how a fresh
 // control naturally behaves. Deliberately excludes
 // checkboxPhoneModelEnabled and the Item Selector's own hidden
 // selection control -- those are properties of the FEATURE, not of
 // one specific model.
+//
+// CORRECTED, same day: Phone Model Rotation X/Y/Z was originally
+// included here too, but per direct correction ("every phone model is
+// oriented the same way in regards to world XYZ. so when rotating the
+// recursie rendering, the rotations should all be the same") it's
+// REMOVED from this list -- Rotation stays ONE SHARED value across
+// every model, same as before this feature existed, since a
+// per-model default would be actively wrong given all models share
+// the same base orientation. This also means the Y=180 value set
+// during this session's own live diagnostic testing (investigating
+// "the screen face in the Iphone 17 max pro model isnt showing up")
+// is now that ONE SHARED rotation for every model, not an
+// iPhone-specific override -- if that turns out wrong for other
+// models, the real cause of the iPhone visibility report was likely
+// something else entirely (camera framing during testing, not a
+// genuine per-model orientation difference), not a reason to
+// reintroduce per-model rotation.
 const PHONE_MODEL_PER_MODEL_CONTROL_IDS = [
   'sliderPhoneModelScale',
   'sliderPhoneModelOffsetX', 'sliderPhoneModelOffsetY', 'sliderPhoneModelOffsetZ',
-  'sliderPhoneModelRotX', 'sliderPhoneModelRotY', 'sliderPhoneModelRotZ',
   'checkboxPhoneResponsiveRotationEnabled', 'checkboxPhoneRotationResetEnabled',
   'checkboxPhoneAxisXEnabled', 'sliderPhoneRotationScaleX',
   'checkboxPhoneAxisYEnabled', 'sliderPhoneRotationScaleY',
