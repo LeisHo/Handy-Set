@@ -116,7 +116,7 @@
     "sliderScreenTextureScaleX": 5,
     "sliderScreenTextureScaleY": 2.25,
     "sliderScreenEmissionIntensity": 1.95,
-    "checkboxScreenMirrorAlternatingX": false,
+    "checkboxScreenMirrorAlternatingX": true,
     "checkboxScreenMirrorAlternatingY": true,
     "checkboxScreenToScale": false,
     "checkboxWristSplayResponsiveEnabled": false,
