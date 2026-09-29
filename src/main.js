@@ -4544,7 +4544,27 @@ function renderPhoneModelItemSelector(parentContent) {
   // curve/range fields' own "MIGRATED"/20th-CHANGELOG-entry history).
   const hiddenRow = addRow(container, { id: 'hiddenPhoneModelFile', label: 'Model File (internal)', type: 'text', inputType: 'text', value: cfg.phoneModelFile, skipDeviceCheckbox: true })
   hiddenRow.style.display = 'none'
-  const hiddenInput = document.getElementById('hiddenPhoneModelFile')
+  // CORRECTED 2026-09-29: `container` (built above via
+  // document.createElement) is still DETACHED from the live document at
+  // this point -- it only gets appended to `parent` further down in this
+  // function. document.getElementById() can't find an id that only
+  // exists inside a detached subtree, so this threw
+  // "Cannot read properties of null (reading 'value')" on every real
+  // page load, which silently aborted ensureDevPanelBuilt() partway
+  // through renderHandysetDevGroups() (devPanelBuilt never got set to
+  // true) -- the next caller (e.g. loadRemoteSettingsOnStartup()'s own
+  // explicit ensureDevPanelBuilt() call) then re-ran the WHOLE build
+  // from scratch, reproducing the exact same throw at the exact same
+  // point every time. Net effect: 2 real, fully-built copies of HAND
+  // MODEL and PHONE MODEL (both addGroup() calls complete before this
+  // line), and every group declared AFTER Phone Model in
+  // renderHandysetDevGroups() (RECURSIVE RENDER, Camera, Lighting, Toon
+  // Shading, Background, Ground Plane, Finger Gizmos) missing entirely
+  // on BOTH attempts -- confirmed live via console error + a direct DOM
+  // section dump on the real deployed site. Fixed by querying within the
+  // row itself (works whether or not it's attached to `document` yet)
+  // instead of a global getElementById lookup.
+  const hiddenInput = hiddenRow.querySelector('#hiddenPhoneModelFile')
   let lastSeenPhoneModelFile = hiddenInput.value
   // Fires on BOTH a user-driven change (the row click handler below
   // also sets .value directly) and an EXTERNAL restore (Reset/Undo/a
