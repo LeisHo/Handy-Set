@@ -300,6 +300,12 @@ const cfg = {
   // o the render mirroring every other screen." See
   // applyScreenTextureTransform()'s own comment for the parity logic.
   screenMirrorAlternatingX: false, screenMirrorAlternatingY: false,
+  // Mirror order/phase -- direct request 2026-09-29: "add 2 checkboxes,
+  // 1 for each axis. It will determine the mirroring order. so if off,
+  // it maybe 010101, when on it will be 101010 etc." Only meaningful
+  // while the matching Alternating checkbox above is also on -- flips
+  // which depths (odd vs even) are the mirrored ones.
+  screenMirrorPhaseX: false, screenMirrorPhaseY: false,
   // "To Scale" -- direct report: "whenever my actual browser size is
   // different from the model mesh size, the rendered image gets scaled
   // incorrectly." Root cause: the off-screen capture always renders
@@ -2797,46 +2803,40 @@ function applyScreenTextureTransform(texture, passIndex) {
   }
   const overall = cfg.screenTextureScale || 1
   const levels = THREE.MathUtils.clamp(Math.round(cfg.screenRecursionLevels || 1), 1, 10)
-  const alternateParity = typeof passIndex === 'number' && (passIndex % 2) !== (levels % 2)
-  // UNCONDITIONAL X base correction (unchanged since 2026-09-29 --
-  // cancels a genuine per-pass alternation baked into the recursive
-  // capture pipeline itself, present with the checkbox off). Kept
-  // exactly as-is below: it's what produced the "checkbox off"
-  // baseline the depth-parity fix directly below was solved against,
-  // and changing it would invalidate that verified fit.
-  const baseFlipX = alternateParity ? -1 : 1
-  // CHECKBOX contribution, CORRECTED 2026-09-29 (3rd round) -- was a
-  // flat per-pass +-1 constant, independent of depth. Solved
-  // algebraically from the user's own full letter-sequence dataset
-  // (Pixel9A + Nothing2, "X checked" columns): the checkbox's real
-  // per-pass contribution isn't constant, it alternates by VIEWER
-  // DEPTH (d = levels-passIndex, i.e. how many nested "screen inside
-  // a screen" generations deep this pass's captured image sits), not
-  // by raw pass index. Root cause: each recursion pass's rendered
-  // image gets embedded inside the NEXT pass's capture (the phone
-  // screen shows the previous pass's texture), so a per-pass flip
-  // compounds as a PRODUCT across every embedding step down to a
-  // given depth -- not a simple per-pass toggle. Verified EXACTLY
-  // (not approximately) against both models' full 8-9-depth
-  // sequences: predicted = offBaseline(d) * (-1)^d matched every
-  // single position. Y's own checkbox (below, UNCHANGED) does NOT fit
-  // this same depth-based model against the available data -- left
-  // as-is rather than guessed a 4th time; likely contaminated by
-  // this same X correction being unconditionally active during every
-  // "Y only" test capture (see this file's own CLAUDE.md gotcha for
-  // the fuller account of why X and Y reads cross-contaminate for an
-  // asymmetric screen image, independent of any remaining formula gap).
+  // REMOVED 2026-09-29 -- the unconditional `baseFlipX` per-pass
+  // correction (present regardless of either checkbox's state) is
+  // gone entirely, per direct instruction ("remove baseflip. i
+  // believe that might be the issue") after a direct report that
+  // mirroring was still visibly occurring with BOTH mirror checkboxes
+  // off. With it removed, `mirrorX`/`mirrorY` are now purely
+  // checkbox-driven: both boxes off means both terms are exactly 1,
+  // every pass, with nothing else in this function able to introduce
+  // a flip.
+  //
+  // MIRROR ORDER/PHASE, added 2026-09-29 -- direct request: "under
+  // the X and Y mirror checkboxes, add 2 checkboxes, 1 for each axis.
+  // It will determine the mirroring order. so if off, it maybe
+  // 010101, when on it will be 101010 etc." `depthOdd` is the shared
+  // depth-parity signal (see the 2026-09-29 depth-parity fix for the
+  // reasoning: viewer depth, not raw pass index, since each recursion
+  // pass embeds the previous pass's capture, compounding per-pass
+  // flips as a product across nesting depth). Each axis's own Phase
+  // checkbox picks which parity is "mirrored": off -> mirrored on
+  // EVEN depths (matches 0,1,0,1,... starting unmirrored at depth 1);
+  // on -> mirrored on ODD depths (1,0,1,0,...). Only has a visible
+  // effect while that axis's own Alternating checkbox is also on.
   const viewerDepth = levels - passIndex // 1 = outermost/direct view, increases with nesting
   const depthOdd = typeof passIndex === 'number' && (viewerDepth % 2 === 1)
-  const checkboxFlipX = cfg.screenMirrorAlternatingX ? (depthOdd ? -1 : 1) : 1
-  const mirrorX = baseFlipX * checkboxFlipX
-  const mirrorY = (cfg.screenMirrorAlternatingY && alternateParity) ? -1 : 1
+  const mirroredX = cfg.screenMirrorPhaseX ? depthOdd : !depthOdd
+  const mirroredY = cfg.screenMirrorPhaseY ? depthOdd : !depthOdd
+  const mirrorX = (cfg.screenMirrorAlternatingX && mirroredX) ? -1 : 1
+  const mirrorY = (cfg.screenMirrorAlternatingY && mirroredY) ? -1 : 1
   // TEMPORARY diagnostic, 2026-09-29 -- direct report "it didint
   // work" after 2 failed theories (constant flip, texture-matrix
   // timing). Logs the real computed parity/mirror per pass so the
   // actual runtime sequence can be read from the console instead of
   // guessed a 4th time. Remove once this is resolved.
-  if (window.__mirrorDebug) console.log(ts() + ' [mirrorDebug] passIndex=' + passIndex + ' levels=' + levels + ' alternateParity=' + alternateParity + ' mirrorX=' + mirrorX)
+  if (window.__mirrorDebug) console.log(ts() + ' [mirrorDebug] passIndex=' + passIndex + ' levels=' + levels + ' depthOdd=' + depthOdd + ' mirrorX=' + mirrorX + ' mirrorY=' + mirrorY)
   texture.center.set(phoneScreenUvCenter.x, phoneScreenUvCenter.y)
   texture.repeat.set(mirrorX / (overall * scaleX), mirrorY / (overall * scaleY))
   texture.rotation = THREE.MathUtils.degToRad(cfg.screenTextureRotation || 0)
@@ -4782,6 +4782,7 @@ const PHONE_MODEL_PER_MODEL_CONTROL_IDS = [
   'sliderScreenTextureOffsetX', 'sliderScreenTextureOffsetY',
   'sliderScreenEmissionIntensity',
   'checkboxScreenMirrorAlternatingX', 'checkboxScreenMirrorAlternatingY',
+  'checkboxScreenMirrorPhaseX', 'checkboxScreenMirrorPhaseY',
 ]
 let phoneModelPerModelSettings = {} // { [modelFile]: { [controlId]: value } } -- persisted via hiddenPhoneModelPerModelSettings below
 
@@ -5227,6 +5228,17 @@ function renderRecursiveRenderGroup(content) {
   addRow(content, { id: 'checkboxScreenMirrorAlternatingY', label: 'Mirror Alternating (Y Axis)', type: 'checkbox' })
   document.getElementById('checkboxScreenMirrorAlternatingY').checked = cfg.screenMirrorAlternatingY
   wireCheckbox('checkboxScreenMirrorAlternatingY', (v) => { cfg.screenMirrorAlternatingY = v })
+  // Mirror Order/Phase X/Y -- direct request 2026-09-29: "add 2
+  // checkboxes, 1 for each axis. It will determine the mirroring
+  // order. so if off, it maybe 010101, when on it will be 101010
+  // etc." See applyScreenTextureTransform()'s own comment for the
+  // depth-parity logic these flip.
+  addRow(content, { id: 'checkboxScreenMirrorPhaseX', label: 'Mirror Order (X Axis)', type: 'checkbox' })
+  document.getElementById('checkboxScreenMirrorPhaseX').checked = cfg.screenMirrorPhaseX
+  wireCheckbox('checkboxScreenMirrorPhaseX', (v) => { cfg.screenMirrorPhaseX = v })
+  addRow(content, { id: 'checkboxScreenMirrorPhaseY', label: 'Mirror Order (Y Axis)', type: 'checkbox' })
+  document.getElementById('checkboxScreenMirrorPhaseY').checked = cfg.screenMirrorPhaseY
+  wireCheckbox('checkboxScreenMirrorPhaseY', (v) => { cfg.screenMirrorPhaseY = v })
   // "To Scale" -- direct report: "whenever my actual browser size is
   // different from the model mesh size, the rendered image gets scaled
   // incorrectly." Locks the X/Y Scale sliders (setSliderLocked(), same
