@@ -4570,6 +4570,76 @@ function renderPhoneTiltGroup(content) {
 // built one.
 let phoneModelItemSelectorParent = null // the PHONE MODEL group's own content div, cached so loadPhoneModelManifest() can re-render in place after an async manifest fetch resolves
 let phoneModelItemSelectorContainer = null // the currently-rendered widget, replaced (not appended twice) on every re-render
+
+// Per-Model Settings -- direct request 2026-09-29: "make sure all
+// slider settings within the phone model group saves per model."
+// Every control under PHONE MODEL (Scale/Offset/Rotation, RESPONSIVE
+// BEHAVIOUR - PHONE's Responsive Rotation, and its own nested
+// RECURSIVE RENDER) is captured under the OLD model's own key right
+// before a switch, and the NEW model's own saved values (if any) are
+// restored right after -- so tuning one model's screen brightness/
+// scale/rotation doesn't silently bleed onto the next model selected.
+// A model never previously tuned simply keeps whatever values are
+// currently showing (no entry to restore), matching how a fresh
+// control naturally behaves. Deliberately excludes
+// checkboxPhoneModelEnabled and the Item Selector's own hidden
+// selection control -- those are properties of the FEATURE, not of
+// one specific model.
+const PHONE_MODEL_PER_MODEL_CONTROL_IDS = [
+  'sliderPhoneModelScale',
+  'sliderPhoneModelOffsetX', 'sliderPhoneModelOffsetY', 'sliderPhoneModelOffsetZ',
+  'sliderPhoneModelRotX', 'sliderPhoneModelRotY', 'sliderPhoneModelRotZ',
+  'checkboxPhoneResponsiveRotationEnabled', 'checkboxPhoneRotationResetEnabled',
+  'checkboxPhoneAxisXEnabled', 'sliderPhoneRotationScaleX',
+  'checkboxPhoneAxisYEnabled', 'sliderPhoneRotationScaleY',
+  'checkboxPhoneAxisZEnabled', 'sliderPhoneRotationScaleZ',
+  'sliderPhoneResponsiveRotationFineTune', 'sliderPhoneRotationDamping',
+  'textPhoneResponsiveRotationRange', 'textPhoneResponsiveRotationCurve',
+  'checkboxScreenRenderEnabled', 'sliderScreenRecursionLevels',
+  'sliderScreenRenderResolution', 'sliderScreenTextureScale',
+  'sliderScreenTextureRotation', 'sliderScreenTextureScaleX',
+  'sliderScreenTextureScaleY', 'checkboxScreenToScale',
+  'sliderScreenEmissionIntensity',
+]
+let phoneModelPerModelSettings = {} // { [modelFile]: { [controlId]: value } } -- persisted via hiddenPhoneModelPerModelSettings below
+
+function capturePhoneModelPerModelSettings(modelFile) {
+  if (!modelFile) return
+  const snapshot = {}
+  PHONE_MODEL_PER_MODEL_CONTROL_IDS.forEach((id) => {
+    const el = document.getElementById(id)
+    if (!el) return
+    snapshot[id] = el.type === 'checkbox' ? el.checked : el.value
+  })
+  phoneModelPerModelSettings[modelFile] = snapshot
+  persistPhoneModelPerModelSettings()
+}
+
+function applyPhoneModelPerModelSettings(modelFile) {
+  const snapshot = phoneModelPerModelSettings[modelFile]
+  if (!snapshot) return // never tuned before -- leave current values as-is, same as a fresh control's default
+  PHONE_MODEL_PER_MODEL_CONTROL_IDS.forEach((id) => {
+    const el = document.getElementById(id)
+    if (!el || !(id in snapshot)) return
+    if (el.type === 'checkbox') el.checked = snapshot[id]
+    else el.value = snapshot[id]
+    // A real 'input' event drives every ordinary wireSlider()/
+    // wireCheckbox() callback (cfg write + side effect, e.g.
+    // applyPhoneModelTransform()); the 2 curve/range-bar controls
+    // (textPhoneResponsiveRotationRange/Curve) don't reliably react to
+    // a dispatched event (devPanel.js's own widgets there are POLLED,
+    // not event-driven -- see curveWidgetResyncs elsewhere in this
+    // file) but DO react to their own poll tick noticing el.value
+    // changed, which setting el.value above already satisfies.
+    el.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+}
+
+function persistPhoneModelPerModelSettings() {
+  const el = document.getElementById('hiddenPhoneModelPerModelSettings')
+  if (el) el.value = JSON.stringify(phoneModelPerModelSettings)
+}
+
 function renderPhoneModelItemSelector(parentContent) {
   const parent = parentContent || phoneModelItemSelectorParent
   if (!parent) return // manifest resolved before the dev panel was ever built -- the next real build reads PHONE_MODEL_OPTIONS fresh anyway
@@ -4625,6 +4695,22 @@ function renderPhoneModelItemSelector(parentContent) {
   // instead of a global getElementById lookup.
   const hiddenInput = hiddenRow.querySelector('#hiddenPhoneModelFile')
   let lastSeenPhoneModelFile = hiddenInput.value
+
+  // Per-Model Settings persistence -- a hidden JSON control, same
+  // Sync-participation pattern as hiddenPhoneModelFile above. Rides
+  // the generic pipeline for Copy/Save/Reset/Undo; its own restore
+  // listener re-parses into the in-memory phoneModelPerModelSettings
+  // object whenever an EXTERNAL restore (Sync/Reset/Undo) changes it.
+  const settingsRow = addRow(container, { id: 'hiddenPhoneModelPerModelSettings', label: 'Per-Model Settings (internal)', type: 'text', inputType: 'text', value: JSON.stringify(phoneModelPerModelSettings), skipDeviceCheckbox: true })
+  settingsRow.style.display = 'none'
+  const settingsInput = settingsRow.querySelector('#hiddenPhoneModelPerModelSettings')
+  let lastSeenPerModelSettingsJson = settingsInput.value
+  settingsInput.addEventListener('input', () => {
+    if (settingsInput.value === lastSeenPerModelSettingsJson) return
+    lastSeenPerModelSettingsJson = settingsInput.value
+    try { phoneModelPerModelSettings = JSON.parse(settingsInput.value) || {} } catch (e) { /* leave whatever's already in memory */ }
+  })
+
   // Fires on BOTH a user-driven change (the row click handler below
   // also sets .value directly) and an EXTERNAL restore (Reset/Undo/a
   // Sync-load, which devPanel.js applies by setting .value then
@@ -4632,8 +4718,20 @@ function renderPhoneModelItemSelector(parentContent) {
   // separate code paths.
   hiddenInput.addEventListener('input', () => {
     if (hiddenInput.value === lastSeenPhoneModelFile) return
+    const previousFile = cfg.phoneModelFile
     lastSeenPhoneModelFile = hiddenInput.value
     cfg.phoneModelFile = hiddenInput.value
+    capturePhoneModelPerModelSettings(previousFile)
+    // Deferred one macrotask: this fires from an EXTERNAL restore
+    // (Sync/Reset/Undo), where devPanel.js's applyControlValues() may
+    // restore hiddenPhoneModelPerModelSettings (this file's own JSON
+    // dictionary) in the SAME synchronous pass, in either order --
+    // reading phoneModelPerModelSettings synchronously here could see
+    // a stale (pre-restore) copy if this control's own restore runs
+    // first. setTimeout(fn, 0) guarantees the whole restore loop (a
+    // single synchronous forEach) has finished before this reads it,
+    // regardless of which control's own registration order comes first.
+    setTimeout(() => applyPhoneModelPerModelSettings(cfg.phoneModelFile), 0)
     if (cfg.phoneModelEnabled) loadPhoneModel(cfg.phoneModelFile)
     renderPhoneModelItemSelector()
   })
@@ -4642,9 +4740,12 @@ function renderPhoneModelItemSelector(parentContent) {
     row.className = 'dp-list-picker-item' + (opt.value === cfg.phoneModelFile ? ' dp-list-picker-item-selected' : '')
     row.textContent = opt.text
     row.addEventListener('click', () => {
+      const previousFile = cfg.phoneModelFile
       cfg.phoneModelFile = opt.value
       lastSeenPhoneModelFile = opt.value
       hiddenInput.value = opt.value
+      capturePhoneModelPerModelSettings(previousFile)
+      applyPhoneModelPerModelSettings(opt.value)
       if (cfg.phoneModelEnabled) loadPhoneModel(opt.value)
       renderPhoneModelItemSelector()
     })
