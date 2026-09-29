@@ -116,7 +116,7 @@
     "sliderScreenTextureOffsetX": 0,
     "sliderScreenTextureOffsetY": -0.05,
     "sliderScreenTextureScaleX": 1.1,
-    "sliderScreenTextureScaleY": 1,
+    "sliderScreenTextureScaleY": 0.95,
     "sliderScreenEmissionIntensity": 0.85,
     "checkboxScreenMirrorAlternatingX": false,
     "checkboxScreenMirrorAlternatingY": false,
