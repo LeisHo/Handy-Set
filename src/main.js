@@ -4680,15 +4680,28 @@ function applyPhoneModelPerModelSettings(modelFile) {
     if (!el || !(id in snapshot)) return
     if (el.type === 'checkbox') el.checked = snapshot[id]
     else el.value = snapshot[id]
-    // A real 'input' event drives every ordinary wireSlider()/
-    // wireCheckbox() callback (cfg write + side effect, e.g.
-    // applyPhoneModelTransform()); the 2 curve/range-bar controls
+    // CORRECTED 2026-09-29: this used to dispatch only 'input', on the
+    // (wrong) assumption that it drives every wireSlider()/
+    // wireCheckbox() callback alike. wireCheckbox() (main.js) actually
+    // listens for 'change', not 'input' -- confirmed live: a checkbox's
+    // .checked visually updated correctly on a model switch, but its
+    // own cfg field silently never changed, since the listener that
+    // writes to cfg never fired. Every checkbox in
+    // PHONE_MODEL_PER_MODEL_CONTROL_IDS (Responsive Rotation On/Off,
+    // the 3 per-axis enables, Rotation Reset On/Off, Recursive Render
+    // On/Off, To Scale, both Mirror Alternating checkboxes) was
+    // affected -- looked switched, silently wasn't. Dispatching BOTH
+    // events covers wireSlider()/wireColor()/wireTextInput() (which
+    // listen for 'input') and wireCheckbox() (which listens for
+    // 'change') without needing to know which kind of control each id
+    // is. The 2 curve/range-bar controls
     // (textPhoneResponsiveRotationRange/Curve) don't reliably react to
-    // a dispatched event (devPanel.js's own widgets there are POLLED,
-    // not event-driven -- see curveWidgetResyncs elsewhere in this
-    // file) but DO react to their own poll tick noticing el.value
-    // changed, which setting el.value above already satisfies.
+    // either dispatched event (devPanel.js's own widgets there are
+    // POLLED -- see curveWidgetResyncs elsewhere in this file) but DO
+    // react to their own poll tick noticing el.value changed, which
+    // setting el.value above already satisfies regardless.
     el.dispatchEvent(new Event('input', { bubbles: true }))
+    el.dispatchEvent(new Event('change', { bubbles: true }))
   })
 }
 
