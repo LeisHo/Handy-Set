@@ -4851,6 +4851,71 @@ the code change (`012b682`) and had to be pushed as an immediate
 follow-up commit (`6a6567f`) -- `?v=135` -> `?v=136`.
 
 --------------------------------------------------------------------------------
+2026-09-29  -  (50th)
+
+Direct report: "something is off with the scale. i cant see the phone
+model right now" + a question about how the new Item Selector is
+supposed to work ("how do i select an object? st click it? will it
+change automatically? i think soemthign is wrong. it isnt working liek
+before"). User's own follow-up clarification: "the model units may not
+be the same, but i tink all my models are scaled the same" and "most
+of my glb files were exported with mm.. the hand may be different."
+
+Root-caused with a proper measurement, not a guess: wrote a small Node
+script that parses each of the 8 GLBs' own raw JSON directly and walks
+the REAL scene graph (full 4x4 matrix accumulation across every node,
+including nested/multiple root nodes -- a first, naive attempt using
+just a root node's own `scale` property in isolation was wrong for
+models with more than one root, e.g. P5 Project 1's own 2 roots) to
+compute each model's TRUE world-space bounding box, exactly matching
+what `THREE.Box3().setFromObject()` would report once loaded. Result:
+6 of 8 models cluster tightly (maxDim 0.0632-0.2289) -- confirming the
+user's own stated belief that their models ARE consistently scaled.
+P5 Project 1 (maxDim 2.0000, suspiciously round -- likely a
+normalization side effect of whatever decimation/re-export step
+"downsized" it) and Samsung Galaxy S26 (maxDim 5.2747) are real,
+MEASURED outliers, ~13x and ~30x larger than the cluster respectively.
+Since `cfg.phoneModelScale` (300) is ONE global value tuned for the
+consistent cluster, and P5 Project 1 is the default/first model in
+the manifest, a fresh load renders it at 2.0 * 300 = 600 world units
+-- roughly 5-17x the hand's own ~115-unit scale, fully explaining
+"can't see it" (not missing, just enormous, likely with the camera
+effectively inside or past it).
+
+Fixed with a new optional `scale` field on `manifest.json` entries
+(threaded through `manifestModelsToOptions()`/the hardcoded fallback
+array, defaulting to 1 when absent -- including for every imported
+model via the Item Selector, which has no measured data of its own
+yet) and a new `currentPhoneModelScaleMultiplier`, set in
+`loadPhoneModel()` by looking up the just-selected option's own
+`.scale`, applied on top of `cfg.phoneModelScale` in
+`applyPhoneModelTransform()`. P5 Project 1 set to 0.0834 and Samsung
+Galaxy S26 to 0.0316 -- both bring their effective size to ~0.167,
+matching the cluster average almost exactly; the other 6 models are
+completely untouched (scale defaults to 1). Separately noted, not
+acted on: Samsung Galaxy S26's own root node also carries a `[-1,-1,-1]`
+scale (a full point-inversion) -- a real, measured oddity in that
+specific file, unrelated to its SIZE and not something this fix
+touches; flagged in case it explains a future report about that one
+model looking mirrored/inside-out.
+
+On the Item Selector question: re-read `renderPhoneModelItemSelector()`
+directly and confirmed no bug -- a single click on a row immediately
+sets `cfg.phoneModelFile`, calls `loadPhoneModel()` if Phone Model is
+currently enabled, and re-renders with the new row highlighted --
+identical behavior to the old `<select>`'s own `wireSelect()` handler,
+not a regression. The confusion was very likely the SAME scale bug:
+even a successful selection change would have looked like "nothing
+happened" if the newly-selected model was also oversized/invisible, or
+if Phone Model's own master On/Off checkbox was off.
+
+Not independently verified against the real device/browser (standing
+limitation) -- this fix rests on a direct, ground-truth GLB measurement
+rather than live rendering, the same methodology that resolved the
+2 previous Virtual Screen bugs this session. `index.html`'s cache-
+buster bumped `?v=136` -> `?v=137`.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

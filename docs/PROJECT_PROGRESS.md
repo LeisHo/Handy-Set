@@ -14,9 +14,14 @@ Desktop's own axis gating (X/Y/Z Rotation on/off + scale) was corrected
 2026-09-29 the same way. Virtual Screen's mesh-lookup bug is fixed
 (multi-primitive Group case), the Recursive Render alternating-mirror
 bug is fixed (UV-mirror compensation, unverified against the real
-device), and the Phone Model selector is now a real Item Selector with
-GLB import, now listing 8 models total (3 downsized, 5 new) — see
-Recently completed below.
+device), the Phone Model selector is now a real Item Selector with GLB
+import listing 8 models, and 2 of those 8 (P5 Project 1, Samsung
+Galaxy S26) had a real, measured ~13-30x scale mismatch that's now
+fixed via a per-model `scale` override — see Recently completed below.
+
+Noticed, not yet added: a new untracked `S4.glb` appeared on disk
+under `data/processed/SMARTPHONE MODELS/` after the scale fix — left
+untouched, not yet requested to be committed.
 
 Remaining untouched, by request: several raw asset-staging folders
 under `data/processed/SMARTPHONE MODELS/` (`BLENDER/`, `RAW GLB/`,
@@ -39,6 +44,22 @@ Pushed to `https://github.com/LeisHo/Handy-Set`
 
 ## Recently completed
 
+- **RESOLVED (2026-09-29): 2 of 8 phone models rendered 13-30x
+  oversized (invisible in practice).** Direct report: "i cant see the
+  phone model right now." Measured (not guessed) by parsing all 8
+  GLBs' raw JSON and walking each real scene graph (full matrix
+  accumulation, not just a root node's own scale) to compute true
+  world-space bounding boxes. 6 of 8 models cluster tightly
+  (maxDim ~0.06-0.23) confirming they ARE consistently scaled as the
+  user believed; P5 Project 1 (2.0, the default/first model) and
+  Samsung Galaxy S26 (5.27) are real outliers. New per-model `scale`
+  field in `manifest.json` (0.0834 and 0.0316 respectively) brings
+  both to ~0.167, matching the cluster — the other 6 are untouched.
+  Also confirmed no bug in the new Item Selector's click-to-select
+  behavior (identical to the old dropdown) — the "nothing happens"
+  confusion was the same scale bug making even a successful switch
+  look broken. See `docs/CHANGELOG.txt`'s matching 2026-09-29 (50th)
+  entry.
 - **RESOLVED (2026-09-29): Recursive Render's alternating left-right
   mirror.** Direct report: odd recursion levels flipped, even ones
   didn't. Diagnosed via `AskUserQuestion` (reproduces even at

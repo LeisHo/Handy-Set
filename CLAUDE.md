@@ -2595,3 +2595,34 @@ wiring, and are still open:
   fair game to commit just because it's physically present there;
   check `manifest.json` and this note for what's actually meant to be
   tracked.
+- **`manifest.json` entries can carry an optional `scale` field
+  (added 2026-09-29) — a per-model multiplier applied ON TOP of
+  `cfg.phoneModelScale` in `applyPhoneModelTransform()`, via
+  `currentPhoneModelScaleMultiplier` (set in `loadPhoneModel()` by
+  looking up the just-selected option's own `.scale`).** Exists
+  because `cfg.phoneModelScale` is ONE global value shared by every
+  model, but different phone GLBs (even ones the user believes are
+  "all scaled the same") can have real, measured native-scale
+  mismatches — confirmed via a direct GLB-parsing measurement (full
+  scene-graph matrix accumulation, not just a root node's own `scale`
+  in isolation — that naive version was wrong for models with more
+  than one root node) that P5 Project 1 and Samsung Galaxy S26 were
+  ~13x and ~30x larger than the other 6 models' own tight cluster.
+  Defaults to 1 when absent (every existing model without an explicit
+  override, and every imported model via the Item Selector, which has
+  no measured data of its own). **If a future model looks wildly
+  over- or under-sized, measure it the same way before guessing a
+  scale value** — a small Node script parsing the GLB's raw JSON
+  directly and walking the real node hierarchy (see this session's own
+  `inspect_glb_world_bounds.js` for the pattern, not saved in the repo
+  but easy to recreate: accumulate each node's TRS/matrix from every
+  scene root down to each mesh-bearing node, transform that mesh's own
+  accessor min/max corners by the accumulated world matrix, merge into
+  a global bounding box) gives a ground-truth number to compute the
+  right multiplier from, rather than trial-and-error in the dev panel.
+  Separately noted, not acted on: Samsung Galaxy S26's own root node
+  also carries a `[-1,-1,-1]` scale (a full point-inversion) — unlike
+  the recursive-render mirror bug above, this is a property of that
+  ONE model's own file, unrelated to Recursive Render, and not
+  something this scale fix touches — flag it if a future report
+  describes that specific model looking mirrored/inside-out.
