@@ -2714,15 +2714,24 @@ function setScreenRenderEnabled(enabled) {
 // Model mobile-rotation-axis saga elsewhere in this file for how badly
 // that goes when repeated), REPLACED with 2 direct user-facing
 // checkboxes (Mirror Alternating X/Y) so the user can toggle exactly
-// what's needed per model, instead of a hardcoded guess. Flips ONLY on
-// ODD-numbered passes (passIndex % 2 === 1) -- a flip applied
-// UNIFORMLY to every pass actually COMPOUNDS across recursion depth
-// (cancels on an even-numbered generation, mirrors on an odd one),
-// which is the more likely explanation for why the old constant `-1 *`
-// didn't resolve an ALTERNATING symptom: it wasn't parity-aware, so it
-// couldn't fix (or could even reproduce) an alternating pattern either
-// way. Registered per-model (PHONE_MODEL_PER_MODEL_CONTROL_IDS) since
-// this may genuinely vary by each model's own mesh/export.
+// what's needed per model, instead of a hardcoded guess. Registered
+// per-model (PHONE_MODEL_PER_MODEL_CONTROL_IDS) since this may
+// genuinely vary by each model's own mesh/export.
+//
+// CORRECTED, same day: the parity direction was originally counted
+// from `passIndex` alone (odd i = mirrored), which mirrors relative to
+// the RENDER LOOP's own internal pass order -- not what was actually
+// asked for. Direct clarification: "it should mirror the first render
+// first. then the 3rd etc. So the render on the actual geometry Screen
+// Face should be mirrored" -- i.e. depth counted from the VIEWER's own
+// perspective, where depth 1 is the texture painted directly on the
+// real Screen Face mesh (the outermost, most-immediately-visible
+// layer -- what `renderVirtualScreen()` computes LAST, at
+// passIndex = levels-1, then displays via
+// renderer.setRenderTarget(null)), depth 2 is the first reflection
+// nested inside that, etc. Viewer-depth d relates to passIndex i by
+// d = levels - i, so "mirror when d is odd" becomes "mirror when
+// (levels - i) is odd", i.e. levels and i have DIFFERENT parities.
 function applyScreenTextureTransform(texture, passIndex) {
   if (!texture) return
   let scaleX = cfg.screenTextureScaleX || 1
@@ -2735,7 +2744,8 @@ function applyScreenTextureTransform(texture, passIndex) {
     scaleY = 1
   }
   const overall = cfg.screenTextureScale || 1
-  const alternateParity = typeof passIndex === 'number' && passIndex % 2 === 1
+  const levels = THREE.MathUtils.clamp(Math.round(cfg.screenRecursionLevels || 1), 1, 10)
+  const alternateParity = typeof passIndex === 'number' && (passIndex % 2) !== (levels % 2)
   const mirrorX = (cfg.screenMirrorAlternatingX && alternateParity) ? -1 : 1
   const mirrorY = (cfg.screenMirrorAlternatingY && alternateParity) ? -1 : 1
   texture.center.set(0.5, 0.5)
