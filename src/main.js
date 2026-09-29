@@ -1961,14 +1961,34 @@ function renderObjectAxesPicker() {
 const PHONE_MODEL_DIR = 'data/processed/SMARTPHONE MODELS'
 const PHONE_MODEL_MANIFEST_ENDPOINT = '/api/upload-phone-model'
 let PHONE_MODEL_OPTIONS = [
-  { value: 'data/processed/SMARTPHONE MODELS/P5_Project_1.glb', text: 'P5 Project 1' },
-  { value: 'data/processed/SMARTPHONE MODELS/Pixel 9A.glb', text: 'Pixel 9A' },
-  { value: 'data/processed/SMARTPHONE MODELS/Iphone17MaxPro.glb', text: 'iPhone 17 Max Pro' }
-] // hardcoded fallback, used only if BOTH the live manifest fetch (GitHub, via the API endpoint) AND the static same-origin manifest.json fail (e.g. fully offline)
+  { value: 'data/processed/SMARTPHONE MODELS/P5_Project_1.glb', text: 'P5 Project 1', scale: 0.0834 },
+  { value: 'data/processed/SMARTPHONE MODELS/Pixel 9A.glb', text: 'Pixel 9A', scale: 1 },
+  { value: 'data/processed/SMARTPHONE MODELS/Iphone17MaxPro.glb', text: 'iPhone 17 Max Pro', scale: 1 }
+] // hardcoded fallback, used only if BOTH the live manifest fetch (GitHub, via the API endpoint) AND the static same-origin manifest.json fail (e.g. fully offline) -- P5's own scale correction kept in sync with manifest.json's own value so even the offline fallback doesn't render it 13x oversized
+// `scale` -- direct report 2026-09-29: "i cant see the phone model right
+// now" -- root-caused by directly parsing all 8 GLBs' raw JSON and
+// walking their own scene graphs to compute each one's TRUE world-space
+// bounding box (full matrix accumulation, not just a root node's own
+// scale in isolation -- a naive first pass at this exact measurement was
+// wrong for models with multiple root nodes). 6 of 8 models cluster
+// tightly (maxDim ~0.06-0.23, confirming the user's own belief that
+// their models ARE consistently scaled); P5 Project 1 (maxDim 2.0) and
+// Samsung Galaxy S26 (maxDim 5.27) are real, measured outliers -- ~13x
+// and ~30x larger respectively, most likely from whatever re-export/
+// decimation step produced them. cfg.phoneModelScale is ONE global
+// value shared by every model, tuned for the consistent cluster, so
+// these 2 render enormous (P5 alone: 2.0 * 300 = 600 world units, vs
+// the hand's own ~115-unit scale) -- not a missing/broken model, just
+// wildly oversized and likely positioned such that the camera ends up
+// effectively inside it. This per-model multiplier (manifest.json's own
+// optional `scale` field, defaults to 1 when absent -- including for
+// every imported model, which has no measured data) is applied ON TOP
+// of cfg.phoneModelScale in applyPhoneModelTransform(), correcting only
+// the 2 outliers without touching the 6 already-consistent models.
 function manifestModelsToOptions(models) {
   return (Array.isArray(models) ? models : [])
     .filter((m) => m && typeof m.file === 'string')
-    .map((m) => ({ value: PHONE_MODEL_DIR + '/' + m.file, text: m.name || m.file }))
+    .map((m) => ({ value: PHONE_MODEL_DIR + '/' + m.file, text: m.name || m.file, scale: typeof m.scale === 'number' ? m.scale : 1 }))
 }
 // Tries the LIVE manifest first (GitHub Contents API via our own
 // endpoint -- reflects an import from moments ago, same reasoning
@@ -1998,6 +2018,7 @@ async function loadPhoneModelManifest() {
   } catch (e) { /* keep the hardcoded fallback */ }
 }
 let phoneModelWrapper = null // THREE.Group at world origin + Offset sliders, added to `scene`
+let currentPhoneModelScaleMultiplier = 1 // the currently-selected model's own PHONE_MODEL_OPTIONS.scale, set by loadPhoneModel() -- see that field's own declaration comment
 let phoneModelRaw = null // the loaded gltf.scene, child of phoneModelWrapper -- rotation/scale/pivot-compensated position
 let phoneModelLoadToken = 0 // guards a stale async load callback from applying after a newer selection superseded it
 // Virtual Screen (render-to-texture onto the phone's own 'Screen Face'
@@ -2351,7 +2372,7 @@ function applyPhoneModelTransform() {
   if (!phoneModelRaw || !phoneModelWrapper) return
   phoneModelWrapper.position.set(cfg.phoneModelOffsetX, cfg.phoneModelOffsetY, cfg.phoneModelOffsetZ)
   phoneModelWrapper.quaternion.slerp(computePhoneCombinedQuat(), cfg.phoneRotationDamping)
-  phoneModelRaw.scale.setScalar(cfg.phoneModelScale)
+  phoneModelRaw.scale.setScalar(cfg.phoneModelScale * currentPhoneModelScaleMultiplier)
   phoneModelRaw.quaternion.identity()
   phoneModelRaw.position.set(0, 0, 0)
 }
@@ -2445,6 +2466,13 @@ function loadPhoneModel(relativePath) {
   if (!relativePath) return
   const token = ++phoneModelLoadToken
   ensurePhoneModelWrapper()
+  // Looked up by VALUE, not passed as a separate argument -- every
+  // existing call site already only passes the path, and this keeps it
+  // that way. An imported model (a blob: URL, not in PHONE_MODEL_OPTIONS
+  // by the time this runs) falls back to 1 -- no measured data exists
+  // for it yet.
+  const matchedOption = PHONE_MODEL_OPTIONS.find((o) => o.value === relativePath)
+  currentPhoneModelScaleMultiplier = (matchedOption && typeof matchedOption.scale === 'number') ? matchedOption.scale : 1
   new GLTFLoader().load(encodeURI(relativePath), (gltf) => {
     if (token !== phoneModelLoadToken) return // superseded by a newer selection/reload before this one finished
     disposePhoneModelRaw()
