@@ -2769,6 +2769,12 @@ function applyScreenTextureTransform(texture, passIndex) {
   const alternateParity = typeof passIndex === 'number' && (passIndex % 2) !== (levels % 2)
   const mirrorX = (cfg.screenMirrorAlternatingX && alternateParity) ? -1 : 1
   const mirrorY = (cfg.screenMirrorAlternatingY && alternateParity) ? -1 : 1
+  // TEMPORARY diagnostic, 2026-09-29 -- direct report "it didint
+  // work" after 2 failed theories (constant flip, texture-matrix
+  // timing). Logs the real computed parity/mirror per pass so the
+  // actual runtime sequence can be read from the console instead of
+  // guessed a 4th time. Remove once this is resolved.
+  if (window.__mirrorDebug) console.log(ts() + ' [mirrorDebug] passIndex=' + passIndex + ' levels=' + levels + ' alternateParity=' + alternateParity + ' mirrorX=' + mirrorX)
   texture.center.set(0.5, 0.5)
   texture.repeat.set(mirrorX / (overall * scaleX), mirrorY / (overall * scaleY))
   texture.rotation = THREE.MathUtils.degToRad(cfg.screenTextureRotation || 0)
