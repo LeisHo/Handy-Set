@@ -229,6 +229,27 @@ const cfg = {
   // 2026-09-29 for a quality/performance control, since a full N-pass
   // render every frame at full resolution is real GPU cost. 100 = base.
   screenRenderResolution: 100,
+  // Texture transform controls -- direct request 2026-09-29: Scale
+  // (uniform), Rotation, and independent X/Y Scale, applied to the
+  // captured render's own UV mapping on the Screen Face mesh (not the
+  // mesh's geometry) via THREE.Texture's built-in repeat/rotation/
+  // center. "To Scale" (see below) computes X/Y Scale automatically and
+  // locks their sliders, instead of the user tuning them by hand.
+  screenTextureScale: 1, screenTextureRotation: 0,
+  screenTextureScaleX: 1, screenTextureScaleY: 1,
+  // "To Scale" -- direct report: "whenever my actual browser size is
+  // different from the model mesh size, the rendered image gets scaled
+  // incorrectly." Root cause: the off-screen capture always renders
+  // through the SAME camera used for the main view, whose aspect ratio
+  // tracks the live browser window -- but the capture is written into a
+  // FIXED-aspect render target (SCREEN_RENDER_BASE_WIDTH/HEIGHT), so a
+  // browser aspect that doesn't match the target's own aspect leaves the
+  // captured content stretched before it's ever mapped onto the mesh.
+  // When on, X/Y Scale are computed each frame from the LIVE camera
+  // aspect vs. the render target's own fixed aspect (see
+  // applyScreenTextureTransform()) instead of the slider values, and
+  // those 2 sliders are locked (disabled) in the dev panel.
+  screenToScaleEnabled: false,
   phoneResponsiveRotationRange: '{"min":0,"max":30}',
   // CORRECTED 2026-09-28, found via real device log data, not guessed:
   // this default was DECREASING (t=0/no-tilt -> curveY=1/full magnitude,
@@ -1944,9 +1965,13 @@ let phoneModelWrapper = null // THREE.Group at world origin + Offset sliders, ad
 let phoneModelRaw = null // the loaded gltf.scene, child of phoneModelWrapper -- rotation/scale/pivot-compensated position
 let phoneModelLoadToken = 0 // guards a stale async load callback from applying after a newer selection superseded it
 // Virtual Screen (render-to-texture onto the phone's own 'Screen Face'
-// mesh) -- see findPhoneScreenMesh()/renderVirtualScreen() below.
-let phoneScreenMesh = null // the mesh found inside phoneModelRaw, or null if this model has no such mesh
-let phoneScreenOriginalMaterial = null // the mesh's real glTF material -- restored whenever Screen Render is off or the model reloads
+// mesh) -- see findPhoneScreenMeshes()/renderVirtualScreen() below.
+// Arrays, not single values, since a multi-primitive glTF 'Screen Face'
+// node loads as several separate THREE.Mesh children (see
+// findPhoneScreenMeshes()'s own comment) -- phoneScreenOriginalMaterials
+// is index-parallel to phoneScreenMeshes.
+let phoneScreenMeshes = [] // the mesh(es) found inside phoneModelRaw, or [] if this model has none
+let phoneScreenOriginalMaterials = [] // each mesh's own real glTF material -- restored whenever Screen Render is off or the model reloads
 let phoneScreenRenderMaterial = null // shared unlit MeshBasicMaterial driving the screen while Screen Render is on; only its .map is swapped per pass -- never disposed/recreated per model, so a model switch doesn't need to rebuild it
 let screenRenderTargets = null // [RT_A, RT_B], created once and reused -- ping-ponged across up to 10 recursion passes per frame (see renderVirtualScreen())
 
@@ -2306,15 +2331,15 @@ function ensurePhoneModelWrapper() {
 function disposePhoneModelRaw() {
   if (!phoneModelRaw) return
   // The generic material-disposal traversal below would dispose whatever
-  // texture is CURRENTLY on phoneScreenMesh.material -- if that's our own
-  // reusable phoneScreenRenderMaterial, its .map is a render target's
-  // texture, not a real glTF asset, and disposing it would break the
-  // render target for every model loaded afterward. Swap back to the
-  // real original material first so only that gets disposed, same as
-  // every other mesh.
-  if (phoneScreenMesh && phoneScreenMesh.material === phoneScreenRenderMaterial) {
-    phoneScreenMesh.material = phoneScreenOriginalMaterial
-  }
+  // texture is CURRENTLY on each phoneScreenMeshes[i].material -- if
+  // that's our own reusable phoneScreenRenderMaterial, its .map is a
+  // render target's texture, not a real glTF asset, and disposing it
+  // would break the render target for every model loaded afterward.
+  // Swap each mesh back to its own real original material first so only
+  // that gets disposed, same as every other mesh.
+  phoneScreenMeshes.forEach((mesh, i) => {
+    if (mesh.material === phoneScreenRenderMaterial) mesh.material = phoneScreenOriginalMaterials[i]
+  })
   phoneModelWrapper.remove(phoneModelRaw)
   phoneModelRaw.traverse((obj) => {
     if (obj.geometry) obj.geometry.dispose()
@@ -2324,46 +2349,61 @@ function disposePhoneModelRaw() {
     }
   })
   phoneModelRaw = null
-  phoneScreenMesh = null
-  phoneScreenOriginalMaterial = null
+  phoneScreenMeshes = []
+  phoneScreenOriginalMaterials = []
 }
-// Finds the mesh representing the phone's screen (Virtual Screen
+// Finds the mesh(es) representing the phone's screen (Virtual Screen
 // render-to-texture target), by the name 'Screen Face' -- case/
 // whitespace-tolerant since glTF export can alter exact capitalization.
-// CORRECTED 2026-09-29, direct report ("I dont see the Recursive Render
-// image. I still see the original material") -- ground-truth-checked by
-// parsing all 3 phone GLBs' raw JSON chunk directly (node/mesh/material
-// names), not by trusting an earlier session's own in-app "no console
-// warning" observation, which turned out to be a false negative from a
-// broken page load during this sandbox's own documented script-delivery
-// flakiness, not a real confirmation. Real findings: P5 Project 1 has a
-// MESH literally named 'Screen Face' (matched by pass 1 below); Pixel
-// 9A has NO mesh/node with that name at all -- its screen is one
-// PRIMITIVE inside a combined 'Front' mesh, distinguished only by a
-// MATERIAL named 'Screen Face' (glTF splits multi-material primitives
-// into separate THREE.Mesh objects on load, each with a single
-// material, but that object's own NAME still comes from the shared
-// parent node/mesh, not the material -- so pass 1 alone can never find
-// it; matched by pass 2 below instead). iPhone 17 Max Pro has NEITHER
-// a matching mesh/node name NOR a matching material name (its screen
-// asset is named 'screen.001'/'Cube.010_screen.001_0', from what looks
-// like an FBX-converted, differently-authored asset) -- this project's
-// own earlier documentation claiming iPhone 17 was "the only model
-// with a Screen Face mesh" was WRONG and has been corrected. Returns
-// null if a model genuinely has neither (not every phone model is
-// guaranteed to have a usable screen target).
-function findPhoneScreenMesh(root) {
-  let found = null
+// Returns an ARRAY (usually 0 or 1 entries, but see the multi-primitive
+// case below) rather than a single mesh -- CORRECTED 2026-09-29 (2nd
+// round), after this project's earlier single-mesh version still missed
+// a real case, found by reading the actual bundled GLTFLoader.js source
+// directly (not guessed): a glTF "mesh" with MULTIPLE primitives (e.g.
+// P5 Project 1's own 'Screen Face' node, which has 2: a 'Display'
+// primitive and a 'backcam' primitive) is NOT loaded as one THREE.Mesh
+// -- GLTFLoader's own loadMesh() creates one THREE.Mesh per primitive
+// and wraps them in a `new Group()` when there's more than one
+// (`if (meshes.length === 1) return meshes[0]; const group = new
+// Group(); ...`); the NODE's own name (here, 'Screen Face') then gets
+// applied to whichever object ends up representing the node --
+// `_loadNodeShallow()`'s own `node.name = nodeName` line runs on
+// `objects[0]` directly when there's exactly one child object (so a
+// SINGLE-primitive node's resulting Mesh correctly ends up named
+// 'Screen Face', matched by pass 1 below with no special-casing needed)
+// but on the NEWLY-CREATED GROUP WRAPPER when there's more than one
+// child (a MULTI-primitive node) -- so for a multi-primitive 'Screen
+// Face' node, NEITHER child Mesh is itself named 'Screen Face' at all;
+// only their non-Mesh parent Group is. A plain `obj.isMesh &&
+// obj.name === ...` search (this function's original version) can
+// never find these children. Pass 1 below fixes this by walking each
+// mesh's own ANCESTOR CHAIN (not just its own name) up to `root`,
+// covering both cases uniformly -- a matching ancestor's name (whether
+// that ancestor IS the mesh itself, for the single-primitive case, or a
+// Group 2+ levels up, for the multi-primitive case) qualifies the mesh.
+// Pass 2 (material-name fallback, for a mesh whose own node/ancestor
+// chain isn't named 'Screen Face' at all but whose MATERIAL is --
+// e.g. one primitive of a larger, differently-named combined mesh) is
+// unchanged from the 1st round's fix. Returns an empty array if a model
+// genuinely has no screen target (not every phone model is guaranteed
+// to have one).
+function findPhoneScreenMeshes(root) {
+  function nameMatches(obj) {
+    return typeof obj.name === 'string' && obj.name.trim().toLowerCase() === 'screen face'
+  }
+  const pass1 = []
   root.traverse((obj) => {
-    if (found || !obj.isMesh || typeof obj.name !== 'string') return
-    if (obj.name.trim().toLowerCase() === 'screen face') found = obj
+    if (!obj.isMesh) return
+    for (let node = obj; node && node !== root.parent; node = node.parent) {
+      if (nameMatches(node)) { pass1.push(obj); break }
+    }
   })
-  if (found) return found
+  if (pass1.length) return pass1
+  const pass2 = []
   root.traverse((obj) => {
-    if (found || !obj.isMesh || !obj.material || typeof obj.material.name !== 'string') return
-    if (obj.material.name.trim().toLowerCase() === 'screen face') found = obj
+    if (obj.isMesh && obj.material && typeof obj.material.name === 'string' && obj.material.name.trim().toLowerCase() === 'screen face') pass2.push(obj)
   })
-  return found
+  return pass2
 }
 function loadPhoneModel(relativePath) {
   if (!relativePath) return
@@ -2374,9 +2414,9 @@ function loadPhoneModel(relativePath) {
     disposePhoneModelRaw()
     phoneModelRaw = gltf.scene
     phoneModelWrapper.add(phoneModelRaw)
-    phoneScreenMesh = findPhoneScreenMesh(phoneModelRaw)
-    phoneScreenOriginalMaterial = phoneScreenMesh ? phoneScreenMesh.material : null
-    if (!phoneScreenMesh) console.warn(ts() + ' Phone model has no "Screen Face" mesh -- Virtual Screen render will have no effect:', relativePath)
+    phoneScreenMeshes = findPhoneScreenMeshes(phoneModelRaw)
+    phoneScreenOriginalMaterials = phoneScreenMeshes.map((m) => m.material)
+    if (!phoneScreenMeshes.length) console.warn(ts() + ' Phone model has no "Screen Face" mesh -- Virtual Screen render will have no effect:', relativePath)
     applyPhoneModelTransform()
   }, undefined, (err) => { console.error(ts() + ' Phone model failed to load:', relativePath, err) })
 }
@@ -2465,35 +2505,72 @@ function ensureScreenRenderTargets() {
   return screenRenderTargets
 }
 function resetPhoneScreenMaterial() {
-  if (!phoneScreenMesh) return
-  if (phoneScreenOriginalMaterial) phoneScreenMesh.material = phoneScreenOriginalMaterial
-  phoneScreenMesh.visible = true
+  phoneScreenMeshes.forEach((mesh, i) => {
+    if (phoneScreenOriginalMaterials[i]) mesh.material = phoneScreenOriginalMaterials[i]
+    mesh.visible = true
+  })
 }
 function setScreenRenderEnabled(enabled) {
   cfg.screenRenderEnabled = enabled
   if (!enabled) resetPhoneScreenMaterial()
 }
+// Applies Scale/Rotation/X-Y-Scale to the render texture's own UV
+// transform (THREE.Texture's built-in offset/repeat/rotation/center --
+// this is a texture-space transform, not a geometry change, so it
+// doesn't touch the mesh itself). `center` is set to (0.5,0.5) so
+// rotation/scale pivot around the middle of the mapped face, not a
+// corner -- the intuitive default for "rotate/scale the screen image."
+// Larger Scale/X-Scale/Y-Scale values make the image appear BIGGER
+// (zoomed in) -- since THREE.Texture.repeat smaller-than-1 zooms IN
+// (shows less of the image across the same UV area), the slider values
+// are inverted (1/value) when assigned to .repeat.
+//
+// "To Scale" mode (cfg.screenToScaleEnabled) computes X/Y Scale
+// automatically instead of reading the sliders -- see cfg's own
+// screenToScaleEnabled comment for the root-cause reasoning. NOT
+// independently browser-verified (this session's own standing
+// limitation) -- if the correction direction comes out backwards on the
+// real device, swap `camAspect / targetAspect` for its reciprocal here,
+// the rest of the reasoning (that SOME correction is needed at all,
+// and that it should track camera.aspect live) should still hold.
+function applyScreenTextureTransform(texture) {
+  if (!texture) return
+  let scaleX = cfg.screenTextureScaleX || 1
+  let scaleY = cfg.screenTextureScaleY || 1
+  if (cfg.screenToScaleEnabled) {
+    const targets = ensureScreenRenderTargets()
+    const targetAspect = targets[0].width / targets[0].height
+    const camAspect = camera.aspect || targetAspect
+    scaleX = camAspect / targetAspect
+    scaleY = 1
+  }
+  const overall = cfg.screenTextureScale || 1
+  texture.center.set(0.5, 0.5)
+  texture.repeat.set(1 / (overall * scaleX), 1 / (overall * scaleY))
+  texture.rotation = THREE.MathUtils.degToRad(cfg.screenTextureRotation || 0)
+  texture.needsUpdate = true
+}
 function renderVirtualScreen() {
-  if (!cfg.screenRenderEnabled || !cfg.phoneModelEnabled || !phoneScreenMesh) return
+  if (!cfg.screenRenderEnabled || !cfg.phoneModelEnabled || !phoneScreenMeshes.length) return
   const targets = ensureScreenRenderTargets()
   const levels = THREE.MathUtils.clamp(Math.round(cfg.screenRecursionLevels || 1), 1, 10)
   if (!phoneScreenRenderMaterial) phoneScreenRenderMaterial = new THREE.MeshBasicMaterial()
   for (let i = 0; i < levels; i++) {
     if (i === 0) {
-      phoneScreenMesh.visible = false
+      phoneScreenMeshes.forEach((mesh) => { mesh.visible = false })
     } else {
-      phoneScreenMesh.visible = true
-      phoneScreenMesh.material = phoneScreenRenderMaterial
       phoneScreenRenderMaterial.map = targets[(i - 1) % 2].texture
+      applyScreenTextureTransform(phoneScreenRenderMaterial.map)
       phoneScreenRenderMaterial.needsUpdate = true
+      phoneScreenMeshes.forEach((mesh) => { mesh.visible = true; mesh.material = phoneScreenRenderMaterial })
     }
     renderer.setRenderTarget(targets[i % 2])
     renderer.render(scene, camera)
   }
-  phoneScreenMesh.visible = true
-  phoneScreenMesh.material = phoneScreenRenderMaterial
   phoneScreenRenderMaterial.map = targets[(levels - 1) % 2].texture
+  applyScreenTextureTransform(phoneScreenRenderMaterial.map)
   phoneScreenRenderMaterial.needsUpdate = true
+  phoneScreenMeshes.forEach((mesh) => { mesh.visible = true; mesh.material = phoneScreenRenderMaterial })
   renderer.setRenderTarget(null)
 }
 
@@ -3213,7 +3290,7 @@ window.__debug = {
   get tiltTarget() { return tiltTarget }, get tiltOriginGround() { return tiltOriginGround },
   get handLengthRaw() { return handLengthRaw }, get handCenterLocal() { return handCenterLocal },
   get phoneModelRaw() { return phoneModelRaw }, get phoneModelWrapper() { return phoneModelWrapper },
-  get phoneScreenMesh() { return phoneScreenMesh }, get screenRenderTargets() { return screenRenderTargets },
+  get phoneScreenMeshes() { return phoneScreenMeshes }, get screenRenderTargets() { return screenRenderTargets },
   get sceneObjectEntries() { return sceneObjectEntries },
   get tiltMagnitude() { return tiltMagnitude }, get tiltAngle() { return tiltAngle },
   get phoneGyroQuat() { return phoneGyroQuat }, get lastInputSource() { return lastInputSource },
@@ -4456,10 +4533,33 @@ function renderRecursiveRenderGroup(content) {
   wireSlider('sliderScreenRecursionLevels', (v) => { cfg.screenRecursionLevels = v })
   addRow(content, { id: 'sliderScreenRenderResolution', label: 'Render Resolution (%)', type: 'slider', min: 10, max: 200, step: 5, value: cfg.screenRenderResolution })
   wireSlider('sliderScreenRenderResolution', (v) => { cfg.screenRenderResolution = v })
+  // Texture transform controls -- direct request 2026-09-29.
+  addRow(content, { id: 'sliderScreenTextureScale', label: 'Texture Scale (x)', type: 'slider', min: 0.1, max: 5, step: 0.05, value: cfg.screenTextureScale })
+  wireSlider('sliderScreenTextureScale', (v) => { cfg.screenTextureScale = v })
+  addRow(content, { id: 'sliderScreenTextureRotation', label: 'Texture Rotation (Deg)', type: 'slider', min: -180, max: 180, step: 1, value: cfg.screenTextureRotation })
+  wireSlider('sliderScreenTextureRotation', (v) => { cfg.screenTextureRotation = v })
+  addRow(content, { id: 'sliderScreenTextureScaleX', label: 'Texture X Scale (x)', type: 'slider', min: 0.1, max: 5, step: 0.05, value: cfg.screenTextureScaleX })
+  wireSlider('sliderScreenTextureScaleX', (v) => { cfg.screenTextureScaleX = v })
+  addRow(content, { id: 'sliderScreenTextureScaleY', label: 'Texture Y Scale (x)', type: 'slider', min: 0.1, max: 5, step: 0.05, value: cfg.screenTextureScaleY })
+  wireSlider('sliderScreenTextureScaleY', (v) => { cfg.screenTextureScaleY = v })
+  // "To Scale" -- direct report: "whenever my actual browser size is
+  // different from the model mesh size, the rendered image gets scaled
+  // incorrectly." Locks the X/Y Scale sliders (setSliderLocked(), same
+  // helper Camera Lock Pan/Zoom/Rotate already uses) while on, since
+  // their effective value is computed automatically instead -- see
+  // applyScreenTextureTransform()'s own comment.
+  addRow(content, { id: 'checkboxScreenToScale', label: 'To Scale (Lock X/Y to Live Aspect)', type: 'checkbox' })
+  document.getElementById('checkboxScreenToScale').checked = cfg.screenToScaleEnabled
+  wireCheckbox('checkboxScreenToScale', (v) => { cfg.screenToScaleEnabled = v; syncScreenToScaleLock() })
+  syncScreenToScaleLock()
   // Moves checkboxScreenRenderEnabled into the group's own title bar and
   // dims the rest of the group while off -- must run after the rows
   // above are actually in the DOM, which they are by this point.
   if (typeof window.makeDevGroupToggleable === 'function') window.makeDevGroupToggleable('desktop', 'RECURSIVE RENDER', 'checkboxScreenRenderEnabled')
+}
+function syncScreenToScaleLock() {
+  setSliderLocked('sliderScreenTextureScaleX', cfg.screenToScaleEnabled)
+  setSliderLocked('sliderScreenTextureScaleY', cfg.screenToScaleEnabled)
 }
 
 function renderLightingGroup(content) {
