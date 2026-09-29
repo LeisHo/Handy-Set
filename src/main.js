@@ -2906,6 +2906,21 @@ function updateTiltTarget() {
 // DANDIES build once fieldRows/fieldCols are actually raised above 1.
 // =======================================================================
 function rebuildField() {
+  // Guard added 2026-09-29: previously DISCLOSED but unfixed
+  // ("Cannot read properties of null (reading 'clone')" inside
+  // SkeletonUtils.clone(), observed once during a synthetic settings
+  // injection) -- now confirmed, via the real deployed site's own
+  // console, to reproduce on EVERY normal page load (multiple times):
+  // loadRemoteSettingsOnStartup()'s applyFullDevPanelState() restores
+  // Field Layout sliders (fieldRows/fieldCols/etc.), each dispatching a
+  // real 'input' event that triggers this function, well before the
+  // hand's own async GLTFLoader.load() callback has set `modelRoot`.
+  // Safe to just no-op here: that same callback calls rebuildField()
+  // itself immediately after setting modelRoot (see its own
+  // "modelRoot = root; rebuildField()" lines below), so a premature
+  // call is always followed by a real one once the model is ready --
+  // nothing is lost by skipping it.
+  if (!modelRoot) return
   hands.forEach((h, i) => {
     if (h.wrapper.parent) h.wrapper.parent.remove(h.wrapper)
     teardownFingerGizmosForHand(h) // NOT parented under h.wrapper -- must be removed separately or they leak into the scene
