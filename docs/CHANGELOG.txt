@@ -4707,6 +4707,99 @@ inspection (ground truth, no rendering involved) -- confirming the
 current on-disk files actually contain what this entry claims.
 
 --------------------------------------------------------------------------------
+2026-09-29  -  (48th)
+
+Direct multi-part request: "Make the Object Model Selector a Item
+Selector actually. Allow me to import glb models, If I import a glb
+model with the same name as an existing import, provide a popup to
+ask if i should overwrite. In all imported models, make it look for a
+layer or mesh called Screen Face. Be flexible with capitalization. In
+Recursive Render, provide a scale slider, a rotation slider, and an X
+and y scale slider. Currently, I see the rendering looks off whenever
+my actual browser size is different from the model mesh size... can
+you add a 'To Scale' checkbox."
+
+Raised via `AskUserQuestion` (import persistence: sync-to-git via the
+existing Vercel API pattern, browser-local IndexedDB, or session-only)
+-- answered "sync to git." Mid-build, found a real platform constraint
+worth a 2nd `AskUserQuestion`: GitHub's simple Contents API (what
+`save-settings.js` already uses) caps a single file at 1MB, but every
+real phone GLB here is 1.8-4MB; Vercel's own serverless functions also
+cap request bodies around 4.5MB. Offered building-now-with-the-ceiling-
+accepted vs. adding chunked upload vs. holding off -- answered "build
+it now, accept the ~4MB ceiling."
+
+**New `api/upload-phone-model.js`** -- commits an imported .glb via
+GitHub's Git Data API (create blob -> splice into a new tree -> create
+commit -> move the branch ref), the standard mechanism for a file over
+the Contents API's 1MB limit. Also maintains a new
+`data/processed/SMARTPHONE MODELS/manifest.json` (a 2nd, separate
+commit, via the simpler Contents API since it's small JSON) listing
+every available model -- POST checks for a filename collision first
+and returns 409 unless an explicit overwrite header is set, matching
+the client's own confirm() popup. GET returns the manifest LIVE from
+GitHub (same "don't trust the static file, it's stale until the next
+deploy" reasoning `save-settings.js`'s own GET already documents).
+
+**Client side (`main.js`)**: `PHONE_MODEL_OPTIONS` (a hardcoded const
+array that needed manual upkeep every time the model folder's contents
+changed -- a real, recurring maintenance burden visible in this file's
+own git history) is now a mutable list populated at startup by
+`loadPhoneModelManifest()` (live manifest -> static manifest.json ->
+hardcoded 3-model fallback, in that order). The `<select>` dropdown is
+replaced by a hand-built Item Selector (`renderPhoneModelItemSelector()`)
+-- a clickable list reusing the SAME `.dp-list-picker`/
+`.dp-list-picker-item` CSS this file's own preset pickers (Saved
+Poses/Cameras/etc., `buildListPicker()`) already use for visual
+consistency, but its own separate widget, not that function reused --
+`buildListPicker()` is built around capturing/naming scalar dev-panel
+STATE, with no file-import concept at all. `importPhoneModelFile()`
+handles the full flow: collision check + confirm() popup, instant
+local load via `URL.createObjectURL(file)` (GLTFLoader loads from a
+blob: URL exactly like any other URL) so the import works for the
+session even if the upload fails or the device is offline, then the
+real upload, swapping the list entry's value from the temporary blob:
+URL to the real permanent path once the commit actually succeeds.
+
+**Screen Face detection for imported models**: no new code was needed
+-- `findPhoneScreenMeshes()` (see the 47th entry) already operates
+generically on whatever `phoneModelRaw` currently is, regardless of
+whether it was loaded from the manifest or a fresh import, and was
+already case/whitespace-tolerant.
+
+**RECURSIVE RENDER texture-transform controls**: Texture Scale
+(uniform), Texture Rotation, Texture X Scale, Texture Y Scale --
+applied via `applyScreenTextureTransform()` to the render texture's
+own UV transform (THREE.Texture's built-in repeat/rotation/center),
+not the mesh geometry, with `center` set to (0.5,0.5) so
+rotation/scale pivots around the middle of the mapped face. **"To
+Scale"** checkbox fixes the reported distortion bug: the off-screen
+capture always renders through the SAME camera used for the main view
+(whose aspect ratio tracks the live browser window), but that capture
+is written into a FIXED-aspect render target
+(`SCREEN_RENDER_BASE_WIDTH`/`HEIGHT`) -- when on, X/Y Scale are
+computed every frame from the live `camera.aspect` vs. the render
+target's own fixed aspect instead of reading the sliders, and both
+sliders are locked (`setSliderLocked()`, the same helper Camera Lock
+Pan/Zoom/Rotate already uses) while on.
+
+Not independently browser/device-verified (standing limitation). The
+"To Scale" correction's own direction (`camAspect / targetAspect`) was
+reasoned through carefully but not confirmed against a real window
+resize -- if it makes the distortion WORSE instead of better, the fix
+is trying the reciprocal at that one line, not re-deriving from
+scratch (see `applyScreenTextureTransform()`'s own comment).
+
+Noticed but deliberately left untouched: several new untracked files/
+folders appeared directly on disk under `data/processed/SMARTPHONE
+MODELS/` (`BLENDER/`, `RAW GLB/`, `Samsung Galaxy S2/`, `Samsung
+Galaxy S26.glb`, `Zip/`, `blackberry/`, `iPhone 17 Max.glb`,
+`samsung-galaxy-s26-black-low-poly/`) -- the user's own asset staging,
+not committed or referenced by this entry's own work.
+
+`index.html`'s cache-buster bumped `?v=134` -> `?v=135`.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

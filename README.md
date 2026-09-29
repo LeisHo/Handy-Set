@@ -67,6 +67,18 @@ Without both set, Sync requests to `/api/save-settings` return a clear
 (`GITHUB_REPO`, `GITHUB_BRANCH`, `SETTINGS_FILE_PATH`) override the
 defaults baked into `api/save-settings.js` if ever needed.
 
+The PHONE MODEL group's own Item Selector "Import GLB" feature
+(`api/upload-phone-model.js`) reuses these SAME 2 env vars — no
+separate setup needed. It commits an imported `.glb` into
+`data/processed/SMARTPHONE MODELS/` via GitHub's Git Data API (not the
+simpler Contents API `api/save-settings.js` uses, since that one caps a
+single file at 1MB — every real phone model here is already over that)
+and keeps `data/processed/SMARTPHONE MODELS/manifest.json` (what the
+Item Selector reads to populate its list) in sync. A file close to
+Vercel's own ~4.5MB serverless request-body ceiling will fail to
+upload with a clear error — the import still loads and works locally
+for that browser session either way, it just won't persist.
+
 ## Known limitations
 
 See `docs/PROJECT_SUMMARY.txt`'s Known Limitations section — several real

@@ -61,6 +61,20 @@ generic engine capability it doesn't have yet; add project settings via
   for devPanel.js's globals to become available. Requires `GITHUB_TOKEN`/
   `DEV_PANEL_SAVE_SECRET` set on this project's own Vercel project — see
   README.md's own setup section.
+- `api/upload-phone-model.js` — Vercel serverless function backing the
+  PHONE MODEL group's Item Selector "Import GLB" feature (added
+  2026-09-29), reusing the SAME `GITHUB_TOKEN`/`DEV_PANEL_SAVE_SECRET`
+  env vars. Unlike `save-settings.js`, it commits via GitHub's **Git
+  Data API** (blob → tree → commit → ref), not the simple Contents API
+  — every real phone GLB here (1.8-4MB) is already over the Contents
+  API's 1MB single-file cap. Also maintains
+  `data/processed/SMARTPHONE MODELS/manifest.json` (what the client
+  fetches, live via this same endpoint's GET, to populate the Item
+  Selector's list) in a 2nd, separate commit via the simpler Contents
+  API, since that file is small JSON. See that file's own top comment
+  for the full reasoning, including the accepted ~4.5MB Vercel
+  request-body ceiling (a direct, deliberate decision — no chunked
+  upload built, see CLAUDE.md's own Gotchas entry below).
 
 ## Known simplifications vs. HANDY DANDIES
 
@@ -2498,3 +2512,46 @@ wiring, and are still open:
   `preview_start`/`navigate`/screenshot verification for this project
   going forward, and say so plainly in the final report rather than
   claiming something was tested.
+- **`findPhoneScreenMeshes()` (plural — was `findPhoneScreenMesh()`,
+  singular, renamed 2026-09-29) returns an ARRAY because a glTF node
+  with MULTIPLE primitives (e.g. P5 Project 1's own 'Screen Face', 2
+  primitives: 'Display' + 'backcam') does NOT load as one THREE.Mesh —
+  confirmed by reading the real, bundled `GLTFLoader.js` source
+  directly (not guessed): it creates one Mesh per primitive and wraps
+  them in a `Group`, applying the glTF NODE's own name to that GROUP,
+  not to either child Mesh.** A single-primitive node (iPhone 17 Max
+  Pro, Pixel 9A as of their own current export) IS still just one
+  THREE.Mesh, correctly named directly from the node — pass 1's
+  ancestor-chain walk handles both shapes uniformly, so don't special-
+  case single- vs. multi-primitive at a call site; always go through
+  `findPhoneScreenMeshes()` and iterate the result.
+  `phoneScreenMeshes`/`phoneScreenOriginalMaterials` (both arrays,
+  index-parallel) replace the old singular `phoneScreenMesh`/
+  `phoneScreenOriginalMaterial` globals everywhere — if a future
+  feature needs "the" screen mesh singular, that's itself a sign it's
+  only accounting for the single-primitive case; iterate the array
+  instead.
+- **Virtual Screen's texture-transform controls (Scale/Rotation/X-Y
+  Scale/"To Scale") are NOT independently browser/device-verified** —
+  same standing limitation as everything else this session
+  (`applyScreenTextureTransform()`'s own comment states the specific
+  risk: the "To Scale" correction direction, `camAspect / targetAspect`,
+  was reasoned through but not confirmed against a real resize). If a
+  future report says "To Scale" makes the distortion WORSE instead of
+  better, try the reciprocal (`targetAspect / camAspect`) at that one
+  line first before re-deriving from scratch.
+- **The Item Selector's "Import GLB" feature accepts files up to
+  roughly Vercel's own ~4.5MB serverless request-body ceiling — a
+  direct, deliberate decision (2026-09-29), not a chunked-upload
+  implementation left unfinished.** If a future model export comes in
+  larger than that, the upload will fail with a clear error from
+  `api/upload-phone-model.js` (the import still loads and works LOCALLY
+  for that browser session regardless — only persistence fails) — the
+  fix, if ever needed, is chunked client-side upload reassembled
+  server-side before the Git Data API commit step, not a config-file
+  tweak (Vercel's own body-size cap for a plain serverless function
+  isn't raiseable via a `config.api.bodyParser` export the way a
+  Next.js API route's is — confirmed by NOT finding this pattern used
+  anywhere in `save-settings.js`, this project's own other, already-
+  working Vercel function, and deliberately not adding an unverified
+  config export to the new one either).

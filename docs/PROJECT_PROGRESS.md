@@ -11,7 +11,18 @@ Nothing in progress. Phone Model's mobile rotation axis mapping saga
 (10+ rounds, see CHANGELOG's 35th-44th entries and the matching
 CLAUDE.md gotcha) is settled per real isolated-checkbox testing.
 Desktop's own axis gating (X/Y/Z Rotation on/off + scale) was corrected
-2026-09-29 the same way — see Recently completed below.
+2026-09-29 the same way. Virtual Screen's mesh-lookup bug is fixed
+(multi-primitive Group case, see the 47th/48th CHANGELOG entries), and
+the Phone Model selector is now a real Item Selector with GLB import —
+see Recently completed below.
+
+Noticed but not acted on: several new untracked files/folders appeared
+directly on disk under `data/processed/SMARTPHONE MODELS/` (`BLENDER/`,
+`RAW GLB/`, `Samsung Galaxy S2/`, `Samsung Galaxy S26.glb`, `Zip/`,
+`blackberry/`, `iPhone 17 Max.glb`, `samsung-galaxy-s26-black-low-poly/`)
+— the user's own asset staging, left untouched. These could now be
+added via the new Item Selector's own Import feature once ready, rather
+than committed directly.
 
 **Not independently verified in-browser this round (2026-09-29)** —
 the sandbox's local static server hit sustained `net::ERR_CONNECTION_RESET`
@@ -26,6 +37,21 @@ Pushed to `https://github.com/LeisHo/Handy-Set`
 
 ## Recently completed
 
+- **NEW (2026-09-29): Phone Model Item Selector + GLB import.** The
+  plain model `<select>` is now a real Item Selector (a clickable
+  list) with an "Import GLB..." button — importing checks for a
+  filename collision and confirms overwrite, loads the model locally
+  and instantly for preview, then persists it via a new
+  `api/upload-phone-model.js` endpoint (GitHub's Git Data API, since
+  every real phone GLB here is over the simpler Contents API's 1MB
+  cap) that also maintains a `manifest.json` the app reads at startup
+  instead of a hardcoded, manually-maintained model list. Also new,
+  same round: RECURSIVE RENDER gained Texture Scale/Rotation/X Scale/Y
+  Scale controls plus a "To Scale" checkbox that auto-corrects the
+  render texture's aspect against the live browser window size (a
+  reported distortion bug) and locks the X/Y sliders while on. Not
+  independently browser-verified (standing limitation). See
+  `docs/CHANGELOG.txt`'s matching 2026-09-29 (48th) entry.
 - **RESOLVED (2026-09-29): Virtual Screen had no visible effect on
   Pixel 9A — a real bug in the mesh-finding logic, not a missing
   feature on that model.** Root cause found by parsing all 3 phone
