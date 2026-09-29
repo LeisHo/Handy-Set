@@ -1,6 +1,6 @@
 {
   "controls": {
-    "checkboxHandModelEnabled": true,
+    "checkboxHandModelEnabled": false,
     "sliderFieldRows": 1,
     "sliderFieldCols": 1,
     "sliderRowSpacing": 9.5,
@@ -9,7 +9,7 @@
     "sliderAlternateRowOffset": -5.5,
     "sliderProgressiveRowOffset": 0,
     "checkboxUseProgressiveOffset": false,
-    "checkboxHideHands": false,
+    "checkboxHideHands": true,
     "slidermodelRotX": 90,
     "slidermodelRotY": 0,
     "slidermodelRotZ": 0,
@@ -107,7 +107,7 @@
     "textPhoneResponsiveRotationRange": "{\"min\":-57,\"max\":45}",
     "textPhoneResponsiveRotationCurve": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"natural\"}",
     "checkboxScreenRenderEnabled": true,
-    "sliderScreenRecursionLevels": 6,
+    "sliderScreenRecursionLevels": 10,
     "sliderScreenRenderResolution": 70,
     "sliderScreenTextureScale": 1,
     "sliderScreenTextureRotation": 90,
@@ -125,7 +125,7 @@
     "sliderCameraFov": 15,
     "sliderCameraZoom": 14,
     "checkboxLockCameraPan": true,
-    "checkboxLockCameraZoom": true,
+    "checkboxLockCameraZoom": false,
     "checkboxLockCameraRotate": true,
     "sliderCameraYaw": 180,
     "sliderCameraPitch": -89,
@@ -178,7 +178,7 @@
     "left": 35,
     "top": 108,
     "width": 350,
-    "height": 76
+    "height": 144
   },
   "devPanelStyle": {
     "titleFontSize": 17,
@@ -8227,13 +8227,13 @@
   },
   "sectionCollapseState": {
     "desktop:Saved Dev Settings": false,
-    "desktop:PHONE MODEL": true,
+    "desktop:PHONE MODEL": false,
     "desktop:OFFSET": true,
     "desktop:PHONE ROTATION": true,
     "desktop:RESPONSIVE BEHAVIOUR - PHONE": true,
     "desktop:Responsive Rotation": false,
     "desktop:RECURSIVE RENDER": false,
-    "desktop:HAND MODEL": false,
+    "desktop:HAND MODEL": true,
     "desktop:Field Layout": false,
     "desktop:Pose": false,
     "desktop:ROTATION": true,
@@ -8272,7 +8272,7 @@
     "desktop:Mouse Log": true,
     "desktop:Sensors": false,
     "desktop:Phone Model Log": false,
-    "desktop:Camera": true,
+    "desktop:Camera": false,
     "desktop:Saved Cameras": false,
     "desktop:Lighting": true,
     "desktop:Saved Lighting": true,
