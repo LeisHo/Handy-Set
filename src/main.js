@@ -2504,8 +2504,23 @@ function disposePhoneModelRaw() {
 // genuinely has no screen target (not every phone model is guaranteed
 // to have one).
 function findPhoneScreenMeshes(root) {
+  // normalizeName() added 2026-09-29, direct report: "the recurrsive
+  // rendering isnt working for hte Nothing2 model" (a real, separate
+  // bug from the meshopt-decoder one -- confirmed live via
+  // window.__debug.phoneModelRaw: the LOADED mesh name is
+  // "Screen_Face" (underscore), even though the raw GLB JSON's own
+  // node name is "Screen Face" (space) -- something in the load
+  // pipeline sanitizes the name, and the exact-match check missed it
+  // entirely. Collapsing underscores/dots to spaces (then collapsing
+  // repeated whitespace) makes "Screen_Face", "Screen.Face", and
+  // "Screen  Face" all match "Screen Face" the same as case already
+  // does, extending this project's own "be flexible with
+  // capitalization" rule to separator characters too.
+  function normalizeName(name) {
+    return name.trim().toLowerCase().replace(/[_.]+/g, ' ').replace(/\s+/g, ' ')
+  }
   function nameMatches(obj) {
-    return typeof obj.name === 'string' && obj.name.trim().toLowerCase() === 'screen face'
+    return typeof obj.name === 'string' && normalizeName(obj.name) === 'screen face'
   }
   const pass1 = []
   root.traverse((obj) => {
@@ -2517,7 +2532,7 @@ function findPhoneScreenMeshes(root) {
   if (pass1.length) return pass1
   const pass2 = []
   root.traverse((obj) => {
-    if (obj.isMesh && obj.material && typeof obj.material.name === 'string' && obj.material.name.trim().toLowerCase() === 'screen face') pass2.push(obj)
+    if (obj.isMesh && obj.material && typeof obj.material.name === 'string' && normalizeName(obj.material.name) === 'screen face') pass2.push(obj)
   })
   return pass2
 }
