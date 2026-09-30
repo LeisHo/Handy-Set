@@ -7,11 +7,13 @@ append-only history.
 
 ## Currently working on
 
-**Nothing in progress right now** — the last active item (on-demand
-rendering, below, plus its same-day follow-up: the render loop now
-stops `requestAnimationFrame` entirely when static instead of merely
-skipping its work each frame — see CHANGELOG's matching entry) shipped
-and is pushed. Waiting on the next request.
+**Nothing in progress right now** — the last active item (a Set Hotkey
+fix: standalone buttons like Pause were never hotkey-eligible, since
+every eligibility/lookup check in `devPanel.js` required a `.dev-row`
+ancestor a hand-built `.dev-buttons` button never has, and Pause itself
+had no `id` — see CHANGELOG's matching entry) shipped and is pushed.
+Waiting on the next request. The on-demand-rendering work (below) and
+its same-day render-loop-stop follow-up are also both shipped.
 
 **Recursive Render mirror investigation — RESOLVED, per direct user
 confirmation ("x mirror issue fixed by the way").** The depth-parity

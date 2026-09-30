@@ -5440,6 +5440,43 @@ scene has gone idle should still glide/decay smoothly via damping, not
 snap to a stop. `index.html` cache-buster: `main.js` `?v=169` -> `?v=170`.
 
 --------------------------------------------------------------------------------
+2026-09-30  -  Fix Set Hotkey: standalone buttons (e.g. Pause) were never
+hotkey-eligible
+
+Direct report: "I wanted to be able to set hotkeys for button types such
+as the pause button in the Debug group." Two compounding bugs:
+
+1. Every hotkey-eligibility/row-lookup check in devPanel.js required a
+   `.dev-row` ancestor, which only ever wraps a single control. A
+   standalone button like Pause (or this template's own Save/Use/Delete/
+   Set Default row) lives inside a shared `.dev-buttons` container
+   holding several buttons side by side -- it was silently excluded
+   everywhere: `getHotkeyEligibleTarget()`, the click-capture handler's
+   row lookup, `renderAllHotkeyBadges()`, and the Hotkeys subgroup list's
+   own edit/delete handlers. Broadened all of these to
+   `.dev-row, .dev-buttons`.
+2. The Pause button itself had no `id` -- every hotkey-bindable control
+   is looked up by id, and "target has no id, cannot bind" would have
+   silently refused it even after fixing (1). Gave it one
+   (`buttonPauseToggle`).
+
+Also fixed a related correctness gap this surfaced: a `.dev-buttons`
+container can hold MULTIPLE hotkeyed buttons, but the badge/input
+removal and owning-control lookups used a bare class selector or
+guessed the owner via "the row's first input/button with an id" -- both
+would silently target the WRONG button's badge the moment 2+ buttons in
+the same row had hotkeys. Tagged each badge/input with
+`data-hotkey-target=<controlId>` and scoped every lookup by it instead.
+`insertHotkeyElementIntoRow()` now also accepts the target element
+directly, inserting the badge/input immediately before that specific
+button when there's no per-row drag handle to anchor against.
+
+NOT independently browser-verified (standing project convention) --
+verified via `node --check` and code tracing only. `index.html`
+cache-busters: `main.js` `?v=170` -> `?v=171`, `devPanel.js` `?v=12` ->
+`?v=13`.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
