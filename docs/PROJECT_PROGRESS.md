@@ -7,26 +7,27 @@ append-only history.
 
 ## Currently working on
 
-**Nothing in progress right now** — the last active item was a 3-part
-follow-up on `RESPONSIVE BEHAVIOUR - PHONE > RESPONSIVE DISPLACE`
-(added this same session): an independent Displace Reset checkbox
-(double-tap now fires Rotation Reset and Displace Reset separately,
-each gated by its own checkbox), dedicated Invert X/Y/Z axis-flip
-checkboxes (self-service, no code edit needed), and a reworked desktop
-mechanism — driven by actual cursor MOVEMENT (frame-to-frame delta) fed
-through the same leaky integrator mobile's accelerometer uses, not the
-cursor's static distance from screen center (which would have
-incorrectly tied displacement magnitude to "how tilted," the opposite
-of what was asked). Displace is now fully independent of Tracking
-Enabled — see CHANGELOG's matching entry for the full account,
-including 2 standalone scripts verifying the desktop path decays
-correctly and is roughly frame-rate independent. NOT device-verified
-yet. Shipped and pushed. Waiting on the next request — including a
-just-arrived, not-yet-scoped question about click/hold timing on "all
-click functions" (which feature this applies to is still being
-clarified). Double Tap Reset in Absolute mode, the Set Hotkey button-
-eligibility fix, on-demand rendering, and the render-loop-stop follow-up
-(all below) are also shipped.
+**Nothing in progress right now** — the last active item was a real-
+device axis correction on `RESPONSIVE DISPLACE`: "switch the input
+outputs for y and z axis." Swapped which raw signal feeds the Y vs Z
+output slot on both mobile (`e.acceleration.y`/`.z`) and desktop
+(vertical cursor delta now drives Z, not Y) — see CHANGELOG's matching
+entry. NOT re-verified against a real device beyond the user's own
+report. (The earlier "click functions"/Hand Behaviour Log question
+turned out to be pasted content meant for a different project —
+HANDY DANDIES, not HANDYSET — and was dropped, no action taken.)
+
+Also shipped this session on `RESPONSIVE DISPLACE`: an independent
+Displace Reset checkbox (double-tap now fires Rotation Reset and
+Displace Reset separately, each gated by its own checkbox), dedicated
+Invert X/Y/Z axis-flip checkboxes (self-service, no code edit needed),
+and a reworked desktop mechanism — driven by actual cursor MOVEMENT
+(frame-to-frame delta) fed through the same leaky integrator mobile's
+accelerometer uses, not the cursor's static distance from screen center.
+Displace is fully independent of Tracking Enabled. Shipped and pushed.
+Waiting on the next request. Double Tap Reset in Absolute mode, the Set
+Hotkey button-eligibility fix, on-demand rendering, and the render-loop-
+stop follow-up (all below) are also shipped.
 
 **Recursive Render mirror investigation — RESOLVED, per direct user
 confirmation ("x mirror issue fixed by the way").** The depth-parity

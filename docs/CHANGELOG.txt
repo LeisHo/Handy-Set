@@ -5626,6 +5626,26 @@ NOT independently browser/device-verified (standing project convention).
 `index.html` cache-buster: `main.js` `?v=173` -> `?v=174`.
 
 --------------------------------------------------------------------------------
+2026-09-30  -  Swap Y/Z axis mapping for Responsive Displace
+
+Direct report: "for displacement switch the input outputs for y and z
+axis." Swapped at the raw-reading stage on both platforms: mobile now
+reads `e.acceleration.z` into the Y output slot and `e.acceleration.y`
+into Z (before the optional world-frame rotation, same pattern as every
+other real-device axis correction in this file -- the bug is in which
+raw sensor axis feeds which output slot, not something that should only
+apply post-rotation); desktop's vertical cursor movement now feeds Z
+instead of Y, for consistency between platforms (desktop still has no
+independent 3rd input channel -- the unused slot is just 0 now instead
+of Y). The Y/Z Axis Displace checkboxes/scale/invert controls and their
+labels are unchanged -- only which raw reading reaches each one.
+
+Not independently re-verified against a real device beyond the user's
+own report -- if this turns out backwards, the fix is reverting this one
+swap, not guessing a 3rd mapping. `index.html` cache-buster: `main.js`
+`?v=174` -> `?v=175`.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
