@@ -96,7 +96,8 @@
     "sliderPhoneModelRotX": 0,
     "sliderPhoneModelRotY": 0,
     "sliderPhoneModelRotZ": 0,
-    "checkboxPhoneResponsiveRotationEnabled": true,
+    "checkboxPhoneResponsiveRotationEnabled": false,
+    "selectPhoneRotationMode": "gyro",
     "checkboxPhoneRotationResetEnabled": true,
     "checkboxPhoneAxisXEnabled": true,
     "sliderPhoneRotationScaleX": -1,
@@ -111,10 +112,12 @@
     "checkboxScreenRenderEnabled": true,
     "sliderScreenRecursionLevels": 10,
     "sliderScreenRenderResolution": 200,
-    "sliderScreenTextureScale": 1.2,
+    "sliderScreenTextureScale": 1.6,
+    "textScreenLevelScaleRange": "{\"min\":1,\"max\":1}",
+    "textScreenLevelScaleCurve": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"linear\"}",
     "sliderScreenTextureRotation": 0,
     "sliderScreenTextureOffsetX": 0,
-    "sliderScreenTextureOffsetY": -0.06,
+    "sliderScreenTextureOffsetY": -0.0379116580126609,
     "sliderScreenTextureScaleX": 0.6,
     "sliderScreenTextureScaleY": 1.1,
     "sliderScreenEmissionIntensity": 0.95,
@@ -134,7 +137,7 @@
     "sliderCameraFov": 15,
     "sliderCameraZoom": 26,
     "checkboxLockCameraPan": true,
-    "checkboxLockCameraZoom": false,
+    "checkboxLockCameraZoom": true,
     "checkboxLockCameraRotate": true,
     "sliderCameraYaw": 180,
     "sliderCameraPitch": -89,
@@ -186,7 +189,7 @@
   "layout": {
     "left": 27,
     "top": 27,
-    "width": 350,
+    "width": 606,
     "height": 671
   },
   "devPanelStyle": {
@@ -380,6 +383,10 @@
                 {
                   "type": "row",
                   "key": "colorDevPanelButtonColor"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderDevGroupNestingLStep"
                 }
               ],
               "rowKeys": [
@@ -389,7 +396,8 @@
                 "sliderDevPanelOpacity",
                 "colorDevPanelAccent2",
                 "colorDevPanelAccent3",
-                "colorDevPanelButtonColor"
+                "colorDevPanelButtonColor",
+                "sliderDevGroupNestingLStep"
               ],
               "subgroups": []
             }
@@ -860,8 +868,15 @@
             "type": "group",
             "section": {
               "key": "desktop:Hotkeys",
-              "items": [],
-              "rowKeys": [],
+              "items": [
+                {
+                  "type": "row",
+                  "key": "sliderDevHotkeySequenceWindow"
+                }
+              ],
+              "rowKeys": [
+                "sliderDevHotkeySequenceWindow"
+              ],
               "subgroups": []
             }
           }
@@ -911,6 +926,10 @@
               {
                 "type": "row",
                 "key": "colorDevPanelButtonColor"
+              },
+              {
+                "type": "row",
+                "key": "sliderDevGroupNestingLStep"
               }
             ],
             "rowKeys": [
@@ -920,7 +939,8 @@
               "sliderDevPanelOpacity",
               "colorDevPanelAccent2",
               "colorDevPanelAccent3",
-              "colorDevPanelButtonColor"
+              "colorDevPanelButtonColor",
+              "sliderDevGroupNestingLStep"
             ],
             "subgroups": []
           },
@@ -1385,8 +1405,15 @@
           },
           {
             "key": "desktop:Hotkeys",
-            "items": [],
-            "rowKeys": [],
+            "items": [
+              {
+                "type": "row",
+                "key": "sliderDevHotkeySequenceWindow"
+              }
+            ],
+            "rowKeys": [
+              "sliderDevHotkeySequenceWindow"
+            ],
             "subgroups": []
           }
         ]
@@ -1538,17 +1565,12 @@
               "rowKeys": [],
               "subgroups": []
             }
-          },
-          {
-            "type": "row",
-            "key": "__row8"
           }
         ],
         "rowKeys": [
           "checkboxShowAxesHelper",
           "checkboxShowGridHelper",
-          "checkboxShowWireframe",
-          "__row8"
+          "checkboxShowWireframe"
         ],
         "subgroups": [
           {
@@ -1791,6 +1813,10 @@
                       {
                         "type": "row",
                         "key": "sliderPhoneRotationScaleZ"
+                      },
+                      {
+                        "type": "row",
+                        "key": "selectPhoneRotationMode"
                       }
                     ],
                     "rowKeys": [
@@ -1805,7 +1831,8 @@
                       "checkboxPhoneAxisYEnabled",
                       "sliderPhoneRotationScaleY",
                       "checkboxPhoneAxisZEnabled",
-                      "sliderPhoneRotationScaleZ"
+                      "sliderPhoneRotationScaleZ",
+                      "selectPhoneRotationMode"
                     ],
                     "subgroups": []
                   }
@@ -1863,6 +1890,10 @@
                     {
                       "type": "row",
                       "key": "sliderPhoneRotationScaleZ"
+                    },
+                    {
+                      "type": "row",
+                      "key": "selectPhoneRotationMode"
                     }
                   ],
                   "rowKeys": [
@@ -1877,7 +1908,8 @@
                     "checkboxPhoneAxisYEnabled",
                     "sliderPhoneRotationScaleY",
                     "checkboxPhoneAxisZEnabled",
-                    "sliderPhoneRotationScaleZ"
+                    "sliderPhoneRotationScaleZ",
+                    "selectPhoneRotationMode"
                   ],
                   "subgroups": []
                 }
@@ -1944,6 +1976,14 @@
                 {
                   "type": "row",
                   "key": "checkboxScreenMirrorPhaseY"
+                },
+                {
+                  "type": "row",
+                  "key": "textScreenLevelScaleRange"
+                },
+                {
+                  "type": "row",
+                  "key": "textScreenLevelScaleCurve"
                 }
               ],
               "rowKeys": [
@@ -1960,7 +2000,9 @@
                 "sliderScreenTextureOffsetX",
                 "sliderScreenTextureOffsetY",
                 "checkboxScreenMirrorPhaseX",
-                "checkboxScreenMirrorPhaseY"
+                "checkboxScreenMirrorPhaseY",
+                "textScreenLevelScaleRange",
+                "textScreenLevelScaleCurve"
               ],
               "subgroups": []
             }
@@ -2072,6 +2114,10 @@
                     {
                       "type": "row",
                       "key": "sliderPhoneRotationScaleZ"
+                    },
+                    {
+                      "type": "row",
+                      "key": "selectPhoneRotationMode"
                     }
                   ],
                   "rowKeys": [
@@ -2086,7 +2132,8 @@
                     "checkboxPhoneAxisYEnabled",
                     "sliderPhoneRotationScaleY",
                     "checkboxPhoneAxisZEnabled",
-                    "sliderPhoneRotationScaleZ"
+                    "sliderPhoneRotationScaleZ",
+                    "selectPhoneRotationMode"
                   ],
                   "subgroups": []
                 }
@@ -2144,6 +2191,10 @@
                   {
                     "type": "row",
                     "key": "sliderPhoneRotationScaleZ"
+                  },
+                  {
+                    "type": "row",
+                    "key": "selectPhoneRotationMode"
                   }
                 ],
                 "rowKeys": [
@@ -2158,7 +2209,8 @@
                   "checkboxPhoneAxisYEnabled",
                   "sliderPhoneRotationScaleY",
                   "checkboxPhoneAxisZEnabled",
-                  "sliderPhoneRotationScaleZ"
+                  "sliderPhoneRotationScaleZ",
+                  "selectPhoneRotationMode"
                 ],
                 "subgroups": []
               }
@@ -2222,6 +2274,14 @@
               {
                 "type": "row",
                 "key": "checkboxScreenMirrorPhaseY"
+              },
+              {
+                "type": "row",
+                "key": "textScreenLevelScaleRange"
+              },
+              {
+                "type": "row",
+                "key": "textScreenLevelScaleCurve"
               }
             ],
             "rowKeys": [
@@ -2238,7 +2298,9 @@
               "sliderScreenTextureOffsetX",
               "sliderScreenTextureOffsetY",
               "checkboxScreenMirrorPhaseX",
-              "checkboxScreenMirrorPhaseY"
+              "checkboxScreenMirrorPhaseY",
+              "textScreenLevelScaleRange",
+              "textScreenLevelScaleCurve"
             ],
             "subgroups": []
           }
@@ -5554,10 +5616,20 @@
                 {
                   "type": "row",
                   "key": "sliderMobileScreenTextureOffsetX"
+                },
+                {
+                  "type": "row",
+                  "key": "textScreenLevelScaleRange"
+                },
+                {
+                  "type": "row",
+                  "key": "textScreenLevelScaleCurve"
                 }
               ],
               "rowKeys": [
-                "sliderMobileScreenTextureOffsetX"
+                "sliderMobileScreenTextureOffsetX",
+                "textScreenLevelScaleRange",
+                "textScreenLevelScaleCurve"
               ],
               "subgroups": []
             }
@@ -5630,10 +5702,20 @@
               {
                 "type": "row",
                 "key": "sliderMobileScreenTextureOffsetX"
+              },
+              {
+                "type": "row",
+                "key": "textScreenLevelScaleRange"
+              },
+              {
+                "type": "row",
+                "key": "textScreenLevelScaleCurve"
               }
             ],
             "rowKeys": [
-              "sliderMobileScreenTextureOffsetX"
+              "sliderMobileScreenTextureOffsetX",
+              "textScreenLevelScaleRange",
+              "textScreenLevelScaleCurve"
             ],
             "subgroups": []
           }
@@ -7317,10 +7399,20 @@
                 {
                   "type": "row",
                   "key": "sliderLandscapeScreenTextureOffsetX"
+                },
+                {
+                  "type": "row",
+                  "key": "textScreenLevelScaleRange"
+                },
+                {
+                  "type": "row",
+                  "key": "textScreenLevelScaleCurve"
                 }
               ],
               "rowKeys": [
-                "sliderLandscapeScreenTextureOffsetX"
+                "sliderLandscapeScreenTextureOffsetX",
+                "textScreenLevelScaleRange",
+                "textScreenLevelScaleCurve"
               ],
               "subgroups": []
             }
@@ -7393,10 +7485,20 @@
               {
                 "type": "row",
                 "key": "sliderLandscapeScreenTextureOffsetX"
+              },
+              {
+                "type": "row",
+                "key": "textScreenLevelScaleRange"
+              },
+              {
+                "type": "row",
+                "key": "textScreenLevelScaleCurve"
               }
             ],
             "rowKeys": [
-              "sliderLandscapeScreenTextureOffsetX"
+              "sliderLandscapeScreenTextureOffsetX",
+              "textScreenLevelScaleRange",
+              "textScreenLevelScaleCurve"
             ],
             "subgroups": []
           }
@@ -8389,7 +8491,7 @@
     "desktop:TABS": true,
     "desktop:BUTTONS": true,
     "desktop:Hotkeys": false,
-    "desktop:Debug": false,
+    "desktop:Debug": true,
     "desktop:Object Axes": true,
     "desktop:Settings": true,
     "desktop:Mouse Log": true,
@@ -8416,7 +8518,7 @@
     "desktop:Saved Poses": true,
     "desktop:Tween": true,
     "desktop:Saved Tween Sequences": true,
-    "desktop:RESPONSIVE BEHAVIOUR - HAND": true,
+    "desktop:RESPONSIVE BEHAVIOUR - HAND": false,
     "desktop:Target": true,
     "desktop:Responsive Arm Rotation at Base": true,
     "desktop:Responsive Pose Tween": true,
@@ -9767,6 +9869,10 @@
   "devHotkeys": {
     "rr": {
       "id": "checkboxPhoneResponsiveRotationEnabled",
+      "type": "checkbox"
+    },
+    "te": {
+      "id": "checkboxTrackingEnabled",
       "type": "checkbox"
     }
   }
