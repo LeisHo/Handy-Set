@@ -109,8 +109,8 @@
     "sliderPhoneRotationDamping": 1,
     "textPhoneResponsiveRotationRange": "{\"min\":-57,\"max\":45}",
     "textPhoneResponsiveRotationCurve": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"natural\"}",
-    "checkboxPhoneResponsiveDisplaceEnabled": true,
-    "selectPhoneDisplaceMode": "worldPosition",
+    "checkboxPhoneResponsiveDisplaceEnabled": false,
+    "selectPhoneDisplaceMode": "acceleration",
     "checkboxPhoneDisplaceResetEnabled": true,
     "checkboxPhoneDisplaceAxisXEnabled": true,
     "sliderPhoneDisplaceScaleX": 0.25,
@@ -122,7 +122,7 @@
     "sliderPhoneDisplaceScaleZ": 0.5,
     "checkboxPhoneDisplaceInvertZ": false,
     "sliderPhoneResponsiveDisplaceFineTune": 0,
-    "sliderPhoneDisplaceDamping": 0.99,
+    "sliderPhoneDisplaceDamping": 0.66,
     "textPhoneResponsiveDisplaceRange": "{\"min\":-20,\"max\":20}",
     "textPhoneResponsiveDisplaceCurve": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"monotone\"}",
     "checkboxScreenRenderEnabled": false,
@@ -206,7 +206,7 @@
     "left": 26,
     "top": 27,
     "width": 350,
-    "height": 120
+    "height": 529
   },
   "devPanelStyle": {
     "titleFontSize": 17,
@@ -9019,7 +9019,7 @@
     "desktop:RECURSIVE RENDER": false,
     "desktop:RESPONSIVE BEHAVIOUR - PHONE": false,
     "desktop:Responsive Rotation": true,
-    "desktop:RESPONSIVE DISPLACE": false,
+    "desktop:RESPONSIVE DISPLACE": true,
     "desktop:HAND MODEL": true,
     "desktop:Field Layout": true,
     "desktop:Pose": true,
