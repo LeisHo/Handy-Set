@@ -2808,7 +2808,19 @@ function integratePhoneDisplacement(e) {
   const now = performance.now()
   if (phoneDisplaceLastTimestamp !== null) {
     const dt = Math.min((now - phoneDisplaceLastTimestamp) / 1000, 0.1) // seconds; capped so a backgrounded tab can't integrate one huge jump on resume
-    let ax = e.acceleration.x || 0, ay = e.acceleration.y || 0, az = e.acceleration.z || 0
+    // Y/Z SWAPPED 2026-09-30, direct report: "for displacement switch the
+    // input outputs for y and z axis" -- whatever previously fed the Y
+    // output (raw e.acceleration.y) now feeds Z, and vice versa. Swapped
+    // at the raw-reading stage, before the optional world-frame rotation
+    // below, matching every other real-device axis correction in this
+    // file (the bug is in which raw sensor axis feeds which output slot,
+    // not something that should only apply post-rotation). The Y/Z Axis
+    // Displace checkboxes/scale/invert controls and their labels are
+    // UNCHANGED -- only which raw reading reaches each one. NOT
+    // independently re-verified against a real device beyond the user's
+    // own report; if this turns out backwards, revert this one swap
+    // rather than guessing a 3rd mapping.
+    let ax = e.acceleration.x || 0, ay = e.acceleration.z || 0, az = e.acceleration.y || 0
     if (cfg.phoneDisplaceMode === 'worldPosition' && latestOrientation) {
       const q = computeDeviceOrientationQuat(latestOrientation.alpha || 0, latestOrientation.beta || 0, latestOrientation.gamma || 0)
       _phoneDisplaceWorldVec.set(ax, ay, az).applyQuaternion(q)
@@ -2841,12 +2853,16 @@ function integratePhoneDisplacement(e) {
 // letting the SAME leaky decay pull velocity/position back down
 // correctly with no separate "cursor went idle" detection needed.
 //
-// No Z (depth/perpendicular-to-face) contribution -- a 2D cursor has no
-// natural 3rd axis to measure "movement" along. Z stays mobile-only,
-// where a real depth reading exists. This is a deliberate scope
-// narrowing (not silently dropped): direction on desktop is just
-// whichever way the cursor is actually moving, no tilt/orientation
-// lookup needed the way mobile's 'worldPosition' mode needs one.
+// Only 2 axes ever carry real cursor movement -- a 2D cursor has no
+// natural 3rd axis to measure "movement" along. (Originally Y stood in
+// for depth-perpendicular-to-face with Z always 0; after the 2026-09-30
+// Y/Z swap below, it's Z that carries the cursor's vertical movement and
+// Y that's always 0 -- see that swap's own comment.) The unused axis
+// stays mobile-only, where a real depth reading exists. This is a
+// deliberate scope narrowing (not silently dropped): direction on
+// desktop is just whichever way the cursor is actually moving, no tilt/
+// orientation lookup needed the way mobile's 'worldPosition' mode needs
+// one.
 let phoneDisplaceDesktopLastNdcX = null, phoneDisplaceDesktopLastNdcY = null
 let phoneDisplaceDesktopLastFrameTime = null
 // Cursor NDC delta has no natural physical unit (unlike mobile's real
@@ -2876,7 +2892,13 @@ function updatePhoneDisplaceDesktopFrame() {
   const dNdcY = cursorNDC.y - phoneDisplaceDesktopLastNdcY
   phoneDisplaceDesktopLastNdcX = cursorNDC.x
   phoneDisplaceDesktopLastNdcY = cursorNDC.y
-  applyPhoneDisplaceSample((dNdcX / dt) * PHONE_DISPLACE_DESKTOP_SENSITIVITY, (dNdcY / dt) * PHONE_DISPLACE_DESKTOP_SENSITIVITY, 0, dt)
+  // Y/Z SWAPPED 2026-09-30, same report/reasoning as integratePhoneDisplacement()'s
+  // own matching fix (mobile) -- applied here too for consistency across
+  // both platforms. Vertical cursor movement now feeds the Z slot
+  // (3rd arg) instead of Y (2nd arg, now always 0 -- desktop still has
+  // no independent 3rd input channel, same limitation this function's
+  // own header comment already documents).
+  applyPhoneDisplaceSample((dNdcX / dt) * PHONE_DISPLACE_DESKTOP_SENSITIVITY, 0, (dNdcY / dt) * PHONE_DISPLACE_DESKTOP_SENSITIVITY, dt)
 }
 // Rotation Reset -- direct request 2026-09-28: a double-tap(mobile)/
 // double-click(desktop) anywhere on screen (gated by a new "Rotation
