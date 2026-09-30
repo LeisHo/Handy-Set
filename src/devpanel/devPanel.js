@@ -424,6 +424,7 @@
                     disarmDevGroupSelection();
                 } else {
                     if (typeof devDeleteGroupArmed !== 'undefined' && devDeleteGroupArmed) disarmDevDeleteGroup();
+                    if (typeof devSetHotkeyArmed !== 'undefined' && devSetHotkeyArmed) disarmSetHotkey();
                     devGroupSelectionArmed = true;
                     addGroupBtn.classList.add('armed');
                 }
@@ -446,6 +447,7 @@
                     disarmDevDeleteGroup();
                 } else {
                     disarmDevGroupSelection();
+                    if (typeof devSetHotkeyArmed !== 'undefined' && devSetHotkeyArmed) disarmSetHotkey();
                     devDeleteGroupArmed = true;
                     deleteGroupBtn.classList.add('armed');
                 }
@@ -524,6 +526,413 @@
             if (devPanel.contains(e.target)) return;
             if (devDeleteGroupArmed) disarmDevDeleteGroup();
         }, true);
+    }
+
+    // ================================================================
+    // SET HOTKEY FEATURE -- added 2026-09-30, direct request: bind a
+    // 1-2 letter SEQUENTIAL key combo (typed in order, not held
+    // simultaneously) to a checkbox/button/slider. Desktop only (never
+    // shown/armed/listened-for on a touch device -- "Do not show
+    // hotkeys on mobile").
+    // ----------------------------------------------------------------
+    const devHotkeyIsTouchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+    let devHotkeys = {}; // { [keySequence]: { id, type: 'checkbox'|'button'|'slider' } }
+    let devSetHotkeyArmed = false;
+    // Which element/control types are eligible -- explicitly excludes
+    // dropdowns (<select>), curve editors and color pickers (neither is
+    // a plain checkbox/range/button element so both are naturally
+    // excluded below without a special case), group-label buttons
+    // (expand/undock/lock, all live inside .dev-section-title), the row/
+    // group drag-handle (a <span>, not a button, also naturally
+    // excluded), and item-selector/list-picker rows (.dev-list-picker).
+    function getHotkeyEligibleTarget(e) {
+        if (e.target.closest('.dev-section-title')) return null;
+        if (e.target.closest('.dev-list-picker')) return null;
+        if (e.target.closest('.dev-header-buttons')) return null;
+        if (e.target.closest('.dev-slider-bound-editable')) return null;
+        if (e.target.closest('.dev-hotkey-badge') || e.target.closest('.dev-hotkey-input')) return null;
+        const checkbox = e.target.closest('input[type="checkbox"]');
+        if (checkbox && checkbox.closest('.dev-row')) return { el: checkbox, type: 'checkbox' };
+        const slider = e.target.closest('input[type="range"]');
+        if (slider && slider.closest('.dev-row')) return { el: slider, type: 'slider' };
+        const button = e.target.closest('button');
+        if (button && button.closest('.dev-row')) return { el: button, type: 'button' };
+        return null;
+    }
+    function disarmSetHotkey() {
+        devSetHotkeyArmed = false;
+        const btn = document.getElementById('devSetHotkeyBtn');
+        if (btn) btn.classList.remove('armed');
+    }
+    function setupSetHotkeyButton() {
+        const btn = document.getElementById('devSetHotkeyBtn');
+        if (!btn) return;
+        if (devHotkeyIsTouchDevice) { btn.style.display = 'none'; return; }
+        btn.addEventListener('click', () => {
+            if (devSetHotkeyArmed) {
+                disarmSetHotkey();
+            } else {
+                // Mutual exclusion with Add Group / Delete Group -- same
+                // reasoning as those 2 already disarming each other: 2
+                // conflicting "what does the next click mean" modes armed
+                // at once would be ambiguous.
+                disarmDevGroupSelection();
+                disarmDevDeleteGroup();
+                devSetHotkeyArmed = true;
+                btn.classList.add('armed');
+            }
+        });
+    }
+    // Finds the row's own drag-handle (always its current first child,
+    // per injectRowDragHandles()'s own insertBefore(handle, row.firstChild))
+    // so the hotkey element can be inserted immediately before it --
+    // "left most within that input's line space", per direct spec.
+    function insertHotkeyElementIntoRow(row, el) {
+        const handle = row.querySelector(':scope > .dev-row-drag-handle');
+        row.insertBefore(el, handle || row.firstChild || null);
+    }
+    function findExistingHotkeyKeyForControl(controlId) {
+        for (const [key, entry] of Object.entries(devHotkeys)) { if (entry.id === controlId) return key; }
+        return null;
+    }
+    // Renders (or re-renders) a control's own hotkey UI inside its row --
+    // either the plain colored-text badge (a saved hotkey exists) or
+    // nothing at all (no hotkey set and not currently mid-edit). Removes
+    // any previous badge/input first so this is always safe to call
+    // repeatedly (after set/edit/delete, or after Undo/Redo restores
+    // devHotkeys).
+    function renderHotkeyBadgeForRow(row, controlId, controlType) {
+        const existingEl = row.querySelector(':scope > .dev-hotkey-badge, :scope > .dev-hotkey-input');
+        if (existingEl) existingEl.remove();
+        const key = findExistingHotkeyKeyForControl(controlId);
+        if (!key) return;
+        const badge = document.createElement('span');
+        badge.className = 'dev-hotkey-badge';
+        badge.textContent = key;
+        badge.title = 'Double-click to edit, double-right-click to delete';
+        let lastContextmenuAt = 0;
+        badge.addEventListener('dblclick', (e) => {
+            e.preventDefault(); e.stopPropagation();
+            startHotkeyEdit(row, controlId, controlType, key);
+        });
+        badge.addEventListener('contextmenu', (e) => {
+            e.preventDefault(); e.stopPropagation();
+            const now = performance.now();
+            if (now - lastContextmenuAt < getHotkeySequenceWindowMs()) {
+                pushDevPanelUndoSnapshot(); devRedoStack = [];
+                delete devHotkeys[key];
+                renderHotkeyBadgeForRow(row, controlId, controlType);
+                refreshHotkeysListSubgroup();
+            }
+            lastContextmenuAt = now;
+        });
+        insertHotkeyElementIntoRow(row, badge);
+    }
+    // Opens the inline edit textbox (used both for a brand-new binding
+    // from the Set Hotkey click-capture below, and for double-click-to-
+    // edit on an existing badge).
+    function startHotkeyEdit(row, controlId, controlType, existingKey) {
+        const existingEl = row.querySelector(':scope > .dev-hotkey-badge, :scope > .dev-hotkey-input');
+        if (existingEl) existingEl.remove();
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'dev-hotkey-input';
+        input.maxLength = 2;
+        if (existingKey) input.value = existingKey;
+        insertHotkeyElementIntoRow(row, input);
+        input.focus(); input.select();
+        let settled = false;
+        function commit() {
+            if (settled) return; settled = true;
+            const typed = input.value.trim().toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 2);
+            input.remove();
+            if (typed) {
+                pushDevPanelUndoSnapshot(); devRedoStack = [];
+                if (existingKey && existingKey !== typed) delete devHotkeys[existingKey];
+                devHotkeys[typed] = { id: controlId, type: controlType };
+            } else if (existingKey) {
+                // Committed empty while editing an existing hotkey -- treat
+                // as a delete, same as double-right-click would.
+                pushDevPanelUndoSnapshot(); devRedoStack = [];
+                delete devHotkeys[existingKey];
+            }
+            renderHotkeyBadgeForRow(row, controlId, controlType);
+            refreshHotkeysListSubgroup();
+        }
+        function cancel() {
+            if (settled) return; settled = true;
+            input.remove();
+            renderHotkeyBadgeForRow(row, controlId, controlType); // restores the old badge, if any
+        }
+        input.addEventListener('blur', commit);
+        input.addEventListener('keydown', (ev) => {
+            if (ev.key === 'Enter') { ev.preventDefault(); input.blur(); }
+            else if (ev.key === 'Escape') { ev.preventDefault(); cancel(); }
+        });
+        input.addEventListener('click', (ev) => ev.stopPropagation());
+    }
+    // The capturing click listener that actually implements "click Set
+    // Hotkey, then click a checkbox/button/slider" -- same "capturing
+    // listener on devPanel, gated by an armed flag" shape as Delete
+    // Group above. preventDefault/stopPropagation on the qualifying
+    // click itself is what satisfies "when i click my selected setting,
+    // that click wont trigger that UI for that click".
+    function setupHotkeyAssignmentCapture() {
+        if (devHotkeyIsTouchDevice) return;
+        devPanel.addEventListener('click', (e) => {
+            if (!devSetHotkeyArmed) return;
+            if (e.target.closest('#devSetHotkeyBtn')) return;
+            const eligible = getHotkeyEligibleTarget(e);
+            if (!eligible) return;
+            e.preventDefault();
+            e.stopPropagation();
+            const row = eligible.el.closest('.dev-row');
+            if (!row) return;
+            if (!eligible.el.id) { console.warn(ts() + ' Set Hotkey: target has no id, cannot bind'); return; }
+            startHotkeyEdit(row, eligible.el.id, eligible.type, findExistingHotkeyKeyForControl(eligible.el.id));
+            // Deliberately stays armed -- "like Delete", lets multiple
+            // hotkeys be set in a row without re-clicking the header
+            // button each time. Disarmed only via the button itself,
+            // Escape (handled by startHotkeyEdit's own input), or
+            // clicking outside the panel (mirrors Delete Group's own
+            // outside-click disarm, added below).
+        }, true);
+        document.addEventListener('click', (e) => {
+            if (devPanel.contains(e.target)) return;
+            if (devSetHotkeyArmed) disarmSetHotkey();
+        }, true);
+    }
+    // Re-renders every control's own hotkey badge -- called once after
+    // initial build and after Undo/Redo/Sync/Reset restores devHotkeys
+    // wholesale (applyFullDevPanelState()), since those don't go through
+    // startHotkeyEdit()'s own per-row render call at all.
+    function renderAllHotkeyBadges() {
+        if (devHotkeyIsTouchDevice) return;
+        const seenIds = new Set();
+        Object.values(devHotkeys).forEach((entry) => seenIds.add(entry.id));
+        // Also clear any row whose hotkey was just removed (Undo, delete)
+        // by re-rendering every row that EITHER currently has a badge/
+        // input OR is a target id still in devHotkeys.
+        document.querySelectorAll('.dev-hotkey-badge, .dev-hotkey-input').forEach((el) => {
+            const row = el.closest('.dev-row');
+            if (row) seenIds.add(row.querySelector('input[id], button[id]')?.id);
+        });
+        seenIds.forEach((id) => {
+            if (!id) return;
+            const el = document.getElementById(id);
+            const row = el && el.closest('.dev-row');
+            if (!row) return;
+            const type = el.type === 'checkbox' ? 'checkbox' : el.type === 'range' ? 'slider' : 'button';
+            renderHotkeyBadgeForRow(row, id, type);
+        });
+        refreshHotkeysListSubgroup();
+    }
+
+    // ----------------------------------------------------------------
+    // Key-sequence detection engine -- keys typed IN ORDER within a
+    // configurable window (default 500ms, see the Hotkeys subgroup's own
+    // slider), not held simultaneously.
+    // ----------------------------------------------------------------
+    function getHotkeySequenceWindowMs() {
+        const el = document.getElementById('sliderDevHotkeySequenceWindow');
+        return el ? parseFloat(el.value) || 500 : 500;
+    }
+    let hotkeyKeyBuffer = '';
+    let hotkeyBufferTimer = null;
+    function resetHotkeyBuffer() {
+        hotkeyKeyBuffer = '';
+        if (hotkeyBufferTimer) { clearTimeout(hotkeyBufferTimer); hotkeyBufferTimer = null; }
+    }
+    function isTypingIntoAnInput(e) {
+        const t = e.target;
+        return t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
+    }
+    function processHotkeyBuffer() {
+        const exact = devHotkeys[hotkeyKeyBuffer];
+        const hasLongerPossibleMatch = hotkeyKeyBuffer.length === 1 && Object.keys(devHotkeys).some((k) => k.length === 2 && k.startsWith(hotkeyKeyBuffer));
+        if (hasLongerPossibleMatch) {
+            clearTimeout(hotkeyBufferTimer);
+            hotkeyBufferTimer = setTimeout(() => {
+                if (devHotkeys[hotkeyKeyBuffer]) triggerHotkey(devHotkeys[hotkeyKeyBuffer]);
+                resetHotkeyBuffer();
+            }, getHotkeySequenceWindowMs());
+            return;
+        }
+        if (exact) triggerHotkey(exact);
+        resetHotkeyBuffer();
+    }
+    function triggerHotkey(entry) {
+        const el = document.getElementById(entry.id);
+        if (!el) return;
+        if (entry.type === 'checkbox') {
+            pushDevPanelUndoSnapshot(); devRedoStack = [];
+            el.checked = !el.checked;
+            // wireCheckbox() listens for 'change', not 'input' -- see this
+            // file's own established convention (CLAUDE.md's own restore-
+            // dispatch gotcha documents this exact requirement).
+            el.dispatchEvent(new Event('change', { bubbles: true }));
+        } else if (entry.type === 'button') {
+            pushDevPanelUndoSnapshot(); devRedoStack = [];
+            el.click();
+        } else if (entry.type === 'slider') {
+            enterSliderHotkeyMode(el);
+        }
+    }
+    function setupHotkeySequenceListener() {
+        if (devHotkeyIsTouchDevice) return;
+        document.addEventListener('keydown', (e) => {
+            if (activeSliderHotkey) { handleSliderHotkeyModeKey(e); return; }
+            if (isTypingIntoAnInput(e)) return; // never hijack normal typing, including the hotkey-edit textbox itself
+            if (!/^[a-z0-9]$/i.test(e.key)) return;
+            hotkeyKeyBuffer += e.key.toLowerCase();
+            if (hotkeyKeyBuffer.length > 2) hotkeyKeyBuffer = hotkeyKeyBuffer.slice(-2);
+            processHotkeyBuffer();
+        });
+    }
+
+    // ----------------------------------------------------------------
+    // Slider Hotkey Mode -- triggering a slider's hotkey doesn't change
+    // anything immediately; it arms arrow-key adjustment instead, shown
+    // via a small HUD next to the floating DEV toggle button.
+    // ----------------------------------------------------------------
+    let activeSliderHotkey = null; // { el, baseStep, multiplier }
+    function getSliderHotkeyHud() {
+        let hud = document.getElementById('devHotkeyHud');
+        if (!hud) {
+            hud = document.createElement('div');
+            hud.id = 'devHotkeyHud';
+            hud.className = 'dev-hotkey-hud';
+            hud.style.display = 'none';
+            document.body.appendChild(hud);
+        }
+        return hud;
+    }
+    function updateSliderHotkeyHud() {
+        if (!activeSliderHotkey) return;
+        const { el, baseStep, multiplier } = activeSliderHotkey;
+        const label = el.closest('.dev-row')?.querySelector('.dev-label')?.textContent || el.id;
+        const hud = getSliderHotkeyHud();
+        hud.innerHTML = '<span class="dev-hotkey-hud-label">' + label + '</span> = ' + el.value + ' (step ' + (baseStep * multiplier) + ')';
+        hud.style.display = 'block';
+    }
+    function enterSliderHotkeyMode(el) {
+        pushDevPanelUndoSnapshot(); devRedoStack = []; // whole session = one undo action
+        activeSliderHotkey = { el, baseStep: parseFloat(el.step) || 1, multiplier: 1 };
+        updateSliderHotkeyHud();
+    }
+    function exitSliderHotkeyMode() {
+        activeSliderHotkey = null;
+        const hud = document.getElementById('devHotkeyHud');
+        if (hud) hud.style.display = 'none';
+    }
+    function handleSliderHotkeyModeKey(e) {
+        if (!activeSliderHotkey) return;
+        const { el, baseStep, multiplier } = activeSliderHotkey;
+        if (e.key === 'Escape') { e.preventDefault(); exitSliderHotkeyMode(); return; }
+        if (e.key === '+' || e.key === '=') { e.preventDefault(); activeSliderHotkey.multiplier *= 10; updateSliderHotkeyHud(); return; }
+        if (e.key === '-' || e.key === '_') { e.preventDefault(); activeSliderHotkey.multiplier = Math.max(0.001, activeSliderHotkey.multiplier / 10); updateSliderHotkeyHud(); return; }
+        if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+            e.preventDefault();
+            const step = baseStep * multiplier * (e.key === 'ArrowUp' ? 1 : -1);
+            const min = parseFloat(el.min), max = parseFloat(el.max);
+            let val = (parseFloat(el.value) || 0) + step;
+            if (!isNaN(min)) val = Math.max(min, val);
+            if (!isNaN(max)) val = Math.min(max, val);
+            el.value = val;
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            updateSliderHotkeyHud();
+        }
+    }
+    // "Changing any other setting will also automatically exit the
+    // slider hotkey mode" -- any input/change/click on a DIFFERENT
+    // element than the currently-armed slider exits it. Best-effort:
+    // exhaustively covering every possible interaction path wasn't
+    // independently verified without live testing.
+    function setupSliderHotkeyModeExitWatcher() {
+        if (devHotkeyIsTouchDevice) return;
+        ['input', 'change', 'click'].forEach((evtName) => {
+            document.addEventListener(evtName, (e) => {
+                if (!activeSliderHotkey) return;
+                if (e.target === activeSliderHotkey.el) return;
+                if (e.target.closest && e.target.closest('#devHotkeyHud')) return;
+                exitSliderHotkeyMode();
+            }, true);
+        });
+    }
+
+    // ----------------------------------------------------------------
+    // "Hotkeys" subgroup, inside the built-in "Dev Panel" group -- lists
+    // every current hotkey/function pair, with the same double-click-
+    // edit / double-right-click-delete interaction as an inline badge,
+    // plus the Sequence Window (Ms) timing slider.
+    // ----------------------------------------------------------------
+    function ensureHotkeysSubgroup() {
+        if (devHotkeyIsTouchDevice) return null;
+        const devPanelSec = Array.from(document.querySelectorAll('#desktopTabContent > .dev-section')).find((s) => {
+            const t = s.querySelector(':scope > .dev-section-title');
+            return t && (t.dataset.sid || t.textContent.replace(/^[▼▶]\s*/, '')) === 'Dev Panel';
+        });
+        if (!devPanelSec) return null;
+        const content = devPanelSec.querySelector(':scope > .dev-section-content');
+        let existing = content.querySelector(':scope > .dev-section[data-sid="Hotkeys"]');
+        if (existing) return existing;
+        const g = createDevGroupElement('Hotkeys', 'desktop');
+        content.appendChild(g);
+        const gc = g.querySelector(':scope > .dev-section-content');
+        const sliderRow = buildUniformControlRow({ id: 'sliderDevHotkeySequenceWindow', label: 'Hotkey Sequence Window (Ms)', type: 'slider', min: 100, max: 2000, step: 'any', value: 500, skipDeviceCheckbox: true });
+        gc.appendChild(sliderRow);
+        const listContainer = document.createElement('div');
+        listContainer.id = 'devHotkeysListContainer';
+        gc.appendChild(listContainer);
+        return g;
+    }
+    function refreshHotkeysListSubgroup() {
+        if (devHotkeyIsTouchDevice) return;
+        const container = document.getElementById('devHotkeysListContainer');
+        if (!container) return;
+        container.innerHTML = '';
+        const entries = Object.entries(devHotkeys);
+        if (!entries.length) {
+            const empty = document.createElement('div');
+            empty.style.cssText = 'font-size:10px; color:#888; padding:2px 0;';
+            empty.textContent = 'No hotkeys set yet.';
+            container.appendChild(empty);
+            return;
+        }
+        entries.forEach(([key, entry]) => {
+            const el = document.getElementById(entry.id);
+            const label = (el && el.closest('.dev-row')?.querySelector('.dev-label')?.textContent) || entry.id;
+            const row = document.createElement('div');
+            row.className = 'dev-row';
+            row.style.cssText = 'display:flex; align-items:center; gap:6px;';
+            const badge = document.createElement('span');
+            badge.className = 'dev-hotkey-badge';
+            badge.textContent = key;
+            badge.title = 'Double-click to edit, double-right-click to delete';
+            let lastContextmenuAt = 0;
+            badge.addEventListener('dblclick', (e) => {
+                e.preventDefault(); e.stopPropagation();
+                const targetRow = el ? el.closest('.dev-row') : null;
+                if (targetRow) startHotkeyEdit(targetRow, entry.id, entry.type, key);
+            });
+            badge.addEventListener('contextmenu', (e) => {
+                e.preventDefault(); e.stopPropagation();
+                const now = performance.now();
+                if (now - lastContextmenuAt < getHotkeySequenceWindowMs()) {
+                    pushDevPanelUndoSnapshot(); devRedoStack = [];
+                    delete devHotkeys[key];
+                    const targetRow = el ? el.closest('.dev-row') : null;
+                    if (targetRow) renderHotkeyBadgeForRow(targetRow, entry.id, entry.type);
+                    refreshHotkeysListSubgroup();
+                }
+                lastContextmenuAt = now;
+            });
+            const labelSpan = document.createElement('span');
+            labelSpan.textContent = label;
+            row.appendChild(badge);
+            row.appendChild(labelSpan);
+            container.appendChild(row);
+        });
     }
 
     // Infinite undo (2026-09-17, ported from Clicko) - per direct request
@@ -5257,6 +5666,12 @@
             devVisibility: { ...devVisibility },
             devIndependence: { mobile: { ...devIndependence.mobile }, landscape: { ...devIndependence.landscape } },
             devDeviceValues: { mobile: { ...devDeviceValues.mobile }, landscape: { ...devDeviceValues.landscape } },
+            // Set Hotkey feature (2026-09-30) -- including this here is
+            // what makes hotkey assignment/edit/delete undoable via the
+            // exact same mechanism as everything else, AND what makes the
+            // Dev Panel Save button persist them (saveDevPanelSettings()
+            // captures this same function's return value directly).
+            devHotkeys: { ...devHotkeys },
         };
     }
     function applyFullDevPanelState(state) {
@@ -5308,6 +5723,11 @@
         refreshEmptyGroupVisibility('mobile');
         refreshEmptyGroupVisibility('landscape');
         refreshAllGroupCascadeCheckboxes();
+        // Set Hotkey feature (2026-09-30) -- defaults to {} for state
+        // saved before this field existed, same convention as
+        // devTextOverridesManual above.
+        devHotkeys = state.devHotkeys ? { ...state.devHotkeys } : {};
+        renderAllHotkeyBadges();
     }
     function copyDevPanelSettings() {
         const text = JSON.stringify(captureFullDevPanelState(), null, 2);
@@ -5994,6 +6414,8 @@
 
         setupDevPanelStyleControls();
         setupGroupNestingObserver();
+        ensureHotkeysSubgroup();
+        renderAllHotkeyBadges();
         makeDevValuesEditable();
         makeDevSliderBoundsEditable();
         setupDevPanelTextEdit();
@@ -6172,6 +6594,13 @@
         setupDevPanelUndo();
         // Search bar - same "always on" reasoning (static header markup).
         setupDevSearch();
+        // Set Hotkey - same "always on" reasoning (header button + global
+        // keydown listeners must work regardless of lazy-build timing).
+        // No-ops entirely on a touch device (each function's own guard).
+        setupSetHotkeyButton();
+        setupHotkeyAssignmentCapture();
+        setupHotkeySequenceListener();
+        setupSliderHotkeyModeExitWatcher();
 
         // The panel is visible-by-default for a dev-allowed visitor
         // (html.dev-mode CSS, no click needed) - build it eagerly for

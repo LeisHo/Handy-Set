@@ -48,6 +48,7 @@
                      reordering the DOM or duplicating any button. -->
                 <div class="dev-header-buttons">
                     <div class="dev-header-buttons-secondary">
+                        <button class="dev-header-icon-btn" id="devSetHotkeyBtn" title="Set Hotkey (click, then click a checkbox/button/slider to bind a key)">⌨</button>
                         <button class="dev-header-icon-btn" id="devTextEditModeBtn" title="Toggle Label Rename Mode">✎</button>
                         <button class="dev-header-icon-btn" id="devAddGroupBtn" title="Add Group (right-click: select settings/groups to fold in)">+</button>
                         <button class="dev-header-icon-btn" id="devDeleteGroupBtn" title="Delete Group/Setting (click, then click a group or setting to delete it)">🗑</button>
@@ -145,6 +146,6 @@
          functions/consts still land in the shared global scope either way,
          reachable from main.js at call time regardless of definition order. -->
     <script type="module" src="src/main.js?v=168"></script>
-    <script src="src/devpanel/devPanel.js?v=10" defer></script>
+    <script src="src/devpanel/devPanel.js?v=11" defer></script>
 </body>
 </html>

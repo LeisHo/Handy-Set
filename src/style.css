@@ -393,6 +393,55 @@ html, body {
     }
 
     /* ============================================================
+       Set Hotkey feature, added 2026-09-30. A saved hotkey badge reads
+       as plain colored bold text (NOT a textbox) in Accent Color #4
+       (the renamed Button Color) - the same --dev-button-color variable
+       every real dev-panel button already uses. The edit textbox
+       (shown while typing/editing) is a plain small input, left-most in
+       the row (inserted before .dev-row-drag-handle).
+       ============================================================ */
+    .dev-hotkey-badge {
+        display: inline-block;
+        color: var(--dev-button-color, #3a3a4a);
+        font-weight: bold;
+        font-size: calc(var(--dev-setting-title-font-size-px, 12) * 1px);
+        cursor: default;
+        user-select: none;
+        margin-right: 4px;
+        flex-shrink: 0;
+    }
+    .dev-hotkey-input {
+        width: 28px;
+        flex-shrink: 0;
+        margin-right: 4px;
+        font-size: calc(var(--dev-setting-title-font-size-px, 12) * 1px);
+        background: #0f0f18;
+        color: var(--dev-panel-non-title-text-color, #aaa);
+        border: 1px solid var(--dev-accent-color, #0ff);
+        border-radius: 3px;
+        padding: 1px 3px;
+        text-transform: lowercase;
+    }
+    /* Slider Hotkey Mode HUD - a small readout left of the floating DEV
+       toggle button (bottom-right corner), shown only while a slider
+       hotkey is actively armed for arrow-key adjustment. */
+    .dev-hotkey-hud {
+        position: fixed;
+        bottom: 12px;
+        right: 70px;
+        z-index: 100000;
+        background: var(--dev-panel-bg-color, #000);
+        color: var(--dev-panel-non-title-text-color, #aaa);
+        border: 1px solid var(--dev-button-color, #3a3a4a);
+        border-radius: 4px;
+        padding: 4px 10px;
+        font-size: calc(var(--dev-setting-title-font-size-px, 12) * 1px);
+        white-space: nowrap;
+        pointer-events: none;
+    }
+    .dev-hotkey-hud .dev-hotkey-hud-label { font-weight: bold; color: var(--dev-button-color, #3a3a4a); }
+
+    /* ============================================================
        [CSS-6] TABS
        ============================================================ */
     .dev-tabs { display: flex; gap: 4px; margin: 8px 0; }
