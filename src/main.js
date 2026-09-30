@@ -2993,6 +2993,20 @@ function resetPhoneRotationBaseline() {
   // boundary.
   phoneNxBaseline = tiltMagnitude * Math.cos(tiltAngle)
   phoneNyBaseline = tiltMagnitude * Math.sin(tiltAngle)
+  // Direct request 2026-09-30: "When I do double tap to reset. Make it
+  // instant instead of tweened and affected by damping." Everything
+  // above only resets the UNDERLYING state (phoneGyroQuat, the absolute
+  // baseline, the desktop nx/ny baseline) -- applyPhoneModelTransform()'s
+  // own per-frame slerp(..., cfg.phoneRotationDamping) would otherwise
+  // still ease the VISIBLE quaternion toward that new target gradually,
+  // over several damped frames, rather than snapping there immediately.
+  // Bypasses that entirely by writing the new target straight onto the
+  // live quaternion right now. computePhoneCombinedQuat() is a pure
+  // function of current state (just reset above), so this correctly
+  // reflects "manual rotation (phoneModelRotX/Y/Z) unchanged, responsive
+  // rotation now neutral" -- calling it again a moment later from the
+  // normal per-frame path is harmless (same deterministic read).
+  if (phoneModelWrapper) phoneModelWrapper.quaternion.copy(computePhoneCombinedQuat())
 }
 // Responsive Displace -- zero both integration stages, not just
 // position, or a nonzero leftover velocity would immediately start
@@ -3007,6 +3021,13 @@ function resetPhoneRotationBaseline() {
 function resetPhoneDisplaceBaseline() {
   phoneDisplaceVelX = phoneDisplaceVelY = phoneDisplaceVelZ = 0
   phoneDisplacePosX = phoneDisplacePosY = phoneDisplacePosZ = 0
+  // Direct request 2026-09-30: "make it instant instead of tweened and
+  // affected by damping" -- same fix as resetPhoneRotationBaseline()'s
+  // own matching change. applyPhoneModelTransform()'s own per-frame
+  // lerp(..., cfg.phoneDisplaceDamping) would otherwise ease the
+  // DISPLAYED offset toward 0 gradually; snap it there directly instead
+  // of waiting for the next several damped frames to catch up.
+  _phoneDisplaceCurrentVec.set(0, 0, 0)
 }
 // CORRECTED 2026-09-27, direct report: "responsive phone rotation
 // should be anchored by the phone models OWN geoemtr origin... its
