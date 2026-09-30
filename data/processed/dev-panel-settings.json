@@ -113,11 +113,11 @@
     "selectPhoneDisplaceMode": "worldPosition",
     "checkboxPhoneDisplaceAxisXEnabled": true,
     "sliderPhoneDisplaceScaleX": 0.25,
-    "checkboxPhoneDisplaceAxisYEnabled": true,
+    "checkboxPhoneDisplaceAxisYEnabled": false,
     "sliderPhoneDisplaceScaleY": 0.25,
-    "checkboxPhoneDisplaceAxisZEnabled": true,
+    "checkboxPhoneDisplaceAxisZEnabled": false,
     "sliderPhoneDisplaceScaleZ": 0.25,
-    "sliderPhoneResponsiveDisplaceFineTune": 0,
+    "sliderPhoneResponsiveDisplaceFineTune": -4.53282711362163,
     "sliderPhoneDisplaceDamping": 1,
     "textPhoneResponsiveDisplaceRange": "{\"min\":-15,\"max\":10}",
     "textPhoneResponsiveDisplaceCurve": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"monotone\"}",
@@ -202,7 +202,7 @@
     "left": 26,
     "top": 27,
     "width": 350,
-    "height": 196
+    "height": 120
   },
   "devPanelStyle": {
     "titleFontSize": 17,
