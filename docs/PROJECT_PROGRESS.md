@@ -7,14 +7,18 @@ append-only history.
 
 ## Currently working on
 
-**Nothing in progress right now** — the last active item (Double Tap to
-Reset was a no-op in the new Absolute/Orientation phone rotation mode,
-since that mode is a pure memoryless function of the raw device reading
-with no accumulator for a reset to touch; fixed by adding a baseline
-quaternion captured at reset time — see CHANGELOG's matching entry)
-shipped and is pushed. Waiting on the next request. The Set Hotkey
-button-eligibility fix, on-demand rendering, and the render-loop-stop
-follow-up (all below) are also shipped.
+**Nothing in progress right now** — the last active item (a new
+`RESPONSIVE BEHAVIOUR - PHONE > RESPONSIVE DISPLACE` group: accelerometer-
+driven positional displacement, mirroring Responsive Rotation's full
+control set — On/Off, a Displace Mode selector (Acceleration/Local Frame
+vs Real World Position), per-axis On/Off+Scale, Fine-Tune, Min/Max
+Range+Curve, Damping — via a leaky double-integration of raw acceleration
+that's provably bounded (verified with a standalone script) rather than
+drifting unboundedly; NOT device-verified yet — see CHANGELOG's matching
+entry for the full design and the axis-mapping caveat) shipped and is
+pushed. Waiting on the next request. Double Tap Reset in Absolute mode,
+the Set Hotkey button-eligibility fix, on-demand rendering, and the
+render-loop-stop follow-up (all below) are also shipped.
 
 **Recursive Render mirror investigation — RESOLVED, per direct user
 confirmation ("x mirror issue fixed by the way").** The depth-parity

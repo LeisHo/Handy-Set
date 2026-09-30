@@ -5514,6 +5514,69 @@ browser/device-verified (standing project convention). `index.html`
 cache-buster: `main.js` `?v=171` -> `?v=172`.
 
 --------------------------------------------------------------------------------
+2026-09-30  -  Add RESPONSIVE DISPLACE: accelerometer-driven positional
+displacement
+
+Direct request (*DC*RESPONSIVE DISPLACE* dev-panel shorthand, CLAUDE.md
+§12g): "Similar to the responsive rotation, we will now use the
+accelerometer compass and fused datastreams to determine the movement
+and acceleration of the phone. Essentially i want the onscreen phones to
+move in the direction of my real phone. Including the [Z, corrected from
+an initial Y] axis, perpendicular to the phone face... This will mirror
+the Responsive Rotation group with pretty much the exact same kind of
+setting inputs but for positional displacement instead of tilt
+rotation," followed by "i also want the 2 calclation types, simialr to
+rotation, one with acceleration, and i guess the other is the real world
+position."
+
+New `RESPONSIVE BEHAVIOUR - PHONE > RESPONSIVE DISPLACE` subgroup,
+mirroring Responsive Rotation's control set 1:1: On/Off, a Displace Mode
+selector (Acceleration/Local Frame vs Real World Position), per-axis
+On/Off+Scale (X=left-right, Y=up-down, Z=perpendicular to face/depth --
+matches raw `devicemotion.acceleration.x/y/z` directly, no reshuffling
+needed), Fine-Tune, Min/Max Range + Curve (World Units, same convention
+as `phoneModelOffsetX/Y/Z`), and a Damping slider.
+
+Math: leaky double-integration of `e.acceleration` (accel -> velocity ->
+position, both stages exponentially decayed toward zero -- unlike
+Rotation's angular-velocity integration, which is inherently bounded by
+quaternion algebra, linear acceleration integration is a textbook-
+unbounded problem without additional sensors this project has no access
+to). Verified via a standalone script: a firm push peaks and then
+gradually decays back over roughly 10+ seconds (feels sustained for a
+normal hold/demo), while 2 minutes of constant sensor bias stays bounded
+around the reference distance rather than running away -- confirming the
+decay constants are reasonable, not just "some number."
+
+The 2 modes only differ in which frame the raw acceleration vector is
+integrated in: `'acceleration'` integrates directly in the device's own
+local frame (simple, mirrors Gyro/Integrated rotation mode);
+`'worldPosition'` first rotates the vector into world frame via
+`computeDeviceOrientationQuat()` (the same function Absolute rotation
+mode already uses) so translation is tracked correctly even while the
+phone rotates mid-movement -- mirrors Rotation's own Gyro-vs-Absolute
+split in spirit.
+
+Reset: the SAME "Rotation Reset On/Off" checkbox + double-tap gesture now
+also zeroes the displacement integrator (disclosed design choice -- not
+a separate toggle). Desktop is a deliberate no-op (no accelerometer-
+equivalent signal to drive it from; cursor position is already claimed
+by Palm Rotation/Responsive Rotation). Also fixed a parse-on-load gap
+Rotation's own curve/range parser has (never called at startup, only on
+a detected widget-value change) by calling
+`parsePhoneResponsiveDisplaceConfig()` explicitly once at panel-build
+time -- Rotation's own existing behavior left untouched (out of scope
+for this task).
+
+NOT independently browser/device-verified (standing project convention)
+-- verified via `node --check` and the standalone integration-math
+script above. The axis mapping (no reshuffling needed, per the W3C spec
+match) and the 2 modes' actual feel are both unconfirmed against a real
+device -- if any axis comes out backwards, flip that axis's own sign in
+`computePhoneDisplaceAxisUnits()`/`integratePhoneDisplacement()`, not the
+whole mapping. `index.html` cache-buster: `main.js` `?v=172` -> `?v=173`.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
