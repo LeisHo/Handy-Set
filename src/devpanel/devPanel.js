@@ -774,6 +774,12 @@
         } else if (entry.type === 'button') {
             pushDevPanelUndoSnapshot(); devRedoStack = [];
             el.click();
+            // Safety net for main.js's on-demand-rendering flag (2026-09-29)
+            // -- a hotkeyed button's own click handler may not be one of
+            // wireSlider/wireCheckbox/etc (e.g. Pause, a list-picker
+            // Use/Save button), so it might not call requestRender() on its
+            // own the way a slider/checkbox change always does.
+            if (typeof window.requestRender === 'function') window.requestRender();
         } else if (entry.type === 'slider') {
             enterSliderHotkeyMode(el);
         }
@@ -3853,6 +3859,13 @@
         function commitPoints() {
             points.sort((a, b) => a.x - b.x);
             hidden.value = JSON.stringify({ points, method });
+            // On-demand rendering (2026-09-29) -- this hidden input carries
+            // its value via direct polling (curveWidgetResyncs in a host's
+            // own main.js), never a dispatched input/change event, so a
+            // generic requestRender() hook (a host-provided global, a no-op
+            // if absent) is the only way a curve-editor drag can flag
+            // "something changed" for an on-demand render loop.
+            if (typeof window.requestRender === 'function') window.requestRender();
         }
         function startHandleDrag(p, i, kind, downEv) {
             downEv.stopPropagation();
@@ -4083,7 +4096,13 @@
         const toPct = (v) => Math.min(100, Math.max(0, (v - trackMin) / (trackMax - trackMin) * 100));
         const fromPct = (pct) => trackMin + (pct / 100) * (trackMax - trackMin);
 
-        function commit() { hidden.value = JSON.stringify(current); }
+        function commit() {
+            hidden.value = JSON.stringify(current);
+            // On-demand rendering (2026-09-29) -- same reasoning as
+            // buildCurveEditorRow()'s own commitPoints(): this hidden input
+            // is read via polling, not a dispatched event.
+            if (typeof window.requestRender === 'function') window.requestRender();
+        }
         function redraw() {
             const minPct = toPct(current.min), maxPct = toPct(current.max);
             fill.style.left = Math.min(minPct, maxPct) + '%';
@@ -5728,6 +5747,15 @@
         // devTextOverridesManual above.
         devHotkeys = state.devHotkeys ? { ...state.devHotkeys } : {};
         renderAllHotkeyBadges();
+        // On-demand rendering safety net (2026-09-29, main.js's own
+        // requestRender()/needsRender) -- applyControlValues() above
+        // dispatches real input/change events for every restored control,
+        // which already flows through main.js's wireSlider/wireCheckbox/etc
+        // hooks, but a Sync/Reset/Undo/Redo/Load is exactly the kind of
+        // "many things changed at once, some via paths that might not all
+        // dispatch" restore worth covering explicitly rather than trusting
+        // every one of those paths individually.
+        if (typeof window.requestRender === 'function') window.requestRender();
     }
     function copyDevPanelSettings() {
         const text = JSON.stringify(captureFullDevPanelState(), null, 2);

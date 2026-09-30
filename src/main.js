@@ -16,6 +16,35 @@ import { detectDeviceInfo } from './deviceInfo.js'
 // Timestamp helper for debug logs
 function ts() { return '[' + new Date().toISOString() + ']' }
 
+// On-demand rendering (2026-09-29). Direct request: "when Responsive
+// Rotation is not turned on, make sure that the 3js isnt still rendering
+// everyframe. In that case, only rerender when a setting has been
+// modified." animate() (near the bottom of this file) keeps calling
+// requestAnimationFrame/controls.update() every frame regardless (cheap,
+// and controls.update()'s own 'change' event below is how OrbitControls
+// damping's post-drag glide gets picked up) but SKIPS the expensive part
+// (the whole per-frame pose/tilt/phone-model/recursive-render compute plus
+// composer.render() itself) unless cfg.trackingEnabled is on (Responsive
+// Rotation's own master gate -- Palm Rotation/Reactive Arm Length/Wrist
+// Splay/Base Arm Rotation/Pose Tween/Phone Model Responsive Rotation all
+// key off tiltMagnitude/armBaseDistanceT, which only ever changes while
+// this is on) or `needsRender` has been flagged by something discrete:
+// a dev-panel control (wireSlider/wireCheckbox/wireColor/wireTextInput/
+// wireSelect below all call requestRender()), an OrbitControls 'change'
+// event (drag/wheel/damping), a window resize, or a Sync/Reset/Undo/Redo
+// restore (devPanel.js's applyFullDevPanelState() calls
+// window.requestRender() directly as a safety net for any restore path
+// that sets a control's value without dispatching a real input/change
+// event). Recursive Render (cfg.screenRenderEnabled) is deliberately NOT
+// included in the "always continuous" condition -- its own render-to-
+// texture pipeline only ever reflects the CURRENT scene state, so with
+// nothing else changing frame-to-frame its own output wouldn't change
+// either; it still updates correctly on-demand via the same needsRender
+// flag as everything else.
+let needsRender = true
+function requestRender() { needsRender = true }
+window.requestRender = requestRender
+
 // Shared DRACOLoader, attached to every GLTFLoader instance (both the
 // hand model and the Phone Model group's own loader). Found 2026-09-29
 // on the real deployed site: P5_Project_1.glb (Phone Model's default
@@ -1447,6 +1476,10 @@ const controls = new OrbitControls(camera, renderer.domElement)
 controls.target.set(cfg.targetX, cfg.targetY, cfg.targetZ)
 controls.enableDamping = true
 controls.update()
+// Fires on every drag/wheel interaction AND every damping glide frame
+// after a drag release -- the standard three.js on-demand-rendering hook
+// (see the requestRender()/needsRender comment up top).
+controls.addEventListener('change', () => requestRender())
 
 const composer = new EffectComposer(renderer)
 composer.addPass(new RenderPass(scene, camera))
@@ -2836,6 +2869,12 @@ function loadPhoneModel(relativePath) {
     }
     if (!phoneScreenMeshes.length) console.warn(ts() + ' Phone model has no "Screen Face" mesh -- Virtual Screen render will have no effect:', relativePath)
     applyPhoneModelTransform()
+    // On-demand rendering (2026-09-29) -- a model swap is triggered from
+    // the Item Selector's own plain <div> rows (no input/change event,
+    // not one of wireSlider/wireCheckbox/etc) and finishes asynchronously
+    // regardless of trigger source, so this async completion is the one
+    // chokepoint that reliably covers every path a load can start from.
+    requestRender()
   }, undefined, (err) => { console.error(ts() + ' Phone model failed to load:', relativePath, err) })
 }
 function removePhoneModel() {
@@ -3936,7 +3975,7 @@ function applyRendererSize(w, h) {
   outlinePass.resolution.set(w, h)
   fatAxesLineMaterials.forEach((m) => m.resolution.set(w, h)) // Object Axes -- LineMaterial computes screen-space width from this
 }
-window.addEventListener('resize', () => applyRendererSize(window.innerWidth, window.innerHeight))
+window.addEventListener('resize', () => { applyRendererSize(window.innerWidth, window.innerHeight); requestRender() })
 
 let isPaused = false
 
@@ -3944,9 +3983,22 @@ function animate() {
   requestAnimationFrame(animate)
   if (renderer.getSize(new THREE.Vector2()).width !== window.innerWidth || renderer.getSize(new THREE.Vector2()).height !== window.innerHeight) {
     applyRendererSize(window.innerWidth, window.innerHeight)
+    requestRender()
   }
   controls.update()
   syncCameraPanelFromLive()
+  // On-demand rendering -- see the requestRender()/needsRender comment
+  // near the top of this file. Responsive Rotation's own master gate
+  // (cfg.trackingEnabled, with a real hand present) forces continuous
+  // rendering, matching every frame's pre-existing gyro/mouse-tracking
+  // behavior; otherwise the whole per-frame compute block AND
+  // composer.render() itself are skipped until something discrete flags
+  // needsRender. isPaused already freezes the SAME per-frame block for an
+  // unrelated reason (the Debug-group Pause button) -- folded into this
+  // same condition rather than checked twice.
+  const shouldRender = (!isPaused && cfg.trackingEnabled && hands.length > 0) || needsRender
+  if (!shouldRender) return
+  needsRender = false
   if (!isPaused) {
     // Phone Tilt rotation (only when tracking is enabled)
     if (cfg.trackingEnabled && hands.length) {
@@ -4327,14 +4379,15 @@ function wireSlider(id, onInput) {
   el.addEventListener('input', (e) => {
     const v = parseFloat(e.target.value)
     onInput(v)
+    requestRender()
     const vEl = document.getElementById(id.replace(/^slider/, 'value'))
     if (vEl) vEl.textContent = v
   })
 }
-function wireCheckbox(id, onChange) { const el = document.getElementById(id); if (el) el.addEventListener('change', (e) => onChange(e.target.checked)) }
-function wireColor(id, onChange) { const el = document.getElementById(id); if (el) el.addEventListener('input', (e) => onChange(e.target.value)) }
-function wireTextInput(id, onChange) { const el = document.getElementById(id); if (el) el.addEventListener('input', (e) => onChange(e.target.value)) }
-function wireSelect(id, onChange) { const el = document.getElementById(id); if (el) el.addEventListener('change', (e) => onChange(e.target.value)) }
+function wireCheckbox(id, onChange) { const el = document.getElementById(id); if (el) el.addEventListener('change', (e) => { onChange(e.target.checked); requestRender() }) }
+function wireColor(id, onChange) { const el = document.getElementById(id); if (el) el.addEventListener('input', (e) => { onChange(e.target.value); requestRender() }) }
+function wireTextInput(id, onChange) { const el = document.getElementById(id); if (el) el.addEventListener('input', (e) => { onChange(e.target.value); requestRender() }) }
+function wireSelect(id, onChange) { const el = document.getElementById(id); if (el) el.addEventListener('change', (e) => { onChange(e.target.value); requestRender() }) }
 
 // REMOVED 2026-09-28 -- elLocal/commitTextControl/buildReactiveRangeWidget/
 // buildReactiveCurveWidget (the hand-built dual-handle range bar and
@@ -4584,7 +4637,12 @@ function buildListPicker(content, opts) {
     }
     if (opts.storageKey) persistListPickerItems(opts.storageKey, items)
   })
-  useBtn.addEventListener('click', () => { if (state.selected && opts.onUse) opts.onUse(state.selected) })
+  // requestRender(): shared by all 5 list-pickers (Poses/Cameras/Lighting/
+  // Toon Shading/Tween Sequences) via this one function -- opts.onUse()
+  // applies the preset directly (applyPoseValuesToHand/applyCameraPreset/
+  // etc), none of which go through wireSlider/wireCheckbox, so on-demand
+  // rendering would otherwise never see this as a "setting modified".
+  useBtn.addEventListener('click', () => { if (state.selected && opts.onUse) { opts.onUse(state.selected); requestRender() } })
   renameBtn.addEventListener('click', () => {
     if (!state.selected) return
     const name = prompt('Rename to:', state.selected.name)
@@ -5877,7 +5935,7 @@ function renderDebugExtras() {
   const pauseRow = document.createElement('div'); pauseRow.className = 'dev-buttons'
   const pauseBtn = document.createElement('button'); pauseBtn.textContent = 'PAUSE'
   pauseRow.appendChild(pauseBtn); debugContent.appendChild(pauseRow)
-  pauseBtn.addEventListener('click', () => { isPaused = !isPaused; pauseBtn.textContent = isPaused ? 'RESUME' : 'PAUSE' })
+  pauseBtn.addEventListener('click', () => { isPaused = !isPaused; pauseBtn.textContent = isPaused ? 'RESUME' : 'PAUSE'; requestRender() })
 
   const sensorSub = addSubgroup(debugContent, 'Sensors')
   if (!isTouchDevice) {
