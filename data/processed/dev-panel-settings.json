@@ -96,8 +96,7 @@
     "sliderPhoneModelRotX": 0,
     "sliderPhoneModelRotY": 0,
     "sliderPhoneModelRotZ": 0,
-    "checkboxPhoneResponsiveRotationEnabled": false,
-    "selectPhoneRotationMode": "gyro",
+    "checkboxPhoneResponsiveRotationEnabled": true,
     "checkboxPhoneRotationResetEnabled": true,
     "checkboxPhoneAxisXEnabled": true,
     "sliderPhoneRotationScaleX": -1,
@@ -112,12 +111,10 @@
     "checkboxScreenRenderEnabled": true,
     "sliderScreenRecursionLevels": 10,
     "sliderScreenRenderResolution": 200,
-    "sliderScreenTextureScale": 1.6,
-    "textScreenLevelScaleRange": "{\"min\":1,\"max\":1}",
-    "textScreenLevelScaleCurve": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"linear\"}",
+    "sliderScreenTextureScale": 1.2,
     "sliderScreenTextureRotation": 0,
     "sliderScreenTextureOffsetX": 0,
-    "sliderScreenTextureOffsetY": -0.0379116580126609,
+    "sliderScreenTextureOffsetY": -0.06,
     "sliderScreenTextureScaleX": 0.6,
     "sliderScreenTextureScaleY": 1.1,
     "sliderScreenEmissionIntensity": 0.95,
@@ -189,7 +186,7 @@
   "layout": {
     "left": 27,
     "top": 27,
-    "width": 606,
+    "width": 350,
     "height": 671
   },
   "devPanelStyle": {
@@ -383,10 +380,6 @@
                 {
                   "type": "row",
                   "key": "colorDevPanelButtonColor"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderDevGroupNestingLStep"
                 }
               ],
               "rowKeys": [
@@ -396,8 +389,7 @@
                 "sliderDevPanelOpacity",
                 "colorDevPanelAccent2",
                 "colorDevPanelAccent3",
-                "colorDevPanelButtonColor",
-                "sliderDevGroupNestingLStep"
+                "colorDevPanelButtonColor"
               ],
               "subgroups": []
             }
@@ -868,15 +860,8 @@
             "type": "group",
             "section": {
               "key": "desktop:Hotkeys",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "sliderDevHotkeySequenceWindow"
-                }
-              ],
-              "rowKeys": [
-                "sliderDevHotkeySequenceWindow"
-              ],
+              "items": [],
+              "rowKeys": [],
               "subgroups": []
             }
           }
@@ -926,10 +911,6 @@
               {
                 "type": "row",
                 "key": "colorDevPanelButtonColor"
-              },
-              {
-                "type": "row",
-                "key": "sliderDevGroupNestingLStep"
               }
             ],
             "rowKeys": [
@@ -939,8 +920,7 @@
               "sliderDevPanelOpacity",
               "colorDevPanelAccent2",
               "colorDevPanelAccent3",
-              "colorDevPanelButtonColor",
-              "sliderDevGroupNestingLStep"
+              "colorDevPanelButtonColor"
             ],
             "subgroups": []
           },
@@ -1405,15 +1385,8 @@
           },
           {
             "key": "desktop:Hotkeys",
-            "items": [
-              {
-                "type": "row",
-                "key": "sliderDevHotkeySequenceWindow"
-              }
-            ],
-            "rowKeys": [
-              "sliderDevHotkeySequenceWindow"
-            ],
+            "items": [],
+            "rowKeys": [],
             "subgroups": []
           }
         ]
@@ -1565,12 +1538,17 @@
               "rowKeys": [],
               "subgroups": []
             }
+          },
+          {
+            "type": "row",
+            "key": "__row8"
           }
         ],
         "rowKeys": [
           "checkboxShowAxesHelper",
           "checkboxShowGridHelper",
-          "checkboxShowWireframe"
+          "checkboxShowWireframe",
+          "__row8"
         ],
         "subgroups": [
           {
@@ -1813,10 +1791,6 @@
                       {
                         "type": "row",
                         "key": "sliderPhoneRotationScaleZ"
-                      },
-                      {
-                        "type": "row",
-                        "key": "selectPhoneRotationMode"
                       }
                     ],
                     "rowKeys": [
@@ -1831,8 +1805,7 @@
                       "checkboxPhoneAxisYEnabled",
                       "sliderPhoneRotationScaleY",
                       "checkboxPhoneAxisZEnabled",
-                      "sliderPhoneRotationScaleZ",
-                      "selectPhoneRotationMode"
+                      "sliderPhoneRotationScaleZ"
                     ],
                     "subgroups": []
                   }
@@ -1890,10 +1863,6 @@
                     {
                       "type": "row",
                       "key": "sliderPhoneRotationScaleZ"
-                    },
-                    {
-                      "type": "row",
-                      "key": "selectPhoneRotationMode"
                     }
                   ],
                   "rowKeys": [
@@ -1908,8 +1877,7 @@
                     "checkboxPhoneAxisYEnabled",
                     "sliderPhoneRotationScaleY",
                     "checkboxPhoneAxisZEnabled",
-                    "sliderPhoneRotationScaleZ",
-                    "selectPhoneRotationMode"
+                    "sliderPhoneRotationScaleZ"
                   ],
                   "subgroups": []
                 }
@@ -1976,14 +1944,6 @@
                 {
                   "type": "row",
                   "key": "checkboxScreenMirrorPhaseY"
-                },
-                {
-                  "type": "row",
-                  "key": "textScreenLevelScaleRange"
-                },
-                {
-                  "type": "row",
-                  "key": "textScreenLevelScaleCurve"
                 }
               ],
               "rowKeys": [
@@ -2000,9 +1960,7 @@
                 "sliderScreenTextureOffsetX",
                 "sliderScreenTextureOffsetY",
                 "checkboxScreenMirrorPhaseX",
-                "checkboxScreenMirrorPhaseY",
-                "textScreenLevelScaleRange",
-                "textScreenLevelScaleCurve"
+                "checkboxScreenMirrorPhaseY"
               ],
               "subgroups": []
             }
@@ -2114,10 +2072,6 @@
                     {
                       "type": "row",
                       "key": "sliderPhoneRotationScaleZ"
-                    },
-                    {
-                      "type": "row",
-                      "key": "selectPhoneRotationMode"
                     }
                   ],
                   "rowKeys": [
@@ -2132,8 +2086,7 @@
                     "checkboxPhoneAxisYEnabled",
                     "sliderPhoneRotationScaleY",
                     "checkboxPhoneAxisZEnabled",
-                    "sliderPhoneRotationScaleZ",
-                    "selectPhoneRotationMode"
+                    "sliderPhoneRotationScaleZ"
                   ],
                   "subgroups": []
                 }
@@ -2191,10 +2144,6 @@
                   {
                     "type": "row",
                     "key": "sliderPhoneRotationScaleZ"
-                  },
-                  {
-                    "type": "row",
-                    "key": "selectPhoneRotationMode"
                   }
                 ],
                 "rowKeys": [
@@ -2209,8 +2158,7 @@
                   "checkboxPhoneAxisYEnabled",
                   "sliderPhoneRotationScaleY",
                   "checkboxPhoneAxisZEnabled",
-                  "sliderPhoneRotationScaleZ",
-                  "selectPhoneRotationMode"
+                  "sliderPhoneRotationScaleZ"
                 ],
                 "subgroups": []
               }
@@ -2274,14 +2222,6 @@
               {
                 "type": "row",
                 "key": "checkboxScreenMirrorPhaseY"
-              },
-              {
-                "type": "row",
-                "key": "textScreenLevelScaleRange"
-              },
-              {
-                "type": "row",
-                "key": "textScreenLevelScaleCurve"
               }
             ],
             "rowKeys": [
@@ -2298,9 +2238,7 @@
               "sliderScreenTextureOffsetX",
               "sliderScreenTextureOffsetY",
               "checkboxScreenMirrorPhaseX",
-              "checkboxScreenMirrorPhaseY",
-              "textScreenLevelScaleRange",
-              "textScreenLevelScaleCurve"
+              "checkboxScreenMirrorPhaseY"
             ],
             "subgroups": []
           }
@@ -5616,20 +5554,10 @@
                 {
                   "type": "row",
                   "key": "sliderMobileScreenTextureOffsetX"
-                },
-                {
-                  "type": "row",
-                  "key": "textScreenLevelScaleRange"
-                },
-                {
-                  "type": "row",
-                  "key": "textScreenLevelScaleCurve"
                 }
               ],
               "rowKeys": [
-                "sliderMobileScreenTextureOffsetX",
-                "textScreenLevelScaleRange",
-                "textScreenLevelScaleCurve"
+                "sliderMobileScreenTextureOffsetX"
               ],
               "subgroups": []
             }
@@ -5702,20 +5630,10 @@
               {
                 "type": "row",
                 "key": "sliderMobileScreenTextureOffsetX"
-              },
-              {
-                "type": "row",
-                "key": "textScreenLevelScaleRange"
-              },
-              {
-                "type": "row",
-                "key": "textScreenLevelScaleCurve"
               }
             ],
             "rowKeys": [
-              "sliderMobileScreenTextureOffsetX",
-              "textScreenLevelScaleRange",
-              "textScreenLevelScaleCurve"
+              "sliderMobileScreenTextureOffsetX"
             ],
             "subgroups": []
           }
@@ -7399,20 +7317,10 @@
                 {
                   "type": "row",
                   "key": "sliderLandscapeScreenTextureOffsetX"
-                },
-                {
-                  "type": "row",
-                  "key": "textScreenLevelScaleRange"
-                },
-                {
-                  "type": "row",
-                  "key": "textScreenLevelScaleCurve"
                 }
               ],
               "rowKeys": [
-                "sliderLandscapeScreenTextureOffsetX",
-                "textScreenLevelScaleRange",
-                "textScreenLevelScaleCurve"
+                "sliderLandscapeScreenTextureOffsetX"
               ],
               "subgroups": []
             }
@@ -7485,20 +7393,10 @@
               {
                 "type": "row",
                 "key": "sliderLandscapeScreenTextureOffsetX"
-              },
-              {
-                "type": "row",
-                "key": "textScreenLevelScaleRange"
-              },
-              {
-                "type": "row",
-                "key": "textScreenLevelScaleCurve"
               }
             ],
             "rowKeys": [
-              "sliderLandscapeScreenTextureOffsetX",
-              "textScreenLevelScaleRange",
-              "textScreenLevelScaleCurve"
+              "sliderLandscapeScreenTextureOffsetX"
             ],
             "subgroups": []
           }
