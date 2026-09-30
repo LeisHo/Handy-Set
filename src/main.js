@@ -2800,31 +2800,72 @@ function applyPhoneDisplaceSample(ax, ay, az, dt) {
 // gates this now; see initMotionInput()/the Displace On/Off checkbox's
 // own wiring for how motion permission gets requested independently of
 // Tracking Enabled too.
+// Raw per-axis noise floor + outlier clamp -- added 2026-09-30, direct
+// reports: "the x axis movement... keeps drifting and sometimes jumps"
+// and (for Y/Z, both Displace Modes) "it is reacting, but it seems
+// buggy... works sometimes, but other times its delayed, sometimes it
+// goes too far." Applied to the RAW e.acceleration reading, before any
+// rotation -- the noise/outliers originate in the raw sensor's own
+// per-axis readings, not in an abstract post-rotation "world frame"
+// concept. DEADZONE filters small persistent sensor noise/bias that
+// would otherwise slowly integrate into a nonzero steady-state offset
+// (drift, since a leaky integrator settles to a fixed nonzero position
+// under a CONSTANT small bias, it doesn't cancel to exactly zero -- see
+// applyPhoneDisplaceSample()'s own comment). CLAMP caps any single
+// anomalous reading (a real sensor glitch, or a large dt after a stalled
+// tick producing an oversized ax*dt term) from producing one outsized
+// velocity kick that visibly overshoots before decaying back. Both are
+// UNVERIFIED judgment calls (not measurements) -- retune first if
+// legitimate gentle/vigorous movement gets over- or under-filtered.
+const PHONE_DISPLACE_RAW_DEADZONE_MPS2 = 0.05
+const PHONE_DISPLACE_RAW_CLAMP_MPS2 = 15
+function filterPhoneDisplaceRawComponent(v) {
+  if (Math.abs(v) < PHONE_DISPLACE_RAW_DEADZONE_MPS2) return 0
+  return THREE.MathUtils.clamp(v, -PHONE_DISPLACE_RAW_CLAMP_MPS2, PHONE_DISPLACE_RAW_CLAMP_MPS2)
+}
 function integratePhoneDisplacement(e) {
-  if (!cfg.phoneResponsiveDisplaceEnabled || !e.acceleration) {
+  if (!cfg.phoneResponsiveDisplaceEnabled) {
     phoneDisplaceLastTimestamp = null // clean restart, no big jump, whenever this resumes -- same convention as integratePhoneGyroRotation's own phoneGyroLastTimestamp
     return
   }
   const now = performance.now()
   if (phoneDisplaceLastTimestamp !== null) {
-    const dt = Math.min((now - phoneDisplaceLastTimestamp) / 1000, 0.1) // seconds; capped so a backgrounded tab can't integrate one huge jump on resume
-    // Y/Z SWAPPED 2026-09-30, direct report: "for displacement switch the
-    // input outputs for y and z axis" -- whatever previously fed the Y
-    // output (raw e.acceleration.y) now feeds Z, and vice versa. Swapped
-    // at the raw-reading stage, before the optional world-frame rotation
-    // below, matching every other real-device axis correction in this
-    // file (the bug is in which raw sensor axis feeds which output slot,
-    // not something that should only apply post-rotation). The Y/Z Axis
-    // Displace checkboxes/scale/invert controls and their labels are
-    // UNCHANGED -- only which raw reading reaches each one. NOT
-    // independently re-verified against a real device beyond the user's
-    // own report; if this turns out backwards, revert this one swap
-    // rather than guessing a 3rd mapping.
-    let ax = e.acceleration.x || 0, ay = e.acceleration.z || 0, az = e.acceleration.y || 0
-    if (cfg.phoneDisplaceMode === 'worldPosition' && latestOrientation) {
-      const q = computeDeviceOrientationQuat(latestOrientation.alpha || 0, latestOrientation.beta || 0, latestOrientation.gamma || 0)
-      _phoneDisplaceWorldVec.set(ax, ay, az).applyQuaternion(q)
-      ax = _phoneDisplaceWorldVec.x; ay = _phoneDisplaceWorldVec.y; az = _phoneDisplaceWorldVec.z
+    // CORRECTED 2026-09-30, direct reports above: this used to also
+    // bail out (resetting phoneDisplaceLastTimestamp, exactly like the
+    // disabled case) whenever e.acceleration was momentarily
+    // unavailable -- a real, known intermittent behavior on some
+    // devices/browsers (occasional null readings, not just "off"). That
+    // reset FROZE velocity/position completely (no decay applied at
+    // all, since the function returned before reaching
+    // applyPhoneDisplaceSample) for the gap's real duration, THEN
+    // discarded that whole elapsed interval once a valid reading
+    // resumed (the next tick re-seeds the timestamp instead of
+    // computing a dt against the stale one) -- exactly the
+    // "sometimes delayed, sometimes overshoots" pattern reported: a
+    // stale, undecayed position frozen mid-gap, then abrupt resumption.
+    // Now a null-acceleration tick still advances time and still runs
+    // the leaky decay (ax/ay/az simply read 0 -- "no push this instant",
+    // not "nothing happened") via the SAME dt-capped math below,
+    // instead of stopping early.
+    const dt = Math.min((now - phoneDisplaceLastTimestamp) / 1000, 0.05) // seconds; tightened 0.1 -> 0.05 (see reports above) so a stalled/irregular tick's worst-case single-step size is halved
+    let ax = 0, ay = 0, az = 0
+    if (e.acceleration) {
+      // Y/Z SWAPPED 2026-09-30, direct report: "for displacement switch
+      // the input outputs for y and z axis" -- whatever previously fed
+      // the Y output (raw e.acceleration.y) now feeds Z, and vice versa.
+      // Swapped at the raw-reading stage, before the optional world-
+      // frame rotation below, matching every other real-device axis
+      // correction in this file. The Y/Z Axis Displace checkboxes/
+      // scale/invert controls and their labels are UNCHANGED -- only
+      // which raw reading reaches each one.
+      ax = filterPhoneDisplaceRawComponent(e.acceleration.x || 0)
+      ay = filterPhoneDisplaceRawComponent(e.acceleration.z || 0)
+      az = filterPhoneDisplaceRawComponent(e.acceleration.y || 0)
+      if (cfg.phoneDisplaceMode === 'worldPosition' && latestOrientation) {
+        const q = computeDeviceOrientationQuat(latestOrientation.alpha || 0, latestOrientation.beta || 0, latestOrientation.gamma || 0)
+        _phoneDisplaceWorldVec.set(ax, ay, az).applyQuaternion(q)
+        ax = _phoneDisplaceWorldVec.x; ay = _phoneDisplaceWorldVec.y; az = _phoneDisplaceWorldVec.z
+      }
     }
     applyPhoneDisplaceSample(ax, ay, az, dt)
   }
