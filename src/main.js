@@ -294,6 +294,17 @@ const cfg = {
   screenTextureScale: 1, screenTextureRotation: 0,
   screenTextureOffsetX: 0, screenTextureOffsetY: 0,
   screenTextureScaleX: 1, screenTextureScaleY: 1,
+  // Per-Level Scale (Min/Max + Curve) -- direct request 2026-09-29:
+  // "provide a min max scale slider and a curve editor. The min max
+  // will determine the min max scale of successive renders. The curve
+  // editor will determine the xy relationship. X is the number of
+  // recursive levels... Y is the scale applied to that render at that
+  // level." Multiplies into the base Texture Scale (screenTextureScale
+  // above) rather than replacing it -- see
+  // computeScreenLevelScale()'s own comment. Default min=max=1 (no
+  // per-level variation) so this is a no-op until deliberately tuned.
+  screenLevelScaleRange: '{"min":1,"max":1}',
+  screenLevelScaleCurve: '{"points":[{"x":0,"y":0},{"x":1,"y":1}],"method":"linear"}',
   // Emission Intensity -- direct report 2026-09-29: "When i use the
   // Pixel 9A model, the screen is very dim." phoneScreenRenderMaterial
   // is an unlit MeshBasicMaterial (its .map is the recursive render's
@@ -2117,6 +2128,28 @@ function parsePhoneResponsiveRotationConfig() {
   try { phoneResponsiveRotationRangeParsed = JSON.parse(cfg.phoneResponsiveRotationRange) } catch (e) { /* keep last-good value */ }
   try { const parsed = JSON.parse(cfg.phoneResponsiveRotationCurve); phoneResponsiveRotationCurveParsed = (parsed.points || parsed).slice().sort((a, b) => a.x - b.x); phoneResponsiveRotationCurveMethod = parsed.method || 'catmullrom' } catch (e) { /* keep last-good value */ }
 }
+let screenLevelScaleRangeParsed = { min: 1, max: 1 }
+let screenLevelScaleCurveParsed = [{ x: 0, y: 0 }, { x: 1, y: 1 }]
+let screenLevelScaleCurveMethod = 'linear'
+function parseScreenLevelScaleConfig() {
+  try { screenLevelScaleRangeParsed = JSON.parse(cfg.screenLevelScaleRange) } catch (e) { /* keep last-good value */ }
+  try { const parsed = JSON.parse(cfg.screenLevelScaleCurve); screenLevelScaleCurveParsed = (parsed.points || parsed).slice().sort((a, b) => a.x - b.x); screenLevelScaleCurveMethod = parsed.method || 'linear' } catch (e) { /* keep last-good value */ }
+}
+// Per-Level Scale -- direct request 2026-09-29, see cfg.screenLevelScaleRange's
+// own comment. `depth` is the VIEWER-perceived nesting level (1 = the
+// outermost/directly-visible render, up to `levels` = the deepest/innermost
+// one) -- "Left edge is the first level" means depth=1 at curve-X=0, matching
+// this file's own established depth terminology (see
+// applyScreenTextureTransform()'s own leading comment on the mirror feature
+// for why depth, not raw pass index, is the right axis to expose here too).
+// Normalized so X always spans the CURRENT total level count exactly
+// ("regardless of level amount"): depth=1 -> t=0, depth=levels -> t=1.
+function computeScreenLevelScale(depth, levels) {
+  const t = levels > 1 ? THREE.MathUtils.clamp((depth - 1) / (levels - 1), 0, 1) : 0
+  const curveY = THREE.MathUtils.clamp(window.evaluateCurveEditorPoints(screenLevelScaleCurveParsed, t, screenLevelScaleCurveMethod), 0, 1)
+  const { min, max } = screenLevelScaleRangeParsed
+  return min + (max - min) * curveY
+}
 // Desktop-only curve/range mapping -- direct confirmation 2026-09-28: "i
 // had it since on desktop, the phone model rotation was determined by
 // distance of the cursor... in a no cursor scenario i have no use for
@@ -2994,7 +3027,7 @@ function setScreenRenderEnabled(enabled) {
 // all), it alone determines the whole chain's starting phase:
 // Order off -> depth 1 unmirrored, Order on -> depth 1 mirrored, with
 // every deeper depth alternating cleanly from there via compounding.
-function applyScreenTextureTransform(texture, isFinalDisplay) {
+function applyScreenTextureTransform(texture, isFinalDisplay, depth, levels) {
   if (!texture) return
   let scaleX = cfg.screenTextureScaleX || 1
   let scaleY = cfg.screenTextureScaleY || 1
@@ -3029,7 +3062,13 @@ function applyScreenTextureTransform(texture, isFinalDisplay) {
     // this is resolved.
     if (window.__mirrorDebug) console.log(ts() + ' [toScaleDebug] camAspect=' + camAspect + ' phoneScreenUvAspect=' + phoneScreenUvAspect + ' scaleX=' + scaleX + ' repeat.x=' + (1 / ((cfg.screenTextureScale || 1) * scaleX)))
   }
-  const overall = cfg.screenTextureScale || 1
+  // Per-Level Scale, added 2026-09-29 -- multiplies the base Texture
+  // Scale by a per-depth factor from the Min/Max + Curve controls (see
+  // computeScreenLevelScale()'s own comment for the depth/curve
+  // reasoning). `depth`/`levels` are only passed at the 2 real call
+  // sites in renderVirtualScreen() -- default to a no-op (depth=1) if
+  // ever called without them.
+  const overall = (cfg.screenTextureScale || 1) * computeScreenLevelScale(depth || 1, levels || 1)
   // MIRROR ORDER/PHASE, REWRITTEN 2026-09-29 (no depth/passIndex math
   // at all now -- see this function's own leading comment for the
   // full reasoning). `isFinalDisplay` is the only thing distinguishing
@@ -3089,7 +3128,13 @@ function applyScreenTextureTransform(texture, isFinalDisplay) {
 function renderVirtualScreen() {
   if (!cfg.screenRenderEnabled || !cfg.phoneModelEnabled || !phoneScreenMeshes.length) return
   const targets = ensureScreenRenderTargets()
-  const levels = THREE.MathUtils.clamp(Math.round(cfg.screenRecursionLevels || 1), 1, 10)
+  // CORRECTED 2026-09-29 -- hard cap raised 10 -> 30, direct request:
+  // "I think its capped at 10... move the cap to 30." The slider's own
+  // UI min/max (still 1-10, see sliderScreenRecursionLevels's own
+  // addRow) is left alone per direct instruction -- this only widens
+  // the actual clamp so a value typed via click-to-type (e.g. 15) isn't
+  // silently capped back down to 10.
+  const levels = THREE.MathUtils.clamp(Math.round(cfg.screenRecursionLevels || 1), 1, 30)
   if (!phoneScreenRenderMaterial) phoneScreenRenderMaterial = new THREE.MeshBasicMaterial()
   if (!phoneScreenWhiteMaterial) phoneScreenWhiteMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff })
   phoneScreenRenderMaterial.color.setScalar(cfg.screenEmissionIntensity ?? 1)
@@ -3114,7 +3159,12 @@ function renderVirtualScreen() {
       // (see applyScreenTextureTransform()'s own leading comment). A
       // LOOP call always embeds one pass's capture into the next, so
       // it's never the final display -- pass isFinalDisplay=false.
-      applyScreenTextureTransform(phoneScreenRenderMaterial.map, false)
+      // depth = levels-i+1, added 2026-09-29 for Per-Level Scale (see
+      // computeScreenLevelScale()'s own comment) -- verified by hand:
+      // for levels=4, i=1..3 gives depth=4,3,2 (the final display below
+      // covers depth=1), matching every depth exactly once, same
+      // derivation already verified for the earlier depth-duplication fix.
+      applyScreenTextureTransform(phoneScreenRenderMaterial.map, false, levels - i + 1, levels)
       phoneScreenMeshes.forEach((mesh) => { mesh.visible = true; mesh.material = phoneScreenRenderMaterial })
     }
     renderer.setRenderTarget(targets[i % 2])
@@ -3124,7 +3174,8 @@ function renderVirtualScreen() {
   // This is the one call not followed by further embedding -- it
   // flips the whole outermost image, everything nested inside it
   // included -- so isFinalDisplay=true (see the leading comment).
-  applyScreenTextureTransform(phoneScreenRenderMaterial.map, true)
+  // depth=1 (the outermost/first level) -- see the loop call site above.
+  applyScreenTextureTransform(phoneScreenRenderMaterial.map, true, 1, levels)
   phoneScreenMeshes.forEach((mesh) => { mesh.visible = true; mesh.material = phoneScreenRenderMaterial })
   renderer.setRenderTarget(null)
 }
@@ -5015,6 +5066,7 @@ const PHONE_MODEL_PER_MODEL_CONTROL_IDS = [
   'textPhoneResponsiveRotationRange', 'textPhoneResponsiveRotationCurve',
   'checkboxScreenRenderEnabled', 'sliderScreenRecursionLevels',
   'sliderScreenRenderResolution', 'sliderScreenTextureScale',
+  'textScreenLevelScaleRange', 'textScreenLevelScaleCurve',
   'sliderScreenTextureRotation', 'sliderScreenTextureScaleX',
   'sliderScreenTextureScaleY', 'checkboxScreenToScale',
   'sliderScreenTextureOffsetX', 'sliderScreenTextureOffsetY',
@@ -5288,15 +5340,15 @@ function renderPhoneModelGroup(content) {
   // importPhoneModelFile() below.
   renderPhoneModelItemSelector(content)
 
-  addRow(content, { id: 'sliderPhoneModelScale', label: 'Model Scale (x100)', type: 'slider', min: 0.5, max: 5, step: 0.05, value: cfg.phoneModelScale })
+  addRow(content, { id: 'sliderPhoneModelScale', label: 'Model Scale (x100)', type: 'slider', min: 0.5, max: 5, step: 'any', value: cfg.phoneModelScale })
   wireSlider('sliderPhoneModelScale', (v) => { cfg.phoneModelScale = v; applyPhoneModelTransform() })
 
   const subOffset = addSubgroup(content, 'OFFSET')
-  addRow(subOffset, { id: 'sliderPhoneModelOffsetX', label: 'X Offset (World Units)', type: 'slider', min: -200, max: 200, step: 0.5, value: cfg.phoneModelOffsetX })
+  addRow(subOffset, { id: 'sliderPhoneModelOffsetX', label: 'X Offset (World Units)', type: 'slider', min: -200, max: 200, step: 'any', value: cfg.phoneModelOffsetX })
   wireSlider('sliderPhoneModelOffsetX', (v) => { cfg.phoneModelOffsetX = v; applyPhoneModelTransform() })
-  addRow(subOffset, { id: 'sliderPhoneModelOffsetY', label: 'Y Offset (World Units)', type: 'slider', min: -200, max: 200, step: 0.5, value: cfg.phoneModelOffsetY })
+  addRow(subOffset, { id: 'sliderPhoneModelOffsetY', label: 'Y Offset (World Units)', type: 'slider', min: -200, max: 200, step: 'any', value: cfg.phoneModelOffsetY })
   wireSlider('sliderPhoneModelOffsetY', (v) => { cfg.phoneModelOffsetY = v; applyPhoneModelTransform() })
-  addRow(subOffset, { id: 'sliderPhoneModelOffsetZ', label: 'Z Offset (World Units)', type: 'slider', min: -200, max: 200, step: 0.5, value: cfg.phoneModelOffsetZ })
+  addRow(subOffset, { id: 'sliderPhoneModelOffsetZ', label: 'Z Offset (World Units)', type: 'slider', min: -200, max: 200, step: 'any', value: cfg.phoneModelOffsetZ })
   wireSlider('sliderPhoneModelOffsetZ', (v) => { cfg.phoneModelOffsetZ = v; applyPhoneModelTransform() })
 
   // Named "PHONE ROTATION", not "ROTATION" -- direct report 2026-09-27:
@@ -5370,17 +5422,17 @@ function renderPhoneModelGroup(content) {
   addRow(subResponsiveRotation, { id: 'checkboxPhoneAxisXEnabled', label: 'X Axis Rotation On/Off', type: 'checkbox' })
   document.getElementById('checkboxPhoneAxisXEnabled').checked = cfg.phoneAxisXEnabled
   wireCheckbox('checkboxPhoneAxisXEnabled', (v) => { cfg.phoneAxisXEnabled = v })
-  addRow(subResponsiveRotation, { id: 'sliderPhoneRotationScaleX', label: 'X Axis Rotation Scale (x)', type: 'slider', min: -3, max: 3, step: 0.05, value: cfg.phoneRotationScaleX })
+  addRow(subResponsiveRotation, { id: 'sliderPhoneRotationScaleX', label: 'X Axis Rotation Scale (x)', type: 'slider', min: -3, max: 3, step: 'any', value: cfg.phoneRotationScaleX })
   wireSlider('sliderPhoneRotationScaleX', (v) => { cfg.phoneRotationScaleX = v })
   addRow(subResponsiveRotation, { id: 'checkboxPhoneAxisYEnabled', label: 'Y Axis Rotation On/Off', type: 'checkbox' })
   document.getElementById('checkboxPhoneAxisYEnabled').checked = cfg.phoneAxisYEnabled
   wireCheckbox('checkboxPhoneAxisYEnabled', (v) => { cfg.phoneAxisYEnabled = v })
-  addRow(subResponsiveRotation, { id: 'sliderPhoneRotationScaleY', label: 'Y Axis Rotation Scale (x)', type: 'slider', min: -3, max: 3, step: 0.05, value: cfg.phoneRotationScaleY })
+  addRow(subResponsiveRotation, { id: 'sliderPhoneRotationScaleY', label: 'Y Axis Rotation Scale (x)', type: 'slider', min: -3, max: 3, step: 'any', value: cfg.phoneRotationScaleY })
   wireSlider('sliderPhoneRotationScaleY', (v) => { cfg.phoneRotationScaleY = v })
   addRow(subResponsiveRotation, { id: 'checkboxPhoneAxisZEnabled', label: 'Z Axis Rotation On/Off', type: 'checkbox' })
   document.getElementById('checkboxPhoneAxisZEnabled').checked = cfg.phoneAxisZEnabled
   wireCheckbox('checkboxPhoneAxisZEnabled', (v) => { cfg.phoneAxisZEnabled = v })
-  addRow(subResponsiveRotation, { id: 'sliderPhoneRotationScaleZ', label: 'Z Axis Rotation Scale (x)', type: 'slider', min: -3, max: 3, step: 0.05, value: cfg.phoneRotationScaleZ })
+  addRow(subResponsiveRotation, { id: 'sliderPhoneRotationScaleZ', label: 'Z Axis Rotation Scale (x)', type: 'slider', min: -3, max: 3, step: 'any', value: cfg.phoneRotationScaleZ })
   wireSlider('sliderPhoneRotationScaleZ', (v) => { cfg.phoneRotationScaleZ = v })
   addRow(subResponsiveRotation, { id: 'sliderPhoneResponsiveRotationFineTune', label: 'Rotation Fine-Tune (Deg)', type: 'slider', min: -90, max: 90, step: 1, value: cfg.phoneResponsiveRotationFineTune })
   wireSlider('sliderPhoneResponsiveRotationFineTune', (v) => { cfg.phoneResponsiveRotationFineTune = v })
@@ -5449,17 +5501,43 @@ function renderRecursiveRenderGroup(content) {
   addRow(content, { id: 'sliderScreenRenderResolution', label: 'Render Resolution (%)', type: 'slider', min: 10, max: 200, step: 5, value: cfg.screenRenderResolution })
   wireSlider('sliderScreenRenderResolution', (v) => { cfg.screenRenderResolution = v })
   // Texture transform controls -- direct request 2026-09-29.
-  addRow(content, { id: 'sliderScreenTextureScale', label: 'Texture Scale (x)', type: 'slider', min: 0.1, max: 5, step: 0.05, value: cfg.screenTextureScale })
+  addRow(content, { id: 'sliderScreenTextureScale', label: 'Texture Scale (x)', type: 'slider', min: 0.1, max: 5, step: 'any', value: cfg.screenTextureScale })
   wireSlider('sliderScreenTextureScale', (v) => { cfg.screenTextureScale = v })
+  // Per-Level Scale (Min/Max + Curve) -- direct request 2026-09-29, see
+  // cfg.screenLevelScaleRange's own comment. Multiplies into Texture
+  // Scale above rather than replacing it (see computeScreenLevelScale()).
+  {
+    let levelRangeDefault = { min: 1, max: 1 }
+    try { levelRangeDefault = JSON.parse(cfg.screenLevelScaleRange) } catch (e) { /* keep fallback */ }
+    addRow(content, { id: 'textScreenLevelScaleRange', label: 'Min / Max Scale (Per Level)', type: 'range-bar', trackMin: 0, trackMax: 5, unit: 'x', defaultValue: levelRangeDefault })
+    let lastSeenLevelScaleRange = document.getElementById('textScreenLevelScaleRange').value
+    curveWidgetResyncs.push(() => {
+      const el = document.getElementById('textScreenLevelScaleRange')
+      if (!el || el.value === lastSeenLevelScaleRange) return
+      lastSeenLevelScaleRange = el.value
+      cfg.screenLevelScaleRange = el.value
+      parseScreenLevelScaleConfig()
+    })
+    const levelCurveParsed = JSON.parse(cfg.screenLevelScaleCurve)
+    addRow(content, { id: 'textScreenLevelScaleCurve', label: 'Scale Curve (Level -> Scale)', type: 'curve-editor', defaultPoints: levelCurveParsed.points, defaultMethod: levelCurveParsed.method, caption: 'X: Recursion Level (Left=First, Right=Last)  ·  Y: Scale Fraction (0=Min, 1=Max)' })
+    let lastSeenLevelScaleCurve = document.getElementById('textScreenLevelScaleCurve').value
+    curveWidgetResyncs.push(() => {
+      const el = document.getElementById('textScreenLevelScaleCurve')
+      if (!el || el.value === lastSeenLevelScaleCurve) return
+      lastSeenLevelScaleCurve = el.value
+      cfg.screenLevelScaleCurve = el.value
+      parseScreenLevelScaleConfig()
+    })
+  }
   addRow(content, { id: 'sliderScreenTextureRotation', label: 'Texture Rotation (Deg)', type: 'slider', min: -180, max: 180, step: 1, value: cfg.screenTextureRotation })
   wireSlider('sliderScreenTextureRotation', (v) => { cfg.screenTextureRotation = v })
-  addRow(content, { id: 'sliderScreenTextureOffsetX', label: 'Texture X Offset', type: 'slider', min: -1, max: 1, step: 0.01, value: cfg.screenTextureOffsetX })
+  addRow(content, { id: 'sliderScreenTextureOffsetX', label: 'Texture X Offset', type: 'slider', min: -1, max: 1, step: 'any', value: cfg.screenTextureOffsetX })
   wireSlider('sliderScreenTextureOffsetX', (v) => { cfg.screenTextureOffsetX = v })
-  addRow(content, { id: 'sliderScreenTextureOffsetY', label: 'Texture Y Offset', type: 'slider', min: -1, max: 1, step: 0.01, value: cfg.screenTextureOffsetY })
+  addRow(content, { id: 'sliderScreenTextureOffsetY', label: 'Texture Y Offset', type: 'slider', min: -1, max: 1, step: 'any', value: cfg.screenTextureOffsetY })
   wireSlider('sliderScreenTextureOffsetY', (v) => { cfg.screenTextureOffsetY = v })
-  addRow(content, { id: 'sliderScreenTextureScaleX', label: 'Texture X Scale (x)', type: 'slider', min: 0.1, max: 5, step: 0.05, value: cfg.screenTextureScaleX })
+  addRow(content, { id: 'sliderScreenTextureScaleX', label: 'Texture X Scale (x)', type: 'slider', min: 0.1, max: 5, step: 'any', value: cfg.screenTextureScaleX })
   wireSlider('sliderScreenTextureScaleX', (v) => { cfg.screenTextureScaleX = v })
-  addRow(content, { id: 'sliderScreenTextureScaleY', label: 'Texture Y Scale (x)', type: 'slider', min: 0.1, max: 5, step: 0.05, value: cfg.screenTextureScaleY })
+  addRow(content, { id: 'sliderScreenTextureScaleY', label: 'Texture Y Scale (x)', type: 'slider', min: 0.1, max: 5, step: 'any', value: cfg.screenTextureScaleY })
   wireSlider('sliderScreenTextureScaleY', (v) => { cfg.screenTextureScaleY = v })
   // Emission Intensity -- direct report: "When i use the Pixel 9A
   // model, the screen is very dim." See cfg.screenEmissionIntensity's
