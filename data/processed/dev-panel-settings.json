@@ -112,11 +112,11 @@
     "checkboxPhoneResponsiveDisplaceEnabled": true,
     "selectPhoneDisplaceMode": "worldPosition",
     "checkboxPhoneDisplaceAxisXEnabled": true,
-    "sliderPhoneDisplaceScaleX": 1,
+    "sliderPhoneDisplaceScaleX": 0.25,
     "checkboxPhoneDisplaceAxisYEnabled": true,
-    "sliderPhoneDisplaceScaleY": 1,
+    "sliderPhoneDisplaceScaleY": 0.25,
     "checkboxPhoneDisplaceAxisZEnabled": true,
-    "sliderPhoneDisplaceScaleZ": 1,
+    "sliderPhoneDisplaceScaleZ": 0.25,
     "sliderPhoneResponsiveDisplaceFineTune": 0,
     "sliderPhoneDisplaceDamping": 0.25,
     "textPhoneResponsiveDisplaceRange": "{\"min\":0,\"max\":10}",
@@ -199,10 +199,10 @@
     "checkboxDeviceInfoEnabled": true
   },
   "layout": {
-    "left": 6,
+    "left": 26,
     "top": 27,
-    "width": 697,
-    "height": 541
+    "width": 350,
+    "height": 673
   },
   "devPanelStyle": {
     "titleFontSize": 17,
@@ -880,15 +880,8 @@
             "type": "group",
             "section": {
               "key": "desktop:Hotkeys",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "sliderDevHotkeySequenceWindow"
-                }
-              ],
-              "rowKeys": [
-                "sliderDevHotkeySequenceWindow"
-              ],
+              "items": [],
+              "rowKeys": [],
               "subgroups": []
             }
           }
@@ -1417,15 +1410,8 @@
           },
           {
             "key": "desktop:Hotkeys",
-            "items": [
-              {
-                "type": "row",
-                "key": "sliderDevHotkeySequenceWindow"
-              }
-            ],
-            "rowKeys": [
-              "sliderDevHotkeySequenceWindow"
-            ],
+            "items": [],
+            "rowKeys": [],
             "subgroups": []
           }
         ]
@@ -5851,6 +5837,32 @@
           {
             "type": "group",
             "section": {
+              "key": "mobile:RECURSIVE RENDER",
+              "items": [
+                {
+                  "type": "row",
+                  "key": "sliderMobileScreenTextureOffsetX"
+                },
+                {
+                  "type": "row",
+                  "key": "textScreenLevelScaleRange"
+                },
+                {
+                  "type": "row",
+                  "key": "textScreenLevelScaleCurve"
+                }
+              ],
+              "rowKeys": [
+                "sliderMobileScreenTextureOffsetX",
+                "textScreenLevelScaleRange",
+                "textScreenLevelScaleCurve"
+              ],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "group",
+            "section": {
               "key": "mobile:RESPONSIVE BEHAVIOUR - PHONE",
               "items": [
                 {
@@ -5936,32 +5948,6 @@
                 }
               ]
             }
-          },
-          {
-            "type": "group",
-            "section": {
-              "key": "mobile:RECURSIVE RENDER",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "sliderMobileScreenTextureOffsetX"
-                },
-                {
-                  "type": "row",
-                  "key": "textScreenLevelScaleRange"
-                },
-                {
-                  "type": "row",
-                  "key": "textScreenLevelScaleCurve"
-                }
-              ],
-              "rowKeys": [
-                "sliderMobileScreenTextureOffsetX",
-                "textScreenLevelScaleRange",
-                "textScreenLevelScaleCurve"
-              ],
-              "subgroups": []
-            }
           }
         ],
         "rowKeys": [],
@@ -5976,6 +5962,29 @@
             "key": "mobile:PHONE ROTATION",
             "items": [],
             "rowKeys": [],
+            "subgroups": []
+          },
+          {
+            "key": "mobile:RECURSIVE RENDER",
+            "items": [
+              {
+                "type": "row",
+                "key": "sliderMobileScreenTextureOffsetX"
+              },
+              {
+                "type": "row",
+                "key": "textScreenLevelScaleRange"
+              },
+              {
+                "type": "row",
+                "key": "textScreenLevelScaleCurve"
+              }
+            ],
+            "rowKeys": [
+              "sliderMobileScreenTextureOffsetX",
+              "textScreenLevelScaleRange",
+              "textScreenLevelScaleCurve"
+            ],
             "subgroups": []
           },
           {
@@ -6063,29 +6072,6 @@
                 "subgroups": []
               }
             ]
-          },
-          {
-            "key": "mobile:RECURSIVE RENDER",
-            "items": [
-              {
-                "type": "row",
-                "key": "sliderMobileScreenTextureOffsetX"
-              },
-              {
-                "type": "row",
-                "key": "textScreenLevelScaleRange"
-              },
-              {
-                "type": "row",
-                "key": "textScreenLevelScaleCurve"
-              }
-            ],
-            "rowKeys": [
-              "sliderMobileScreenTextureOffsetX",
-              "textScreenLevelScaleRange",
-              "textScreenLevelScaleCurve"
-            ],
-            "subgroups": []
           }
         ]
       },
@@ -7712,6 +7698,32 @@
           {
             "type": "group",
             "section": {
+              "key": "landscape:RECURSIVE RENDER",
+              "items": [
+                {
+                  "type": "row",
+                  "key": "sliderLandscapeScreenTextureOffsetX"
+                },
+                {
+                  "type": "row",
+                  "key": "textScreenLevelScaleRange"
+                },
+                {
+                  "type": "row",
+                  "key": "textScreenLevelScaleCurve"
+                }
+              ],
+              "rowKeys": [
+                "sliderLandscapeScreenTextureOffsetX",
+                "textScreenLevelScaleRange",
+                "textScreenLevelScaleCurve"
+              ],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "group",
+            "section": {
               "key": "landscape:RESPONSIVE BEHAVIOUR - PHONE",
               "items": [
                 {
@@ -7797,32 +7809,6 @@
                 }
               ]
             }
-          },
-          {
-            "type": "group",
-            "section": {
-              "key": "landscape:RECURSIVE RENDER",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "sliderLandscapeScreenTextureOffsetX"
-                },
-                {
-                  "type": "row",
-                  "key": "textScreenLevelScaleRange"
-                },
-                {
-                  "type": "row",
-                  "key": "textScreenLevelScaleCurve"
-                }
-              ],
-              "rowKeys": [
-                "sliderLandscapeScreenTextureOffsetX",
-                "textScreenLevelScaleRange",
-                "textScreenLevelScaleCurve"
-              ],
-              "subgroups": []
-            }
           }
         ],
         "rowKeys": [],
@@ -7837,6 +7823,29 @@
             "key": "landscape:PHONE ROTATION",
             "items": [],
             "rowKeys": [],
+            "subgroups": []
+          },
+          {
+            "key": "landscape:RECURSIVE RENDER",
+            "items": [
+              {
+                "type": "row",
+                "key": "sliderLandscapeScreenTextureOffsetX"
+              },
+              {
+                "type": "row",
+                "key": "textScreenLevelScaleRange"
+              },
+              {
+                "type": "row",
+                "key": "textScreenLevelScaleCurve"
+              }
+            ],
+            "rowKeys": [
+              "sliderLandscapeScreenTextureOffsetX",
+              "textScreenLevelScaleRange",
+              "textScreenLevelScaleCurve"
+            ],
             "subgroups": []
           },
           {
@@ -7924,29 +7933,6 @@
                 "subgroups": []
               }
             ]
-          },
-          {
-            "key": "landscape:RECURSIVE RENDER",
-            "items": [
-              {
-                "type": "row",
-                "key": "sliderLandscapeScreenTextureOffsetX"
-              },
-              {
-                "type": "row",
-                "key": "textScreenLevelScaleRange"
-              },
-              {
-                "type": "row",
-                "key": "textScreenLevelScaleCurve"
-              }
-            ],
-            "rowKeys": [
-              "sliderLandscapeScreenTextureOffsetX",
-              "textScreenLevelScaleRange",
-              "textScreenLevelScaleCurve"
-            ],
-            "subgroups": []
           }
         ]
       },
@@ -8999,10 +8985,10 @@
     "mobile:PHONE MODEL": false,
     "mobile:OFFSET": false,
     "mobile:PHONE ROTATION": false,
+    "mobile:RECURSIVE RENDER": false,
     "mobile:RESPONSIVE BEHAVIOUR - PHONE": false,
     "mobile:Responsive Rotation": false,
     "mobile:RESPONSIVE DISPLACE": false,
-    "mobile:RECURSIVE RENDER": false,
     "mobile:HAND MODEL": false,
     "mobile:Field Layout": false,
     "mobile:Pose": true,
@@ -9053,10 +9039,10 @@
     "landscape:PHONE MODEL": false,
     "landscape:OFFSET": false,
     "landscape:PHONE ROTATION": false,
+    "landscape:RECURSIVE RENDER": false,
     "landscape:RESPONSIVE BEHAVIOUR - PHONE": false,
     "landscape:Responsive Rotation": false,
     "landscape:RESPONSIVE DISPLACE": false,
-    "landscape:RECURSIVE RENDER": false,
     "landscape:HAND MODEL": false,
     "landscape:Field Layout": true,
     "landscape:Pose": true,
