@@ -5867,7 +5867,14 @@ function renderDebugExtras() {
   wireCheckbox('checkboxShowAxesHelper', (v) => { cfg.showAxesHelper = v; axesHelper.visible = v })
   addRow(debugContent, { id: 'checkboxShowWireframe', label: 'Show Wireframe', type: 'checkbox' })
   wireCheckbox('checkboxShowWireframe', (v) => { cfg.showWireframe = v; hands.forEach((h) => { h.skinnedMesh.material.wireframe = v }) })
-  const pauseRow = document.createElement('div'); pauseRow.className = 'dev-row'
+  // CORRECTED 2026-09-30, direct report: "The Pause button... should be
+  // stylized the same as other buttons. It should use the button color
+  // and font etc." Was a bare .dev-row with an unstyled <button> -- real
+  // dev-panel buttons get their look from `.dev-buttons button` (Button
+  // Color/font/border-radius/hover), which only applies inside a
+  // `.dev-buttons` container (the same wrapper class Save/Use/Delete/Set
+  // Default already use), not a plain `.dev-row`.
+  const pauseRow = document.createElement('div'); pauseRow.className = 'dev-buttons'
   const pauseBtn = document.createElement('button'); pauseBtn.textContent = 'PAUSE'
   pauseRow.appendChild(pauseBtn); debugContent.appendChild(pauseRow)
   pauseBtn.addEventListener('click', () => { isPaused = !isPaused; pauseBtn.textContent = isPaused ? 'RESUME' : 'PAUSE' })

@@ -4828,9 +4828,22 @@
                 { tab, group: 'Dev Panel', id: 'colorDevPanelAccent', type: 'color', label: 'Accent Color (Buttons/UI):', value: '#005f8f' },
                 { tab, group: 'Dev Panel', id: 'colorDevPanelAccent2', type: 'color', label: 'Accent Color #2 (Dev Panel Label):', value: '#26253a' },
                 { tab, group: 'Dev Panel', id: 'colorDevPanelAccent3', type: 'color', label: 'Accent Color #3 (Checkboxes):', value: '#7ec8e3' },
-                { tab, group: 'Dev Panel', id: 'colorDevPanelButtonColor', type: 'color', label: 'Button Color:', value: '#3a3a4a' },
+                { tab, group: 'Dev Panel', id: 'colorDevPanelButtonColor', type: 'color', label: 'Accent Color #4 (Button Color):', value: '#3a3a4a' },
                 { tab, group: 'Dev Panel', id: 'colorDevPanelSliderColor', type: 'color', label: 'Slider Color:', value: '#ffffff' },
                 { tab, group: 'Dev Panel', id: 'colorDevPanelGroupLabelBg', type: 'color', label: 'Group Label Background Color:', value: '#005f8f' },
+                // Group Nesting L Step -- direct request 2026-09-30: "This
+                // allows me to change the L value of each successive layer
+                // of group nesting. So if i set it to -5, A single level
+                // nested group will be Accent Color but the HSL L value
+                // will be less by 5. Then a group nested in that group's
+                // HSL L value will be Accent Color but -10%, etc." A
+                // single shared slider (not per-tab), same as
+                // colorDevPanelGroupLabelBg -- see refreshGroupNestingColors()
+                // for the actual per-title color computation. Default 0 is
+                // a no-op (every depth shows the exact same base color)
+                // until deliberately tuned, matching this project's own
+                // convention for a new control.
+                { tab, group: 'Dev Panel', id: 'sliderDevGroupNestingLStep', type: 'slider', label: 'Group Nesting L Step (%):', min: -20, max: 20, step: 'any', value: 0 },
                 { tab, group: 'Dev Panel', id: 'selectDevPanelFontFamily', type: 'select', label: 'Font (All Text):', options: [
                     { value: 'monospace', text: 'Monospace' }, { value: 'Arial, Helvetica, sans-serif', text: 'Arial' },
                     // Matches Clicko's own current live fontFamily value exactly
@@ -5018,7 +5031,7 @@
         }
         const p = tab === 'desktop' ? 'sliderDevPanel' : tab === 'mobile' ? 'sliderMobileDevPanel' : 'sliderLandscapeDevPanel';
         makeGroup('MECHANICS', [p + 'ScrollStrength'], content);
-        makeGroup('PANEL UI', ['colorDevPanelBg', 'colorDevPanelAccent', 'colorDevPanelAccent2', 'colorDevPanelAccent3', 'colorDevPanelButtonColor', 'colorDevPanelSliderColor', p + 'Opacity'], content);
+        makeGroup('PANEL UI', ['colorDevPanelBg', 'colorDevPanelAccent', 'colorDevPanelAccent2', 'colorDevPanelAccent3', 'colorDevPanelButtonColor', 'colorDevPanelSliderColor', p + 'Opacity', 'sliderDevGroupNestingLStep'], content);
         const text = makeGroup('TEXT', ['selectDevPanelFontFamily'], content);
         const textContent = text.querySelector(':scope > .dev-section-content');
         makeGroup('Dev Panel Title', ['checkboxDevBoldTitle', 'checkboxDevCapsTitleText', p + 'TitleFontSize', p + 'TitleLetterSpacing', p + 'TitleLineHeight', p + 'ButtonTextBorder', 'colorDevPanelTitleText'], textContent);
@@ -5026,6 +5039,96 @@
         makeGroup('Setting Title', ['checkboxDevCapsSettingsText', 'checkboxDevBoldSettings', p + 'SettingTitleFontSize', p + 'ValueFontSize', p + 'SettingsLineHeight', 'sliderDevSettingsTextLetterSpacing', 'colorDevPanelNonTitleText', 'colorDevPanelSettingNumber'], textContent);
         makeGroup('TABS', ['checkboxDevBoldTab', 'checkboxDevCapsTabText', p + 'TabFontSize', 'sliderDevTabTextLetterSpacing', p + 'TabLineHeight', 'colorDevPanelTabText'], textContent);
         makeGroup('BUTTONS', ['checkboxDevBoldButton', 'checkboxDevCapsButtonText', p + 'ButtonFontSize', 'sliderDevButtonTextLetterSpacing', p + 'ButtonLineHeight', 'colorDevPanelButtonText', p + 'ButtonHeight'], textContent);
+    }
+
+    // ================================================================
+    // Group Nesting L Step -- direct request 2026-09-30, see
+    // sliderDevGroupNestingLStep's own comment for the full spec. Every
+    // group title's background is normally the SAME flat
+    // --dev-group-label-bg-color for every group regardless of nesting
+    // depth -- this computes a per-depth HSL-Lightness-adjusted variant
+    // instead (base color unchanged at depth 0, each successive nesting
+    // level darker/lighter by one more step) and applies it as each
+    // title's own inline background, overriding the flat CSS var.
+    // ----------------------------------------------------------------
+    function hexToHsl(hex) {
+        hex = (hex || '#005f8f').replace('#', '');
+        const r = parseInt(hex.substr(0, 2), 16) / 255, g = parseInt(hex.substr(2, 2), 16) / 255, b = parseInt(hex.substr(4, 2), 16) / 255;
+        const max = Math.max(r, g, b), min = Math.min(r, g, b);
+        let h = 0, s = 0; const l = (max + min) / 2;
+        if (max !== min) {
+            const d = max - min;
+            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+            if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
+            else if (max === g) h = (b - r) / d + 2;
+            else h = (r - g) / d + 4;
+            h /= 6;
+        }
+        return { h: h * 360, s: s * 100, l: l * 100 };
+    }
+    function hslToHex(h, s, l) {
+        h /= 360; s /= 100; l /= 100;
+        let r, g, b;
+        if (s === 0) { r = g = b = l; }
+        else {
+            const hue2rgb = (p, q, t) => { if (t < 0) t += 1; if (t > 1) t -= 1; if (t < 1 / 6) return p + (q - p) * 6 * t; if (t < 1 / 2) return q; if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6; return p; };
+            const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+            const p = 2 * l - q;
+            r = hue2rgb(p, q, h + 1 / 3); g = hue2rgb(p, q, h); b = hue2rgb(p, q, h - 1 / 3);
+        }
+        const toHex = (x) => Math.round(x * 255).toString(16).padStart(2, '0');
+        return '#' + toHex(r) + toHex(g) + toHex(b);
+    }
+    // Depth = number of .dev-section ancestors WITHIN the given tab-
+    // content root (0 for a top-level group, 1 for a subgroup, etc.) --
+    // matches how addSubgroup()/makeGroup() actually nest DOM elements.
+    function computeGroupNestingDepth(titleEl, rootEl) {
+        let depth = 0;
+        let section = titleEl.closest('.dev-section');
+        while (section && rootEl.contains(section)) {
+            const parentSection = section.parentElement && section.parentElement.closest('.dev-section');
+            if (!parentSection || !rootEl.contains(parentSection)) break;
+            depth++;
+            section = parentSection;
+        }
+        return depth;
+    }
+    let _groupNestingRefreshQueued = false;
+    function refreshGroupNestingColors() {
+        // Debounced to one pass per animation frame -- the MutationObserver
+        // below can fire many times in a row during a drag-reorder.
+        if (_groupNestingRefreshQueued) return;
+        _groupNestingRefreshQueued = true;
+        requestAnimationFrame(() => {
+            _groupNestingRefreshQueued = false;
+            const baseHex = (document.getElementById('colorDevPanelGroupLabelBg') || {}).value || devPanelStyle.groupLabelBgColor || '#005f8f';
+            const lStep = parseFloat((document.getElementById('sliderDevGroupNestingLStep') || {}).value || 0);
+            const baseHsl = hexToHsl(baseHex);
+            const colorCache = {};
+            const colorForDepth = (depth) => {
+                if (colorCache[depth] !== undefined) return colorCache[depth];
+                const l = Math.max(0, Math.min(100, baseHsl.l + depth * lStep));
+                return (colorCache[depth] = hslToHex(baseHsl.h, baseHsl.s, l));
+            };
+            ['desktopTabContent', 'mobileTabContent', 'landscapeTabContent'].forEach((rootId) => {
+                const root = document.getElementById(rootId);
+                if (!root) return;
+                root.querySelectorAll('.dev-section-title').forEach((title) => {
+                    const depth = computeGroupNestingDepth(title, root);
+                    title.style.background = colorForDepth(depth);
+                });
+            });
+        });
+    }
+    // Catches drag-reorder, +Add Group, fold-into-new-group, delete, and
+    // Sync/Reset-driven order restores -- anything that could change
+    // nesting depth -- without needing a call from every one of those
+    // individual code paths. Wired once the panel actually exists.
+    function setupGroupNestingObserver() {
+        const scroll = devPanel.querySelector('.dev-panel-scroll-content');
+        if (!scroll) return;
+        new MutationObserver(refreshGroupNestingColors).observe(scroll, { childList: true, subtree: true });
+        refreshGroupNestingColors();
     }
 
     function setupDevPanelStyleControls() {
@@ -5050,7 +5153,17 @@
         });
         DEV_PANEL_STYLE_COLOR_KEYS.forEach(([key, id]) => {
             const el = document.getElementById(id);
-            if (el) el.addEventListener('input', (e) => { devPanelStyle[key] = e.target.value; applyDevPanelOwnStyling('desktop'); });
+            if (el) el.addEventListener('input', (e) => {
+                devPanelStyle[key] = e.target.value;
+                applyDevPanelOwnStyling('desktop');
+                if (key === 'groupLabelBgColor') refreshGroupNestingColors();
+            });
+        });
+        const nestingLStepEl = document.getElementById('sliderDevGroupNestingLStep');
+        if (nestingLStepEl) nestingLStepEl.addEventListener('input', (e) => {
+            const valEl = document.getElementById('valueDevGroupNestingLStep');
+            if (valEl) valEl.textContent = e.target.value;
+            refreshGroupNestingColors();
         });
         const fontEl = document.getElementById('selectDevPanelFontFamily');
         if (fontEl) fontEl.addEventListener('change', (e) => { devPanelStyle.fontFamily = e.target.value; applyDevPanelOwnStyling('desktop'); });
@@ -5880,6 +5993,7 @@
         if (window.renderHandysetDevGroups) window.renderHandysetDevGroups();
 
         setupDevPanelStyleControls();
+        setupGroupNestingObserver();
         makeDevValuesEditable();
         makeDevSliderBoundsEditable();
         setupDevPanelTextEdit();

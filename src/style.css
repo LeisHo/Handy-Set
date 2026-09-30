@@ -563,10 +563,13 @@ html, body {
        corner is simpler as a plain sibling, no reattachment machinery
        needed at all). */
     .dev-section { margin-bottom: 15px; position: relative; }
-    /* This ONE group's title uses Accent Color #2 specifically, rather
-       than the generic Group Label Background Color every other group's
-       title uses (re-synced 2026-09-28). */
-    #devSavedSettingsGroupTitle { background: var(--dev-accent-color-2, #26253a); }
+    /* CORRECTED 2026-09-30, direct request: "'Saved Dev Settings' group
+       label should be the same color as other group labels. Leave
+       Accent Color 2 as unused for now." Was a special-case override
+       using Accent Color #2 -- removed so this title falls through to
+       the same .dev-section-title rule (--dev-group-label-bg-color)
+       every other group's title already uses. The Accent Color #2
+       control itself is left in place, just genuinely unused now. */
     .dev-section-title {
         /* FIX (project-side, not upstream — same "genuine template bug"
            class as the group-cascade-checkbox display:none fix above):
