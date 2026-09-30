@@ -7,60 +7,55 @@ append-only history.
 
 ## Currently working on
 
-**Recursive Render mirror investigation — X-axis RESOLVED (verified
-exactly against a full letter-sequence dataset), Y-axis and the X/Y
-interaction still open.** See CHANGELOG's 54th and 55th entries for
-the full account; summary of current state:
-- X-mirror: `checkboxFlipX` now alternates by VIEWER DEPTH
-  (`offBaseline(d) * (-1)^d`, d = levels − passIndex), not a flat
-  per-pass constant — solved algebraically from a full 16-sequence
-  dataset (2 models × 4 checkbox combinations × 2 axes) and verified
-  as an EXACT match, every position, on both models. Root cause: each
-  recursion pass embeds the previous pass's already-mirrored capture,
-  so a per-pass flip compounds as a PRODUCT across nesting depth
-  rather than applying once per depth — this also explains the
-  period-4-looking patterns seen throughout this investigation despite
-  the underlying per-pass JS signal being proven period-2 via console
-  instrumentation.
-- Y-mirror: still uses its original formula (checkbox-gated
-  `alternateParity`), unverified against this dataset — it does NOT
-  fit the same depth-parity model, likely because X's own always-on
-  background correction (`baseFlipX`) contaminated every "Y only" test
-  capture. Not yet reconciled; not guessed further without cleaner
-  isolated data.
-- X/Y interaction ("both checked" looking wrong): direct user
-  insight, independently arrived at and consistent with the mechanism
-  above — the phone's screen content is asymmetric, so composing both
-  mirrors is a 180° rotation, not two independent flips, and a
-  rotation of asymmetric content just looks like a different wrong
-  image. This may mean "both checked" isn't a further bug to chase at
-  all once X alone (Y off) is confirmed clean.
-- NOT yet independently browser-verified against the real deployed
-  site — the exact-match verification is algebraic, against the
-  user's own reported sequences, not a fresh live screenshot (per this
-  project's own "skip sandbox verification" convention).
-- A temporary diagnostic (`window.__mirrorDebug = true` in the
-  browser console) is left in place in `applyScreenTextureTransform()`
-  logging real per-pass state — proven reliable where monkey-patching
-  `THREE.WebGLRenderer.prototype.render` was NOT (the renderer
-  instance shadows the prototype method; patches there are silently
-  never invoked — confirmed live, don't rely on this technique again
-  on this project).
+**Nothing in progress right now** — the last active item (on-demand
+rendering, below) shipped and is pushed. Waiting on the next request.
+
+**Recursive Render mirror investigation — RESOLVED, per direct user
+confirmation ("x mirror issue fixed by the way").** The depth-parity
+X-mirror fix (CHANGELOG's 54th/55th entries: `checkboxFlipX` alternates
+by viewer depth, `offBaseline(d) * (-1)^d`, not a flat per-pass
+constant — each recursion pass embeds the previous pass's already-
+mirrored capture, so a per-pass flip compounds as a PRODUCT across
+nesting depth) is confirmed working on the real deployed site. Y-mirror
+and the X/Y-both-checked interaction were never separately reported
+back on and are assumed fine unless a new report says otherwise —
+don't reopen that investigation without a fresh, concrete report.
 
 Separately, Samsung Galaxy S26 (a genuine, pre-existing, already-
 documented `[-1,-1,-1]` root-node scale inversion) and Galaxy S2 (a
-genuinely degenerate Screen Face UV with zero vertical extent) are
-BOTH real, separate, per-model asset issues unrelated to the mirror
-investigation above — neither is fixable via code; both need
-re-export from the source (Blender, most likely).
+genuinely degenerate Screen Face UV with zero vertical extent) remain
+real, separate, per-model asset issues — neither is fixable via code;
+both need re-export from the source (Blender, most likely).
 
-**Also in progress, interrupted by the above:** widening the step on
-every "*Scale"-labeled dev-panel slider (Pose/Model/Texture/Hand
-Scale, Phone Rotation Scale X/Y/Z) from 0.05 to a much finer
-increment, per direct request ("for alll scale sliders allow me to go
-in any increment. dont round it to .05") — not yet completed/shipped.
+**Slider-stepping request superseded/completed:** the earlier "widen
+the step on every *Scale slider" request was overtaken by a broader,
+more specific follow-up ("dont use any stepping of inputs... I
+currently cant input '0.001'") scoped to the Phone Model group
+specifically — `step` was removed entirely (`step: 'any'`) on all 12
+Scale/Offset/Rotation-Scale/Texture-Scale/Texture-Offset sliders in
+that group, not just widened. See CHANGELOG's on-demand-rendering-
+adjacent backfill entry for detail.
 
-**Completed and verified live this session** (see CHANGELOG's 52nd
+**Also shipped since the last update to this doc** (backfilled into
+`CHANGELOG.txt` — see its dated entries): Recursive Render's Min/Max
+Scale + Level→Scale curve editor (with recursion levels uncapped from
+10 to 30), 4 small dev-panel styling fixes (Pause button styling,
+Saved Dev Settings label color, a new Group Nesting L Step slider,
+"Accent Color #4" rename), the full Set Hotkey feature (a new
+interactive subsystem in the shared `devPanel.js` template — see
+CLAUDE.md's own file-map note on this file being a verbatim template
+copy), and **on-demand rendering**: `animate()` no longer calls
+`composer.render()` every RAF frame unconditionally — it now skips the
+whole per-frame compute+render pass unless Responsive Rotation is
+active or something discrete (a dev-panel control, OrbitControls
+damping/drag, a resize, a Sync/Reset/Undo/Redo restore, a list-picker
+Use, a hotkey trigger, an async phone-model load, or a curve-editor/
+range-bar drag) flags a `requestRender()`/`needsRender` signal. NOT
+independently browser-verified (standing project convention) — the
+two spots worth a live spot-check are called out directly in
+`CHANGELOG.txt`'s matching entry.
+
+**Completed and verified live earlier this session** (see CHANGELOG's 52nd
 and 53rd entries for full detail): the duplicate HAND MODEL/PHONE
 MODEL dev-panel groups bug (root cause: an uncaught null-reference
 throw aborting the whole panel build, not a settings-sync issue as
