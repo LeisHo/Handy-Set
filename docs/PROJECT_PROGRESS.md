@@ -7,15 +7,25 @@ append-only history.
 
 ## Currently working on
 
-**Nothing in progress right now** — the last active item was a real-
-device axis correction on `RESPONSIVE DISPLACE`: "switch the input
-outputs for y and z axis." Swapped which raw signal feeds the Y vs Z
-output slot on both mobile (`e.acceleration.y`/`.z`) and desktop
-(vertical cursor delta now drives Z, not Y) — see CHANGELOG's matching
-entry. NOT re-verified against a real device beyond the user's own
-report. (The earlier "click functions"/Hand Behaviour Log question
-turned out to be pasted content meant for a different project —
-HANDY DANDIES, not HANDYSET — and was dropped, no action taken.)
+**Nothing in progress right now** — the last active item was a real bug
+fix on `RESPONSIVE DISPLACE` (mobile): reports of X drifting/jumping and
+Y/Z being inconsistent/delayed/overshooting, all on the same device,
+both Displace Modes. Root-caused to `integratePhoneDisplacement()`
+fully freezing velocity/position (no decay at all) whenever
+`e.acceleration` came back momentarily null — a known intermittent
+real-device behavior — then discarding the whole elapsed gap once a
+valid reading resumed, producing exactly "frozen then overshoots."
+Fixed to keep decaying through a null-reading tick instead of freezing;
+also added a raw deadzone + outlier clamp and tightened the integration
+dt cap. Verified via a standalone script showing the old logic freezing
+solid across a simulated gap vs. the new logic decaying correctly — see
+CHANGELOG's matching entry. NOT re-verified against a real device beyond
+the user's own reports. Before that: a real-device axis correction
+("switch the input outputs for y and z axis") swapped which raw signal
+feeds the Y vs Z output slot on both mobile and desktop. (An earlier
+"click functions"/Hand Behaviour Log question turned out to be pasted
+content meant for a different project — HANDY DANDIES, not HANDYSET —
+and was dropped, no action taken.)
 
 Also shipped this session on `RESPONSIVE DISPLACE`: an independent
 Displace Reset checkbox (double-tap now fires Rotation Reset and

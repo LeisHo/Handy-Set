@@ -5646,6 +5646,52 @@ swap, not guessing a 3rd mapping. `index.html` cache-buster: `main.js`
 `?v=174` -> `?v=175`.
 
 --------------------------------------------------------------------------------
+2026-09-30  -  Fix jumpy/delayed Responsive Displace: don't freeze
+integration on momentary null acceleration
+
+Direct reports (mobile, both Displace Modes affected the same way,
+pointing at the shared integration layer): "the x axis movement isnt
+good. it keeps drifting and sometimes jumps" and "the z and y
+displacement isnt smooth... it works sometimes, but other times its
+delayed, sometimes it goes too far."
+
+Root cause: `integratePhoneDisplacement()` treated a momentarily null
+`e.acceleration` reading (a known intermittent behavior on some real
+devices/browsers, not just "tracking off") identically to Displace
+being disabled -- it reset `phoneDisplaceLastTimestamp` and returned
+before ever reaching the leaky decay math. This FROZE velocity/position
+completely for the gap's real duration (no decay applied at all), then
+discarded that whole elapsed interval once a valid reading resumed (the
+next tick re-seeds the timestamp instead of computing a `dt` against
+the stale one) -- producing exactly the reported pattern: a stale,
+undecayed position sitting frozen mid-gap, then an abrupt resumption/
+overshoot once real integration continues. Verified via a standalone
+script: simulating a 2s null-acceleration gap left the OLD logic's
+velocity/position completely unchanged (frozen), while the NEW logic
+correctly decayed through the same gap.
+
+Fixed by letting a null-acceleration tick still advance time and still
+run the leaky decay (`ax`/`ay`/`az` simply read 0 for that tick -- "no
+push this instant," not "nothing happened, don't decay either").
+
+Also added, addressing the same reports: a raw per-axis deadzone
+(filters small persistent sensor noise/bias before it can integrate
+into a nonzero steady-state drift) and an outlier clamp (caps any
+single anomalous reading -- a sensor glitch, or a large `dt` after a
+stalled tick -- from producing one oversized velocity kick that
+visibly overshoots before decaying back), applied to the raw
+acceleration reading before the optional world-frame rotation. Also
+tightened the `dt` cap 0.1s -> 0.05s, halving the worst-case single-
+step integration size on an irregular/stalled tick.
+
+Both new constants (deadzone, clamp) are disclosed, unverified judgment
+calls, not measurements -- retune first if legitimate movement gets
+over/under-filtered. NOT independently re-verified against a real
+device beyond the user's own reports and the standalone freeze/decay
+simulation above. `index.html` cache-buster: `main.js` `?v=175` ->
+`?v=176`.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
