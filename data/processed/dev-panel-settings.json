@@ -96,7 +96,7 @@
     "sliderPhoneModelRotX": 0,
     "sliderPhoneModelRotY": 0,
     "sliderPhoneModelRotZ": 0,
-    "checkboxPhoneResponsiveRotationEnabled": false,
+    "checkboxPhoneResponsiveRotationEnabled": true,
     "selectPhoneRotationMode": "gyro",
     "checkboxPhoneRotationResetEnabled": true,
     "checkboxPhoneAxisXEnabled": true,
@@ -111,7 +111,7 @@
     "textPhoneResponsiveRotationCurve": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"natural\"}",
     "checkboxScreenRenderEnabled": true,
     "sliderScreenRecursionLevels": 10,
-    "sliderScreenRenderResolution": 170,
+    "sliderScreenRenderResolution": 105,
     "sliderScreenTextureScale": 1.2,
     "textScreenLevelScaleRange": "{\"min\":1,\"max\":1}",
     "textScreenLevelScaleCurve": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"linear\"}",
@@ -190,7 +190,7 @@
     "left": 27,
     "top": 27,
     "width": 350,
-    "height": 572
+    "height": 609
   },
   "devPanelStyle": {
     "titleFontSize": 17,
