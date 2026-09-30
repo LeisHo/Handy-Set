@@ -555,8 +555,18 @@
         if (checkbox && checkbox.closest('.dev-row')) return { el: checkbox, type: 'checkbox' };
         const slider = e.target.closest('input[type="range"]');
         if (slider && slider.closest('.dev-row')) return { el: slider, type: 'slider' };
+        // CORRECTED 2026-09-30, direct report: a standalone button not
+        // built via addRow({type:'button'}) -- e.g. a host project's own
+        // hand-built Pause button, or this template's Save/Use/Delete/Set
+        // Default row -- never sits inside a .dev-row (that's only ever a
+        // single-control row); it lives inside a shared .dev-buttons
+        // container holding several buttons side by side. Restricting this
+        // to .dev-row alone silently excluded every button of that shape
+        // from ever being hotkey-eligible. .dev-row stays required for
+        // checkbox/slider (neither control type is ever built this way in
+        // this codebase).
         const button = e.target.closest('button');
-        if (button && button.closest('.dev-row')) return { el: button, type: 'button' };
+        if (button && button.closest('.dev-row, .dev-buttons')) return { el: button, type: 'button' };
         return null;
     }
     function disarmSetHotkey() {
@@ -586,10 +596,20 @@
     // Finds the row's own drag-handle (always its current first child,
     // per injectRowDragHandles()'s own insertBefore(handle, row.firstChild))
     // so the hotkey element can be inserted immediately before it --
-    // "left most within that input's line space", per direct spec.
-    function insertHotkeyElementIntoRow(row, el) {
+    // "left most within that input's line space", per direct spec. A real
+    // .dev-row (a single control) always has this. A .dev-buttons
+    // container (CORRECTED 2026-09-30, see getHotkeyEligibleTarget()'s own
+    // comment -- e.g. Pause, or this template's Save/Use/Delete/Set
+    // Default row) holds SEVERAL buttons and has no drag handle at all, so
+    // "left of the drag icon" has no meaning there -- the next best
+    // anchor is immediately before the SPECIFIC button this badge/input
+    // belongs to (targetEl), so it sits next to that button and not some
+    // arbitrary sibling's.
+    function insertHotkeyElementIntoRow(row, el, targetEl) {
         const handle = row.querySelector(':scope > .dev-row-drag-handle');
-        row.insertBefore(el, handle || row.firstChild || null);
+        if (handle) { row.insertBefore(el, handle); return; }
+        if (targetEl && targetEl.parentNode === row) { row.insertBefore(el, targetEl); return; }
+        row.insertBefore(el, row.firstChild || null);
     }
     function findExistingHotkeyKeyForControl(controlId) {
         for (const [key, entry] of Object.entries(devHotkeys)) { if (entry.id === controlId) return key; }
@@ -602,12 +622,18 @@
     // repeatedly (after set/edit/delete, or after Undo/Redo restores
     // devHotkeys).
     function renderHotkeyBadgeForRow(row, controlId, controlType) {
-        const existingEl = row.querySelector(':scope > .dev-hotkey-badge, :scope > .dev-hotkey-input');
+        // CORRECTED 2026-09-30: scoped by data-hotkey-target (controlId),
+        // not just the bare class -- a plain ":scope > .dev-hotkey-badge"
+        // would match ANY badge in a shared .dev-buttons container (e.g.
+        // 2 different hotkeyed buttons in the same row), removing/
+        // re-rendering the wrong one's badge.
+        const existingEl = row.querySelector(':scope > [data-hotkey-target="' + controlId + '"]');
         if (existingEl) existingEl.remove();
         const key = findExistingHotkeyKeyForControl(controlId);
         if (!key) return;
         const badge = document.createElement('span');
         badge.className = 'dev-hotkey-badge';
+        badge.dataset.hotkeyTarget = controlId;
         badge.textContent = key;
         badge.title = 'Double-click to edit, double-right-click to delete';
         let lastContextmenuAt = 0;
@@ -626,20 +652,23 @@
             }
             lastContextmenuAt = now;
         });
-        insertHotkeyElementIntoRow(row, badge);
+        insertHotkeyElementIntoRow(row, badge, document.getElementById(controlId));
     }
     // Opens the inline edit textbox (used both for a brand-new binding
     // from the Set Hotkey click-capture below, and for double-click-to-
     // edit on an existing badge).
     function startHotkeyEdit(row, controlId, controlType, existingKey) {
-        const existingEl = row.querySelector(':scope > .dev-hotkey-badge, :scope > .dev-hotkey-input');
+        // Scoped by data-hotkey-target -- same reasoning as
+        // renderHotkeyBadgeForRow()'s own matching fix.
+        const existingEl = row.querySelector(':scope > [data-hotkey-target="' + controlId + '"]');
         if (existingEl) existingEl.remove();
         const input = document.createElement('input');
         input.type = 'text';
         input.className = 'dev-hotkey-input';
+        input.dataset.hotkeyTarget = controlId;
         input.maxLength = 2;
         if (existingKey) input.value = existingKey;
-        insertHotkeyElementIntoRow(row, input);
+        insertHotkeyElementIntoRow(row, input, document.getElementById(controlId));
         input.focus(); input.select();
         let settled = false;
         function commit() {
@@ -686,7 +715,8 @@
             if (!eligible) return;
             e.preventDefault();
             e.stopPropagation();
-            const row = eligible.el.closest('.dev-row');
+            // .dev-buttons -- see getHotkeyEligibleTarget()'s own comment.
+            const row = eligible.el.closest('.dev-row, .dev-buttons');
             if (!row) return;
             if (!eligible.el.id) { console.warn(ts() + ' Set Hotkey: target has no id, cannot bind'); return; }
             startHotkeyEdit(row, eligible.el.id, eligible.type, findExistingHotkeyKeyForControl(eligible.el.id));
@@ -711,16 +741,24 @@
         const seenIds = new Set();
         Object.values(devHotkeys).forEach((entry) => seenIds.add(entry.id));
         // Also clear any row whose hotkey was just removed (Undo, delete)
-        // by re-rendering every row that EITHER currently has a badge/
-        // input OR is a target id still in devHotkeys.
+        // by re-rendering every target that EITHER currently has a badge/
+        // input OR is a target id still in devHotkeys. CORRECTED
+        // 2026-09-30: reads data-hotkey-target directly (set by
+        // renderHotkeyBadgeForRow()/startHotkeyEdit()) instead of guessing
+        // the owning control via "the row's first input/button with an
+        // id" -- that guess breaks the moment a shared .dev-buttons
+        // container (Pause, Save/Use/Delete/Set Default, etc.) holds more
+        // than one id'd button, since querySelector only ever returns the
+        // FIRST match regardless of which button the badge actually
+        // belongs to. .dev-row/.dev-buttons broadened to match
+        // getHotkeyEligibleTarget()'s own container fix.
         document.querySelectorAll('.dev-hotkey-badge, .dev-hotkey-input').forEach((el) => {
-            const row = el.closest('.dev-row');
-            if (row) seenIds.add(row.querySelector('input[id], button[id]')?.id);
+            if (el.dataset.hotkeyTarget) seenIds.add(el.dataset.hotkeyTarget);
         });
         seenIds.forEach((id) => {
             if (!id) return;
             const el = document.getElementById(id);
-            const row = el && el.closest('.dev-row');
+            const row = el && el.closest('.dev-row, .dev-buttons');
             if (!row) return;
             const type = el.type === 'checkbox' ? 'checkbox' : el.type === 'range' ? 'slider' : 'button';
             renderHotkeyBadgeForRow(row, id, type);
@@ -907,7 +945,14 @@
         }
         entries.forEach(([key, entry]) => {
             const el = document.getElementById(entry.id);
-            const label = (el && el.closest('.dev-row')?.querySelector('.dev-label')?.textContent) || entry.id;
+            // .dev-row, .dev-buttons -- CORRECTED 2026-09-30, same
+            // container-shape fix as getHotkeyEligibleTarget() (a
+            // standalone button like Pause lives in .dev-buttons, not
+            // .dev-row); falls back to entry.id when no .dev-label exists
+            // in either shape (e.g. a plain .dev-buttons button has no
+            // separate label element, just its own text).
+            const targetContainer = el ? el.closest('.dev-row, .dev-buttons') : null;
+            const label = targetContainer?.querySelector('.dev-label')?.textContent || entry.id;
             const row = document.createElement('div');
             row.className = 'dev-row';
             row.style.cssText = 'display:flex; align-items:center; gap:6px;';
@@ -918,8 +963,7 @@
             let lastContextmenuAt = 0;
             badge.addEventListener('dblclick', (e) => {
                 e.preventDefault(); e.stopPropagation();
-                const targetRow = el ? el.closest('.dev-row') : null;
-                if (targetRow) startHotkeyEdit(targetRow, entry.id, entry.type, key);
+                if (targetContainer) startHotkeyEdit(targetContainer, entry.id, entry.type, key);
             });
             badge.addEventListener('contextmenu', (e) => {
                 e.preventDefault(); e.stopPropagation();
@@ -927,8 +971,7 @@
                 if (now - lastContextmenuAt < getHotkeySequenceWindowMs()) {
                     pushDevPanelUndoSnapshot(); devRedoStack = [];
                     delete devHotkeys[key];
-                    const targetRow = el ? el.closest('.dev-row') : null;
-                    if (targetRow) renderHotkeyBadgeForRow(targetRow, entry.id, entry.type);
+                    if (targetContainer) renderHotkeyBadgeForRow(targetContainer, entry.id, entry.type);
                     refreshHotkeysListSubgroup();
                 }
                 lastContextmenuAt = now;

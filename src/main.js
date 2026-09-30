@@ -5974,7 +5974,11 @@ function renderDebugExtras() {
   // `.dev-buttons` container (the same wrapper class Save/Use/Delete/Set
   // Default already use), not a plain `.dev-row`.
   const pauseRow = document.createElement('div'); pauseRow.className = 'dev-buttons'
-  const pauseBtn = document.createElement('button'); pauseBtn.textContent = 'PAUSE'
+  // id required for Set Hotkey (devPanel.js) -- every hotkey-bindable
+  // control is looked up by id (triggerHotkey()/renderAllHotkeyBadges()),
+  // and this button never had one, which is the other half of why it
+  // couldn't be hotkeyed (see devPanel.js's own .dev-buttons container fix).
+  const pauseBtn = document.createElement('button'); pauseBtn.id = 'buttonPauseToggle'; pauseBtn.textContent = 'PAUSE'
   pauseRow.appendChild(pauseBtn); debugContent.appendChild(pauseRow)
   pauseBtn.addEventListener('click', () => { isPaused = !isPaused; pauseBtn.textContent = isPaused ? 'RESUME' : 'PAUSE'; requestRender() })
 
