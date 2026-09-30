@@ -5577,6 +5577,55 @@ device -- if any axis comes out backwards, flip that axis's own sign in
 whole mapping. `index.html` cache-buster: `main.js` `?v=172` -> `?v=173`.
 
 --------------------------------------------------------------------------------
+2026-09-30  -  Rework RESPONSIVE DISPLACE: independent of Tracking
+Enabled, cursor-movement-driven on desktop, plus reset checkbox + axis
+invert UI
+
+Three direct follow-ups on RESPONSIVE DISPLACE, addressed together since
+each changed the same code:
+
+1. "add a displacement reset checkbox. Similar to the rotation, a double
+   tap will place the phone back in its starting location." Split
+   `resetPhoneModelRotationBaseline()` into `resetPhoneRotationBaseline()`
+   + `resetPhoneDisplaceBaseline()`, each gated by its OWN "Reset
+   On/Off" checkbox -- both still share the ONE double-tap/double-click
+   gesture, firing independently based on which checkbox(es) are on.
+2. "provide me some ui to flip axes. so i dont need to go through you to
+   fix it." Added dedicated Invert X/Y/Z checkboxes, applied on top of
+   the existing Scale sliders -- a negative Scale value already flipped
+   direction, but this makes it an explicit, discoverable control
+   instead of a non-obvious side effect.
+3. "make sure that the displacement on desktop is determined by the
+   cursor, just like rotation" -- then corrected: "that displacement
+   isnt meant to be driven by phone tilt at all... its only meant to
+   measure the movement in space... magnitude of tilt should not affect
+   magnitude of displacement." The first desktop attempt read the
+   cursor's STATIC distance from screen center (`tiltMagnitude`/
+   `tiltAngle`, Rotation's own signal) -- reworked to measure actual
+   CURSOR MOVEMENT (frame-to-frame delta, sampled every render frame so
+   decay correctly settles when the cursor stops, not per mousemove
+   event which would leave state stuck). Extracted
+   `applyPhoneDisplaceSample()` as a shared leaky accel->velocity->
+   position integrator so both platforms (mobile's real accelerometer,
+   desktop's cursor-delta) write into the exact same
+   `phoneDisplacePosX/Y/Z` state through the same curve/range mapping.
+
+Also, per direct answer to a clarifying question (gating should be
+"Fully independent"): removed `cfg.trackingEnabled` from every Displace
+gate (integration, magnitude computation, and `animate()`'s on-demand-
+render condition) -- Responsive Displace now works purely off its own
+On/Off checkbox, on both platforms, including requesting motion
+permission independently of Tracking Enabled.
+
+Verified via 3 standalone scripts: the original mobile leaky-integration
+bounds check (unchanged), and 2 new checks for the desktop cursor-delta
+path -- confirms position fully decays to near-zero after the cursor
+goes stationary (not stuck), and is reasonably frame-rate independent.
+
+NOT independently browser/device-verified (standing project convention).
+`index.html` cache-buster: `main.js` `?v=173` -> `?v=174`.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
