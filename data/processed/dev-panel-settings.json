@@ -110,7 +110,7 @@
     "textPhoneResponsiveRotationRange": "{\"min\":-57,\"max\":45}",
     "textPhoneResponsiveRotationCurve": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"natural\"}",
     "checkboxPhoneResponsiveDisplaceEnabled": true,
-    "selectPhoneDisplaceMode": "acceleration",
+    "selectPhoneDisplaceMode": "worldPosition",
     "checkboxPhoneDisplaceAxisXEnabled": true,
     "sliderPhoneDisplaceScaleX": 1,
     "checkboxPhoneDisplaceAxisYEnabled": true,
