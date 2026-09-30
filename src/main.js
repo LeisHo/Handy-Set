@@ -41,8 +41,28 @@ function ts() { return '[' + new Date().toISOString() + ']' }
 // nothing else changing frame-to-frame its own output wouldn't change
 // either; it still updates correctly on-demand via the same needsRender
 // flag as everything else.
+//
+// CORRECTED 2026-09-30, direct follow-up: the first version above still
+// called requestAnimationFrame(animate) unconditionally every browser
+// frame even while shouldRender was false -- it skipped the expensive
+// compute+render work but never stopped the RAF LOOP ITSELF, so the
+// browser kept waking this tab up 60x/sec for nothing. animate() (below)
+// now only re-schedules itself when a render is still needed; otherwise
+// it lets the loop die (renderLoopRunning = false) and requestRender()
+// is what restarts it -- a single guarded entry point so a flurry of
+// rapid calls (e.g. a slider drag firing many 'input' events per second)
+// never schedules more than one pending RAF at a time.
 let needsRender = true
-function requestRender() { needsRender = true }
+let renderLoopRunning = false
+function requestRender() {
+  needsRender = true
+  if (!renderLoopRunning) startRenderLoop()
+}
+function startRenderLoop() {
+  if (renderLoopRunning) return
+  renderLoopRunning = true
+  requestAnimationFrame(animate)
+}
 window.requestRender = requestRender
 
 // Shared DRACOLoader, attached to every GLTFLoader instance (both the
@@ -3676,6 +3696,7 @@ handLoader.load(MODEL_URL, async (gltf) => {
   loadingEl.classList.add('hidden')
   initMotionInput()
   setupPhoneRotationResetGesture()
+  renderLoopRunning = true // first frame runs synchronously here, not via RAF -- see startRenderLoop()'s own comment
   animate()
 }, undefined, (err) => {
   console.error(ts() + ' Failed to load hand model', err)
@@ -3980,7 +4001,6 @@ window.addEventListener('resize', () => { applyRendererSize(window.innerWidth, w
 let isPaused = false
 
 function animate() {
-  requestAnimationFrame(animate)
   if (renderer.getSize(new THREE.Vector2()).width !== window.innerWidth || renderer.getSize(new THREE.Vector2()).height !== window.innerHeight) {
     applyRendererSize(window.innerWidth, window.innerHeight)
     requestRender()
@@ -3996,9 +4016,30 @@ function animate() {
   // needsRender. isPaused already freezes the SAME per-frame block for an
   // unrelated reason (the Debug-group Pause button) -- folded into this
   // same condition rather than checked twice.
-  const shouldRender = (!isPaused && cfg.trackingEnabled && hands.length > 0) || needsRender
-  if (!shouldRender) return
-  needsRender = false
+  const continuousRenderNeeded = !isPaused && cfg.trackingEnabled && hands.length > 0
+  const shouldRender = continuousRenderNeeded || needsRender
+  if (shouldRender) {
+    needsRender = false
+    renderOneFrame()
+  }
+  // CORRECTED 2026-09-30: the loop no longer just skips its expensive work
+  // while idle -- it stops calling requestAnimationFrame entirely, so the
+  // browser doesn't keep waking this tab up 60x/sec for nothing while
+  // static. controls.update() above can synchronously re-flag needsRender
+  // via OrbitControls' own 'change' event (damping still gliding this very
+  // frame), which is why this check comes AFTER controls.update() rather
+  // than trusting only continuousRenderNeeded. Any future interaction that
+  // needs the loop running again goes through requestRender() (see its own
+  // comment), which restarts the loop itself -- OrbitControls' own pointer/
+  // wheel handlers already dispatch 'change' independent of this loop, so
+  // a drag/zoom wakes the loop even while it's fully stopped.
+  if (continuousRenderNeeded || needsRender) {
+    requestAnimationFrame(animate)
+  } else {
+    renderLoopRunning = false
+  }
+}
+function renderOneFrame() {
   if (!isPaused) {
     // Phone Tilt rotation (only when tracking is enabled)
     if (cfg.trackingEnabled && hands.length) {
