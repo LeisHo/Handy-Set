@@ -7,8 +7,16 @@ append-only history.
 
 ## Currently working on
 
-**Nothing in progress right now** — the last active item made Double
-Tap Reset instant: `resetPhoneRotationBaseline()`/
+**Nothing in progress right now** — the last active item added Clear
+All Logs / Copy All Logs / Pause-Resume Logs buttons spanning all 3
+Debug-group logs (Mouse Log, Sensors, Phone Model Log) — Mouse Log's own
+state is private to `devPanel.js`, so 3 small bare-global helper
+functions were exposed there for `main.js` to reach it. See CHANGELOG's
+matching entry. (A prior message asking for the Phone Model Log to be
+split into a sensors log + a position/orientation log turned out to
+already exist as-is — the "Sensors" and "Phone Model Log" subgroups were
+already fully separate; no change was needed there.) Before that, the
+last active item made Double Tap Reset instant: `resetPhoneRotationBaseline()`/
 `resetPhoneDisplaceBaseline()` already reset the underlying state, but
 the per-frame slerp/lerp damping was still easing the DISPLAYED
 rotation/offset toward that target over several frames — both functions

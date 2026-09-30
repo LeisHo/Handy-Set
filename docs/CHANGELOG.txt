@@ -5719,6 +5719,42 @@ Not independently browser/device-verified (standing project convention)
 cache-buster: `main.js` `?v=176` -> `?v=177`.
 
 --------------------------------------------------------------------------------
+2026-09-30  -  Add Clear All Logs, Copy All Logs, and Pause/Resume Logs
+buttons
+
+Direct requests: "provide a clear all logs button and copy all logs
+button" / "and a pause and resume logs button."
+
+The Debug group has 3 separate logs (Mouse Log -- devPanel.js's own
+built-in template feature; Sensors and Phone Model Log -- HANDYSET's
+own). Added a shared controls row spanning all 3:
+- **Clear All Logs** -- calls each log's own existing clear function.
+- **Copy All Logs** -- concatenates all 3 logs' text (with section
+  headers) and copies to clipboard, same flash-confirmation pattern the
+  individual Copy buttons already use.
+- **Pause/Resume Logs** -- a new overlay flag (`allLogsPaused`,
+  `main.js`) that gates whether a new entry gets appended anywhere,
+  independent of each log's own existing control (the Stream Sensor
+  Data checkbox, Mouse Log's own always-on click capture) -- toggling it
+  doesn't disturb those controls' own state, it's a pure "freeze
+  everything for a moment" utility, not a persisted setting.
+
+Mouse Log's own state (`mouseLog[]`, `pushMouseLogEntry()`) is private
+to `devPanel.js`'s own scope, so 3 small bare-global functions were
+added there: `getMouseLogText()` (for Copy All), and
+`isMouseLogPaused()`/`setMouseLogPaused()` (for Pause/Resume) --
+`devPanel.js` is a classic (non-module) script, so its top-level
+function declarations are already reachable as bare globals from
+`main.js` (a module), matching this file's own existing pattern
+(`addGroup()` and friends already rely on the same reachability for
+`devPanel.js`'s other exposed functions).
+
+Not independently browser-verified (standing project convention) --
+verified via `node --check` on both files only. `index.html`
+cache-busters: `main.js` `?v=177` -> `?v=178`, `devPanel.js` `?v=13` ->
+`?v=14`.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
