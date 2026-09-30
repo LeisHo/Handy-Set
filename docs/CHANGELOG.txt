@@ -5286,6 +5286,128 @@ sequences, algebraically, not a fresh live screenshot check.
 depth-parity fix).
 
 --------------------------------------------------------------------------------
+2026-09-29/30  -  (backfill -- 3 prior undocumented commits)
+
+CLAUDE.md §4a requires updating this log in the same session a change
+ships; the 3 commits below (all real, already pushed, visible in `git
+log`) shipped without a matching entry here. Backfilled now, at
+summary level rather than a full blow-by-blow, once the gap was
+noticed while adding this entry's own on-demand-rendering work below.
+
+- Recursive Render: added a Min/Max Scale range-bar + a Level->Scale
+  curve editor under the Texture Scale slider (X = recursion level,
+  left edge = level 1, right edge = the last level regardless of how
+  many levels are set; Y = the scale multiplier applied at that
+  level) -- `computeScreenLevelScale(depth, levels)`, fed into
+  `applyScreenTextureTransform()`'s own `overall` scale computation.
+  Recursion level cap raised 10 -> 30 (the slider's own visible
+  min/max UI range is unchanged -- only the clamp typing a larger
+  number gets accepted against moved).
+- Phone Model group: removed numeric `step` entirely (`step: 'any'`)
+  from all 12 Scale/Offset/Rotation-Scale/Texture-Scale/Texture-Offset
+  sliders, so any decimal value (e.g. `0.001`) can be typed via the
+  click-to-edit popup, not just whole steps.
+- 4 small dev-panel styling fixes: the Debug-group Pause button now
+  uses the shared `.dev-buttons button` styling (Button Color/font/
+  hover) instead of looking like a bare unstyled button; "Saved Dev
+  Settings"'s own group-label background override was removed so it
+  matches every other group label's color; "Button Color" was renamed
+  to "Accent Color #4 (Button Color)"; a new Group Nesting L Step (%)
+  slider (Panel UI group) shifts each successive nesting depth's group
+  label HSL Lightness by that amount per level, computed via
+  `computeGroupNestingDepth()`/`refreshGroupNestingColors()` and kept
+  in sync via a MutationObserver on the panel's own scroll content.
+- Set Hotkey feature (devPanel.js, the shared template): a full new
+  interactive subsystem per a detailed spec -- a header icon button
+  arms/disarms hotkey-assignment mode (mutually exclusive with Add/
+  Delete Group); clicking an eligible checkbox/button/slider (not
+  dropdowns/curve-editors/color-pickers/group-label buttons/drag
+  handles/list-picker items) opens a small 1-2-letter textbox left of
+  the row's drag handle; a set hotkey renders as bold Accent-Color-#4
+  text, double-click to edit, double-right-click to delete. Triggering
+  inverts a checkbox, clicks/toggles a button, or (for a slider) enters
+  a dedicated "slider hotkey mode" where Up/Down arrows adjust the
+  value by the slider's own step (+/- multiply the step by 10x), shown
+  in a HUD near the floating DEV button, exited by Escape or by
+  touching any other control. Sequential (not simultaneous) 2-letter
+  combos are detected via a buffered, timing-windowed state machine
+  (`hotkeyKeyBuffer`, default 500ms window, adjustable via a slider in
+  a new "Hotkeys" subgroup that also lists every hotkey/function pair
+  for the same double-click/double-right-click edit/delete). Every
+  hotkey set/trigger/edit/delete is individually undoable (a slider's
+  whole hotkey-mode session -- arm through exit -- counts as ONE undo
+  action, not one per arrow-key press), persists through Sync (folded
+  into `captureFullDevPanelState()`/`applyFullDevPanelState()`), and is
+  gated off entirely on touch devices.
+
+None of this was independently browser-verified (standing project
+convention, no live sandbox testing for HANDYSET this session) --
+verified via `node --check` and, for the HSL/depth-scale math, via
+standalone Node scripts replicating the formulas before shipping.
+`index.html` cache-busters bumped across this work: `main.js` `?v=165`
+-> `?v=168`, `devPanel.js` `?v=9` -> `?v=11`.
+
+--------------------------------------------------------------------------------
+2026-09-29  -  On-demand rendering (skip per-frame render/composer.render
+when Responsive Rotation is off)
+
+Direct request: "when Responsive Rotation is not turned on, make sure
+that the 3js isnt still rendering everyframe. In that case, only
+rerender when a setting has been modified." `animate()` previously
+called `composer.render()` unconditionally on every RAF frame. Added a
+`needsRender` flag + `requestRender()` (main.js, exposed as
+`window.requestRender`): the whole per-frame compute block AND
+`composer.render()` itself are now skipped unless Responsive Rotation
+is active (`cfg.trackingEnabled` with a hand present -- Palm Rotation/
+Reactive Arm Length/Wrist Splay/Base Arm Rotation/Pose Tween/Phone
+Model Responsive Rotation all key off `tiltMagnitude`/
+`armBaseDistanceT`, which only changes while this is on) or something
+discrete flagged `needsRender`. `requestAnimationFrame`/
+`controls.update()`/`syncCameraPanelFromLive()` still run every frame
+regardless (cheap, and needed so OrbitControls damping's own 'change'
+event -- the actual on-demand-render trigger for camera motion -- keeps
+firing correctly).
+
+Every discrete "something changed" path was hooked explicitly rather
+than relying on one central mechanism, since this project has several
+genuinely separate control-wiring systems: the 5 shared wire* functions
+(wireSlider/wireCheckbox/wireColor/wireTextInput/wireSelect -- covers
+the large majority of ~150 dev-panel controls project-wide), an
+OrbitControls 'change' listener (drag/wheel/damping-glide), a window
+resize handler, devPanel.js's `applyFullDevPanelState()` (Sync/Reset/
+Undo/Redo/Named-State restore -- a safety net, since `applyControlValues()`
+already dispatches real events for most of these), the 5 list-picker
+Use buttons (apply a preset directly, bypassing wireSlider/wireCheckbox
+entirely), the Set Hotkey button-trigger path (a hotkeyed button's own
+click handler isn't necessarily one of the wire* functions), the Pause
+toggle, an async phone-model load completing (covers Item Selector
+clicks, a Sync-restored selection, and Import GLB uniformly, regardless
+of which one triggered the load), and devPanel.js's own generic
+curve-editor/range-bar control types (the 12 curve/range fields across
+Reactive Arm Length/Wrist Splay/Base Arm Rotation/Pose Tween/Phone
+Model Responsive Rotation/Recursive Render's new per-level scale curve
+-- these carry their value via direct per-frame polling, never a
+dispatched input/change event, so they needed their own explicit
+`window.requestRender()` call inside their shared `commitPoints()`/
+`commit()` functions).
+
+Recursive Render (`cfg.screenRenderEnabled`) is deliberately NOT part
+of the "always continuous" condition -- its render-to-texture pipeline
+only ever reflects the current scene state, so with nothing else
+changing frame-to-frame its own output wouldn't change either; it
+still updates correctly on-demand via the same `needsRender` flag as
+everything else.
+
+NOT independently browser-verified (standing project convention) --
+syntax-checked via `node --check` only, no live sandbox testing. The
+two highest-risk spots worth a live spot-check: OrbitControls damping
+actually continuing to glide smoothly for a few frames after a drag
+release with Responsive Rotation off (rather than snapping to a stop),
+and a curve-editor/range-bar drag actually producing a live-updating
+graph while Responsive Rotation is off. `index.html` cache-buster:
+`main.js` `?v=168` -> `?v=169`, `devPanel.js` `?v=11` -> `?v=12`.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
