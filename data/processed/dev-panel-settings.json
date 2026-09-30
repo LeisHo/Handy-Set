@@ -118,8 +118,8 @@
     "checkboxPhoneDisplaceAxisZEnabled": true,
     "sliderPhoneDisplaceScaleZ": 0.25,
     "sliderPhoneResponsiveDisplaceFineTune": 0,
-    "sliderPhoneDisplaceDamping": 0.25,
-    "textPhoneResponsiveDisplaceRange": "{\"min\":0,\"max\":10}",
+    "sliderPhoneDisplaceDamping": 1,
+    "textPhoneResponsiveDisplaceRange": "{\"min\":-15,\"max\":10}",
     "textPhoneResponsiveDisplaceCurve": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"monotone\"}",
     "checkboxScreenRenderEnabled": true,
     "sliderScreenRecursionLevels": 10,
@@ -202,7 +202,7 @@
     "left": 26,
     "top": 27,
     "width": 350,
-    "height": 673
+    "height": 541
   },
   "devPanelStyle": {
     "titleFontSize": 17,
