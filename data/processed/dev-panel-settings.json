@@ -112,14 +112,14 @@
     "checkboxPhoneResponsiveDisplaceEnabled": true,
     "selectPhoneDisplaceMode": "worldPosition",
     "checkboxPhoneDisplaceResetEnabled": true,
-    "checkboxPhoneDisplaceAxisXEnabled": false,
+    "checkboxPhoneDisplaceAxisXEnabled": true,
     "sliderPhoneDisplaceScaleX": 0.25,
     "checkboxPhoneDisplaceInvertX": false,
-    "checkboxPhoneDisplaceAxisYEnabled": true,
+    "checkboxPhoneDisplaceAxisYEnabled": false,
     "sliderPhoneDisplaceScaleY": 0.25,
     "checkboxPhoneDisplaceInvertY": false,
-    "checkboxPhoneDisplaceAxisZEnabled": true,
-    "sliderPhoneDisplaceScaleZ": 0.25,
+    "checkboxPhoneDisplaceAxisZEnabled": false,
+    "sliderPhoneDisplaceScaleZ": 0.292295148797391,
     "checkboxPhoneDisplaceInvertZ": false,
     "sliderPhoneResponsiveDisplaceFineTune": -4.53282711362163,
     "sliderPhoneDisplaceDamping": 1,
@@ -206,7 +206,7 @@
     "left": 26,
     "top": 27,
     "width": 350,
-    "height": 165
+    "height": 120
   },
   "devPanelStyle": {
     "titleFontSize": 17,
