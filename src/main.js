@@ -2294,11 +2294,37 @@ function computeDeviceOrientationQuat(alphaDeg, betaDeg, gammaDeg) {
 // either (only the desktop cursor-position path does; see
 // computePhoneResponsiveAxisDeg()'s own comment), so Absolute mode not
 // using it either is consistent with existing behavior, not a new gap.
-function computePhoneAbsoluteOrientationQuat(e) {
+// Split out from computePhoneAbsoluteOrientationQuat() below (2026-09-30,
+// see that function's own comment for why) so resetPhoneModelRotationBaseline()
+// can capture the SAME raw quaternion (pre-baseline) to invert into a new
+// baseline, without duplicating the alphaDeg/betaDeg/gammaDeg computation.
+function computePhoneAbsoluteOrientationRawQuat(e) {
   const alphaDeg = cfg.phoneAxisZEnabled ? (e.alpha || 0) * cfg.phoneRotationScaleZ : 0
   const betaDeg = cfg.phoneAxisXEnabled ? (e.beta || 0) * cfg.phoneRotationScaleX : 0
   const gammaDeg = cfg.phoneAxisYEnabled ? (e.gamma || 0) * cfg.phoneRotationScaleY : 0
-  return computeDeviceOrientationQuat(alphaDeg, betaDeg, gammaDeg)
+  return computeDeviceOrientationQuat(alphaDeg, betaDeg, gammaDeg) // returns the shared _phoneAbsoluteQuat instance
+}
+// Baseline for Absolute/Orientation mode -- added 2026-09-30, direct
+// report: "the double tap to reset button doesn't seem to work" in this
+// mode specifically ("in gyro it works, but in the new mode it doesn't").
+// Root cause: unlike Gyro mode's phoneGyroQuat (a running accumulator
+// resetPhoneModelRotationBaseline() already zeroes directly), Absolute
+// mode is a PURE, MEMORYLESS function of the phone's raw current
+// alpha/beta/gamma (see this function's own comment on why, and its
+// deliberate lack of a curve/range step) -- there was nothing for a reset
+// to affect at all, so double-tapping silently did nothing. Identity by
+// default (no behavior change until the user actually resets), then set
+// by resetPhoneModelRotationBaseline() to the INVERSE of whatever the raw
+// absolute quaternion was at that instant, so THAT orientation becomes
+// the model's new neutral/identity pose. This is still memoryless/drift-
+// free going forward -- a fixed value captured ONCE at reset time, never
+// accumulated frame-to-frame -- just relative to a re-centered reference
+// instead of the device's raw (alpha=0,beta=0,gamma=0).
+const _phoneAbsoluteBaselineInverse = new THREE.Quaternion()
+const _phoneAbsoluteResultQuat = new THREE.Quaternion()
+function computePhoneAbsoluteOrientationQuat(e) {
+  const raw = computePhoneAbsoluteOrientationRawQuat(e)
+  return _phoneAbsoluteResultQuat.copy(_phoneAbsoluteBaselineInverse).multiply(raw)
 }
 // REMOVED 2026-09-28 (9th round) -- PHONE_GYRO_OUTPUT_FIX_QUAT, an 8th-
 // round output-conjugation constant. 3 rounds of reports (6th/7th/8th)
@@ -2565,10 +2591,23 @@ function integratePhoneGyroRotation(e) {
 // phoneModelRotX/Y/Z sliders -- those are a deliberate, separate offset
 // on top, not part of "my real phone's orientation." SIMPLIFIED
 // 2026-09-28 along with the gyro-integration switch -- mobile's own
-// reset is now just "zero the accumulator," since there's no separate
-// baseline to manage any more.
+// reset was just "zero the accumulator" at that point, since there was no
+// separate baseline to manage. CORRECTED 2026-09-30: no longer true --
+// Absolute/Orientation mode (added the same day as this correction) is a
+// separate, memoryless rotation path with its own baseline
+// (_phoneAbsoluteBaselineInverse) that this function must ALSO update, or
+// double-tap silently does nothing while that mode is selected -- see
+// that variable's own declaration comment for the full account.
 function resetPhoneModelRotationBaseline() {
   phoneGyroQuat.identity()
+  // Absolute/Orientation mode -- added 2026-09-30, see
+  // _phoneAbsoluteBaselineInverse's own declaration comment for the full
+  // account of why this was missing. Only meaningful with a real
+  // orientation reading on hand; a no-op (leaves the existing baseline in
+  // place) if reset is triggered before mobile has ever received one.
+  if (lastInputSource === 'device' && latestOrientation) {
+    _phoneAbsoluteBaselineInverse.copy(computePhoneAbsoluteOrientationRawQuat(latestOrientation)).invert()
+  }
   // Desktop: baseline captured in the RAW (pre-final-clamp) domain -- a
   // post-clamp baseline would saturate near the cursor-distance ceiling
   // the same way the old mobile path once did near a physical clamp
