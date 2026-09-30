@@ -348,8 +348,27 @@ const cfg = {
   // inverted axis remains possible.
   phoneResponsiveDisplaceEnabled: false,
   phoneDisplaceMode: 'acceleration', // 'acceleration' (device-local frame, simple) | 'worldPosition' (rotated into world frame first, corrects for the phone's own rotation during a move)
+  // Displace Reset -- added 2026-09-30, direct request: "add a
+  // displacement reset checkbox. Similar to the rotation, a double tap
+  // will place the phone back in its starting location." Independently
+  // toggleable from checkboxPhoneRotationResetEnabled -- both still share
+  // the ONE double-tap/double-click gesture (setupPhoneRotationResetGesture()),
+  // not 2 separate gestures. See that function's own comment.
+  phoneDisplaceResetEnabled: false,
   phoneDisplaceAxisXEnabled: true, phoneDisplaceAxisYEnabled: true, phoneDisplaceAxisZEnabled: true,
   phoneDisplaceScaleX: 1, phoneDisplaceScaleY: 1, phoneDisplaceScaleZ: 1,
+  // Invert X/Y/Z -- added 2026-09-30, direct request: "provide me some ui
+  // to flip axes. so i dont need to go through you to fix it." A negative
+  // Scale value ALREADY flips an axis's direction (same convention as
+  // Rotation's own scale sliders), but that's a non-obvious side effect
+  // of a control that otherwise reads as a magnitude/intensity knob --
+  // this is a dedicated, unambiguous "flip this axis" checkbox instead,
+  // applied ON TOP of Scale (not a replacement for it) in
+  // computePhoneDisplaceAxisUnits(). Scoped to Displace only for now
+  // (the feature just built, and the one actually unverified against a
+  // real device) -- the same checkbox could be added to Rotation's own
+  // per-axis controls on request.
+  phoneDisplaceInvertX: false, phoneDisplaceInvertY: false, phoneDisplaceInvertZ: false,
   phoneResponsiveDisplaceFineTune: 0,
   // Same semantic as phoneRotationDamping (1=instant, lower=smoother) --
   // applied as a lerp on the final displacement vector, same role slerp
@@ -1938,7 +1957,11 @@ function requestMotionPermissionIfNeeded() {
 }
 function initMotionInput() {
   window.addEventListener('mousemove', handleMouseMoveFallback)
-  if (cfg.trackingEnabled) requestMotionPermissionIfNeeded()
+  // Responsive Displace is now independent of Tracking Enabled (direct
+  // answer: "Fully independent") -- requesting permission on EITHER
+  // being on at load ensures Displace's own real devicemotion listener
+  // is attached even when Tracking Enabled itself is off.
+  if (cfg.trackingEnabled || cfg.phoneResponsiveDisplaceEnabled) requestMotionPermissionIfNeeded()
 }
 // Rotation Reset gesture -- direct request 2026-09-28: double-tap
 // (mobile)/double-click (desktop) ANYWHERE on screen re-baselines Phone
@@ -1973,19 +1996,30 @@ function isInsideDevPanel(target) {
 // even reaches the canvas or OrbitControls' own bubble-phase handler --
 // so it can no longer be swallowed regardless of what OrbitControls
 // does afterward.
+// SPLIT 2026-09-30, direct request: "add a displacement reset checkbox.
+// Similar to the rotation, a double tap will place the phone back in its
+// starting location" -- Rotation Reset and Displace Reset are now
+// independently toggleable, both still sharing the ONE double-tap/
+// double-click gesture (not 2 separate gestures). The gesture fires if
+// EITHER checkbox is on; each piece only actually resets if its OWN
+// checkbox is checked.
+function firePhoneResetGesture() {
+  if (cfg.phoneRotationResetEnabled) resetPhoneRotationBaseline()
+  if (cfg.phoneDisplaceResetEnabled) resetPhoneDisplaceBaseline()
+}
 function setupPhoneRotationResetGesture() {
   window.addEventListener('dblclick', (e) => {
-    if (!cfg.phoneRotationResetEnabled || isInsideDevPanel(e.target)) return
-    resetPhoneModelRotationBaseline()
+    if ((!cfg.phoneRotationResetEnabled && !cfg.phoneDisplaceResetEnabled) || isInsideDevPanel(e.target)) return
+    firePhoneResetGesture()
   }, { capture: true })
   window.addEventListener('touchend', (e) => {
-    if (!cfg.phoneRotationResetEnabled || isInsideDevPanel(e.target)) return
+    if ((!cfg.phoneRotationResetEnabled && !cfg.phoneDisplaceResetEnabled) || isInsideDevPanel(e.target)) return
     const touch = e.changedTouches && e.changedTouches[0]
     if (!touch) return
     const now = performance.now()
     const dx = touch.clientX - lastTapX, dy = touch.clientY - lastTapY
     if ((now - lastTapTime) < DOUBLE_TAP_MS && Math.hypot(dx, dy) < DOUBLE_TAP_MAX_DIST_PX) {
-      resetPhoneModelRotationBaseline()
+      firePhoneResetGesture()
       lastTapTime = 0 // consume -- a 3rd quick tap starts a fresh pair, not another double-tap
     } else {
       lastTapTime = now
@@ -2288,23 +2322,38 @@ function computePhoneResponsiveAxisDeg(rawComponent) {
   return magnitude * Math.sign(rawComponent)
 }
 // Responsive Displace -- maps a leaky-integrated per-axis position
-// (phoneDisplacePosX/Y/Z, in real METERS -- see integratePhoneDisplacement()
-// below) through the SAME curve/range/fine-tune shape
-// computePhoneResponsiveAxisDeg() already uses for Rotation, into World
-// Units (the same unit phoneModelOffsetX/Y/Z already use). A raw meters
-// value has no natural 0-1 domain the way tilt magnitude or cursor
-// distance does, so it's normalized against PHONE_DISPLACE_REFERENCE_METERS
-// first -- an UNVERIFIED, disclosed judgment call (not a measurement): a
-// real phone move of roughly this many meters (accounting for this
-// feature's own leaky/decayed integration, which underestimates a true
-// sustained displacement -- see that function's own comment) is treated
-// as "fully at the curve's right edge." If the response feels too
-// weak/strong for a normal hand movement, this is the one constant to
-// retune first.
+// (phoneDisplacePosX/Y/Z, in real METERS -- see applyPhoneDisplaceSample()/
+// integratePhoneDisplacement()/updatePhoneDisplaceDesktopFrame() below)
+// through the curve/range/fine-tune system into World Units (the same
+// unit phoneModelOffsetX/Y/Z already use).
+//
+// CORRECTED 2026-09-30, direct clarification after this feature's first
+// desktop implementation used the cursor's STATIC distance/angle from
+// screen center (the same tiltMagnitude/tiltAngle signal Rotation's own
+// desktop path reads): "that displacement isnt meant to be driven by
+// phone tilt at all... its only meant to measure the movement in
+// space... but of course yo still use tilt data to determine the
+// directio nthe phone is oving [sic] ... but magnitude of tilt should
+// not affect magnitude of displacement." Desktop now measures actual
+// CURSOR MOVEMENT (frame-to-frame delta, see updatePhoneDisplaceDesktopFrame()),
+// fed through the SAME leaky accel-like integrator mobile's real
+// accelerometer uses -- both platforms write into the SAME
+// phoneDisplacePosX/Y/Z state now, through the SAME normalization below,
+// so this function no longer branches by platform at all. Tilt/
+// orientation data is still legitimately used for DIRECTION in mobile's
+// 'worldPosition' mode (rotating the raw acceleration vector into world
+// frame before integrating) -- just never as a source of MAGNITUDE.
+//
+// A raw meters value has no natural 0-1 domain the way tilt magnitude or
+// cursor distance has, so it's normalized against
+// PHONE_DISPLACE_REFERENCE_METERS first -- an UNVERIFIED, disclosed
+// judgment call (not a measurement, and now shared by desktop's own
+// differently-scaled cursor-delta signal too, via
+// PHONE_DISPLACE_DESKTOP_SENSITIVITY). If the response feels too
+// weak/strong, these are the 2 constants to retune first.
 const PHONE_DISPLACE_REFERENCE_METERS = 0.25
 const PHONE_DISPLACE_DEADZONE = 0.02 // same role as PHONE_RESPONSIVE_DEADZONE, own constant since it gates a METERS ratio, not a degrees-equivalent one
-function computePhoneDisplaceAxisUnits(rawMeters, axisEnabled, axisScale) {
-  if (!cfg.trackingEnabled) return 0
+function computePhoneDisplaceAxisUnits(rawMeters, axisEnabled, axisScale, axisInverted) {
   if (!cfg.phoneResponsiveDisplaceEnabled) return 0
   if (!axisEnabled) return 0
   const t = THREE.MathUtils.clamp(Math.abs(rawMeters) / PHONE_DISPLACE_REFERENCE_METERS, 0, 1)
@@ -2312,15 +2361,14 @@ function computePhoneDisplaceAxisUnits(rawMeters, axisEnabled, axisScale) {
   const curveY = THREE.MathUtils.clamp(window.evaluateCurveEditorPoints(phoneResponsiveDisplaceCurveParsed, t, phoneResponsiveDisplaceCurveMethod), 0, 1)
   const { min, max } = phoneResponsiveDisplaceRangeParsed
   const magnitude = min + (max - min) * curveY + (cfg.phoneResponsiveDisplaceFineTune || 0)
-  return magnitude * Math.sign(rawMeters) * axisScale
+  return magnitude * Math.sign(rawMeters) * axisScale * (axisInverted ? -1 : 1)
 }
 const _phoneDisplaceResultVec = new THREE.Vector3()
 function computePhoneResponsiveDisplacement() {
-  if (lastInputSource !== 'device') return _phoneDisplaceResultVec.set(0, 0, 0) // mobile-only for now -- desktop has no accelerometer-equivalent input, and cursor position is already claimed by Palm Rotation/Responsive Rotation
   return _phoneDisplaceResultVec.set(
-    computePhoneDisplaceAxisUnits(phoneDisplacePosX, cfg.phoneDisplaceAxisXEnabled, cfg.phoneDisplaceScaleX),
-    computePhoneDisplaceAxisUnits(phoneDisplacePosY, cfg.phoneDisplaceAxisYEnabled, cfg.phoneDisplaceScaleY),
-    computePhoneDisplaceAxisUnits(phoneDisplacePosZ, cfg.phoneDisplaceAxisZEnabled, cfg.phoneDisplaceScaleZ)
+    computePhoneDisplaceAxisUnits(phoneDisplacePosX, cfg.phoneDisplaceAxisXEnabled, cfg.phoneDisplaceScaleX, cfg.phoneDisplaceInvertX),
+    computePhoneDisplaceAxisUnits(phoneDisplacePosY, cfg.phoneDisplaceAxisYEnabled, cfg.phoneDisplaceScaleY, cfg.phoneDisplaceInvertY),
+    computePhoneDisplaceAxisUnits(phoneDisplacePosZ, cfg.phoneDisplaceAxisZEnabled, cfg.phoneDisplaceScaleZ, cfg.phoneDisplaceInvertZ)
   )
 }
 const _phoneCombinedQuat = new THREE.Quaternion()
@@ -2728,8 +2776,32 @@ let phoneDisplaceVelX = 0, phoneDisplaceVelY = 0, phoneDisplaceVelZ = 0
 let phoneDisplacePosX = 0, phoneDisplacePosY = 0, phoneDisplacePosZ = 0
 let phoneDisplaceLastTimestamp = null
 const _phoneDisplaceWorldVec = new THREE.Vector3()
+// Shared leaky accel->velocity->position integrator -- one real
+// devicemotion sample (MOBILE) or one desktop cursor-delta "impulse"
+// (see updatePhoneDisplaceDesktopFrame() below) both funnel through this
+// SAME function, so both platforms write into the exact same
+// phoneDisplacePosX/Y/Z state and get read back identically by
+// computePhoneResponsiveDisplacement().
+function applyPhoneDisplaceSample(ax, ay, az, dt) {
+  const velDecay = Math.exp(-PHONE_DISPLACE_VELOCITY_DECAY_RATE * dt)
+  const posDecay = Math.exp(-PHONE_DISPLACE_POSITION_DECAY_RATE * dt)
+  phoneDisplaceVelX = phoneDisplaceVelX * velDecay + ax * dt
+  phoneDisplaceVelY = phoneDisplaceVelY * velDecay + ay * dt
+  phoneDisplaceVelZ = phoneDisplaceVelZ * velDecay + az * dt
+  phoneDisplacePosX = phoneDisplacePosX * posDecay + phoneDisplaceVelX * dt
+  phoneDisplacePosY = phoneDisplacePosY * posDecay + phoneDisplaceVelY * dt
+  phoneDisplacePosZ = phoneDisplacePosZ * posDecay + phoneDisplaceVelZ * dt
+}
+// MOBILE -- real accelerometer, event-driven (per devicemotion tick, its
+// own accurate dt from real sample timestamps). CORRECTED 2026-09-30:
+// cfg.trackingEnabled removed from the gate -- direct answer to "should
+// Responsive Displace require Tracking Enabled... or work
+// independently": "Fully independent." Only cfg.phoneResponsiveDisplaceEnabled
+// gates this now; see initMotionInput()/the Displace On/Off checkbox's
+// own wiring for how motion permission gets requested independently of
+// Tracking Enabled too.
 function integratePhoneDisplacement(e) {
-  if (!cfg.trackingEnabled || !cfg.phoneResponsiveDisplaceEnabled || !e.acceleration) {
+  if (!cfg.phoneResponsiveDisplaceEnabled || !e.acceleration) {
     phoneDisplaceLastTimestamp = null // clean restart, no big jump, whenever this resumes -- same convention as integratePhoneGyroRotation's own phoneGyroLastTimestamp
     return
   }
@@ -2742,16 +2814,69 @@ function integratePhoneDisplacement(e) {
       _phoneDisplaceWorldVec.set(ax, ay, az).applyQuaternion(q)
       ax = _phoneDisplaceWorldVec.x; ay = _phoneDisplaceWorldVec.y; az = _phoneDisplaceWorldVec.z
     }
-    const velDecay = Math.exp(-PHONE_DISPLACE_VELOCITY_DECAY_RATE * dt)
-    const posDecay = Math.exp(-PHONE_DISPLACE_POSITION_DECAY_RATE * dt)
-    phoneDisplaceVelX = phoneDisplaceVelX * velDecay + ax * dt
-    phoneDisplaceVelY = phoneDisplaceVelY * velDecay + ay * dt
-    phoneDisplaceVelZ = phoneDisplaceVelZ * velDecay + az * dt
-    phoneDisplacePosX = phoneDisplacePosX * posDecay + phoneDisplaceVelX * dt
-    phoneDisplacePosY = phoneDisplacePosY * posDecay + phoneDisplaceVelY * dt
-    phoneDisplacePosZ = phoneDisplacePosZ * posDecay + phoneDisplaceVelZ * dt
+    applyPhoneDisplaceSample(ax, ay, az, dt)
   }
   phoneDisplaceLastTimestamp = now
+}
+// DESKTOP -- added 2026-09-30, direct clarification: "that displacement
+// isnt meant to be driven by phone tilt at all... its only meant to
+// measure the movement in space... magnitude of tilt should not affect
+// magnitude of displacement." Replaces this feature's first desktop
+// attempt, which read the cursor's STATIC distance from screen center
+// (tiltMagnitude/tiltAngle, the same signal Rotation's own desktop path
+// legitimately uses for ITS purpose) -- that conflated "how far tilted"
+// with "how much displacement," exactly what was corrected. This instead
+// samples the cursor's actual FRAME-TO-FRAME MOVEMENT (a real "how much
+// did it just move" delta), fed as an acceleration-like impulse into the
+// SAME applyPhoneDisplaceSample() leaky integrator mobile's real
+// accelerometer uses.
+//
+// Deliberately sampled once per RENDER FRAME (called from
+// updatePhoneModelFrame()), not once per mousemove event -- mousemove
+// only fires while the cursor is actually moving, so an event-driven
+// design would leave phoneDisplaceVelX/Y stuck at their last nonzero
+// value (never decaying) the instant the cursor stops, since decay only
+// ever applies alongside a new sample. Sampling every render frame
+// means a stationary cursor naturally produces a zero delta next frame,
+// letting the SAME leaky decay pull velocity/position back down
+// correctly with no separate "cursor went idle" detection needed.
+//
+// No Z (depth/perpendicular-to-face) contribution -- a 2D cursor has no
+// natural 3rd axis to measure "movement" along. Z stays mobile-only,
+// where a real depth reading exists. This is a deliberate scope
+// narrowing (not silently dropped): direction on desktop is just
+// whichever way the cursor is actually moving, no tilt/orientation
+// lookup needed the way mobile's 'worldPosition' mode needs one.
+let phoneDisplaceDesktopLastNdcX = null, phoneDisplaceDesktopLastNdcY = null
+let phoneDisplaceDesktopLastFrameTime = null
+// Cursor NDC delta has no natural physical unit (unlike mobile's real
+// m/s^2 accelerometer reading) -- this brings a normal, moderate cursor
+// drag into a comparable response range through the SAME leaky pipeline
+// and PHONE_DISPLACE_REFERENCE_METERS curve mapping. A judgment call, not
+// a measurement -- retune first if the desktop feel is too weak/strong
+// relative to mobile.
+const PHONE_DISPLACE_DESKTOP_SENSITIVITY = 8
+function updatePhoneDisplaceDesktopFrame() {
+  if (lastInputSource !== 'mouse' || !cfg.phoneResponsiveDisplaceEnabled) {
+    phoneDisplaceDesktopLastNdcX = null
+    phoneDisplaceDesktopLastFrameTime = null
+    return
+  }
+  const now = performance.now()
+  if (phoneDisplaceDesktopLastNdcX === null) {
+    phoneDisplaceDesktopLastNdcX = cursorNDC.x
+    phoneDisplaceDesktopLastNdcY = cursorNDC.y
+    phoneDisplaceDesktopLastFrameTime = now
+    return
+  }
+  const dt = Math.min((now - phoneDisplaceDesktopLastFrameTime) / 1000, 0.1)
+  phoneDisplaceDesktopLastFrameTime = now
+  if (dt <= 0) return
+  const dNdcX = cursorNDC.x - phoneDisplaceDesktopLastNdcX
+  const dNdcY = cursorNDC.y - phoneDisplaceDesktopLastNdcY
+  phoneDisplaceDesktopLastNdcX = cursorNDC.x
+  phoneDisplaceDesktopLastNdcY = cursorNDC.y
+  applyPhoneDisplaceSample((dNdcX / dt) * PHONE_DISPLACE_DESKTOP_SENSITIVITY, (dNdcY / dt) * PHONE_DISPLACE_DESKTOP_SENSITIVITY, 0, dt)
 }
 // Rotation Reset -- direct request 2026-09-28: a double-tap(mobile)/
 // double-click(desktop) anywhere on screen (gated by a new "Rotation
@@ -2771,19 +2896,25 @@ function integratePhoneDisplacement(e) {
 // Despite its name (kept to avoid a mechanical rename across every call
 // site -- wireCheckbox('checkboxTrackingEnabled', ...),
 // wireSelect('selectPhoneRotationMode', ...),
-// wireCheckbox('checkboxPhoneResponsiveRotationEnabled', ...), and the
-// double-tap/double-click gesture), this already reset MULTIPLE
-// responsive systems' state before Displace existed (Gyro AND Absolute
-// rotation mode AND the desktop nx/ny baseline) -- adding Displace's own
-// reset here is the same treatment, not a scope change to the function's
-// own role. ADDED 2026-09-30: also zeroes the leaky-integrated
-// displacement position/velocity, so the SAME "Rotation Reset On/Off"
-// checkbox + double-tap gesture re-centers movement tracking too --
-// deliberately NOT a separate toggle (would need decoupling the gesture
-// handler's own single cfg.phoneRotationResetEnabled gate from a 2nd,
-// independent one) -- if independent on/off control for the 2 resets is
-// wanted later, that's the point to revisit.
+// wireCheckbox('checkboxPhoneResponsiveRotationEnabled', ...), and (via
+// resetPhoneRotationBaseline()) the double-tap/double-click gesture.
+// SPLIT 2026-09-30 (direct request: "add a displacement reset checkbox
+// ... a double tap will place the phone back in its starting location")
+// into resetPhoneRotationBaseline() + resetPhoneDisplaceBaseline() below,
+// so the double-tap gesture can fire either one independently based on
+// its OWN "Reset On/Off" checkbox (checkboxPhoneRotationResetEnabled /
+// checkboxPhoneDisplaceResetEnabled) -- see
+// setupPhoneRotationResetGesture()'s own comment. This function stays as
+// a thin "reset everything" wrapper, UNCHANGED for the "on-enable"
+// call sites above (toggling Rotation on, or switching Rotation Mode,
+// still resets both pieces unconditionally, exactly as before this
+// split -- those call sites never checked either Reset-On/Off checkbox
+// to begin with, only the gesture did).
 function resetPhoneModelRotationBaseline() {
+  resetPhoneRotationBaseline()
+  resetPhoneDisplaceBaseline()
+}
+function resetPhoneRotationBaseline() {
   phoneGyroQuat.identity()
   // Absolute/Orientation mode -- added 2026-09-30, see
   // _phoneAbsoluteBaselineInverse's own declaration comment for the full
@@ -2793,17 +2924,26 @@ function resetPhoneModelRotationBaseline() {
   if (lastInputSource === 'device' && latestOrientation) {
     _phoneAbsoluteBaselineInverse.copy(computePhoneAbsoluteOrientationRawQuat(latestOrientation)).invert()
   }
-  // Responsive Displace -- zero both integration stages, not just
-  // position, or a nonzero leftover velocity would immediately start
-  // rebuilding a position again on the very next devicemotion tick.
-  phoneDisplaceVelX = phoneDisplaceVelY = phoneDisplaceVelZ = 0
-  phoneDisplacePosX = phoneDisplacePosY = phoneDisplacePosZ = 0
   // Desktop: baseline captured in the RAW (pre-final-clamp) domain -- a
   // post-clamp baseline would saturate near the cursor-distance ceiling
   // the same way the old mobile path once did near a physical clamp
   // boundary.
   phoneNxBaseline = tiltMagnitude * Math.cos(tiltAngle)
   phoneNyBaseline = tiltMagnitude * Math.sin(tiltAngle)
+}
+// Responsive Displace -- zero both integration stages, not just
+// position, or a nonzero leftover velocity would immediately start
+// rebuilding a position again on the very next sample (real devicemotion
+// tick on mobile, or the next render frame's cursor-delta sample on
+// desktop -- both platforms share this same state, see
+// applyPhoneDisplaceSample()'s own comment). No separate desktop
+// baseline needed (unlike Rotation's own phoneNxBaseline/phoneNyBaseline)
+// -- Displace's desktop path measures cursor MOVEMENT, not a static
+// position relative to some reference point, so zeroing position/
+// velocity directly already means "back to starting location."
+function resetPhoneDisplaceBaseline() {
+  phoneDisplaceVelX = phoneDisplaceVelY = phoneDisplaceVelZ = 0
+  phoneDisplacePosX = phoneDisplacePosY = phoneDisplacePosZ = 0
 }
 // CORRECTED 2026-09-27, direct report: "responsive phone rotation
 // should be anchored by the phone models OWN geoemtr origin... its
@@ -3178,6 +3318,7 @@ function syncHandModelEnabledCheckboxes() {
 // dev-panel control's own input event.
 function updatePhoneModelFrame() {
   if (!cfg.phoneModelEnabled || !phoneModelRaw) return
+  updatePhoneDisplaceDesktopFrame() // per-frame cursor-delta sampling (desktop only, no-ops on mobile) -- see its own comment for why this must run every frame, not per mousemove event
   applyPhoneModelTransform()
 }
 
@@ -4257,8 +4398,15 @@ function animate() {
   // composer.render() itself are skipped until something discrete flags
   // needsRender. isPaused already freezes the SAME per-frame block for an
   // unrelated reason (the Debug-group Pause button) -- folded into this
-  // same condition rather than checked twice.
-  const continuousRenderNeeded = !isPaused && cfg.trackingEnabled && hands.length > 0
+  // same condition rather than checked twice. ADDED 2026-09-30:
+  // cfg.phoneResponsiveDisplaceEnabled also forces continuous rendering,
+  // independent of cfg.trackingEnabled (Displace is now its own
+  // independent mechanic, per direct answer: "Fully independent") --
+  // without this, updatePhoneDisplaceDesktopFrame()'s own per-frame
+  // cursor-delta sampling (and mobile's per-frame visual read of the
+  // leaky-integrated position) would silently stop running the moment
+  // the render loop goes idle with Tracking Enabled off.
+  const continuousRenderNeeded = !isPaused && ((cfg.trackingEnabled && hands.length > 0) || cfg.phoneResponsiveDisplaceEnabled)
   const shouldRender = continuousRenderNeeded || needsRender
   if (shouldRender) {
     needsRender = false
@@ -5409,9 +5557,10 @@ const PHONE_MODEL_PER_MODEL_CONTROL_IDS = [
   // Responsive Rotation directly above (a smaller/lighter phone model
   // might reasonably want different displace tuning than a larger one).
   'checkboxPhoneResponsiveDisplaceEnabled', 'selectPhoneDisplaceMode',
-  'checkboxPhoneDisplaceAxisXEnabled', 'sliderPhoneDisplaceScaleX',
-  'checkboxPhoneDisplaceAxisYEnabled', 'sliderPhoneDisplaceScaleY',
-  'checkboxPhoneDisplaceAxisZEnabled', 'sliderPhoneDisplaceScaleZ',
+  'checkboxPhoneDisplaceResetEnabled',
+  'checkboxPhoneDisplaceAxisXEnabled', 'sliderPhoneDisplaceScaleX', 'checkboxPhoneDisplaceInvertX',
+  'checkboxPhoneDisplaceAxisYEnabled', 'sliderPhoneDisplaceScaleY', 'checkboxPhoneDisplaceInvertY',
+  'checkboxPhoneDisplaceAxisZEnabled', 'sliderPhoneDisplaceScaleZ', 'checkboxPhoneDisplaceInvertZ',
   'sliderPhoneResponsiveDisplaceFineTune', 'sliderPhoneDisplaceDamping',
   'textPhoneResponsiveDisplaceRange', 'textPhoneResponsiveDisplaceCurve',
   'checkboxScreenRenderEnabled', 'sliderScreenRecursionLevels',
@@ -5833,11 +5982,13 @@ function renderPhoneModelGroup(content) {
   const subResponsiveDisplace = addSubgroup(subResponsiveBehaviour, 'RESPONSIVE DISPLACE')
   addRow(subResponsiveDisplace, { id: 'checkboxPhoneResponsiveDisplaceEnabled', label: 'Responsive Displace (On/Off)', type: 'checkbox' })
   document.getElementById('checkboxPhoneResponsiveDisplaceEnabled').checked = cfg.phoneResponsiveDisplaceEnabled
-  // No baseline/reset call on enable, unlike Rotation's own checkbox --
-  // the leaky integrator's own decay already keeps it near zero when the
-  // phone is at rest, so there's no equivalent "leftover accumulated
-  // state from a previous test" risk to guard against here.
-  wireCheckbox('checkboxPhoneResponsiveDisplaceEnabled', (v) => { cfg.phoneResponsiveDisplaceEnabled = v })
+  // Requests motion permission on enable -- ADDED 2026-09-30, now that
+  // Displace is independent of Tracking Enabled (whose own checkbox used
+  // to be the only thing that ever called this), enabling Displace ALONE
+  // (Tracking Enabled off) needs its own trigger or mobile's real
+  // devicemotion listener never gets attached at all. See
+  // initMotionInput()'s own matching fix for the page-load case.
+  wireCheckbox('checkboxPhoneResponsiveDisplaceEnabled', (v) => { cfg.phoneResponsiveDisplaceEnabled = v; if (v) requestMotionPermissionIfNeeded() })
   // Displace Mode -- direct request: "i also want the 2 calclation
   // types, simialr to rotation, one with acceleration, and i guess the
   // other is the real world position." See integratePhoneDisplacement()'s
@@ -5845,28 +5996,48 @@ function renderPhoneModelGroup(content) {
   addRow(subResponsiveDisplace, { id: 'selectPhoneDisplaceMode', label: 'Displace Mode', type: 'select', options: [{ value: 'acceleration', text: 'Acceleration / Local Frame' }, { value: 'worldPosition', text: 'Real World Position' }], value: cfg.phoneDisplaceMode })
   document.getElementById('selectPhoneDisplaceMode').value = cfg.phoneDisplaceMode
   wireSelect('selectPhoneDisplaceMode', (v) => { cfg.phoneDisplaceMode = v })
-  // Per-axis on/off + scale -- X=left-right, Y=up-down, Z=perpendicular to
-  // the phone face/depth (direct correction of the user's own first
-  // message, which said Y for this). Matches the raw W3C
-  // devicemotion.acceleration.x/y/z convention directly -- see cfg's own
-  // phoneResponsiveDisplaceEnabled declaration comment for why no axis
-  // reshuffling was needed here, unlike Rotation's own beta/gamma/alpha
-  // mapping.
+  // Displace Reset -- added 2026-09-30, direct request: "add a
+  // displacement reset checkbox. Similar to the rotation, a double tap
+  // will place the phone back in its starting location." Independently
+  // toggleable from Rotation's own "Rotation Reset On/Off" -- both share
+  // the SAME double-tap/double-click gesture (setupPhoneRotationResetGesture()),
+  // not 2 separate gestures.
+  addRow(subResponsiveDisplace, { id: 'checkboxPhoneDisplaceResetEnabled', label: 'Displace Reset On/Off', type: 'checkbox' })
+  document.getElementById('checkboxPhoneDisplaceResetEnabled').checked = cfg.phoneDisplaceResetEnabled
+  wireCheckbox('checkboxPhoneDisplaceResetEnabled', (v) => { cfg.phoneDisplaceResetEnabled = v })
+  // Per-axis on/off + scale + invert -- X=left-right, Y=up-down,
+  // Z=perpendicular to the phone face/depth (direct correction of the
+  // user's own first message, which said Y for this). Matches the raw
+  // W3C devicemotion.acceleration.x/y/z convention directly -- see cfg's
+  // own phoneResponsiveDisplaceEnabled declaration comment for why no
+  // axis reshuffling was needed here, unlike Rotation's own beta/gamma/
+  // alpha mapping. Invert -- direct request: "provide me some ui to flip
+  // axes. so i dont need to go through you to fix it" -- see cfg's own
+  // phoneDisplaceInvertX declaration comment.
   addRow(subResponsiveDisplace, { id: 'checkboxPhoneDisplaceAxisXEnabled', label: 'X Axis Displace On/Off', type: 'checkbox' })
   document.getElementById('checkboxPhoneDisplaceAxisXEnabled').checked = cfg.phoneDisplaceAxisXEnabled
   wireCheckbox('checkboxPhoneDisplaceAxisXEnabled', (v) => { cfg.phoneDisplaceAxisXEnabled = v })
   addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplaceScaleX', label: 'X Axis Displace Scale (x)', type: 'slider', min: -3, max: 3, step: 'any', value: cfg.phoneDisplaceScaleX })
   wireSlider('sliderPhoneDisplaceScaleX', (v) => { cfg.phoneDisplaceScaleX = v })
+  addRow(subResponsiveDisplace, { id: 'checkboxPhoneDisplaceInvertX', label: 'Invert X Axis Displace', type: 'checkbox' })
+  document.getElementById('checkboxPhoneDisplaceInvertX').checked = cfg.phoneDisplaceInvertX
+  wireCheckbox('checkboxPhoneDisplaceInvertX', (v) => { cfg.phoneDisplaceInvertX = v })
   addRow(subResponsiveDisplace, { id: 'checkboxPhoneDisplaceAxisYEnabled', label: 'Y Axis Displace On/Off', type: 'checkbox' })
   document.getElementById('checkboxPhoneDisplaceAxisYEnabled').checked = cfg.phoneDisplaceAxisYEnabled
   wireCheckbox('checkboxPhoneDisplaceAxisYEnabled', (v) => { cfg.phoneDisplaceAxisYEnabled = v })
   addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplaceScaleY', label: 'Y Axis Displace Scale (x)', type: 'slider', min: -3, max: 3, step: 'any', value: cfg.phoneDisplaceScaleY })
   wireSlider('sliderPhoneDisplaceScaleY', (v) => { cfg.phoneDisplaceScaleY = v })
+  addRow(subResponsiveDisplace, { id: 'checkboxPhoneDisplaceInvertY', label: 'Invert Y Axis Displace', type: 'checkbox' })
+  document.getElementById('checkboxPhoneDisplaceInvertY').checked = cfg.phoneDisplaceInvertY
+  wireCheckbox('checkboxPhoneDisplaceInvertY', (v) => { cfg.phoneDisplaceInvertY = v })
   addRow(subResponsiveDisplace, { id: 'checkboxPhoneDisplaceAxisZEnabled', label: 'Z Axis Displace On/Off (Perpendicular To Face)', type: 'checkbox' })
   document.getElementById('checkboxPhoneDisplaceAxisZEnabled').checked = cfg.phoneDisplaceAxisZEnabled
   wireCheckbox('checkboxPhoneDisplaceAxisZEnabled', (v) => { cfg.phoneDisplaceAxisZEnabled = v })
   addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplaceScaleZ', label: 'Z Axis Displace Scale (x)', type: 'slider', min: -3, max: 3, step: 'any', value: cfg.phoneDisplaceScaleZ })
   wireSlider('sliderPhoneDisplaceScaleZ', (v) => { cfg.phoneDisplaceScaleZ = v })
+  addRow(subResponsiveDisplace, { id: 'checkboxPhoneDisplaceInvertZ', label: 'Invert Z Axis Displace', type: 'checkbox' })
+  document.getElementById('checkboxPhoneDisplaceInvertZ').checked = cfg.phoneDisplaceInvertZ
+  wireCheckbox('checkboxPhoneDisplaceInvertZ', (v) => { cfg.phoneDisplaceInvertZ = v })
   addRow(subResponsiveDisplace, { id: 'sliderPhoneResponsiveDisplaceFineTune', label: 'Displace Fine-Tune (World Units)', type: 'slider', min: -50, max: 50, step: 'any', value: cfg.phoneResponsiveDisplaceFineTune })
   wireSlider('sliderPhoneResponsiveDisplaceFineTune', (v) => { cfg.phoneResponsiveDisplaceFineTune = v })
   addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplaceDamping', label: 'Displace Damping (1=Instant)', type: 'slider', min: 0.05, max: 1, step: 0.01, value: cfg.phoneDisplaceDamping })
