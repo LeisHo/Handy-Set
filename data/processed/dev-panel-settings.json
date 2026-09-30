@@ -87,12 +87,12 @@
     "selectPoseTweenTargetPoseName": "Big Open Palm",
     "textPoseTweenCurve": "{\"points\": [{\"x\": 0, \"y\": 0}, {\"x\": 1, \"y\": 1}], \"method\": \"catmullrom\"}",
     "checkboxPhoneModelEnabled": true,
-    "hiddenPhoneModelFile": "data/processed/SMARTPHONE MODELS/Iphone17MaxPro.glb",
+    "hiddenPhoneModelFile": "blob:https://handy-set.vercel.app/828cd7f0-4b37-41ec-a2f0-10ca6716166d",
     "hiddenPhoneModelPerModelSettings": "{\"data/processed/SMARTPHONE MODELS/P5_Project_1.glb\":{\"sliderPhoneModelScale\":\"1\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"-1\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":true,\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"1\",\"textPhoneResponsiveRotationRange\":\"{\\\"min\\\":-57,\\\"max\\\":45}\",\"textPhoneResponsiveRotationCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"natural\\\"}\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"10\",\"sliderScreenRenderResolution\":\"165\",\"sliderScreenTextureScale\":\"1\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"1.35\",\"sliderScreenTextureScaleY\":\"1.2\",\"checkboxScreenToScale\":true,\"sliderScreenTextureOffsetX\":\"0\",\"sliderScreenTextureOffsetY\":\"0\",\"sliderScreenEmissionIntensity\":\"1.1\",\"checkboxScreenMirrorAlternatingX\":true,\"checkboxScreenMirrorAlternatingY\":false,\"checkboxScreenMirrorPhaseX\":false,\"checkboxScreenMirrorPhaseY\":false},\"data/processed/SMARTPHONE MODELS/Nothing2.glb\":{\"sliderPhoneModelScale\":\"1\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"0\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":true,\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"-1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"1\",\"textPhoneResponsiveRotationRange\":\"{\\\"min\\\":-57,\\\"max\\\":45}\",\"textPhoneResponsiveRotationCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"natural\\\"}\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"18\",\"sliderScreenRenderResolution\":\"200\",\"sliderScreenTextureScale\":\"0.9\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"1\",\"sliderScreenTextureScaleY\":\"0.9\",\"checkboxScreenToScale\":true,\"sliderScreenTextureOffsetX\":\"0.01\",\"sliderScreenTextureOffsetY\":\"0.05\",\"sliderScreenEmissionIntensity\":\"1\",\"checkboxScreenMirrorAlternatingX\":true,\"checkboxScreenMirrorAlternatingY\":true,\"checkboxScreenMirrorPhaseX\":false,\"checkboxScreenMirrorPhaseY\":false},\"data/processed/SMARTPHONE MODELS/Pixel 9A.glb\":{\"sliderPhoneModelScale\":\"1\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"0\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":true,\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"1\",\"textPhoneResponsiveRotationRange\":\"{\\\"min\\\":-57,\\\"max\\\":45}\",\"textPhoneResponsiveRotationCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"natural\\\"}\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"5\",\"sliderScreenRenderResolution\":\"175\",\"sliderScreenTextureScale\":\"0.95\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"1.1\",\"sliderScreenTextureScaleY\":\"0.95\",\"checkboxScreenToScale\":true,\"sliderScreenTextureOffsetX\":\"0\",\"sliderScreenTextureOffsetY\":\"0\",\"sliderScreenEmissionIntensity\":\"0.85\",\"checkboxScreenMirrorAlternatingX\":true,\"checkboxScreenMirrorAlternatingY\":false,\"checkboxScreenMirrorPhaseX\":false,\"checkboxScreenMirrorPhaseY\":false},\"data/processed/SMARTPHONE MODELS/Iphone17MaxPro.glb\":{\"sliderPhoneModelScale\":\"1\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"0\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":true,\"selectPhoneRotationMode\":\"gyro\",\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"1\",\"textPhoneResponsiveRotationRange\":\"{\\\"min\\\":-57,\\\"max\\\":45}\",\"textPhoneResponsiveRotationCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"natural\\\"}\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"10\",\"sliderScreenRenderResolution\":\"175\",\"sliderScreenTextureScale\":\"0.95\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"1.1\",\"sliderScreenTextureScaleY\":\"0.95\",\"checkboxScreenToScale\":true,\"sliderScreenTextureOffsetX\":\"0\",\"sliderScreenTextureOffsetY\":\"0\",\"sliderScreenEmissionIntensity\":\"0.85\",\"checkboxScreenMirrorAlternatingX\":true,\"checkboxScreenMirrorAlternatingY\":false,\"checkboxScreenMirrorPhaseX\":false,\"checkboxScreenMirrorPhaseY\":false},\"data/processed/SMARTPHONE MODELS/Galaxy S2.glb\":{\"sliderPhoneModelScale\":\"1\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"0\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":true,\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"-1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"1\",\"textPhoneResponsiveRotationRange\":\"{\\\"min\\\":-57,\\\"max\\\":45}\",\"textPhoneResponsiveRotationCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"natural\\\"}\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"9\",\"sliderScreenRenderResolution\":\"200\",\"sliderScreenTextureScale\":\"1.25\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"1\",\"sliderScreenTextureScaleY\":\"1\",\"checkboxScreenToScale\":true,\"sliderScreenTextureOffsetX\":\"0\",\"sliderScreenTextureOffsetY\":\"0\",\"sliderScreenEmissionIntensity\":\"1\",\"checkboxScreenMirrorAlternatingX\":true,\"checkboxScreenMirrorAlternatingY\":false,\"checkboxScreenMirrorPhaseX\":false,\"checkboxScreenMirrorPhaseY\":false},\"data/processed/SMARTPHONE MODELS/Motorola Razr.glb\":{\"sliderPhoneModelScale\":\"0.75\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"-4\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":false,\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"-1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"1\",\"textPhoneResponsiveRotationRange\":\"{\\\"min\\\":-57,\\\"max\\\":45}\",\"textPhoneResponsiveRotationCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"natural\\\"}\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"5\",\"sliderScreenRenderResolution\":\"100\",\"sliderScreenTextureScale\":\"1\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"1\",\"sliderScreenTextureScaleY\":\"1\",\"checkboxScreenToScale\":true,\"sliderScreenTextureOffsetX\":\"0\",\"sliderScreenTextureOffsetY\":\"0.05\",\"sliderScreenEmissionIntensity\":\"3.3\",\"checkboxScreenMirrorAlternatingX\":true,\"checkboxScreenMirrorAlternatingY\":false,\"checkboxScreenMirrorPhaseX\":false,\"checkboxScreenMirrorPhaseY\":false},\"data/processed/SMARTPHONE MODELS/Samsung Galaxy S26.glb\":{\"sliderPhoneModelScale\":\"1\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"0\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":true,\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"-1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1.3\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"0.21\",\"textPhoneResponsiveRotationRange\":\"{\\\"min\\\":-57,\\\"max\\\":45}\",\"textPhoneResponsiveRotationCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"natural\\\"}\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"18\",\"sliderScreenRenderResolution\":\"200\",\"sliderScreenTextureScale\":\"1.2\",\"sliderScreenTextureRotation\":\"0\",\"sliderScreenTextureScaleX\":\"0.6\",\"sliderScreenTextureScaleY\":\"1.1\",\"checkboxScreenToScale\":true,\"sliderScreenTextureOffsetX\":\"0\",\"sliderScreenTextureOffsetY\":\"-0.06\",\"sliderScreenEmissionIntensity\":\"0.95\",\"checkboxScreenMirrorAlternatingX\":false,\"checkboxScreenMirrorAlternatingY\":true,\"checkboxScreenMirrorPhaseX\":false,\"checkboxScreenMirrorPhaseY\":false},\"data/processed/SMARTPHONE MODELS/iPhone 17 Max.glb\":{\"sliderPhoneModelScale\":\"0.5\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"0\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":true,\"selectPhoneRotationMode\":\"gyro\",\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"-1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1.3\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"0.21\",\"textPhoneResponsiveRotationRange\":\"{\\\"min\\\":-57,\\\"max\\\":45}\",\"textPhoneResponsiveRotationCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"natural\\\"}\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"7\",\"sliderScreenRenderResolution\":\"100\",\"sliderScreenTextureScale\":\"1\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"0.6\",\"sliderScreenTextureScaleY\":\"1.1\",\"checkboxScreenToScale\":true,\"sliderScreenTextureOffsetX\":\"0\",\"sliderScreenTextureOffsetY\":\"0.01\",\"sliderScreenEmissionIntensity\":\"0.9\",\"checkboxScreenMirrorAlternatingX\":true,\"checkboxScreenMirrorAlternatingY\":false,\"checkboxScreenMirrorPhaseX\":false,\"checkboxScreenMirrorPhaseY\":false}}",
     "sliderPhoneModelScale": 1,
     "sliderPhoneModelOffsetX": 0,
     "sliderPhoneModelOffsetY": 31,
-    "sliderPhoneModelOffsetZ": 1,
+    "sliderPhoneModelOffsetZ": -1,
     "sliderPhoneModelRotX": 0,
     "sliderPhoneModelRotY": 0,
     "sliderPhoneModelRotZ": 0,
@@ -187,7 +187,7 @@
   "layout": {
     "left": 26,
     "top": 27,
-    "width": 350,
+    "width": 607,
     "height": 671
   },
   "devPanelStyle": {
@@ -202,7 +202,7 @@
     "titleTextColor": "#ffffff",
     "nonTitleTextColor": "#ffffff",
     "accentColor": "#005f8f",
-    "sliderColor": "#ffffff",
+    "sliderColor": "#a8e2ff",
     "fontFamily": "Helvetica, Arial, sans-serif",
     "capsButtonText": true,
     "capsTabText": true,
@@ -232,9 +232,9 @@
     "buttonTextColor": "#ffffff",
     "settingNumberColor": "#5cc9ff",
     "tabTextColor": "#ffffff",
-    "accentColor2": "#26253a",
-    "buttonColor": "#3a3a4a",
-    "accentColor3": "#7ec8e3"
+    "accentColor2": "#9994ff",
+    "buttonColor": "#b44f18",
+    "accentColor3": "#043a4e"
   },
   "mobileDevPanelStyle": {
     "titleFontSize": 17,
@@ -330,6 +330,1333 @@
   },
   "sectionOrder": {
     "desktopTabContent": [
+      {
+        "key": "desktop:Dev Panel",
+        "items": [
+          {
+            "type": "group",
+            "section": {
+              "key": "desktop:MECHANICS",
+              "items": [
+                {
+                  "type": "row",
+                  "key": "sliderDevPanelScrollStrength"
+                }
+              ],
+              "rowKeys": [
+                "sliderDevPanelScrollStrength"
+              ],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "group",
+            "section": {
+              "key": "desktop:PANEL UI",
+              "items": [
+                {
+                  "type": "row",
+                  "key": "colorDevPanelBg"
+                },
+                {
+                  "type": "row",
+                  "key": "colorDevPanelAccent"
+                },
+                {
+                  "type": "row",
+                  "key": "colorDevPanelSliderColor"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderDevPanelOpacity"
+                },
+                {
+                  "type": "row",
+                  "key": "colorDevPanelAccent2"
+                },
+                {
+                  "type": "row",
+                  "key": "colorDevPanelAccent3"
+                },
+                {
+                  "type": "row",
+                  "key": "colorDevPanelButtonColor"
+                }
+              ],
+              "rowKeys": [
+                "colorDevPanelBg",
+                "colorDevPanelAccent",
+                "colorDevPanelSliderColor",
+                "sliderDevPanelOpacity",
+                "colorDevPanelAccent2",
+                "colorDevPanelAccent3",
+                "colorDevPanelButtonColor"
+              ],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "group",
+            "section": {
+              "key": "desktop:TEXT",
+              "items": [
+                {
+                  "type": "row",
+                  "key": "selectDevPanelFontFamily"
+                },
+                {
+                  "type": "group",
+                  "section": {
+                    "key": "desktop:Dev Panel Title",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "checkboxDevBoldTitle"
+                      },
+                      {
+                        "type": "row",
+                        "key": "checkboxDevCapsTitleText"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderDevPanelTitleFontSize"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderDevPanelTitleLetterSpacing"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderDevPanelTitleLineHeight"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderDevPanelButtonTextBorder"
+                      },
+                      {
+                        "type": "row",
+                        "key": "colorDevPanelTitleText"
+                      }
+                    ],
+                    "rowKeys": [
+                      "checkboxDevBoldTitle",
+                      "checkboxDevCapsTitleText",
+                      "sliderDevPanelTitleFontSize",
+                      "sliderDevPanelTitleLetterSpacing",
+                      "sliderDevPanelTitleLineHeight",
+                      "sliderDevPanelButtonTextBorder",
+                      "colorDevPanelTitleText"
+                    ],
+                    "subgroups": []
+                  }
+                },
+                {
+                  "type": "group",
+                  "section": {
+                    "key": "desktop:Group Title",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "checkboxDevBoldGroup"
+                      },
+                      {
+                        "type": "row",
+                        "key": "checkboxDevCapsGroupNames"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderDevPanelGroupTitleFontSize"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderDevGroupTextLetterSpacing"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderDevPanelGroupLineHeight"
+                      },
+                      {
+                        "type": "row",
+                        "key": "colorDevPanelGroupText"
+                      },
+                      {
+                        "type": "row",
+                        "key": "colorDevPanelGroupLabelBg"
+                      }
+                    ],
+                    "rowKeys": [
+                      "checkboxDevBoldGroup",
+                      "checkboxDevCapsGroupNames",
+                      "sliderDevPanelGroupTitleFontSize",
+                      "sliderDevGroupTextLetterSpacing",
+                      "sliderDevPanelGroupLineHeight",
+                      "colorDevPanelGroupText",
+                      "colorDevPanelGroupLabelBg"
+                    ],
+                    "subgroups": []
+                  }
+                },
+                {
+                  "type": "group",
+                  "section": {
+                    "key": "desktop:Setting Title",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "checkboxDevCapsSettingsText"
+                      },
+                      {
+                        "type": "row",
+                        "key": "checkboxDevBoldSettings"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderDevPanelSettingTitleFontSize"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderDevPanelValueFontSize"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderDevPanelSettingsLineHeight"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderDevSettingsTextLetterSpacing"
+                      },
+                      {
+                        "type": "row",
+                        "key": "colorDevPanelNonTitleText"
+                      },
+                      {
+                        "type": "row",
+                        "key": "colorDevPanelSettingNumber"
+                      }
+                    ],
+                    "rowKeys": [
+                      "checkboxDevCapsSettingsText",
+                      "checkboxDevBoldSettings",
+                      "sliderDevPanelSettingTitleFontSize",
+                      "sliderDevPanelValueFontSize",
+                      "sliderDevPanelSettingsLineHeight",
+                      "sliderDevSettingsTextLetterSpacing",
+                      "colorDevPanelNonTitleText",
+                      "colorDevPanelSettingNumber"
+                    ],
+                    "subgroups": []
+                  }
+                },
+                {
+                  "type": "group",
+                  "section": {
+                    "key": "desktop:TABS",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "checkboxDevBoldTab"
+                      },
+                      {
+                        "type": "row",
+                        "key": "checkboxDevCapsTabText"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderDevPanelTabFontSize"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderDevTabTextLetterSpacing"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderDevPanelTabLineHeight"
+                      },
+                      {
+                        "type": "row",
+                        "key": "colorDevPanelTabText"
+                      }
+                    ],
+                    "rowKeys": [
+                      "checkboxDevBoldTab",
+                      "checkboxDevCapsTabText",
+                      "sliderDevPanelTabFontSize",
+                      "sliderDevTabTextLetterSpacing",
+                      "sliderDevPanelTabLineHeight",
+                      "colorDevPanelTabText"
+                    ],
+                    "subgroups": []
+                  }
+                },
+                {
+                  "type": "group",
+                  "section": {
+                    "key": "desktop:BUTTONS",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "checkboxDevBoldButton"
+                      },
+                      {
+                        "type": "row",
+                        "key": "checkboxDevCapsButtonText"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderDevPanelButtonFontSize"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderDevButtonTextLetterSpacing"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderDevPanelButtonLineHeight"
+                      },
+                      {
+                        "type": "row",
+                        "key": "colorDevPanelButtonText"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderDevPanelButtonHeight"
+                      }
+                    ],
+                    "rowKeys": [
+                      "checkboxDevBoldButton",
+                      "checkboxDevCapsButtonText",
+                      "sliderDevPanelButtonFontSize",
+                      "sliderDevButtonTextLetterSpacing",
+                      "sliderDevPanelButtonLineHeight",
+                      "colorDevPanelButtonText",
+                      "sliderDevPanelButtonHeight"
+                    ],
+                    "subgroups": []
+                  }
+                }
+              ],
+              "rowKeys": [
+                "selectDevPanelFontFamily"
+              ],
+              "subgroups": [
+                {
+                  "key": "desktop:Dev Panel Title",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "checkboxDevBoldTitle"
+                    },
+                    {
+                      "type": "row",
+                      "key": "checkboxDevCapsTitleText"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderDevPanelTitleFontSize"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderDevPanelTitleLetterSpacing"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderDevPanelTitleLineHeight"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderDevPanelButtonTextBorder"
+                    },
+                    {
+                      "type": "row",
+                      "key": "colorDevPanelTitleText"
+                    }
+                  ],
+                  "rowKeys": [
+                    "checkboxDevBoldTitle",
+                    "checkboxDevCapsTitleText",
+                    "sliderDevPanelTitleFontSize",
+                    "sliderDevPanelTitleLetterSpacing",
+                    "sliderDevPanelTitleLineHeight",
+                    "sliderDevPanelButtonTextBorder",
+                    "colorDevPanelTitleText"
+                  ],
+                  "subgroups": []
+                },
+                {
+                  "key": "desktop:Group Title",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "checkboxDevBoldGroup"
+                    },
+                    {
+                      "type": "row",
+                      "key": "checkboxDevCapsGroupNames"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderDevPanelGroupTitleFontSize"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderDevGroupTextLetterSpacing"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderDevPanelGroupLineHeight"
+                    },
+                    {
+                      "type": "row",
+                      "key": "colorDevPanelGroupText"
+                    },
+                    {
+                      "type": "row",
+                      "key": "colorDevPanelGroupLabelBg"
+                    }
+                  ],
+                  "rowKeys": [
+                    "checkboxDevBoldGroup",
+                    "checkboxDevCapsGroupNames",
+                    "sliderDevPanelGroupTitleFontSize",
+                    "sliderDevGroupTextLetterSpacing",
+                    "sliderDevPanelGroupLineHeight",
+                    "colorDevPanelGroupText",
+                    "colorDevPanelGroupLabelBg"
+                  ],
+                  "subgroups": []
+                },
+                {
+                  "key": "desktop:Setting Title",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "checkboxDevCapsSettingsText"
+                    },
+                    {
+                      "type": "row",
+                      "key": "checkboxDevBoldSettings"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderDevPanelSettingTitleFontSize"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderDevPanelValueFontSize"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderDevPanelSettingsLineHeight"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderDevSettingsTextLetterSpacing"
+                    },
+                    {
+                      "type": "row",
+                      "key": "colorDevPanelNonTitleText"
+                    },
+                    {
+                      "type": "row",
+                      "key": "colorDevPanelSettingNumber"
+                    }
+                  ],
+                  "rowKeys": [
+                    "checkboxDevCapsSettingsText",
+                    "checkboxDevBoldSettings",
+                    "sliderDevPanelSettingTitleFontSize",
+                    "sliderDevPanelValueFontSize",
+                    "sliderDevPanelSettingsLineHeight",
+                    "sliderDevSettingsTextLetterSpacing",
+                    "colorDevPanelNonTitleText",
+                    "colorDevPanelSettingNumber"
+                  ],
+                  "subgroups": []
+                },
+                {
+                  "key": "desktop:TABS",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "checkboxDevBoldTab"
+                    },
+                    {
+                      "type": "row",
+                      "key": "checkboxDevCapsTabText"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderDevPanelTabFontSize"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderDevTabTextLetterSpacing"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderDevPanelTabLineHeight"
+                    },
+                    {
+                      "type": "row",
+                      "key": "colorDevPanelTabText"
+                    }
+                  ],
+                  "rowKeys": [
+                    "checkboxDevBoldTab",
+                    "checkboxDevCapsTabText",
+                    "sliderDevPanelTabFontSize",
+                    "sliderDevTabTextLetterSpacing",
+                    "sliderDevPanelTabLineHeight",
+                    "colorDevPanelTabText"
+                  ],
+                  "subgroups": []
+                },
+                {
+                  "key": "desktop:BUTTONS",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "checkboxDevBoldButton"
+                    },
+                    {
+                      "type": "row",
+                      "key": "checkboxDevCapsButtonText"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderDevPanelButtonFontSize"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderDevButtonTextLetterSpacing"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderDevPanelButtonLineHeight"
+                    },
+                    {
+                      "type": "row",
+                      "key": "colorDevPanelButtonText"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderDevPanelButtonHeight"
+                    }
+                  ],
+                  "rowKeys": [
+                    "checkboxDevBoldButton",
+                    "checkboxDevCapsButtonText",
+                    "sliderDevPanelButtonFontSize",
+                    "sliderDevButtonTextLetterSpacing",
+                    "sliderDevPanelButtonLineHeight",
+                    "colorDevPanelButtonText",
+                    "sliderDevPanelButtonHeight"
+                  ],
+                  "subgroups": []
+                }
+              ]
+            }
+          }
+        ],
+        "rowKeys": [],
+        "subgroups": [
+          {
+            "key": "desktop:MECHANICS",
+            "items": [
+              {
+                "type": "row",
+                "key": "sliderDevPanelScrollStrength"
+              }
+            ],
+            "rowKeys": [
+              "sliderDevPanelScrollStrength"
+            ],
+            "subgroups": []
+          },
+          {
+            "key": "desktop:PANEL UI",
+            "items": [
+              {
+                "type": "row",
+                "key": "colorDevPanelBg"
+              },
+              {
+                "type": "row",
+                "key": "colorDevPanelAccent"
+              },
+              {
+                "type": "row",
+                "key": "colorDevPanelSliderColor"
+              },
+              {
+                "type": "row",
+                "key": "sliderDevPanelOpacity"
+              },
+              {
+                "type": "row",
+                "key": "colorDevPanelAccent2"
+              },
+              {
+                "type": "row",
+                "key": "colorDevPanelAccent3"
+              },
+              {
+                "type": "row",
+                "key": "colorDevPanelButtonColor"
+              }
+            ],
+            "rowKeys": [
+              "colorDevPanelBg",
+              "colorDevPanelAccent",
+              "colorDevPanelSliderColor",
+              "sliderDevPanelOpacity",
+              "colorDevPanelAccent2",
+              "colorDevPanelAccent3",
+              "colorDevPanelButtonColor"
+            ],
+            "subgroups": []
+          },
+          {
+            "key": "desktop:TEXT",
+            "items": [
+              {
+                "type": "row",
+                "key": "selectDevPanelFontFamily"
+              },
+              {
+                "type": "group",
+                "section": {
+                  "key": "desktop:Dev Panel Title",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "checkboxDevBoldTitle"
+                    },
+                    {
+                      "type": "row",
+                      "key": "checkboxDevCapsTitleText"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderDevPanelTitleFontSize"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderDevPanelTitleLetterSpacing"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderDevPanelTitleLineHeight"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderDevPanelButtonTextBorder"
+                    },
+                    {
+                      "type": "row",
+                      "key": "colorDevPanelTitleText"
+                    }
+                  ],
+                  "rowKeys": [
+                    "checkboxDevBoldTitle",
+                    "checkboxDevCapsTitleText",
+                    "sliderDevPanelTitleFontSize",
+                    "sliderDevPanelTitleLetterSpacing",
+                    "sliderDevPanelTitleLineHeight",
+                    "sliderDevPanelButtonTextBorder",
+                    "colorDevPanelTitleText"
+                  ],
+                  "subgroups": []
+                }
+              },
+              {
+                "type": "group",
+                "section": {
+                  "key": "desktop:Group Title",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "checkboxDevBoldGroup"
+                    },
+                    {
+                      "type": "row",
+                      "key": "checkboxDevCapsGroupNames"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderDevPanelGroupTitleFontSize"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderDevGroupTextLetterSpacing"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderDevPanelGroupLineHeight"
+                    },
+                    {
+                      "type": "row",
+                      "key": "colorDevPanelGroupText"
+                    },
+                    {
+                      "type": "row",
+                      "key": "colorDevPanelGroupLabelBg"
+                    }
+                  ],
+                  "rowKeys": [
+                    "checkboxDevBoldGroup",
+                    "checkboxDevCapsGroupNames",
+                    "sliderDevPanelGroupTitleFontSize",
+                    "sliderDevGroupTextLetterSpacing",
+                    "sliderDevPanelGroupLineHeight",
+                    "colorDevPanelGroupText",
+                    "colorDevPanelGroupLabelBg"
+                  ],
+                  "subgroups": []
+                }
+              },
+              {
+                "type": "group",
+                "section": {
+                  "key": "desktop:Setting Title",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "checkboxDevCapsSettingsText"
+                    },
+                    {
+                      "type": "row",
+                      "key": "checkboxDevBoldSettings"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderDevPanelSettingTitleFontSize"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderDevPanelValueFontSize"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderDevPanelSettingsLineHeight"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderDevSettingsTextLetterSpacing"
+                    },
+                    {
+                      "type": "row",
+                      "key": "colorDevPanelNonTitleText"
+                    },
+                    {
+                      "type": "row",
+                      "key": "colorDevPanelSettingNumber"
+                    }
+                  ],
+                  "rowKeys": [
+                    "checkboxDevCapsSettingsText",
+                    "checkboxDevBoldSettings",
+                    "sliderDevPanelSettingTitleFontSize",
+                    "sliderDevPanelValueFontSize",
+                    "sliderDevPanelSettingsLineHeight",
+                    "sliderDevSettingsTextLetterSpacing",
+                    "colorDevPanelNonTitleText",
+                    "colorDevPanelSettingNumber"
+                  ],
+                  "subgroups": []
+                }
+              },
+              {
+                "type": "group",
+                "section": {
+                  "key": "desktop:TABS",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "checkboxDevBoldTab"
+                    },
+                    {
+                      "type": "row",
+                      "key": "checkboxDevCapsTabText"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderDevPanelTabFontSize"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderDevTabTextLetterSpacing"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderDevPanelTabLineHeight"
+                    },
+                    {
+                      "type": "row",
+                      "key": "colorDevPanelTabText"
+                    }
+                  ],
+                  "rowKeys": [
+                    "checkboxDevBoldTab",
+                    "checkboxDevCapsTabText",
+                    "sliderDevPanelTabFontSize",
+                    "sliderDevTabTextLetterSpacing",
+                    "sliderDevPanelTabLineHeight",
+                    "colorDevPanelTabText"
+                  ],
+                  "subgroups": []
+                }
+              },
+              {
+                "type": "group",
+                "section": {
+                  "key": "desktop:BUTTONS",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "checkboxDevBoldButton"
+                    },
+                    {
+                      "type": "row",
+                      "key": "checkboxDevCapsButtonText"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderDevPanelButtonFontSize"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderDevButtonTextLetterSpacing"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderDevPanelButtonLineHeight"
+                    },
+                    {
+                      "type": "row",
+                      "key": "colorDevPanelButtonText"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderDevPanelButtonHeight"
+                    }
+                  ],
+                  "rowKeys": [
+                    "checkboxDevBoldButton",
+                    "checkboxDevCapsButtonText",
+                    "sliderDevPanelButtonFontSize",
+                    "sliderDevButtonTextLetterSpacing",
+                    "sliderDevPanelButtonLineHeight",
+                    "colorDevPanelButtonText",
+                    "sliderDevPanelButtonHeight"
+                  ],
+                  "subgroups": []
+                }
+              }
+            ],
+            "rowKeys": [
+              "selectDevPanelFontFamily"
+            ],
+            "subgroups": [
+              {
+                "key": "desktop:Dev Panel Title",
+                "items": [
+                  {
+                    "type": "row",
+                    "key": "checkboxDevBoldTitle"
+                  },
+                  {
+                    "type": "row",
+                    "key": "checkboxDevCapsTitleText"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderDevPanelTitleFontSize"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderDevPanelTitleLetterSpacing"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderDevPanelTitleLineHeight"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderDevPanelButtonTextBorder"
+                  },
+                  {
+                    "type": "row",
+                    "key": "colorDevPanelTitleText"
+                  }
+                ],
+                "rowKeys": [
+                  "checkboxDevBoldTitle",
+                  "checkboxDevCapsTitleText",
+                  "sliderDevPanelTitleFontSize",
+                  "sliderDevPanelTitleLetterSpacing",
+                  "sliderDevPanelTitleLineHeight",
+                  "sliderDevPanelButtonTextBorder",
+                  "colorDevPanelTitleText"
+                ],
+                "subgroups": []
+              },
+              {
+                "key": "desktop:Group Title",
+                "items": [
+                  {
+                    "type": "row",
+                    "key": "checkboxDevBoldGroup"
+                  },
+                  {
+                    "type": "row",
+                    "key": "checkboxDevCapsGroupNames"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderDevPanelGroupTitleFontSize"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderDevGroupTextLetterSpacing"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderDevPanelGroupLineHeight"
+                  },
+                  {
+                    "type": "row",
+                    "key": "colorDevPanelGroupText"
+                  },
+                  {
+                    "type": "row",
+                    "key": "colorDevPanelGroupLabelBg"
+                  }
+                ],
+                "rowKeys": [
+                  "checkboxDevBoldGroup",
+                  "checkboxDevCapsGroupNames",
+                  "sliderDevPanelGroupTitleFontSize",
+                  "sliderDevGroupTextLetterSpacing",
+                  "sliderDevPanelGroupLineHeight",
+                  "colorDevPanelGroupText",
+                  "colorDevPanelGroupLabelBg"
+                ],
+                "subgroups": []
+              },
+              {
+                "key": "desktop:Setting Title",
+                "items": [
+                  {
+                    "type": "row",
+                    "key": "checkboxDevCapsSettingsText"
+                  },
+                  {
+                    "type": "row",
+                    "key": "checkboxDevBoldSettings"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderDevPanelSettingTitleFontSize"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderDevPanelValueFontSize"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderDevPanelSettingsLineHeight"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderDevSettingsTextLetterSpacing"
+                  },
+                  {
+                    "type": "row",
+                    "key": "colorDevPanelNonTitleText"
+                  },
+                  {
+                    "type": "row",
+                    "key": "colorDevPanelSettingNumber"
+                  }
+                ],
+                "rowKeys": [
+                  "checkboxDevCapsSettingsText",
+                  "checkboxDevBoldSettings",
+                  "sliderDevPanelSettingTitleFontSize",
+                  "sliderDevPanelValueFontSize",
+                  "sliderDevPanelSettingsLineHeight",
+                  "sliderDevSettingsTextLetterSpacing",
+                  "colorDevPanelNonTitleText",
+                  "colorDevPanelSettingNumber"
+                ],
+                "subgroups": []
+              },
+              {
+                "key": "desktop:TABS",
+                "items": [
+                  {
+                    "type": "row",
+                    "key": "checkboxDevBoldTab"
+                  },
+                  {
+                    "type": "row",
+                    "key": "checkboxDevCapsTabText"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderDevPanelTabFontSize"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderDevTabTextLetterSpacing"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderDevPanelTabLineHeight"
+                  },
+                  {
+                    "type": "row",
+                    "key": "colorDevPanelTabText"
+                  }
+                ],
+                "rowKeys": [
+                  "checkboxDevBoldTab",
+                  "checkboxDevCapsTabText",
+                  "sliderDevPanelTabFontSize",
+                  "sliderDevTabTextLetterSpacing",
+                  "sliderDevPanelTabLineHeight",
+                  "colorDevPanelTabText"
+                ],
+                "subgroups": []
+              },
+              {
+                "key": "desktop:BUTTONS",
+                "items": [
+                  {
+                    "type": "row",
+                    "key": "checkboxDevBoldButton"
+                  },
+                  {
+                    "type": "row",
+                    "key": "checkboxDevCapsButtonText"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderDevPanelButtonFontSize"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderDevButtonTextLetterSpacing"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderDevPanelButtonLineHeight"
+                  },
+                  {
+                    "type": "row",
+                    "key": "colorDevPanelButtonText"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderDevPanelButtonHeight"
+                  }
+                ],
+                "rowKeys": [
+                  "checkboxDevBoldButton",
+                  "checkboxDevCapsButtonText",
+                  "sliderDevPanelButtonFontSize",
+                  "sliderDevButtonTextLetterSpacing",
+                  "sliderDevPanelButtonLineHeight",
+                  "colorDevPanelButtonText",
+                  "sliderDevPanelButtonHeight"
+                ],
+                "subgroups": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "desktop:Debug",
+        "items": [
+          {
+            "type": "group",
+            "section": {
+              "key": "desktop:Object Axes",
+              "items": [
+                {
+                  "type": "row",
+                  "key": "checkboxObjectAxesEnabled"
+                },
+                {
+                  "type": "row",
+                  "key": "checkboxObjectAxesRenderInFront"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderObjectAxesThickness"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderObjectAxesLength"
+                }
+              ],
+              "rowKeys": [
+                "checkboxObjectAxesEnabled",
+                "checkboxObjectAxesRenderInFront",
+                "sliderObjectAxesThickness",
+                "sliderObjectAxesLength"
+              ],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "row",
+            "key": "checkboxShowAxesHelper"
+          },
+          {
+            "type": "group",
+            "section": {
+              "key": "desktop:Settings",
+              "items": [
+                {
+                  "type": "row",
+                  "key": "checkboxDeviceInfoEnabled"
+                }
+              ],
+              "rowKeys": [
+                "checkboxDeviceInfoEnabled"
+              ],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "group",
+            "section": {
+              "key": "desktop:Mouse Log",
+              "items": [
+                {
+                  "type": "row",
+                  "key": "checkboxMouseLogPosition"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderMouseLogInterval"
+                },
+                {
+                  "type": "row",
+                  "key": "checkboxMouseLogScroll"
+                },
+                {
+                  "type": "row",
+                  "key": "checkboxMouseLogKeystrokes"
+                }
+              ],
+              "rowKeys": [
+                "checkboxMouseLogPosition",
+                "sliderMouseLogInterval",
+                "checkboxMouseLogScroll",
+                "checkboxMouseLogKeystrokes"
+              ],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "row",
+            "key": "checkboxShowGridHelper"
+          },
+          {
+            "type": "row",
+            "key": "checkboxShowWireframe"
+          },
+          {
+            "type": "group",
+            "section": {
+              "key": "desktop:Sensors",
+              "items": [
+                {
+                  "type": "row",
+                  "key": "checkboxSensorStream"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderSensorInterval"
+                },
+                {
+                  "type": "row",
+                  "key": "checkboxSensorLogAccel"
+                },
+                {
+                  "type": "row",
+                  "key": "checkboxSensorLogGyro"
+                },
+                {
+                  "type": "row",
+                  "key": "checkboxSensorLogCompass"
+                },
+                {
+                  "type": "row",
+                  "key": "checkboxSensorLogOrientBeta"
+                },
+                {
+                  "type": "row",
+                  "key": "checkboxSensorLogOrientGamma"
+                }
+              ],
+              "rowKeys": [
+                "checkboxSensorStream",
+                "sliderSensorInterval",
+                "checkboxSensorLogAccel",
+                "checkboxSensorLogGyro",
+                "checkboxSensorLogCompass",
+                "checkboxSensorLogOrientBeta",
+                "checkboxSensorLogOrientGamma"
+              ],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "group",
+            "section": {
+              "key": "desktop:Phone Model Log",
+              "items": [],
+              "rowKeys": [],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "row",
+            "key": "__row8"
+          }
+        ],
+        "rowKeys": [
+          "checkboxShowAxesHelper",
+          "checkboxShowGridHelper",
+          "checkboxShowWireframe",
+          "__row8"
+        ],
+        "subgroups": [
+          {
+            "key": "desktop:Object Axes",
+            "items": [
+              {
+                "type": "row",
+                "key": "checkboxObjectAxesEnabled"
+              },
+              {
+                "type": "row",
+                "key": "checkboxObjectAxesRenderInFront"
+              },
+              {
+                "type": "row",
+                "key": "sliderObjectAxesThickness"
+              },
+              {
+                "type": "row",
+                "key": "sliderObjectAxesLength"
+              }
+            ],
+            "rowKeys": [
+              "checkboxObjectAxesEnabled",
+              "checkboxObjectAxesRenderInFront",
+              "sliderObjectAxesThickness",
+              "sliderObjectAxesLength"
+            ],
+            "subgroups": []
+          },
+          {
+            "key": "desktop:Settings",
+            "items": [
+              {
+                "type": "row",
+                "key": "checkboxDeviceInfoEnabled"
+              }
+            ],
+            "rowKeys": [
+              "checkboxDeviceInfoEnabled"
+            ],
+            "subgroups": []
+          },
+          {
+            "key": "desktop:Mouse Log",
+            "items": [
+              {
+                "type": "row",
+                "key": "checkboxMouseLogPosition"
+              },
+              {
+                "type": "row",
+                "key": "sliderMouseLogInterval"
+              },
+              {
+                "type": "row",
+                "key": "checkboxMouseLogScroll"
+              },
+              {
+                "type": "row",
+                "key": "checkboxMouseLogKeystrokes"
+              }
+            ],
+            "rowKeys": [
+              "checkboxMouseLogPosition",
+              "sliderMouseLogInterval",
+              "checkboxMouseLogScroll",
+              "checkboxMouseLogKeystrokes"
+            ],
+            "subgroups": []
+          },
+          {
+            "key": "desktop:Sensors",
+            "items": [
+              {
+                "type": "row",
+                "key": "checkboxSensorStream"
+              },
+              {
+                "type": "row",
+                "key": "sliderSensorInterval"
+              },
+              {
+                "type": "row",
+                "key": "checkboxSensorLogAccel"
+              },
+              {
+                "type": "row",
+                "key": "checkboxSensorLogGyro"
+              },
+              {
+                "type": "row",
+                "key": "checkboxSensorLogCompass"
+              },
+              {
+                "type": "row",
+                "key": "checkboxSensorLogOrientBeta"
+              },
+              {
+                "type": "row",
+                "key": "checkboxSensorLogOrientGamma"
+              }
+            ],
+            "rowKeys": [
+              "checkboxSensorStream",
+              "sliderSensorInterval",
+              "checkboxSensorLogAccel",
+              "checkboxSensorLogGyro",
+              "checkboxSensorLogCompass",
+              "checkboxSensorLogOrientBeta",
+              "checkboxSensorLogOrientGamma"
+            ],
+            "subgroups": []
+          },
+          {
+            "key": "desktop:Phone Model Log",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          }
+        ]
+      },
       {
         "key": "desktop:PHONE MODEL",
         "items": [
@@ -3297,1333 +4624,6 @@
           "sliderFingerGizmoAxisThickness"
         ],
         "subgroups": []
-      },
-      {
-        "key": "desktop:Dev Panel",
-        "items": [
-          {
-            "type": "group",
-            "section": {
-              "key": "desktop:MECHANICS",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "sliderDevPanelScrollStrength"
-                }
-              ],
-              "rowKeys": [
-                "sliderDevPanelScrollStrength"
-              ],
-              "subgroups": []
-            }
-          },
-          {
-            "type": "group",
-            "section": {
-              "key": "desktop:PANEL UI",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "colorDevPanelBg"
-                },
-                {
-                  "type": "row",
-                  "key": "colorDevPanelAccent"
-                },
-                {
-                  "type": "row",
-                  "key": "colorDevPanelSliderColor"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderDevPanelOpacity"
-                },
-                {
-                  "type": "row",
-                  "key": "colorDevPanelAccent2"
-                },
-                {
-                  "type": "row",
-                  "key": "colorDevPanelAccent3"
-                },
-                {
-                  "type": "row",
-                  "key": "colorDevPanelButtonColor"
-                }
-              ],
-              "rowKeys": [
-                "colorDevPanelBg",
-                "colorDevPanelAccent",
-                "colorDevPanelSliderColor",
-                "sliderDevPanelOpacity",
-                "colorDevPanelAccent2",
-                "colorDevPanelAccent3",
-                "colorDevPanelButtonColor"
-              ],
-              "subgroups": []
-            }
-          },
-          {
-            "type": "group",
-            "section": {
-              "key": "desktop:TEXT",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "selectDevPanelFontFamily"
-                },
-                {
-                  "type": "group",
-                  "section": {
-                    "key": "desktop:Dev Panel Title",
-                    "items": [
-                      {
-                        "type": "row",
-                        "key": "checkboxDevBoldTitle"
-                      },
-                      {
-                        "type": "row",
-                        "key": "checkboxDevCapsTitleText"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderDevPanelTitleFontSize"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderDevPanelTitleLetterSpacing"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderDevPanelTitleLineHeight"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderDevPanelButtonTextBorder"
-                      },
-                      {
-                        "type": "row",
-                        "key": "colorDevPanelTitleText"
-                      }
-                    ],
-                    "rowKeys": [
-                      "checkboxDevBoldTitle",
-                      "checkboxDevCapsTitleText",
-                      "sliderDevPanelTitleFontSize",
-                      "sliderDevPanelTitleLetterSpacing",
-                      "sliderDevPanelTitleLineHeight",
-                      "sliderDevPanelButtonTextBorder",
-                      "colorDevPanelTitleText"
-                    ],
-                    "subgroups": []
-                  }
-                },
-                {
-                  "type": "group",
-                  "section": {
-                    "key": "desktop:Group Title",
-                    "items": [
-                      {
-                        "type": "row",
-                        "key": "checkboxDevBoldGroup"
-                      },
-                      {
-                        "type": "row",
-                        "key": "checkboxDevCapsGroupNames"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderDevPanelGroupTitleFontSize"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderDevGroupTextLetterSpacing"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderDevPanelGroupLineHeight"
-                      },
-                      {
-                        "type": "row",
-                        "key": "colorDevPanelGroupText"
-                      },
-                      {
-                        "type": "row",
-                        "key": "colorDevPanelGroupLabelBg"
-                      }
-                    ],
-                    "rowKeys": [
-                      "checkboxDevBoldGroup",
-                      "checkboxDevCapsGroupNames",
-                      "sliderDevPanelGroupTitleFontSize",
-                      "sliderDevGroupTextLetterSpacing",
-                      "sliderDevPanelGroupLineHeight",
-                      "colorDevPanelGroupText",
-                      "colorDevPanelGroupLabelBg"
-                    ],
-                    "subgroups": []
-                  }
-                },
-                {
-                  "type": "group",
-                  "section": {
-                    "key": "desktop:Setting Title",
-                    "items": [
-                      {
-                        "type": "row",
-                        "key": "checkboxDevCapsSettingsText"
-                      },
-                      {
-                        "type": "row",
-                        "key": "checkboxDevBoldSettings"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderDevPanelSettingTitleFontSize"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderDevPanelValueFontSize"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderDevPanelSettingsLineHeight"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderDevSettingsTextLetterSpacing"
-                      },
-                      {
-                        "type": "row",
-                        "key": "colorDevPanelNonTitleText"
-                      },
-                      {
-                        "type": "row",
-                        "key": "colorDevPanelSettingNumber"
-                      }
-                    ],
-                    "rowKeys": [
-                      "checkboxDevCapsSettingsText",
-                      "checkboxDevBoldSettings",
-                      "sliderDevPanelSettingTitleFontSize",
-                      "sliderDevPanelValueFontSize",
-                      "sliderDevPanelSettingsLineHeight",
-                      "sliderDevSettingsTextLetterSpacing",
-                      "colorDevPanelNonTitleText",
-                      "colorDevPanelSettingNumber"
-                    ],
-                    "subgroups": []
-                  }
-                },
-                {
-                  "type": "group",
-                  "section": {
-                    "key": "desktop:TABS",
-                    "items": [
-                      {
-                        "type": "row",
-                        "key": "checkboxDevBoldTab"
-                      },
-                      {
-                        "type": "row",
-                        "key": "checkboxDevCapsTabText"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderDevPanelTabFontSize"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderDevTabTextLetterSpacing"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderDevPanelTabLineHeight"
-                      },
-                      {
-                        "type": "row",
-                        "key": "colorDevPanelTabText"
-                      }
-                    ],
-                    "rowKeys": [
-                      "checkboxDevBoldTab",
-                      "checkboxDevCapsTabText",
-                      "sliderDevPanelTabFontSize",
-                      "sliderDevTabTextLetterSpacing",
-                      "sliderDevPanelTabLineHeight",
-                      "colorDevPanelTabText"
-                    ],
-                    "subgroups": []
-                  }
-                },
-                {
-                  "type": "group",
-                  "section": {
-                    "key": "desktop:BUTTONS",
-                    "items": [
-                      {
-                        "type": "row",
-                        "key": "checkboxDevBoldButton"
-                      },
-                      {
-                        "type": "row",
-                        "key": "checkboxDevCapsButtonText"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderDevPanelButtonFontSize"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderDevButtonTextLetterSpacing"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderDevPanelButtonLineHeight"
-                      },
-                      {
-                        "type": "row",
-                        "key": "colorDevPanelButtonText"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderDevPanelButtonHeight"
-                      }
-                    ],
-                    "rowKeys": [
-                      "checkboxDevBoldButton",
-                      "checkboxDevCapsButtonText",
-                      "sliderDevPanelButtonFontSize",
-                      "sliderDevButtonTextLetterSpacing",
-                      "sliderDevPanelButtonLineHeight",
-                      "colorDevPanelButtonText",
-                      "sliderDevPanelButtonHeight"
-                    ],
-                    "subgroups": []
-                  }
-                }
-              ],
-              "rowKeys": [
-                "selectDevPanelFontFamily"
-              ],
-              "subgroups": [
-                {
-                  "key": "desktop:Dev Panel Title",
-                  "items": [
-                    {
-                      "type": "row",
-                      "key": "checkboxDevBoldTitle"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxDevCapsTitleText"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderDevPanelTitleFontSize"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderDevPanelTitleLetterSpacing"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderDevPanelTitleLineHeight"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderDevPanelButtonTextBorder"
-                    },
-                    {
-                      "type": "row",
-                      "key": "colorDevPanelTitleText"
-                    }
-                  ],
-                  "rowKeys": [
-                    "checkboxDevBoldTitle",
-                    "checkboxDevCapsTitleText",
-                    "sliderDevPanelTitleFontSize",
-                    "sliderDevPanelTitleLetterSpacing",
-                    "sliderDevPanelTitleLineHeight",
-                    "sliderDevPanelButtonTextBorder",
-                    "colorDevPanelTitleText"
-                  ],
-                  "subgroups": []
-                },
-                {
-                  "key": "desktop:Group Title",
-                  "items": [
-                    {
-                      "type": "row",
-                      "key": "checkboxDevBoldGroup"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxDevCapsGroupNames"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderDevPanelGroupTitleFontSize"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderDevGroupTextLetterSpacing"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderDevPanelGroupLineHeight"
-                    },
-                    {
-                      "type": "row",
-                      "key": "colorDevPanelGroupText"
-                    },
-                    {
-                      "type": "row",
-                      "key": "colorDevPanelGroupLabelBg"
-                    }
-                  ],
-                  "rowKeys": [
-                    "checkboxDevBoldGroup",
-                    "checkboxDevCapsGroupNames",
-                    "sliderDevPanelGroupTitleFontSize",
-                    "sliderDevGroupTextLetterSpacing",
-                    "sliderDevPanelGroupLineHeight",
-                    "colorDevPanelGroupText",
-                    "colorDevPanelGroupLabelBg"
-                  ],
-                  "subgroups": []
-                },
-                {
-                  "key": "desktop:Setting Title",
-                  "items": [
-                    {
-                      "type": "row",
-                      "key": "checkboxDevCapsSettingsText"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxDevBoldSettings"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderDevPanelSettingTitleFontSize"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderDevPanelValueFontSize"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderDevPanelSettingsLineHeight"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderDevSettingsTextLetterSpacing"
-                    },
-                    {
-                      "type": "row",
-                      "key": "colorDevPanelNonTitleText"
-                    },
-                    {
-                      "type": "row",
-                      "key": "colorDevPanelSettingNumber"
-                    }
-                  ],
-                  "rowKeys": [
-                    "checkboxDevCapsSettingsText",
-                    "checkboxDevBoldSettings",
-                    "sliderDevPanelSettingTitleFontSize",
-                    "sliderDevPanelValueFontSize",
-                    "sliderDevPanelSettingsLineHeight",
-                    "sliderDevSettingsTextLetterSpacing",
-                    "colorDevPanelNonTitleText",
-                    "colorDevPanelSettingNumber"
-                  ],
-                  "subgroups": []
-                },
-                {
-                  "key": "desktop:TABS",
-                  "items": [
-                    {
-                      "type": "row",
-                      "key": "checkboxDevBoldTab"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxDevCapsTabText"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderDevPanelTabFontSize"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderDevTabTextLetterSpacing"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderDevPanelTabLineHeight"
-                    },
-                    {
-                      "type": "row",
-                      "key": "colorDevPanelTabText"
-                    }
-                  ],
-                  "rowKeys": [
-                    "checkboxDevBoldTab",
-                    "checkboxDevCapsTabText",
-                    "sliderDevPanelTabFontSize",
-                    "sliderDevTabTextLetterSpacing",
-                    "sliderDevPanelTabLineHeight",
-                    "colorDevPanelTabText"
-                  ],
-                  "subgroups": []
-                },
-                {
-                  "key": "desktop:BUTTONS",
-                  "items": [
-                    {
-                      "type": "row",
-                      "key": "checkboxDevBoldButton"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxDevCapsButtonText"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderDevPanelButtonFontSize"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderDevButtonTextLetterSpacing"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderDevPanelButtonLineHeight"
-                    },
-                    {
-                      "type": "row",
-                      "key": "colorDevPanelButtonText"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderDevPanelButtonHeight"
-                    }
-                  ],
-                  "rowKeys": [
-                    "checkboxDevBoldButton",
-                    "checkboxDevCapsButtonText",
-                    "sliderDevPanelButtonFontSize",
-                    "sliderDevButtonTextLetterSpacing",
-                    "sliderDevPanelButtonLineHeight",
-                    "colorDevPanelButtonText",
-                    "sliderDevPanelButtonHeight"
-                  ],
-                  "subgroups": []
-                }
-              ]
-            }
-          }
-        ],
-        "rowKeys": [],
-        "subgroups": [
-          {
-            "key": "desktop:MECHANICS",
-            "items": [
-              {
-                "type": "row",
-                "key": "sliderDevPanelScrollStrength"
-              }
-            ],
-            "rowKeys": [
-              "sliderDevPanelScrollStrength"
-            ],
-            "subgroups": []
-          },
-          {
-            "key": "desktop:PANEL UI",
-            "items": [
-              {
-                "type": "row",
-                "key": "colorDevPanelBg"
-              },
-              {
-                "type": "row",
-                "key": "colorDevPanelAccent"
-              },
-              {
-                "type": "row",
-                "key": "colorDevPanelSliderColor"
-              },
-              {
-                "type": "row",
-                "key": "sliderDevPanelOpacity"
-              },
-              {
-                "type": "row",
-                "key": "colorDevPanelAccent2"
-              },
-              {
-                "type": "row",
-                "key": "colorDevPanelAccent3"
-              },
-              {
-                "type": "row",
-                "key": "colorDevPanelButtonColor"
-              }
-            ],
-            "rowKeys": [
-              "colorDevPanelBg",
-              "colorDevPanelAccent",
-              "colorDevPanelSliderColor",
-              "sliderDevPanelOpacity",
-              "colorDevPanelAccent2",
-              "colorDevPanelAccent3",
-              "colorDevPanelButtonColor"
-            ],
-            "subgroups": []
-          },
-          {
-            "key": "desktop:TEXT",
-            "items": [
-              {
-                "type": "row",
-                "key": "selectDevPanelFontFamily"
-              },
-              {
-                "type": "group",
-                "section": {
-                  "key": "desktop:Dev Panel Title",
-                  "items": [
-                    {
-                      "type": "row",
-                      "key": "checkboxDevBoldTitle"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxDevCapsTitleText"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderDevPanelTitleFontSize"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderDevPanelTitleLetterSpacing"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderDevPanelTitleLineHeight"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderDevPanelButtonTextBorder"
-                    },
-                    {
-                      "type": "row",
-                      "key": "colorDevPanelTitleText"
-                    }
-                  ],
-                  "rowKeys": [
-                    "checkboxDevBoldTitle",
-                    "checkboxDevCapsTitleText",
-                    "sliderDevPanelTitleFontSize",
-                    "sliderDevPanelTitleLetterSpacing",
-                    "sliderDevPanelTitleLineHeight",
-                    "sliderDevPanelButtonTextBorder",
-                    "colorDevPanelTitleText"
-                  ],
-                  "subgroups": []
-                }
-              },
-              {
-                "type": "group",
-                "section": {
-                  "key": "desktop:Group Title",
-                  "items": [
-                    {
-                      "type": "row",
-                      "key": "checkboxDevBoldGroup"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxDevCapsGroupNames"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderDevPanelGroupTitleFontSize"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderDevGroupTextLetterSpacing"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderDevPanelGroupLineHeight"
-                    },
-                    {
-                      "type": "row",
-                      "key": "colorDevPanelGroupText"
-                    },
-                    {
-                      "type": "row",
-                      "key": "colorDevPanelGroupLabelBg"
-                    }
-                  ],
-                  "rowKeys": [
-                    "checkboxDevBoldGroup",
-                    "checkboxDevCapsGroupNames",
-                    "sliderDevPanelGroupTitleFontSize",
-                    "sliderDevGroupTextLetterSpacing",
-                    "sliderDevPanelGroupLineHeight",
-                    "colorDevPanelGroupText",
-                    "colorDevPanelGroupLabelBg"
-                  ],
-                  "subgroups": []
-                }
-              },
-              {
-                "type": "group",
-                "section": {
-                  "key": "desktop:Setting Title",
-                  "items": [
-                    {
-                      "type": "row",
-                      "key": "checkboxDevCapsSettingsText"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxDevBoldSettings"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderDevPanelSettingTitleFontSize"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderDevPanelValueFontSize"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderDevPanelSettingsLineHeight"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderDevSettingsTextLetterSpacing"
-                    },
-                    {
-                      "type": "row",
-                      "key": "colorDevPanelNonTitleText"
-                    },
-                    {
-                      "type": "row",
-                      "key": "colorDevPanelSettingNumber"
-                    }
-                  ],
-                  "rowKeys": [
-                    "checkboxDevCapsSettingsText",
-                    "checkboxDevBoldSettings",
-                    "sliderDevPanelSettingTitleFontSize",
-                    "sliderDevPanelValueFontSize",
-                    "sliderDevPanelSettingsLineHeight",
-                    "sliderDevSettingsTextLetterSpacing",
-                    "colorDevPanelNonTitleText",
-                    "colorDevPanelSettingNumber"
-                  ],
-                  "subgroups": []
-                }
-              },
-              {
-                "type": "group",
-                "section": {
-                  "key": "desktop:TABS",
-                  "items": [
-                    {
-                      "type": "row",
-                      "key": "checkboxDevBoldTab"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxDevCapsTabText"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderDevPanelTabFontSize"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderDevTabTextLetterSpacing"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderDevPanelTabLineHeight"
-                    },
-                    {
-                      "type": "row",
-                      "key": "colorDevPanelTabText"
-                    }
-                  ],
-                  "rowKeys": [
-                    "checkboxDevBoldTab",
-                    "checkboxDevCapsTabText",
-                    "sliderDevPanelTabFontSize",
-                    "sliderDevTabTextLetterSpacing",
-                    "sliderDevPanelTabLineHeight",
-                    "colorDevPanelTabText"
-                  ],
-                  "subgroups": []
-                }
-              },
-              {
-                "type": "group",
-                "section": {
-                  "key": "desktop:BUTTONS",
-                  "items": [
-                    {
-                      "type": "row",
-                      "key": "checkboxDevBoldButton"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxDevCapsButtonText"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderDevPanelButtonFontSize"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderDevButtonTextLetterSpacing"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderDevPanelButtonLineHeight"
-                    },
-                    {
-                      "type": "row",
-                      "key": "colorDevPanelButtonText"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderDevPanelButtonHeight"
-                    }
-                  ],
-                  "rowKeys": [
-                    "checkboxDevBoldButton",
-                    "checkboxDevCapsButtonText",
-                    "sliderDevPanelButtonFontSize",
-                    "sliderDevButtonTextLetterSpacing",
-                    "sliderDevPanelButtonLineHeight",
-                    "colorDevPanelButtonText",
-                    "sliderDevPanelButtonHeight"
-                  ],
-                  "subgroups": []
-                }
-              }
-            ],
-            "rowKeys": [
-              "selectDevPanelFontFamily"
-            ],
-            "subgroups": [
-              {
-                "key": "desktop:Dev Panel Title",
-                "items": [
-                  {
-                    "type": "row",
-                    "key": "checkboxDevBoldTitle"
-                  },
-                  {
-                    "type": "row",
-                    "key": "checkboxDevCapsTitleText"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderDevPanelTitleFontSize"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderDevPanelTitleLetterSpacing"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderDevPanelTitleLineHeight"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderDevPanelButtonTextBorder"
-                  },
-                  {
-                    "type": "row",
-                    "key": "colorDevPanelTitleText"
-                  }
-                ],
-                "rowKeys": [
-                  "checkboxDevBoldTitle",
-                  "checkboxDevCapsTitleText",
-                  "sliderDevPanelTitleFontSize",
-                  "sliderDevPanelTitleLetterSpacing",
-                  "sliderDevPanelTitleLineHeight",
-                  "sliderDevPanelButtonTextBorder",
-                  "colorDevPanelTitleText"
-                ],
-                "subgroups": []
-              },
-              {
-                "key": "desktop:Group Title",
-                "items": [
-                  {
-                    "type": "row",
-                    "key": "checkboxDevBoldGroup"
-                  },
-                  {
-                    "type": "row",
-                    "key": "checkboxDevCapsGroupNames"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderDevPanelGroupTitleFontSize"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderDevGroupTextLetterSpacing"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderDevPanelGroupLineHeight"
-                  },
-                  {
-                    "type": "row",
-                    "key": "colorDevPanelGroupText"
-                  },
-                  {
-                    "type": "row",
-                    "key": "colorDevPanelGroupLabelBg"
-                  }
-                ],
-                "rowKeys": [
-                  "checkboxDevBoldGroup",
-                  "checkboxDevCapsGroupNames",
-                  "sliderDevPanelGroupTitleFontSize",
-                  "sliderDevGroupTextLetterSpacing",
-                  "sliderDevPanelGroupLineHeight",
-                  "colorDevPanelGroupText",
-                  "colorDevPanelGroupLabelBg"
-                ],
-                "subgroups": []
-              },
-              {
-                "key": "desktop:Setting Title",
-                "items": [
-                  {
-                    "type": "row",
-                    "key": "checkboxDevCapsSettingsText"
-                  },
-                  {
-                    "type": "row",
-                    "key": "checkboxDevBoldSettings"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderDevPanelSettingTitleFontSize"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderDevPanelValueFontSize"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderDevPanelSettingsLineHeight"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderDevSettingsTextLetterSpacing"
-                  },
-                  {
-                    "type": "row",
-                    "key": "colorDevPanelNonTitleText"
-                  },
-                  {
-                    "type": "row",
-                    "key": "colorDevPanelSettingNumber"
-                  }
-                ],
-                "rowKeys": [
-                  "checkboxDevCapsSettingsText",
-                  "checkboxDevBoldSettings",
-                  "sliderDevPanelSettingTitleFontSize",
-                  "sliderDevPanelValueFontSize",
-                  "sliderDevPanelSettingsLineHeight",
-                  "sliderDevSettingsTextLetterSpacing",
-                  "colorDevPanelNonTitleText",
-                  "colorDevPanelSettingNumber"
-                ],
-                "subgroups": []
-              },
-              {
-                "key": "desktop:TABS",
-                "items": [
-                  {
-                    "type": "row",
-                    "key": "checkboxDevBoldTab"
-                  },
-                  {
-                    "type": "row",
-                    "key": "checkboxDevCapsTabText"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderDevPanelTabFontSize"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderDevTabTextLetterSpacing"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderDevPanelTabLineHeight"
-                  },
-                  {
-                    "type": "row",
-                    "key": "colorDevPanelTabText"
-                  }
-                ],
-                "rowKeys": [
-                  "checkboxDevBoldTab",
-                  "checkboxDevCapsTabText",
-                  "sliderDevPanelTabFontSize",
-                  "sliderDevTabTextLetterSpacing",
-                  "sliderDevPanelTabLineHeight",
-                  "colorDevPanelTabText"
-                ],
-                "subgroups": []
-              },
-              {
-                "key": "desktop:BUTTONS",
-                "items": [
-                  {
-                    "type": "row",
-                    "key": "checkboxDevBoldButton"
-                  },
-                  {
-                    "type": "row",
-                    "key": "checkboxDevCapsButtonText"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderDevPanelButtonFontSize"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderDevButtonTextLetterSpacing"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderDevPanelButtonLineHeight"
-                  },
-                  {
-                    "type": "row",
-                    "key": "colorDevPanelButtonText"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderDevPanelButtonHeight"
-                  }
-                ],
-                "rowKeys": [
-                  "checkboxDevBoldButton",
-                  "checkboxDevCapsButtonText",
-                  "sliderDevPanelButtonFontSize",
-                  "sliderDevButtonTextLetterSpacing",
-                  "sliderDevPanelButtonLineHeight",
-                  "colorDevPanelButtonText",
-                  "sliderDevPanelButtonHeight"
-                ],
-                "subgroups": []
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "key": "desktop:Debug",
-        "items": [
-          {
-            "type": "group",
-            "section": {
-              "key": "desktop:Object Axes",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "checkboxObjectAxesEnabled"
-                },
-                {
-                  "type": "row",
-                  "key": "checkboxObjectAxesRenderInFront"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderObjectAxesThickness"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderObjectAxesLength"
-                }
-              ],
-              "rowKeys": [
-                "checkboxObjectAxesEnabled",
-                "checkboxObjectAxesRenderInFront",
-                "sliderObjectAxesThickness",
-                "sliderObjectAxesLength"
-              ],
-              "subgroups": []
-            }
-          },
-          {
-            "type": "row",
-            "key": "checkboxShowAxesHelper"
-          },
-          {
-            "type": "group",
-            "section": {
-              "key": "desktop:Settings",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "checkboxDeviceInfoEnabled"
-                }
-              ],
-              "rowKeys": [
-                "checkboxDeviceInfoEnabled"
-              ],
-              "subgroups": []
-            }
-          },
-          {
-            "type": "group",
-            "section": {
-              "key": "desktop:Mouse Log",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "checkboxMouseLogPosition"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderMouseLogInterval"
-                },
-                {
-                  "type": "row",
-                  "key": "checkboxMouseLogScroll"
-                },
-                {
-                  "type": "row",
-                  "key": "checkboxMouseLogKeystrokes"
-                }
-              ],
-              "rowKeys": [
-                "checkboxMouseLogPosition",
-                "sliderMouseLogInterval",
-                "checkboxMouseLogScroll",
-                "checkboxMouseLogKeystrokes"
-              ],
-              "subgroups": []
-            }
-          },
-          {
-            "type": "row",
-            "key": "checkboxShowGridHelper"
-          },
-          {
-            "type": "row",
-            "key": "checkboxShowWireframe"
-          },
-          {
-            "type": "group",
-            "section": {
-              "key": "desktop:Sensors",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "checkboxSensorStream"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderSensorInterval"
-                },
-                {
-                  "type": "row",
-                  "key": "checkboxSensorLogAccel"
-                },
-                {
-                  "type": "row",
-                  "key": "checkboxSensorLogGyro"
-                },
-                {
-                  "type": "row",
-                  "key": "checkboxSensorLogCompass"
-                },
-                {
-                  "type": "row",
-                  "key": "checkboxSensorLogOrientBeta"
-                },
-                {
-                  "type": "row",
-                  "key": "checkboxSensorLogOrientGamma"
-                }
-              ],
-              "rowKeys": [
-                "checkboxSensorStream",
-                "sliderSensorInterval",
-                "checkboxSensorLogAccel",
-                "checkboxSensorLogGyro",
-                "checkboxSensorLogCompass",
-                "checkboxSensorLogOrientBeta",
-                "checkboxSensorLogOrientGamma"
-              ],
-              "subgroups": []
-            }
-          },
-          {
-            "type": "group",
-            "section": {
-              "key": "desktop:Phone Model Log",
-              "items": [],
-              "rowKeys": [],
-              "subgroups": []
-            }
-          },
-          {
-            "type": "row",
-            "key": "__row8"
-          }
-        ],
-        "rowKeys": [
-          "checkboxShowAxesHelper",
-          "checkboxShowGridHelper",
-          "checkboxShowWireframe",
-          "__row8"
-        ],
-        "subgroups": [
-          {
-            "key": "desktop:Object Axes",
-            "items": [
-              {
-                "type": "row",
-                "key": "checkboxObjectAxesEnabled"
-              },
-              {
-                "type": "row",
-                "key": "checkboxObjectAxesRenderInFront"
-              },
-              {
-                "type": "row",
-                "key": "sliderObjectAxesThickness"
-              },
-              {
-                "type": "row",
-                "key": "sliderObjectAxesLength"
-              }
-            ],
-            "rowKeys": [
-              "checkboxObjectAxesEnabled",
-              "checkboxObjectAxesRenderInFront",
-              "sliderObjectAxesThickness",
-              "sliderObjectAxesLength"
-            ],
-            "subgroups": []
-          },
-          {
-            "key": "desktop:Settings",
-            "items": [
-              {
-                "type": "row",
-                "key": "checkboxDeviceInfoEnabled"
-              }
-            ],
-            "rowKeys": [
-              "checkboxDeviceInfoEnabled"
-            ],
-            "subgroups": []
-          },
-          {
-            "key": "desktop:Mouse Log",
-            "items": [
-              {
-                "type": "row",
-                "key": "checkboxMouseLogPosition"
-              },
-              {
-                "type": "row",
-                "key": "sliderMouseLogInterval"
-              },
-              {
-                "type": "row",
-                "key": "checkboxMouseLogScroll"
-              },
-              {
-                "type": "row",
-                "key": "checkboxMouseLogKeystrokes"
-              }
-            ],
-            "rowKeys": [
-              "checkboxMouseLogPosition",
-              "sliderMouseLogInterval",
-              "checkboxMouseLogScroll",
-              "checkboxMouseLogKeystrokes"
-            ],
-            "subgroups": []
-          },
-          {
-            "key": "desktop:Sensors",
-            "items": [
-              {
-                "type": "row",
-                "key": "checkboxSensorStream"
-              },
-              {
-                "type": "row",
-                "key": "sliderSensorInterval"
-              },
-              {
-                "type": "row",
-                "key": "checkboxSensorLogAccel"
-              },
-              {
-                "type": "row",
-                "key": "checkboxSensorLogGyro"
-              },
-              {
-                "type": "row",
-                "key": "checkboxSensorLogCompass"
-              },
-              {
-                "type": "row",
-                "key": "checkboxSensorLogOrientBeta"
-              },
-              {
-                "type": "row",
-                "key": "checkboxSensorLogOrientGamma"
-              }
-            ],
-            "rowKeys": [
-              "checkboxSensorStream",
-              "sliderSensorInterval",
-              "checkboxSensorLogAccel",
-              "checkboxSensorLogGyro",
-              "checkboxSensorLogCompass",
-              "checkboxSensorLogOrientBeta",
-              "checkboxSensorLogOrientGamma"
-            ],
-            "subgroups": []
-          },
-          {
-            "key": "desktop:Phone Model Log",
-            "items": [],
-            "rowKeys": [],
-            "subgroups": []
-          }
-        ]
       },
       {
         "key": "desktop:Camera",
@@ -8355,12 +8355,27 @@
   },
   "sectionCollapseState": {
     "desktop:Saved Dev Settings": false,
+    "desktop:Dev Panel": true,
+    "desktop:MECHANICS": true,
+    "desktop:PANEL UI": true,
+    "desktop:TEXT": true,
+    "desktop:Dev Panel Title": true,
+    "desktop:Group Title": true,
+    "desktop:Setting Title": true,
+    "desktop:TABS": true,
+    "desktop:BUTTONS": true,
+    "desktop:Debug": true,
+    "desktop:Object Axes": true,
+    "desktop:Settings": true,
+    "desktop:Mouse Log": true,
+    "desktop:Sensors": true,
+    "desktop:Phone Model Log": true,
     "desktop:PHONE MODEL": false,
     "desktop:OFFSET": false,
     "desktop:PHONE ROTATION": true,
     "desktop:RESPONSIVE BEHAVIOUR - PHONE": true,
-    "desktop:Responsive Rotation": false,
-    "desktop:RECURSIVE RENDER": false,
+    "desktop:Responsive Rotation": true,
+    "desktop:RECURSIVE RENDER": true,
     "desktop:HAND MODEL": true,
     "desktop:Field Layout": true,
     "desktop:Pose": true,
@@ -8385,21 +8400,6 @@
     "desktop:Palm Facing": true,
     "desktop:Ground Plane": true,
     "desktop:Finger Gizmos": true,
-    "desktop:Dev Panel": true,
-    "desktop:MECHANICS": true,
-    "desktop:PANEL UI": true,
-    "desktop:TEXT": true,
-    "desktop:Dev Panel Title": true,
-    "desktop:Group Title": true,
-    "desktop:Setting Title": true,
-    "desktop:TABS": true,
-    "desktop:BUTTONS": true,
-    "desktop:Debug": true,
-    "desktop:Object Axes": true,
-    "desktop:Settings": true,
-    "desktop:Mouse Log": true,
-    "desktop:Sensors": true,
-    "desktop:Phone Model Log": true,
     "desktop:Camera": true,
     "desktop:Saved Cameras": true,
     "desktop:Lighting": true,
