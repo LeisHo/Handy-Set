@@ -5477,6 +5477,43 @@ cache-busters: `main.js` `?v=170` -> `?v=171`, `devPanel.js` `?v=12` ->
 `?v=13`.
 
 --------------------------------------------------------------------------------
+2026-09-30  -  Fix Double Tap to Reset doing nothing in Absolute/
+Orientation rotation mode
+
+Direct report: "when I am testing the new rotation mode, not the gyro
+mode... turning on the double tap to reset button doesn't seem to work.
+In gyro it works, but in the new mode it doesn't."
+
+Root cause: `resetPhoneModelRotationBaseline()` only ever zeroed
+`phoneGyroQuat` (Gyro/Integrated mode's own running accumulator) and the
+desktop-only cursor-distance baselines. Absolute/Orientation mode (added
+earlier the same day) is a pure, memoryless function of the phone's raw
+current alpha/beta/gamma -- by design, to eliminate gyro drift/path-
+dependence -- so it has no accumulator for a reset to touch at all.
+Double-tapping was a complete no-op in that mode.
+
+Added `_phoneAbsoluteBaselineInverse`: identity by default (no behavior
+change until the user actually resets), then set by
+`resetPhoneModelRotationBaseline()` to the inverse of whatever the raw
+absolute orientation quaternion is at that instant, so the phone's
+orientation AT RESET TIME becomes the model's new neutral pose.
+`computePhoneAbsoluteOrientationQuat()` now composes this baseline
+against every subsequent raw reading. Still fully memoryless/drift-free
+going forward -- a fixed value captured once, never accumulated frame-
+to-frame, just relative to a re-centered reference instead of the
+device's raw (0,0,0). Split the raw alpha/beta/gamma-to-quaternion
+computation into its own `computePhoneAbsoluteOrientationRawQuat()` so
+the reset path and the per-frame path share the exact same math rather
+than duplicating it.
+
+Verified algebraically (`q_baseline^-1 * q_current` reduces to identity
+whenever `q_current == q_baseline`, for any unit quaternion -- a
+property of quaternion algebra itself, not dependent on this project's
+own axis-mapping conventions) and via `node --check`. NOT independently
+browser/device-verified (standing project convention). `index.html`
+cache-buster: `main.js` `?v=171` -> `?v=172`.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

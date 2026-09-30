@@ -7,13 +7,14 @@ append-only history.
 
 ## Currently working on
 
-**Nothing in progress right now** — the last active item (a Set Hotkey
-fix: standalone buttons like Pause were never hotkey-eligible, since
-every eligibility/lookup check in `devPanel.js` required a `.dev-row`
-ancestor a hand-built `.dev-buttons` button never has, and Pause itself
-had no `id` — see CHANGELOG's matching entry) shipped and is pushed.
-Waiting on the next request. The on-demand-rendering work (below) and
-its same-day render-loop-stop follow-up are also both shipped.
+**Nothing in progress right now** — the last active item (Double Tap to
+Reset was a no-op in the new Absolute/Orientation phone rotation mode,
+since that mode is a pure memoryless function of the raw device reading
+with no accumulator for a reset to touch; fixed by adding a baseline
+quaternion captured at reset time — see CHANGELOG's matching entry)
+shipped and is pushed. Waiting on the next request. The Set Hotkey
+button-eligibility fix, on-demand rendering, and the render-loop-stop
+follow-up (all below) are also shipped.
 
 **Recursive Render mirror investigation — RESOLVED, per direct user
 confirmation ("x mirror issue fixed by the way").** The depth-parity
