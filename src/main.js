@@ -4669,8 +4669,19 @@ let sensorTimer = null
 // by scraping sensorLogEl.textContent, so a future format/DOM change
 // doesn't need to be mirrored in 2 places.
 let sensorLog = []
+// Added 2026-09-30, direct request: "a pause and resume logs button."
+// A single overlay flag covering all 3 Debug-group logs at once (Mouse
+// Log, Sensors, Phone Model Log) -- separate from Sensors/Phone Model
+// Log's own existing "Stream Sensor Data" checkbox (which stops their
+// timers entirely); this just gates whether a new entry gets appended,
+// so toggling it doesn't disturb the streaming checkbox's own state.
+// Mouse Log's own pause state (devPanel.js, a classic script's bare
+// global) is kept in sync via setMouseLogPaused() wherever this flag
+// changes -- see toggleAllLogsPaused() below.
+let allLogsPaused = false
 function fmt(n) { return (typeof n === 'number' && !Number.isNaN(n)) ? n.toFixed(2) : '--' }
 function pushSensorLog(text) {
+  if (allLogsPaused) return
   const line = ts() + ' ' + text
   sensorLog.push(line)
   if (sensorLog.length > 200) sensorLog.shift()
@@ -4771,6 +4782,7 @@ let phoneModelLogEl = null
 let phoneModelLogTimer = null
 let phoneModelLog = []
 function pushPhoneModelLog(text) {
+  if (allLogsPaused) return
   const line = ts() + ' ' + text
   phoneModelLog.push(line)
   if (phoneModelLog.length > 200) phoneModelLog.shift()
@@ -4821,6 +4833,40 @@ function savePhoneModelLog() {
 function clearPhoneModelLog() {
   phoneModelLog = []
   if (phoneModelLogEl) phoneModelLogEl.innerHTML = ''
+}
+
+// All-logs controls (Debug group) -- direct requests: "provide a clear
+// all logs button and copy all logs button" / "and a pause and resume
+// logs button." Span all 3 Debug-group logs -- Mouse Log (devPanel.js's
+// own built-in log, reached as a bare global -- see addGroup()'s own
+// comment on this reachability), Sensors, and Phone Model Log.
+function clearAllLogs() {
+  clearMouseLog()
+  clearSensorLog()
+  clearPhoneModelLog()
+}
+function copyAllLogsText(btn) {
+  const text = '=== Mouse Log ===\n' + getMouseLogText() +
+    '\n\n=== Sensor Log ===\n' + sensorLog.join('\n') +
+    '\n\n=== Phone Model Log ===\n' + phoneModelLog.join('\n')
+  const flash = (msg) => { const orig = btn.textContent; btn.textContent = msg; setTimeout(() => { btn.textContent = orig }, 900) }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => flash('Copied!')).catch(() => flash('Copy failed'))
+  } else {
+    flash('Copy failed')
+  }
+}
+// Independent of each log's own streaming state (Stream Sensor Data
+// checkbox, Mouse Log's own always-on click capture) -- a pure overlay
+// that gates whether NEW entries get appended anywhere, without
+// disturbing whatever each log's own control currently says. Mouse
+// Log's own pause flag lives in devPanel.js (a separate script/scope),
+// kept in sync via setMouseLogPaused() (also a bare global, per
+// pushMouseLogEntry()'s own comment).
+function toggleAllLogsPaused(btn) {
+  allLogsPaused = !allLogsPaused
+  setMouseLogPaused(allLogsPaused)
+  btn.textContent = allLogsPaused ? 'RESUME LOGS' : 'PAUSE LOGS'
 }
 
 // =======================================================================
@@ -6567,6 +6613,24 @@ function renderDebugExtras() {
   const pauseBtn = document.createElement('button'); pauseBtn.id = 'buttonPauseToggle'; pauseBtn.textContent = 'PAUSE'
   pauseRow.appendChild(pauseBtn); debugContent.appendChild(pauseRow)
   pauseBtn.addEventListener('click', () => { isPaused = !isPaused; pauseBtn.textContent = isPaused ? 'RESUME' : 'PAUSE'; requestRender() })
+
+  // All-logs controls -- direct requests: "provide a clear all logs
+  // button and copy all logs button" / "and a pause and resume logs
+  // button." Sits above the 3 individual logs below (Mouse Log is
+  // devPanel.js's own built-in subgroup, appearing even earlier in the
+  // panel; Sensors/Phone Model Log are HANDYSET's own, right below) so
+  // it reads as a shared master-controls row for all of them. See
+  // clearAllLogs()/copyAllLogsText()/toggleAllLogsPaused()'s own
+  // comments for what each spans.
+  const allLogsRow = document.createElement('div'); allLogsRow.className = 'dev-buttons'
+  const clearAllLogsBtn = document.createElement('button'); clearAllLogsBtn.textContent = 'CLEAR ALL LOGS'
+  const copyAllLogsBtn = document.createElement('button'); copyAllLogsBtn.textContent = 'COPY ALL LOGS'
+  const pauseAllLogsBtn = document.createElement('button'); pauseAllLogsBtn.textContent = 'PAUSE LOGS'
+  allLogsRow.append(clearAllLogsBtn, copyAllLogsBtn, pauseAllLogsBtn)
+  debugContent.appendChild(allLogsRow)
+  clearAllLogsBtn.addEventListener('click', clearAllLogs)
+  copyAllLogsBtn.addEventListener('click', () => copyAllLogsText(copyAllLogsBtn))
+  pauseAllLogsBtn.addEventListener('click', () => toggleAllLogsPaused(pauseAllLogsBtn))
 
   const sensorSub = addSubgroup(debugContent, 'Sensors')
   if (!isTouchDevice) {

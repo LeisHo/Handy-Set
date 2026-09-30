@@ -6103,12 +6103,25 @@
         while (mouseLogEl.children.length > MOUSE_LOG_MAX_ENTRIES) mouseLogEl.removeChild(mouseLogEl.firstChild);
         mouseLogEl.scrollTop = mouseLogEl.scrollHeight;
     }
+    // Added 2026-09-30 -- a host project's own "Pause/Resume ALL Logs"
+    // control (main.js, HANDYSET) needs to pause Mouse Log too, but
+    // mouseLog/pushMouseLogEntry are private to this file's own scope.
+    // isMouseLogPaused()/setMouseLogPaused()/getMouseLogText() below are
+    // plain top-level function declarations -- in this classic (non-
+    // module) script they're already reachable as bare globals from any
+    // other script on the page (see main.js's own comment on this same
+    // reachability, right above its addGroup()), no explicit window.x=x
+    // needed.
+    let mouseLogPaused = false;
     function pushMouseLogEntry(entry) {
+        if (mouseLogPaused) return;
         entry.time = formatMouseLogTime(new Date());
         mouseLog.push(entry);
         if (mouseLog.length > MOUSE_LOG_MAX_ENTRIES) mouseLog.shift();
         renderMouseLogEntry(entry);
     }
+    function isMouseLogPaused() { return mouseLogPaused; }
+    function setMouseLogPaused(v) { mouseLogPaused = v; }
     // Context entries (device + viewport dims + pixel ratio) - logged once
     // when logging starts, and again whenever the viewport actually
     // changes size (resize/orientation change) while the log has content -
@@ -6145,6 +6158,10 @@
         if (e.detail) text += '  ' + e.detail;
         return text;
     }
+    // Bare global, per pushMouseLogEntry()'s own comment above -- lets a
+    // host project's own "Copy ALL Logs" button include Mouse Log's
+    // content without needing direct access to the private mouseLog array.
+    function getMouseLogText() { return mouseLog.map(mouseLogEntryToLine).join('\n'); }
     function copyMouseLog(btn) {
         const text = mouseLog.map(mouseLogEntryToLine).join('\n');
         const flash = (msg) => { const orig = btn.textContent; btn.textContent = msg; setTimeout(() => { btn.textContent = orig; }, 900); };
