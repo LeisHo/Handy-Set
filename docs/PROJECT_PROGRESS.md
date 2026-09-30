@@ -8,7 +8,10 @@ append-only history.
 ## Currently working on
 
 **Nothing in progress right now** — the last active item (on-demand
-rendering, below) shipped and is pushed. Waiting on the next request.
+rendering, below, plus its same-day follow-up: the render loop now
+stops `requestAnimationFrame` entirely when static instead of merely
+skipping its work each frame — see CHANGELOG's matching entry) shipped
+and is pushed. Waiting on the next request.
 
 **Recursive Render mirror investigation — RESOLVED, per direct user
 confirmation ("x mirror issue fixed by the way").** The depth-parity

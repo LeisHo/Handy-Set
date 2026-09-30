@@ -5408,6 +5408,38 @@ graph while Responsive Rotation is off. `index.html` cache-buster:
 `main.js` `?v=168` -> `?v=169`, `devPanel.js` `?v=11` -> `?v=12`.
 
 --------------------------------------------------------------------------------
+2026-09-29  -  Stop the render loop entirely when static (not just skip
+its work)
+
+Direct follow-up on the same-day on-demand-rendering change above: that
+version still called `requestAnimationFrame(animate)` unconditionally
+every browser frame even when nothing was rendered -- it skipped the
+expensive compute+render work but never stopped the RAF loop itself, so
+the browser kept waking the tab up 60x/sec for nothing while idle.
+
+Added `renderLoopRunning` + `startRenderLoop()`: `animate()` now only
+re-schedules itself when Responsive Rotation is active or `needsRender`
+is still set after that frame's work; otherwise the loop is allowed to
+die. `requestRender()` is the single guarded restart point -- it flags
+`needsRender` and, if the loop isn't currently running, calls
+`startRenderLoop()`. OrbitControls' own pointer/wheel handlers dispatch
+'change' independent of this loop (their internal handlers call
+`update()` themselves as part of handling the input), so a drag or zoom
+correctly wakes a fully-stopped loop; `controls.update()` inside
+`animate()` then sustains the loop frame-to-frame through damping's own
+decay until it settles and the loop stops again on its own. Split the
+previous single `animate()` body into `animate()` (scheduling only) and
+a new `renderOneFrame()` (the actual per-frame work, logic unchanged) for
+clarity.
+
+NOT independently browser-verified (standing project convention) --
+verified via `node --check` and by tracing three.js's own OrbitControls
+source for the pointer-handler-calls-update()-synchronously behavior
+this relies on. Worth a live spot-check: dragging the camera after the
+scene has gone idle should still glide/decay smoothly via damping, not
+snap to a stop. `index.html` cache-buster: `main.js` `?v=169` -> `?v=170`.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
