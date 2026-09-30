@@ -96,8 +96,8 @@
     "sliderPhoneModelRotX": 0,
     "sliderPhoneModelRotY": 0,
     "sliderPhoneModelRotZ": 0,
-    "checkboxPhoneResponsiveRotationEnabled": false,
-    "selectPhoneRotationMode": "gyro",
+    "checkboxPhoneResponsiveRotationEnabled": true,
+    "selectPhoneRotationMode": "absolute",
     "checkboxPhoneRotationResetEnabled": true,
     "checkboxPhoneAxisXEnabled": true,
     "sliderPhoneRotationScaleX": -1,
@@ -189,8 +189,8 @@
   "layout": {
     "left": 27,
     "top": 27,
-    "width": 606,
-    "height": 671
+    "width": 350,
+    "height": 76
   },
   "devPanelStyle": {
     "titleFontSize": 17,
@@ -868,15 +868,8 @@
             "type": "group",
             "section": {
               "key": "desktop:Hotkeys",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "sliderDevHotkeySequenceWindow"
-                }
-              ],
-              "rowKeys": [
-                "sliderDevHotkeySequenceWindow"
-              ],
+              "items": [],
+              "rowKeys": [],
               "subgroups": []
             }
           }
@@ -1405,15 +1398,8 @@
           },
           {
             "key": "desktop:Hotkeys",
-            "items": [
-              {
-                "type": "row",
-                "key": "sliderDevHotkeySequenceWindow"
-              }
-            ],
-            "rowKeys": [
-              "sliderDevHotkeySequenceWindow"
-            ],
+            "items": [],
+            "rowKeys": [],
             "subgroups": []
           }
         ]
@@ -8491,7 +8477,7 @@
     "desktop:TABS": true,
     "desktop:BUTTONS": true,
     "desktop:Hotkeys": false,
-    "desktop:Debug": false,
+    "desktop:Debug": true,
     "desktop:Object Axes": true,
     "desktop:Settings": true,
     "desktop:Mouse Log": true,
