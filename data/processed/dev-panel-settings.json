@@ -87,12 +87,12 @@
     "selectPoseTweenTargetPoseName": "Big Open Palm",
     "textPoseTweenCurve": "{\"points\": [{\"x\": 0, \"y\": 0}, {\"x\": 1, \"y\": 1}], \"method\": \"catmullrom\"}",
     "checkboxPhoneModelEnabled": true,
-    "hiddenPhoneModelFile": "blob:https://handy-set.vercel.app/828cd7f0-4b37-41ec-a2f0-10ca6716166d",
-    "hiddenPhoneModelPerModelSettings": "{\"data/processed/SMARTPHONE MODELS/P5_Project_1.glb\":{\"sliderPhoneModelScale\":\"1\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"-1\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":true,\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"1\",\"textPhoneResponsiveRotationRange\":\"{\\\"min\\\":-57,\\\"max\\\":45}\",\"textPhoneResponsiveRotationCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"natural\\\"}\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"10\",\"sliderScreenRenderResolution\":\"165\",\"sliderScreenTextureScale\":\"1\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"1.35\",\"sliderScreenTextureScaleY\":\"1.2\",\"checkboxScreenToScale\":true,\"sliderScreenTextureOffsetX\":\"0\",\"sliderScreenTextureOffsetY\":\"0\",\"sliderScreenEmissionIntensity\":\"1.1\",\"checkboxScreenMirrorAlternatingX\":true,\"checkboxScreenMirrorAlternatingY\":false,\"checkboxScreenMirrorPhaseX\":false,\"checkboxScreenMirrorPhaseY\":false},\"data/processed/SMARTPHONE MODELS/Nothing2.glb\":{\"sliderPhoneModelScale\":\"1\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"0\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":true,\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"-1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"1\",\"textPhoneResponsiveRotationRange\":\"{\\\"min\\\":-57,\\\"max\\\":45}\",\"textPhoneResponsiveRotationCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"natural\\\"}\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"18\",\"sliderScreenRenderResolution\":\"200\",\"sliderScreenTextureScale\":\"0.9\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"1\",\"sliderScreenTextureScaleY\":\"0.9\",\"checkboxScreenToScale\":true,\"sliderScreenTextureOffsetX\":\"0.01\",\"sliderScreenTextureOffsetY\":\"0.05\",\"sliderScreenEmissionIntensity\":\"1\",\"checkboxScreenMirrorAlternatingX\":true,\"checkboxScreenMirrorAlternatingY\":true,\"checkboxScreenMirrorPhaseX\":false,\"checkboxScreenMirrorPhaseY\":false},\"data/processed/SMARTPHONE MODELS/Pixel 9A.glb\":{\"sliderPhoneModelScale\":\"1\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"0\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":true,\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"1\",\"textPhoneResponsiveRotationRange\":\"{\\\"min\\\":-57,\\\"max\\\":45}\",\"textPhoneResponsiveRotationCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"natural\\\"}\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"5\",\"sliderScreenRenderResolution\":\"175\",\"sliderScreenTextureScale\":\"0.95\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"1.1\",\"sliderScreenTextureScaleY\":\"0.95\",\"checkboxScreenToScale\":true,\"sliderScreenTextureOffsetX\":\"0\",\"sliderScreenTextureOffsetY\":\"0\",\"sliderScreenEmissionIntensity\":\"0.85\",\"checkboxScreenMirrorAlternatingX\":true,\"checkboxScreenMirrorAlternatingY\":false,\"checkboxScreenMirrorPhaseX\":false,\"checkboxScreenMirrorPhaseY\":false},\"data/processed/SMARTPHONE MODELS/Iphone17MaxPro.glb\":{\"sliderPhoneModelScale\":\"1\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"0\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":true,\"selectPhoneRotationMode\":\"gyro\",\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"1\",\"textPhoneResponsiveRotationRange\":\"{\\\"min\\\":-57,\\\"max\\\":45}\",\"textPhoneResponsiveRotationCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"natural\\\"}\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"10\",\"sliderScreenRenderResolution\":\"175\",\"sliderScreenTextureScale\":\"0.95\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"1.1\",\"sliderScreenTextureScaleY\":\"0.95\",\"checkboxScreenToScale\":true,\"sliderScreenTextureOffsetX\":\"0\",\"sliderScreenTextureOffsetY\":\"0\",\"sliderScreenEmissionIntensity\":\"0.85\",\"checkboxScreenMirrorAlternatingX\":true,\"checkboxScreenMirrorAlternatingY\":false,\"checkboxScreenMirrorPhaseX\":false,\"checkboxScreenMirrorPhaseY\":false},\"data/processed/SMARTPHONE MODELS/Galaxy S2.glb\":{\"sliderPhoneModelScale\":\"1\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"0\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":true,\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"-1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"1\",\"textPhoneResponsiveRotationRange\":\"{\\\"min\\\":-57,\\\"max\\\":45}\",\"textPhoneResponsiveRotationCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"natural\\\"}\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"9\",\"sliderScreenRenderResolution\":\"200\",\"sliderScreenTextureScale\":\"1.25\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"1\",\"sliderScreenTextureScaleY\":\"1\",\"checkboxScreenToScale\":true,\"sliderScreenTextureOffsetX\":\"0\",\"sliderScreenTextureOffsetY\":\"0\",\"sliderScreenEmissionIntensity\":\"1\",\"checkboxScreenMirrorAlternatingX\":true,\"checkboxScreenMirrorAlternatingY\":false,\"checkboxScreenMirrorPhaseX\":false,\"checkboxScreenMirrorPhaseY\":false},\"data/processed/SMARTPHONE MODELS/Motorola Razr.glb\":{\"sliderPhoneModelScale\":\"0.75\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"-4\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":false,\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"-1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"1\",\"textPhoneResponsiveRotationRange\":\"{\\\"min\\\":-57,\\\"max\\\":45}\",\"textPhoneResponsiveRotationCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"natural\\\"}\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"5\",\"sliderScreenRenderResolution\":\"100\",\"sliderScreenTextureScale\":\"1\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"1\",\"sliderScreenTextureScaleY\":\"1\",\"checkboxScreenToScale\":true,\"sliderScreenTextureOffsetX\":\"0\",\"sliderScreenTextureOffsetY\":\"0.05\",\"sliderScreenEmissionIntensity\":\"3.3\",\"checkboxScreenMirrorAlternatingX\":true,\"checkboxScreenMirrorAlternatingY\":false,\"checkboxScreenMirrorPhaseX\":false,\"checkboxScreenMirrorPhaseY\":false},\"data/processed/SMARTPHONE MODELS/Samsung Galaxy S26.glb\":{\"sliderPhoneModelScale\":\"1\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"0\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":true,\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"-1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1.3\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"0.21\",\"textPhoneResponsiveRotationRange\":\"{\\\"min\\\":-57,\\\"max\\\":45}\",\"textPhoneResponsiveRotationCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"natural\\\"}\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"18\",\"sliderScreenRenderResolution\":\"200\",\"sliderScreenTextureScale\":\"1.2\",\"sliderScreenTextureRotation\":\"0\",\"sliderScreenTextureScaleX\":\"0.6\",\"sliderScreenTextureScaleY\":\"1.1\",\"checkboxScreenToScale\":true,\"sliderScreenTextureOffsetX\":\"0\",\"sliderScreenTextureOffsetY\":\"-0.06\",\"sliderScreenEmissionIntensity\":\"0.95\",\"checkboxScreenMirrorAlternatingX\":false,\"checkboxScreenMirrorAlternatingY\":true,\"checkboxScreenMirrorPhaseX\":false,\"checkboxScreenMirrorPhaseY\":false},\"data/processed/SMARTPHONE MODELS/iPhone 17 Max.glb\":{\"sliderPhoneModelScale\":\"0.5\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"0\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":true,\"selectPhoneRotationMode\":\"gyro\",\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"-1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1.3\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"0.21\",\"textPhoneResponsiveRotationRange\":\"{\\\"min\\\":-57,\\\"max\\\":45}\",\"textPhoneResponsiveRotationCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"natural\\\"}\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"7\",\"sliderScreenRenderResolution\":\"100\",\"sliderScreenTextureScale\":\"1\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"0.6\",\"sliderScreenTextureScaleY\":\"1.1\",\"checkboxScreenToScale\":true,\"sliderScreenTextureOffsetX\":\"0\",\"sliderScreenTextureOffsetY\":\"0.01\",\"sliderScreenEmissionIntensity\":\"0.9\",\"checkboxScreenMirrorAlternatingX\":true,\"checkboxScreenMirrorAlternatingY\":false,\"checkboxScreenMirrorPhaseX\":false,\"checkboxScreenMirrorPhaseY\":false}}",
-    "sliderPhoneModelScale": 1,
+    "hiddenPhoneModelFile": "data/processed/SMARTPHONE MODELS/iPhone 17 Max.glb",
+    "hiddenPhoneModelPerModelSettings": "{\"data/processed/SMARTPHONE MODELS/P5_Project_1.glb\":{\"sliderPhoneModelScale\":\"1\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"-1\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":true,\"selectPhoneRotationMode\":\"gyro\",\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"1\",\"textPhoneResponsiveRotationRange\":\"{\\\"min\\\":-57,\\\"max\\\":45}\",\"textPhoneResponsiveRotationCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"natural\\\"}\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"10\",\"sliderScreenRenderResolution\":\"165\",\"sliderScreenTextureScale\":\"1\",\"textScreenLevelScaleRange\":\"{\\\"min\\\":1,\\\"max\\\":1}\",\"textScreenLevelScaleCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"linear\\\"}\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"1.35\",\"sliderScreenTextureScaleY\":\"1.2\",\"checkboxScreenToScale\":true,\"sliderScreenTextureOffsetX\":\"0\",\"sliderScreenTextureOffsetY\":\"0\",\"sliderScreenEmissionIntensity\":\"1.1\",\"checkboxScreenMirrorAlternatingX\":true,\"checkboxScreenMirrorAlternatingY\":false,\"checkboxScreenMirrorPhaseX\":false,\"checkboxScreenMirrorPhaseY\":false},\"data/processed/SMARTPHONE MODELS/Nothing2.glb\":{\"sliderPhoneModelScale\":\"1\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"0\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":true,\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"-1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"1\",\"textPhoneResponsiveRotationRange\":\"{\\\"min\\\":-57,\\\"max\\\":45}\",\"textPhoneResponsiveRotationCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"natural\\\"}\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"18\",\"sliderScreenRenderResolution\":\"200\",\"sliderScreenTextureScale\":\"0.9\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"1\",\"sliderScreenTextureScaleY\":\"0.9\",\"checkboxScreenToScale\":true,\"sliderScreenTextureOffsetX\":\"0.01\",\"sliderScreenTextureOffsetY\":\"0.05\",\"sliderScreenEmissionIntensity\":\"1\",\"checkboxScreenMirrorAlternatingX\":true,\"checkboxScreenMirrorAlternatingY\":true,\"checkboxScreenMirrorPhaseX\":false,\"checkboxScreenMirrorPhaseY\":false},\"data/processed/SMARTPHONE MODELS/Pixel 9A.glb\":{\"sliderPhoneModelScale\":\"1\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"0\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":true,\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"1\",\"textPhoneResponsiveRotationRange\":\"{\\\"min\\\":-57,\\\"max\\\":45}\",\"textPhoneResponsiveRotationCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"natural\\\"}\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"5\",\"sliderScreenRenderResolution\":\"175\",\"sliderScreenTextureScale\":\"0.95\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"1.1\",\"sliderScreenTextureScaleY\":\"0.95\",\"checkboxScreenToScale\":true,\"sliderScreenTextureOffsetX\":\"0\",\"sliderScreenTextureOffsetY\":\"0\",\"sliderScreenEmissionIntensity\":\"0.85\",\"checkboxScreenMirrorAlternatingX\":true,\"checkboxScreenMirrorAlternatingY\":false,\"checkboxScreenMirrorPhaseX\":false,\"checkboxScreenMirrorPhaseY\":false},\"data/processed/SMARTPHONE MODELS/Iphone17MaxPro.glb\":{\"sliderPhoneModelScale\":\"1\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"0\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":true,\"selectPhoneRotationMode\":\"gyro\",\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"1\",\"textPhoneResponsiveRotationRange\":\"{\\\"min\\\":-57,\\\"max\\\":45}\",\"textPhoneResponsiveRotationCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"natural\\\"}\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"10\",\"sliderScreenRenderResolution\":\"175\",\"sliderScreenTextureScale\":\"0.95\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"1.1\",\"sliderScreenTextureScaleY\":\"0.95\",\"checkboxScreenToScale\":true,\"sliderScreenTextureOffsetX\":\"0\",\"sliderScreenTextureOffsetY\":\"0\",\"sliderScreenEmissionIntensity\":\"0.85\",\"checkboxScreenMirrorAlternatingX\":true,\"checkboxScreenMirrorAlternatingY\":false,\"checkboxScreenMirrorPhaseX\":false,\"checkboxScreenMirrorPhaseY\":false},\"data/processed/SMARTPHONE MODELS/Galaxy S2.glb\":{\"sliderPhoneModelScale\":\"1\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"0\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":true,\"selectPhoneRotationMode\":\"gyro\",\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"-1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"1\",\"textPhoneResponsiveRotationRange\":\"{\\\"min\\\":-57,\\\"max\\\":45}\",\"textPhoneResponsiveRotationCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"natural\\\"}\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"9\",\"sliderScreenRenderResolution\":\"200\",\"sliderScreenTextureScale\":\"1.25\",\"textScreenLevelScaleRange\":\"{\\\"min\\\":1,\\\"max\\\":1}\",\"textScreenLevelScaleCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"linear\\\"}\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"1\",\"sliderScreenTextureScaleY\":\"1\",\"checkboxScreenToScale\":true,\"sliderScreenTextureOffsetX\":\"0\",\"sliderScreenTextureOffsetY\":\"0\",\"sliderScreenEmissionIntensity\":\"1\",\"checkboxScreenMirrorAlternatingX\":true,\"checkboxScreenMirrorAlternatingY\":false,\"checkboxScreenMirrorPhaseX\":false,\"checkboxScreenMirrorPhaseY\":false},\"data/processed/SMARTPHONE MODELS/Motorola Razr.glb\":{\"sliderPhoneModelScale\":\"0.75\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"-4\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":false,\"selectPhoneRotationMode\":\"gyro\",\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"-1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"1\",\"textPhoneResponsiveRotationRange\":\"{\\\"min\\\":-57,\\\"max\\\":45}\",\"textPhoneResponsiveRotationCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"natural\\\"}\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"5\",\"sliderScreenRenderResolution\":\"100\",\"sliderScreenTextureScale\":\"1\",\"textScreenLevelScaleRange\":\"{\\\"min\\\":1,\\\"max\\\":1}\",\"textScreenLevelScaleCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"linear\\\"}\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"1\",\"sliderScreenTextureScaleY\":\"1\",\"checkboxScreenToScale\":true,\"sliderScreenTextureOffsetX\":\"0\",\"sliderScreenTextureOffsetY\":\"0.05\",\"sliderScreenEmissionIntensity\":\"3.3\",\"checkboxScreenMirrorAlternatingX\":true,\"checkboxScreenMirrorAlternatingY\":false,\"checkboxScreenMirrorPhaseX\":false,\"checkboxScreenMirrorPhaseY\":false},\"data/processed/SMARTPHONE MODELS/Samsung Galaxy S26.glb\":{\"sliderPhoneModelScale\":\"1\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"0\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":true,\"selectPhoneRotationMode\":\"gyro\",\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"-1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1.3\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"0.21\",\"textPhoneResponsiveRotationRange\":\"{\\\"min\\\":-57,\\\"max\\\":45}\",\"textPhoneResponsiveRotationCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"natural\\\"}\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"10\",\"sliderScreenRenderResolution\":\"200\",\"sliderScreenTextureScale\":\"1.2\",\"textScreenLevelScaleRange\":\"{\\\"min\\\":1,\\\"max\\\":1}\",\"textScreenLevelScaleCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"linear\\\"}\",\"sliderScreenTextureRotation\":\"0\",\"sliderScreenTextureScaleX\":\"0.6\",\"sliderScreenTextureScaleY\":\"1.1\",\"checkboxScreenToScale\":true,\"sliderScreenTextureOffsetX\":\"0\",\"sliderScreenTextureOffsetY\":\"-0.06\",\"sliderScreenEmissionIntensity\":\"0.95\",\"checkboxScreenMirrorAlternatingX\":false,\"checkboxScreenMirrorAlternatingY\":true,\"checkboxScreenMirrorPhaseX\":false,\"checkboxScreenMirrorPhaseY\":false},\"data/processed/SMARTPHONE MODELS/iPhone 17 Max.glb\":{\"sliderPhoneModelScale\":\"0.5\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"0\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":true,\"selectPhoneRotationMode\":\"gyro\",\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"-1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1.3\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"0.21\",\"textPhoneResponsiveRotationRange\":\"{\\\"min\\\":-57,\\\"max\\\":45}\",\"textPhoneResponsiveRotationCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"natural\\\"}\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"7\",\"sliderScreenRenderResolution\":\"100\",\"sliderScreenTextureScale\":\"1\",\"textScreenLevelScaleRange\":\"{\\\"min\\\":1,\\\"max\\\":1}\",\"textScreenLevelScaleCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"linear\\\"}\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"0.6\",\"sliderScreenTextureScaleY\":\"1.1\",\"checkboxScreenToScale\":true,\"sliderScreenTextureOffsetX\":\"0\",\"sliderScreenTextureOffsetY\":\"0.01\",\"sliderScreenEmissionIntensity\":\"0.9\",\"checkboxScreenMirrorAlternatingX\":true,\"checkboxScreenMirrorAlternatingY\":false,\"checkboxScreenMirrorPhaseX\":false,\"checkboxScreenMirrorPhaseY\":false},\"blob:https://handy-set.vercel.app/828cd7f0-4b37-41ec-a2f0-10ca6716166d\":{\"sliderPhoneModelScale\":\"1\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"-1\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":true,\"selectPhoneRotationMode\":\"gyro\",\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"1\",\"textPhoneResponsiveRotationRange\":\"{\\\"min\\\":-57,\\\"max\\\":45}\",\"textPhoneResponsiveRotationCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"natural\\\"}\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"10\",\"sliderScreenRenderResolution\":\"175\",\"sliderScreenTextureScale\":\"0.9\",\"textScreenLevelScaleRange\":\"{\\\"min\\\":1,\\\"max\\\":1}\",\"textScreenLevelScaleCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"linear\\\"}\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"1.1\",\"sliderScreenTextureScaleY\":\"0.95\",\"checkboxScreenToScale\":true,\"sliderScreenTextureOffsetX\":\"0\",\"sliderScreenTextureOffsetY\":\"0.01\",\"sliderScreenEmissionIntensity\":\"0.9\",\"checkboxScreenMirrorAlternatingX\":true,\"checkboxScreenMirrorAlternatingY\":false,\"checkboxScreenMirrorPhaseX\":false,\"checkboxScreenMirrorPhaseY\":false}}",
+    "sliderPhoneModelScale": 0.5,
     "sliderPhoneModelOffsetX": 0,
     "sliderPhoneModelOffsetY": 31,
-    "sliderPhoneModelOffsetZ": -1,
+    "sliderPhoneModelOffsetZ": 0,
     "sliderPhoneModelRotX": 0,
     "sliderPhoneModelRotY": 0,
     "sliderPhoneModelRotZ": 0,
@@ -100,24 +100,26 @@
     "selectPhoneRotationMode": "gyro",
     "checkboxPhoneRotationResetEnabled": true,
     "checkboxPhoneAxisXEnabled": true,
-    "sliderPhoneRotationScaleX": 1,
+    "sliderPhoneRotationScaleX": -1,
     "checkboxPhoneAxisYEnabled": true,
     "sliderPhoneRotationScaleY": 1,
     "checkboxPhoneAxisZEnabled": true,
-    "sliderPhoneRotationScaleZ": 1,
+    "sliderPhoneRotationScaleZ": 1.3,
     "sliderPhoneResponsiveRotationFineTune": 43,
-    "sliderPhoneRotationDamping": 1,
+    "sliderPhoneRotationDamping": 0.21,
     "textPhoneResponsiveRotationRange": "{\"min\":-57,\"max\":45}",
     "textPhoneResponsiveRotationCurve": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"natural\"}",
     "checkboxScreenRenderEnabled": true,
-    "sliderScreenRecursionLevels": 18,
-    "sliderScreenRenderResolution": 175,
-    "sliderScreenTextureScale": 0.9,
+    "sliderScreenRecursionLevels": 7,
+    "sliderScreenRenderResolution": 100,
+    "sliderScreenTextureScale": 1,
+    "textScreenLevelScaleRange": "{\"min\":1,\"max\":1}",
+    "textScreenLevelScaleCurve": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"linear\"}",
     "sliderScreenTextureRotation": 180,
     "sliderScreenTextureOffsetX": 0,
     "sliderScreenTextureOffsetY": 0.01,
-    "sliderScreenTextureScaleX": 1.1,
-    "sliderScreenTextureScaleY": 0.95,
+    "sliderScreenTextureScaleX": 0.6,
+    "sliderScreenTextureScaleY": 1.1,
     "sliderScreenEmissionIntensity": 0.9,
     "checkboxScreenMirrorAlternatingX": true,
     "checkboxScreenMirrorAlternatingY": false,
@@ -1940,6 +1942,14 @@
                 {
                   "type": "row",
                   "key": "checkboxScreenMirrorPhaseY"
+                },
+                {
+                  "type": "row",
+                  "key": "textScreenLevelScaleRange"
+                },
+                {
+                  "type": "row",
+                  "key": "textScreenLevelScaleCurve"
                 }
               ],
               "rowKeys": [
@@ -1956,7 +1966,9 @@
                 "sliderScreenTextureOffsetX",
                 "sliderScreenTextureOffsetY",
                 "checkboxScreenMirrorPhaseX",
-                "checkboxScreenMirrorPhaseY"
+                "checkboxScreenMirrorPhaseY",
+                "textScreenLevelScaleRange",
+                "textScreenLevelScaleCurve"
               ],
               "subgroups": []
             }
@@ -2228,6 +2240,14 @@
               {
                 "type": "row",
                 "key": "checkboxScreenMirrorPhaseY"
+              },
+              {
+                "type": "row",
+                "key": "textScreenLevelScaleRange"
+              },
+              {
+                "type": "row",
+                "key": "textScreenLevelScaleCurve"
               }
             ],
             "rowKeys": [
@@ -2244,7 +2264,9 @@
               "sliderScreenTextureOffsetX",
               "sliderScreenTextureOffsetY",
               "checkboxScreenMirrorPhaseX",
-              "checkboxScreenMirrorPhaseY"
+              "checkboxScreenMirrorPhaseY",
+              "textScreenLevelScaleRange",
+              "textScreenLevelScaleCurve"
             ],
             "subgroups": []
           }
@@ -4858,6 +4880,615 @@
     ],
     "mobileTabContent": [
       {
+        "key": "mobile:Dev Panel",
+        "items": [
+          {
+            "type": "group",
+            "section": {
+              "key": "mobile:MECHANICS",
+              "items": [
+                {
+                  "type": "row",
+                  "key": "sliderMobileDevPanelScrollStrength"
+                }
+              ],
+              "rowKeys": [
+                "sliderMobileDevPanelScrollStrength"
+              ],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "group",
+            "section": {
+              "key": "mobile:PANEL UI",
+              "items": [],
+              "rowKeys": [],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "group",
+            "section": {
+              "key": "mobile:TEXT",
+              "items": [
+                {
+                  "type": "group",
+                  "section": {
+                    "key": "mobile:Dev Panel Title",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "sliderMobileDevPanelTitleFontSize"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderMobileDevPanelTitleLetterSpacing"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderMobileDevPanelTitleLineHeight"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderMobileDevPanelButtonTextBorder"
+                      }
+                    ],
+                    "rowKeys": [
+                      "sliderMobileDevPanelTitleFontSize",
+                      "sliderMobileDevPanelTitleLetterSpacing",
+                      "sliderMobileDevPanelTitleLineHeight",
+                      "sliderMobileDevPanelButtonTextBorder"
+                    ],
+                    "subgroups": []
+                  }
+                },
+                {
+                  "type": "group",
+                  "section": {
+                    "key": "mobile:Group Title",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "sliderMobileDevPanelGroupTitleFontSize"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderMobileDevPanelGroupLineHeight"
+                      }
+                    ],
+                    "rowKeys": [
+                      "sliderMobileDevPanelGroupTitleFontSize",
+                      "sliderMobileDevPanelGroupLineHeight"
+                    ],
+                    "subgroups": []
+                  }
+                },
+                {
+                  "type": "group",
+                  "section": {
+                    "key": "mobile:Setting Title",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "sliderMobileDevPanelSettingTitleFontSize"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderMobileDevPanelValueFontSize"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderMobileDevPanelSettingsLineHeight"
+                      }
+                    ],
+                    "rowKeys": [
+                      "sliderMobileDevPanelSettingTitleFontSize",
+                      "sliderMobileDevPanelValueFontSize",
+                      "sliderMobileDevPanelSettingsLineHeight"
+                    ],
+                    "subgroups": []
+                  }
+                },
+                {
+                  "type": "group",
+                  "section": {
+                    "key": "mobile:TABS",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "sliderMobileDevPanelTabFontSize"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderMobileDevPanelTabLineHeight"
+                      }
+                    ],
+                    "rowKeys": [
+                      "sliderMobileDevPanelTabFontSize",
+                      "sliderMobileDevPanelTabLineHeight"
+                    ],
+                    "subgroups": []
+                  }
+                },
+                {
+                  "type": "group",
+                  "section": {
+                    "key": "mobile:BUTTONS",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "sliderMobileDevPanelButtonFontSize"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderMobileDevPanelButtonLineHeight"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderMobileDevPanelButtonHeight"
+                      }
+                    ],
+                    "rowKeys": [
+                      "sliderMobileDevPanelButtonFontSize",
+                      "sliderMobileDevPanelButtonLineHeight",
+                      "sliderMobileDevPanelButtonHeight"
+                    ],
+                    "subgroups": []
+                  }
+                }
+              ],
+              "rowKeys": [],
+              "subgroups": [
+                {
+                  "key": "mobile:Dev Panel Title",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "sliderMobileDevPanelTitleFontSize"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderMobileDevPanelTitleLetterSpacing"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderMobileDevPanelTitleLineHeight"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderMobileDevPanelButtonTextBorder"
+                    }
+                  ],
+                  "rowKeys": [
+                    "sliderMobileDevPanelTitleFontSize",
+                    "sliderMobileDevPanelTitleLetterSpacing",
+                    "sliderMobileDevPanelTitleLineHeight",
+                    "sliderMobileDevPanelButtonTextBorder"
+                  ],
+                  "subgroups": []
+                },
+                {
+                  "key": "mobile:Group Title",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "sliderMobileDevPanelGroupTitleFontSize"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderMobileDevPanelGroupLineHeight"
+                    }
+                  ],
+                  "rowKeys": [
+                    "sliderMobileDevPanelGroupTitleFontSize",
+                    "sliderMobileDevPanelGroupLineHeight"
+                  ],
+                  "subgroups": []
+                },
+                {
+                  "key": "mobile:Setting Title",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "sliderMobileDevPanelSettingTitleFontSize"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderMobileDevPanelValueFontSize"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderMobileDevPanelSettingsLineHeight"
+                    }
+                  ],
+                  "rowKeys": [
+                    "sliderMobileDevPanelSettingTitleFontSize",
+                    "sliderMobileDevPanelValueFontSize",
+                    "sliderMobileDevPanelSettingsLineHeight"
+                  ],
+                  "subgroups": []
+                },
+                {
+                  "key": "mobile:TABS",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "sliderMobileDevPanelTabFontSize"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderMobileDevPanelTabLineHeight"
+                    }
+                  ],
+                  "rowKeys": [
+                    "sliderMobileDevPanelTabFontSize",
+                    "sliderMobileDevPanelTabLineHeight"
+                  ],
+                  "subgroups": []
+                },
+                {
+                  "key": "mobile:BUTTONS",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "sliderMobileDevPanelButtonFontSize"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderMobileDevPanelButtonLineHeight"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderMobileDevPanelButtonHeight"
+                    }
+                  ],
+                  "rowKeys": [
+                    "sliderMobileDevPanelButtonFontSize",
+                    "sliderMobileDevPanelButtonLineHeight",
+                    "sliderMobileDevPanelButtonHeight"
+                  ],
+                  "subgroups": []
+                }
+              ]
+            }
+          }
+        ],
+        "rowKeys": [],
+        "subgroups": [
+          {
+            "key": "mobile:MECHANICS",
+            "items": [
+              {
+                "type": "row",
+                "key": "sliderMobileDevPanelScrollStrength"
+              }
+            ],
+            "rowKeys": [
+              "sliderMobileDevPanelScrollStrength"
+            ],
+            "subgroups": []
+          },
+          {
+            "key": "mobile:PANEL UI",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
+          {
+            "key": "mobile:TEXT",
+            "items": [
+              {
+                "type": "group",
+                "section": {
+                  "key": "mobile:Dev Panel Title",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "sliderMobileDevPanelTitleFontSize"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderMobileDevPanelTitleLetterSpacing"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderMobileDevPanelTitleLineHeight"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderMobileDevPanelButtonTextBorder"
+                    }
+                  ],
+                  "rowKeys": [
+                    "sliderMobileDevPanelTitleFontSize",
+                    "sliderMobileDevPanelTitleLetterSpacing",
+                    "sliderMobileDevPanelTitleLineHeight",
+                    "sliderMobileDevPanelButtonTextBorder"
+                  ],
+                  "subgroups": []
+                }
+              },
+              {
+                "type": "group",
+                "section": {
+                  "key": "mobile:Group Title",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "sliderMobileDevPanelGroupTitleFontSize"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderMobileDevPanelGroupLineHeight"
+                    }
+                  ],
+                  "rowKeys": [
+                    "sliderMobileDevPanelGroupTitleFontSize",
+                    "sliderMobileDevPanelGroupLineHeight"
+                  ],
+                  "subgroups": []
+                }
+              },
+              {
+                "type": "group",
+                "section": {
+                  "key": "mobile:Setting Title",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "sliderMobileDevPanelSettingTitleFontSize"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderMobileDevPanelValueFontSize"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderMobileDevPanelSettingsLineHeight"
+                    }
+                  ],
+                  "rowKeys": [
+                    "sliderMobileDevPanelSettingTitleFontSize",
+                    "sliderMobileDevPanelValueFontSize",
+                    "sliderMobileDevPanelSettingsLineHeight"
+                  ],
+                  "subgroups": []
+                }
+              },
+              {
+                "type": "group",
+                "section": {
+                  "key": "mobile:TABS",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "sliderMobileDevPanelTabFontSize"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderMobileDevPanelTabLineHeight"
+                    }
+                  ],
+                  "rowKeys": [
+                    "sliderMobileDevPanelTabFontSize",
+                    "sliderMobileDevPanelTabLineHeight"
+                  ],
+                  "subgroups": []
+                }
+              },
+              {
+                "type": "group",
+                "section": {
+                  "key": "mobile:BUTTONS",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "sliderMobileDevPanelButtonFontSize"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderMobileDevPanelButtonLineHeight"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderMobileDevPanelButtonHeight"
+                    }
+                  ],
+                  "rowKeys": [
+                    "sliderMobileDevPanelButtonFontSize",
+                    "sliderMobileDevPanelButtonLineHeight",
+                    "sliderMobileDevPanelButtonHeight"
+                  ],
+                  "subgroups": []
+                }
+              }
+            ],
+            "rowKeys": [],
+            "subgroups": [
+              {
+                "key": "mobile:Dev Panel Title",
+                "items": [
+                  {
+                    "type": "row",
+                    "key": "sliderMobileDevPanelTitleFontSize"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderMobileDevPanelTitleLetterSpacing"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderMobileDevPanelTitleLineHeight"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderMobileDevPanelButtonTextBorder"
+                  }
+                ],
+                "rowKeys": [
+                  "sliderMobileDevPanelTitleFontSize",
+                  "sliderMobileDevPanelTitleLetterSpacing",
+                  "sliderMobileDevPanelTitleLineHeight",
+                  "sliderMobileDevPanelButtonTextBorder"
+                ],
+                "subgroups": []
+              },
+              {
+                "key": "mobile:Group Title",
+                "items": [
+                  {
+                    "type": "row",
+                    "key": "sliderMobileDevPanelGroupTitleFontSize"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderMobileDevPanelGroupLineHeight"
+                  }
+                ],
+                "rowKeys": [
+                  "sliderMobileDevPanelGroupTitleFontSize",
+                  "sliderMobileDevPanelGroupLineHeight"
+                ],
+                "subgroups": []
+              },
+              {
+                "key": "mobile:Setting Title",
+                "items": [
+                  {
+                    "type": "row",
+                    "key": "sliderMobileDevPanelSettingTitleFontSize"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderMobileDevPanelValueFontSize"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderMobileDevPanelSettingsLineHeight"
+                  }
+                ],
+                "rowKeys": [
+                  "sliderMobileDevPanelSettingTitleFontSize",
+                  "sliderMobileDevPanelValueFontSize",
+                  "sliderMobileDevPanelSettingsLineHeight"
+                ],
+                "subgroups": []
+              },
+              {
+                "key": "mobile:TABS",
+                "items": [
+                  {
+                    "type": "row",
+                    "key": "sliderMobileDevPanelTabFontSize"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderMobileDevPanelTabLineHeight"
+                  }
+                ],
+                "rowKeys": [
+                  "sliderMobileDevPanelTabFontSize",
+                  "sliderMobileDevPanelTabLineHeight"
+                ],
+                "subgroups": []
+              },
+              {
+                "key": "mobile:BUTTONS",
+                "items": [
+                  {
+                    "type": "row",
+                    "key": "sliderMobileDevPanelButtonFontSize"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderMobileDevPanelButtonLineHeight"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderMobileDevPanelButtonHeight"
+                  }
+                ],
+                "rowKeys": [
+                  "sliderMobileDevPanelButtonFontSize",
+                  "sliderMobileDevPanelButtonLineHeight",
+                  "sliderMobileDevPanelButtonHeight"
+                ],
+                "subgroups": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "mobile:Debug",
+        "items": [
+          {
+            "type": "group",
+            "section": {
+              "key": "mobile:Object Axes",
+              "items": [],
+              "rowKeys": [],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "group",
+            "section": {
+              "key": "mobile:Settings",
+              "items": [],
+              "rowKeys": [],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "group",
+            "section": {
+              "key": "mobile:Sensors",
+              "items": [],
+              "rowKeys": [],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "group",
+            "section": {
+              "key": "mobile:Phone Model Log",
+              "items": [],
+              "rowKeys": [],
+              "subgroups": []
+            }
+          }
+        ],
+        "rowKeys": [],
+        "subgroups": [
+          {
+            "key": "mobile:Object Axes",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
+          {
+            "key": "mobile:Settings",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
+          {
+            "key": "mobile:Sensors",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
+          {
+            "key": "mobile:Phone Model Log",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          }
+        ]
+      },
+      {
         "key": "mobile:PHONE MODEL",
         "items": [
           {
@@ -4936,10 +5567,20 @@
                 {
                   "type": "row",
                   "key": "sliderMobileScreenTextureOffsetX"
+                },
+                {
+                  "type": "row",
+                  "key": "textScreenLevelScaleRange"
+                },
+                {
+                  "type": "row",
+                  "key": "textScreenLevelScaleCurve"
                 }
               ],
               "rowKeys": [
-                "sliderMobileScreenTextureOffsetX"
+                "sliderMobileScreenTextureOffsetX",
+                "textScreenLevelScaleRange",
+                "textScreenLevelScaleCurve"
               ],
               "subgroups": []
             }
@@ -5012,10 +5653,20 @@
               {
                 "type": "row",
                 "key": "sliderMobileScreenTextureOffsetX"
+              },
+              {
+                "type": "row",
+                "key": "textScreenLevelScaleRange"
+              },
+              {
+                "type": "row",
+                "key": "textScreenLevelScaleCurve"
               }
             ],
             "rowKeys": [
-              "sliderMobileScreenTextureOffsetX"
+              "sliderMobileScreenTextureOffsetX",
+              "textScreenLevelScaleRange",
+              "textScreenLevelScaleCurve"
             ],
             "subgroups": []
           }
@@ -5920,615 +6571,6 @@
         "subgroups": []
       },
       {
-        "key": "mobile:Dev Panel",
-        "items": [
-          {
-            "type": "group",
-            "section": {
-              "key": "mobile:MECHANICS",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "sliderMobileDevPanelScrollStrength"
-                }
-              ],
-              "rowKeys": [
-                "sliderMobileDevPanelScrollStrength"
-              ],
-              "subgroups": []
-            }
-          },
-          {
-            "type": "group",
-            "section": {
-              "key": "mobile:PANEL UI",
-              "items": [],
-              "rowKeys": [],
-              "subgroups": []
-            }
-          },
-          {
-            "type": "group",
-            "section": {
-              "key": "mobile:TEXT",
-              "items": [
-                {
-                  "type": "group",
-                  "section": {
-                    "key": "mobile:Dev Panel Title",
-                    "items": [
-                      {
-                        "type": "row",
-                        "key": "sliderMobileDevPanelTitleFontSize"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderMobileDevPanelTitleLetterSpacing"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderMobileDevPanelTitleLineHeight"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderMobileDevPanelButtonTextBorder"
-                      }
-                    ],
-                    "rowKeys": [
-                      "sliderMobileDevPanelTitleFontSize",
-                      "sliderMobileDevPanelTitleLetterSpacing",
-                      "sliderMobileDevPanelTitleLineHeight",
-                      "sliderMobileDevPanelButtonTextBorder"
-                    ],
-                    "subgroups": []
-                  }
-                },
-                {
-                  "type": "group",
-                  "section": {
-                    "key": "mobile:Group Title",
-                    "items": [
-                      {
-                        "type": "row",
-                        "key": "sliderMobileDevPanelGroupTitleFontSize"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderMobileDevPanelGroupLineHeight"
-                      }
-                    ],
-                    "rowKeys": [
-                      "sliderMobileDevPanelGroupTitleFontSize",
-                      "sliderMobileDevPanelGroupLineHeight"
-                    ],
-                    "subgroups": []
-                  }
-                },
-                {
-                  "type": "group",
-                  "section": {
-                    "key": "mobile:Setting Title",
-                    "items": [
-                      {
-                        "type": "row",
-                        "key": "sliderMobileDevPanelSettingTitleFontSize"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderMobileDevPanelValueFontSize"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderMobileDevPanelSettingsLineHeight"
-                      }
-                    ],
-                    "rowKeys": [
-                      "sliderMobileDevPanelSettingTitleFontSize",
-                      "sliderMobileDevPanelValueFontSize",
-                      "sliderMobileDevPanelSettingsLineHeight"
-                    ],
-                    "subgroups": []
-                  }
-                },
-                {
-                  "type": "group",
-                  "section": {
-                    "key": "mobile:TABS",
-                    "items": [
-                      {
-                        "type": "row",
-                        "key": "sliderMobileDevPanelTabFontSize"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderMobileDevPanelTabLineHeight"
-                      }
-                    ],
-                    "rowKeys": [
-                      "sliderMobileDevPanelTabFontSize",
-                      "sliderMobileDevPanelTabLineHeight"
-                    ],
-                    "subgroups": []
-                  }
-                },
-                {
-                  "type": "group",
-                  "section": {
-                    "key": "mobile:BUTTONS",
-                    "items": [
-                      {
-                        "type": "row",
-                        "key": "sliderMobileDevPanelButtonFontSize"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderMobileDevPanelButtonLineHeight"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderMobileDevPanelButtonHeight"
-                      }
-                    ],
-                    "rowKeys": [
-                      "sliderMobileDevPanelButtonFontSize",
-                      "sliderMobileDevPanelButtonLineHeight",
-                      "sliderMobileDevPanelButtonHeight"
-                    ],
-                    "subgroups": []
-                  }
-                }
-              ],
-              "rowKeys": [],
-              "subgroups": [
-                {
-                  "key": "mobile:Dev Panel Title",
-                  "items": [
-                    {
-                      "type": "row",
-                      "key": "sliderMobileDevPanelTitleFontSize"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderMobileDevPanelTitleLetterSpacing"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderMobileDevPanelTitleLineHeight"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderMobileDevPanelButtonTextBorder"
-                    }
-                  ],
-                  "rowKeys": [
-                    "sliderMobileDevPanelTitleFontSize",
-                    "sliderMobileDevPanelTitleLetterSpacing",
-                    "sliderMobileDevPanelTitleLineHeight",
-                    "sliderMobileDevPanelButtonTextBorder"
-                  ],
-                  "subgroups": []
-                },
-                {
-                  "key": "mobile:Group Title",
-                  "items": [
-                    {
-                      "type": "row",
-                      "key": "sliderMobileDevPanelGroupTitleFontSize"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderMobileDevPanelGroupLineHeight"
-                    }
-                  ],
-                  "rowKeys": [
-                    "sliderMobileDevPanelGroupTitleFontSize",
-                    "sliderMobileDevPanelGroupLineHeight"
-                  ],
-                  "subgroups": []
-                },
-                {
-                  "key": "mobile:Setting Title",
-                  "items": [
-                    {
-                      "type": "row",
-                      "key": "sliderMobileDevPanelSettingTitleFontSize"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderMobileDevPanelValueFontSize"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderMobileDevPanelSettingsLineHeight"
-                    }
-                  ],
-                  "rowKeys": [
-                    "sliderMobileDevPanelSettingTitleFontSize",
-                    "sliderMobileDevPanelValueFontSize",
-                    "sliderMobileDevPanelSettingsLineHeight"
-                  ],
-                  "subgroups": []
-                },
-                {
-                  "key": "mobile:TABS",
-                  "items": [
-                    {
-                      "type": "row",
-                      "key": "sliderMobileDevPanelTabFontSize"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderMobileDevPanelTabLineHeight"
-                    }
-                  ],
-                  "rowKeys": [
-                    "sliderMobileDevPanelTabFontSize",
-                    "sliderMobileDevPanelTabLineHeight"
-                  ],
-                  "subgroups": []
-                },
-                {
-                  "key": "mobile:BUTTONS",
-                  "items": [
-                    {
-                      "type": "row",
-                      "key": "sliderMobileDevPanelButtonFontSize"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderMobileDevPanelButtonLineHeight"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderMobileDevPanelButtonHeight"
-                    }
-                  ],
-                  "rowKeys": [
-                    "sliderMobileDevPanelButtonFontSize",
-                    "sliderMobileDevPanelButtonLineHeight",
-                    "sliderMobileDevPanelButtonHeight"
-                  ],
-                  "subgroups": []
-                }
-              ]
-            }
-          }
-        ],
-        "rowKeys": [],
-        "subgroups": [
-          {
-            "key": "mobile:MECHANICS",
-            "items": [
-              {
-                "type": "row",
-                "key": "sliderMobileDevPanelScrollStrength"
-              }
-            ],
-            "rowKeys": [
-              "sliderMobileDevPanelScrollStrength"
-            ],
-            "subgroups": []
-          },
-          {
-            "key": "mobile:PANEL UI",
-            "items": [],
-            "rowKeys": [],
-            "subgroups": []
-          },
-          {
-            "key": "mobile:TEXT",
-            "items": [
-              {
-                "type": "group",
-                "section": {
-                  "key": "mobile:Dev Panel Title",
-                  "items": [
-                    {
-                      "type": "row",
-                      "key": "sliderMobileDevPanelTitleFontSize"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderMobileDevPanelTitleLetterSpacing"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderMobileDevPanelTitleLineHeight"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderMobileDevPanelButtonTextBorder"
-                    }
-                  ],
-                  "rowKeys": [
-                    "sliderMobileDevPanelTitleFontSize",
-                    "sliderMobileDevPanelTitleLetterSpacing",
-                    "sliderMobileDevPanelTitleLineHeight",
-                    "sliderMobileDevPanelButtonTextBorder"
-                  ],
-                  "subgroups": []
-                }
-              },
-              {
-                "type": "group",
-                "section": {
-                  "key": "mobile:Group Title",
-                  "items": [
-                    {
-                      "type": "row",
-                      "key": "sliderMobileDevPanelGroupTitleFontSize"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderMobileDevPanelGroupLineHeight"
-                    }
-                  ],
-                  "rowKeys": [
-                    "sliderMobileDevPanelGroupTitleFontSize",
-                    "sliderMobileDevPanelGroupLineHeight"
-                  ],
-                  "subgroups": []
-                }
-              },
-              {
-                "type": "group",
-                "section": {
-                  "key": "mobile:Setting Title",
-                  "items": [
-                    {
-                      "type": "row",
-                      "key": "sliderMobileDevPanelSettingTitleFontSize"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderMobileDevPanelValueFontSize"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderMobileDevPanelSettingsLineHeight"
-                    }
-                  ],
-                  "rowKeys": [
-                    "sliderMobileDevPanelSettingTitleFontSize",
-                    "sliderMobileDevPanelValueFontSize",
-                    "sliderMobileDevPanelSettingsLineHeight"
-                  ],
-                  "subgroups": []
-                }
-              },
-              {
-                "type": "group",
-                "section": {
-                  "key": "mobile:TABS",
-                  "items": [
-                    {
-                      "type": "row",
-                      "key": "sliderMobileDevPanelTabFontSize"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderMobileDevPanelTabLineHeight"
-                    }
-                  ],
-                  "rowKeys": [
-                    "sliderMobileDevPanelTabFontSize",
-                    "sliderMobileDevPanelTabLineHeight"
-                  ],
-                  "subgroups": []
-                }
-              },
-              {
-                "type": "group",
-                "section": {
-                  "key": "mobile:BUTTONS",
-                  "items": [
-                    {
-                      "type": "row",
-                      "key": "sliderMobileDevPanelButtonFontSize"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderMobileDevPanelButtonLineHeight"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderMobileDevPanelButtonHeight"
-                    }
-                  ],
-                  "rowKeys": [
-                    "sliderMobileDevPanelButtonFontSize",
-                    "sliderMobileDevPanelButtonLineHeight",
-                    "sliderMobileDevPanelButtonHeight"
-                  ],
-                  "subgroups": []
-                }
-              }
-            ],
-            "rowKeys": [],
-            "subgroups": [
-              {
-                "key": "mobile:Dev Panel Title",
-                "items": [
-                  {
-                    "type": "row",
-                    "key": "sliderMobileDevPanelTitleFontSize"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderMobileDevPanelTitleLetterSpacing"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderMobileDevPanelTitleLineHeight"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderMobileDevPanelButtonTextBorder"
-                  }
-                ],
-                "rowKeys": [
-                  "sliderMobileDevPanelTitleFontSize",
-                  "sliderMobileDevPanelTitleLetterSpacing",
-                  "sliderMobileDevPanelTitleLineHeight",
-                  "sliderMobileDevPanelButtonTextBorder"
-                ],
-                "subgroups": []
-              },
-              {
-                "key": "mobile:Group Title",
-                "items": [
-                  {
-                    "type": "row",
-                    "key": "sliderMobileDevPanelGroupTitleFontSize"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderMobileDevPanelGroupLineHeight"
-                  }
-                ],
-                "rowKeys": [
-                  "sliderMobileDevPanelGroupTitleFontSize",
-                  "sliderMobileDevPanelGroupLineHeight"
-                ],
-                "subgroups": []
-              },
-              {
-                "key": "mobile:Setting Title",
-                "items": [
-                  {
-                    "type": "row",
-                    "key": "sliderMobileDevPanelSettingTitleFontSize"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderMobileDevPanelValueFontSize"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderMobileDevPanelSettingsLineHeight"
-                  }
-                ],
-                "rowKeys": [
-                  "sliderMobileDevPanelSettingTitleFontSize",
-                  "sliderMobileDevPanelValueFontSize",
-                  "sliderMobileDevPanelSettingsLineHeight"
-                ],
-                "subgroups": []
-              },
-              {
-                "key": "mobile:TABS",
-                "items": [
-                  {
-                    "type": "row",
-                    "key": "sliderMobileDevPanelTabFontSize"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderMobileDevPanelTabLineHeight"
-                  }
-                ],
-                "rowKeys": [
-                  "sliderMobileDevPanelTabFontSize",
-                  "sliderMobileDevPanelTabLineHeight"
-                ],
-                "subgroups": []
-              },
-              {
-                "key": "mobile:BUTTONS",
-                "items": [
-                  {
-                    "type": "row",
-                    "key": "sliderMobileDevPanelButtonFontSize"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderMobileDevPanelButtonLineHeight"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderMobileDevPanelButtonHeight"
-                  }
-                ],
-                "rowKeys": [
-                  "sliderMobileDevPanelButtonFontSize",
-                  "sliderMobileDevPanelButtonLineHeight",
-                  "sliderMobileDevPanelButtonHeight"
-                ],
-                "subgroups": []
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "key": "mobile:Debug",
-        "items": [
-          {
-            "type": "group",
-            "section": {
-              "key": "mobile:Object Axes",
-              "items": [],
-              "rowKeys": [],
-              "subgroups": []
-            }
-          },
-          {
-            "type": "group",
-            "section": {
-              "key": "mobile:Settings",
-              "items": [],
-              "rowKeys": [],
-              "subgroups": []
-            }
-          },
-          {
-            "type": "group",
-            "section": {
-              "key": "mobile:Sensors",
-              "items": [],
-              "rowKeys": [],
-              "subgroups": []
-            }
-          },
-          {
-            "type": "group",
-            "section": {
-              "key": "mobile:Phone Model Log",
-              "items": [],
-              "rowKeys": [],
-              "subgroups": []
-            }
-          }
-        ],
-        "rowKeys": [],
-        "subgroups": [
-          {
-            "key": "mobile:Object Axes",
-            "items": [],
-            "rowKeys": [],
-            "subgroups": []
-          },
-          {
-            "key": "mobile:Settings",
-            "items": [],
-            "rowKeys": [],
-            "subgroups": []
-          },
-          {
-            "key": "mobile:Sensors",
-            "items": [],
-            "rowKeys": [],
-            "subgroups": []
-          },
-          {
-            "key": "mobile:Phone Model Log",
-            "items": [],
-            "rowKeys": [],
-            "subgroups": []
-          }
-        ]
-      },
-      {
         "key": "mobile:Camera",
         "items": [
           {
@@ -6605,6 +6647,615 @@
       }
     ],
     "landscapeTabContent": [
+      {
+        "key": "landscape:Dev Panel",
+        "items": [
+          {
+            "type": "group",
+            "section": {
+              "key": "landscape:MECHANICS",
+              "items": [
+                {
+                  "type": "row",
+                  "key": "sliderLandscapeDevPanelScrollStrength"
+                }
+              ],
+              "rowKeys": [
+                "sliderLandscapeDevPanelScrollStrength"
+              ],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "group",
+            "section": {
+              "key": "landscape:PANEL UI",
+              "items": [],
+              "rowKeys": [],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "group",
+            "section": {
+              "key": "landscape:TEXT",
+              "items": [
+                {
+                  "type": "group",
+                  "section": {
+                    "key": "landscape:Dev Panel Title",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "sliderLandscapeDevPanelTitleFontSize"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderLandscapeDevPanelTitleLetterSpacing"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderLandscapeDevPanelTitleLineHeight"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderLandscapeDevPanelButtonTextBorder"
+                      }
+                    ],
+                    "rowKeys": [
+                      "sliderLandscapeDevPanelTitleFontSize",
+                      "sliderLandscapeDevPanelTitleLetterSpacing",
+                      "sliderLandscapeDevPanelTitleLineHeight",
+                      "sliderLandscapeDevPanelButtonTextBorder"
+                    ],
+                    "subgroups": []
+                  }
+                },
+                {
+                  "type": "group",
+                  "section": {
+                    "key": "landscape:Group Title",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "sliderLandscapeDevPanelGroupTitleFontSize"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderLandscapeDevPanelGroupLineHeight"
+                      }
+                    ],
+                    "rowKeys": [
+                      "sliderLandscapeDevPanelGroupTitleFontSize",
+                      "sliderLandscapeDevPanelGroupLineHeight"
+                    ],
+                    "subgroups": []
+                  }
+                },
+                {
+                  "type": "group",
+                  "section": {
+                    "key": "landscape:Setting Title",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "sliderLandscapeDevPanelSettingTitleFontSize"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderLandscapeDevPanelValueFontSize"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderLandscapeDevPanelSettingsLineHeight"
+                      }
+                    ],
+                    "rowKeys": [
+                      "sliderLandscapeDevPanelSettingTitleFontSize",
+                      "sliderLandscapeDevPanelValueFontSize",
+                      "sliderLandscapeDevPanelSettingsLineHeight"
+                    ],
+                    "subgroups": []
+                  }
+                },
+                {
+                  "type": "group",
+                  "section": {
+                    "key": "landscape:TABS",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "sliderLandscapeDevPanelTabFontSize"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderLandscapeDevPanelTabLineHeight"
+                      }
+                    ],
+                    "rowKeys": [
+                      "sliderLandscapeDevPanelTabFontSize",
+                      "sliderLandscapeDevPanelTabLineHeight"
+                    ],
+                    "subgroups": []
+                  }
+                },
+                {
+                  "type": "group",
+                  "section": {
+                    "key": "landscape:BUTTONS",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "sliderLandscapeDevPanelButtonFontSize"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderLandscapeDevPanelButtonLineHeight"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderLandscapeDevPanelButtonHeight"
+                      }
+                    ],
+                    "rowKeys": [
+                      "sliderLandscapeDevPanelButtonFontSize",
+                      "sliderLandscapeDevPanelButtonLineHeight",
+                      "sliderLandscapeDevPanelButtonHeight"
+                    ],
+                    "subgroups": []
+                  }
+                }
+              ],
+              "rowKeys": [],
+              "subgroups": [
+                {
+                  "key": "landscape:Dev Panel Title",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapeDevPanelTitleFontSize"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapeDevPanelTitleLetterSpacing"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapeDevPanelTitleLineHeight"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapeDevPanelButtonTextBorder"
+                    }
+                  ],
+                  "rowKeys": [
+                    "sliderLandscapeDevPanelTitleFontSize",
+                    "sliderLandscapeDevPanelTitleLetterSpacing",
+                    "sliderLandscapeDevPanelTitleLineHeight",
+                    "sliderLandscapeDevPanelButtonTextBorder"
+                  ],
+                  "subgroups": []
+                },
+                {
+                  "key": "landscape:Group Title",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapeDevPanelGroupTitleFontSize"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapeDevPanelGroupLineHeight"
+                    }
+                  ],
+                  "rowKeys": [
+                    "sliderLandscapeDevPanelGroupTitleFontSize",
+                    "sliderLandscapeDevPanelGroupLineHeight"
+                  ],
+                  "subgroups": []
+                },
+                {
+                  "key": "landscape:Setting Title",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapeDevPanelSettingTitleFontSize"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapeDevPanelValueFontSize"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapeDevPanelSettingsLineHeight"
+                    }
+                  ],
+                  "rowKeys": [
+                    "sliderLandscapeDevPanelSettingTitleFontSize",
+                    "sliderLandscapeDevPanelValueFontSize",
+                    "sliderLandscapeDevPanelSettingsLineHeight"
+                  ],
+                  "subgroups": []
+                },
+                {
+                  "key": "landscape:TABS",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapeDevPanelTabFontSize"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapeDevPanelTabLineHeight"
+                    }
+                  ],
+                  "rowKeys": [
+                    "sliderLandscapeDevPanelTabFontSize",
+                    "sliderLandscapeDevPanelTabLineHeight"
+                  ],
+                  "subgroups": []
+                },
+                {
+                  "key": "landscape:BUTTONS",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapeDevPanelButtonFontSize"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapeDevPanelButtonLineHeight"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapeDevPanelButtonHeight"
+                    }
+                  ],
+                  "rowKeys": [
+                    "sliderLandscapeDevPanelButtonFontSize",
+                    "sliderLandscapeDevPanelButtonLineHeight",
+                    "sliderLandscapeDevPanelButtonHeight"
+                  ],
+                  "subgroups": []
+                }
+              ]
+            }
+          }
+        ],
+        "rowKeys": [],
+        "subgroups": [
+          {
+            "key": "landscape:MECHANICS",
+            "items": [
+              {
+                "type": "row",
+                "key": "sliderLandscapeDevPanelScrollStrength"
+              }
+            ],
+            "rowKeys": [
+              "sliderLandscapeDevPanelScrollStrength"
+            ],
+            "subgroups": []
+          },
+          {
+            "key": "landscape:PANEL UI",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
+          {
+            "key": "landscape:TEXT",
+            "items": [
+              {
+                "type": "group",
+                "section": {
+                  "key": "landscape:Dev Panel Title",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapeDevPanelTitleFontSize"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapeDevPanelTitleLetterSpacing"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapeDevPanelTitleLineHeight"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapeDevPanelButtonTextBorder"
+                    }
+                  ],
+                  "rowKeys": [
+                    "sliderLandscapeDevPanelTitleFontSize",
+                    "sliderLandscapeDevPanelTitleLetterSpacing",
+                    "sliderLandscapeDevPanelTitleLineHeight",
+                    "sliderLandscapeDevPanelButtonTextBorder"
+                  ],
+                  "subgroups": []
+                }
+              },
+              {
+                "type": "group",
+                "section": {
+                  "key": "landscape:Group Title",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapeDevPanelGroupTitleFontSize"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapeDevPanelGroupLineHeight"
+                    }
+                  ],
+                  "rowKeys": [
+                    "sliderLandscapeDevPanelGroupTitleFontSize",
+                    "sliderLandscapeDevPanelGroupLineHeight"
+                  ],
+                  "subgroups": []
+                }
+              },
+              {
+                "type": "group",
+                "section": {
+                  "key": "landscape:Setting Title",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapeDevPanelSettingTitleFontSize"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapeDevPanelValueFontSize"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapeDevPanelSettingsLineHeight"
+                    }
+                  ],
+                  "rowKeys": [
+                    "sliderLandscapeDevPanelSettingTitleFontSize",
+                    "sliderLandscapeDevPanelValueFontSize",
+                    "sliderLandscapeDevPanelSettingsLineHeight"
+                  ],
+                  "subgroups": []
+                }
+              },
+              {
+                "type": "group",
+                "section": {
+                  "key": "landscape:TABS",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapeDevPanelTabFontSize"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapeDevPanelTabLineHeight"
+                    }
+                  ],
+                  "rowKeys": [
+                    "sliderLandscapeDevPanelTabFontSize",
+                    "sliderLandscapeDevPanelTabLineHeight"
+                  ],
+                  "subgroups": []
+                }
+              },
+              {
+                "type": "group",
+                "section": {
+                  "key": "landscape:BUTTONS",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapeDevPanelButtonFontSize"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapeDevPanelButtonLineHeight"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapeDevPanelButtonHeight"
+                    }
+                  ],
+                  "rowKeys": [
+                    "sliderLandscapeDevPanelButtonFontSize",
+                    "sliderLandscapeDevPanelButtonLineHeight",
+                    "sliderLandscapeDevPanelButtonHeight"
+                  ],
+                  "subgroups": []
+                }
+              }
+            ],
+            "rowKeys": [],
+            "subgroups": [
+              {
+                "key": "landscape:Dev Panel Title",
+                "items": [
+                  {
+                    "type": "row",
+                    "key": "sliderLandscapeDevPanelTitleFontSize"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderLandscapeDevPanelTitleLetterSpacing"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderLandscapeDevPanelTitleLineHeight"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderLandscapeDevPanelButtonTextBorder"
+                  }
+                ],
+                "rowKeys": [
+                  "sliderLandscapeDevPanelTitleFontSize",
+                  "sliderLandscapeDevPanelTitleLetterSpacing",
+                  "sliderLandscapeDevPanelTitleLineHeight",
+                  "sliderLandscapeDevPanelButtonTextBorder"
+                ],
+                "subgroups": []
+              },
+              {
+                "key": "landscape:Group Title",
+                "items": [
+                  {
+                    "type": "row",
+                    "key": "sliderLandscapeDevPanelGroupTitleFontSize"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderLandscapeDevPanelGroupLineHeight"
+                  }
+                ],
+                "rowKeys": [
+                  "sliderLandscapeDevPanelGroupTitleFontSize",
+                  "sliderLandscapeDevPanelGroupLineHeight"
+                ],
+                "subgroups": []
+              },
+              {
+                "key": "landscape:Setting Title",
+                "items": [
+                  {
+                    "type": "row",
+                    "key": "sliderLandscapeDevPanelSettingTitleFontSize"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderLandscapeDevPanelValueFontSize"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderLandscapeDevPanelSettingsLineHeight"
+                  }
+                ],
+                "rowKeys": [
+                  "sliderLandscapeDevPanelSettingTitleFontSize",
+                  "sliderLandscapeDevPanelValueFontSize",
+                  "sliderLandscapeDevPanelSettingsLineHeight"
+                ],
+                "subgroups": []
+              },
+              {
+                "key": "landscape:TABS",
+                "items": [
+                  {
+                    "type": "row",
+                    "key": "sliderLandscapeDevPanelTabFontSize"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderLandscapeDevPanelTabLineHeight"
+                  }
+                ],
+                "rowKeys": [
+                  "sliderLandscapeDevPanelTabFontSize",
+                  "sliderLandscapeDevPanelTabLineHeight"
+                ],
+                "subgroups": []
+              },
+              {
+                "key": "landscape:BUTTONS",
+                "items": [
+                  {
+                    "type": "row",
+                    "key": "sliderLandscapeDevPanelButtonFontSize"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderLandscapeDevPanelButtonLineHeight"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderLandscapeDevPanelButtonHeight"
+                  }
+                ],
+                "rowKeys": [
+                  "sliderLandscapeDevPanelButtonFontSize",
+                  "sliderLandscapeDevPanelButtonLineHeight",
+                  "sliderLandscapeDevPanelButtonHeight"
+                ],
+                "subgroups": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "landscape:Debug",
+        "items": [
+          {
+            "type": "group",
+            "section": {
+              "key": "landscape:Object Axes",
+              "items": [],
+              "rowKeys": [],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "group",
+            "section": {
+              "key": "landscape:Settings",
+              "items": [],
+              "rowKeys": [],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "group",
+            "section": {
+              "key": "landscape:Sensors",
+              "items": [],
+              "rowKeys": [],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "group",
+            "section": {
+              "key": "landscape:Phone Model Log",
+              "items": [],
+              "rowKeys": [],
+              "subgroups": []
+            }
+          }
+        ],
+        "rowKeys": [],
+        "subgroups": [
+          {
+            "key": "landscape:Object Axes",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
+          {
+            "key": "landscape:Settings",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
+          {
+            "key": "landscape:Sensors",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
+          {
+            "key": "landscape:Phone Model Log",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          }
+        ]
+      },
       {
         "key": "landscape:PHONE MODEL",
         "items": [
@@ -6684,10 +7335,20 @@
                 {
                   "type": "row",
                   "key": "sliderLandscapeScreenTextureOffsetX"
+                },
+                {
+                  "type": "row",
+                  "key": "textScreenLevelScaleRange"
+                },
+                {
+                  "type": "row",
+                  "key": "textScreenLevelScaleCurve"
                 }
               ],
               "rowKeys": [
-                "sliderLandscapeScreenTextureOffsetX"
+                "sliderLandscapeScreenTextureOffsetX",
+                "textScreenLevelScaleRange",
+                "textScreenLevelScaleCurve"
               ],
               "subgroups": []
             }
@@ -6760,10 +7421,20 @@
               {
                 "type": "row",
                 "key": "sliderLandscapeScreenTextureOffsetX"
+              },
+              {
+                "type": "row",
+                "key": "textScreenLevelScaleRange"
+              },
+              {
+                "type": "row",
+                "key": "textScreenLevelScaleCurve"
               }
             ],
             "rowKeys": [
-              "sliderLandscapeScreenTextureOffsetX"
+              "sliderLandscapeScreenTextureOffsetX",
+              "textScreenLevelScaleRange",
+              "textScreenLevelScaleCurve"
             ],
             "subgroups": []
           }
@@ -7668,615 +8339,6 @@
         "subgroups": []
       },
       {
-        "key": "landscape:Dev Panel",
-        "items": [
-          {
-            "type": "group",
-            "section": {
-              "key": "landscape:MECHANICS",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "sliderLandscapeDevPanelScrollStrength"
-                }
-              ],
-              "rowKeys": [
-                "sliderLandscapeDevPanelScrollStrength"
-              ],
-              "subgroups": []
-            }
-          },
-          {
-            "type": "group",
-            "section": {
-              "key": "landscape:PANEL UI",
-              "items": [],
-              "rowKeys": [],
-              "subgroups": []
-            }
-          },
-          {
-            "type": "group",
-            "section": {
-              "key": "landscape:TEXT",
-              "items": [
-                {
-                  "type": "group",
-                  "section": {
-                    "key": "landscape:Dev Panel Title",
-                    "items": [
-                      {
-                        "type": "row",
-                        "key": "sliderLandscapeDevPanelTitleFontSize"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderLandscapeDevPanelTitleLetterSpacing"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderLandscapeDevPanelTitleLineHeight"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderLandscapeDevPanelButtonTextBorder"
-                      }
-                    ],
-                    "rowKeys": [
-                      "sliderLandscapeDevPanelTitleFontSize",
-                      "sliderLandscapeDevPanelTitleLetterSpacing",
-                      "sliderLandscapeDevPanelTitleLineHeight",
-                      "sliderLandscapeDevPanelButtonTextBorder"
-                    ],
-                    "subgroups": []
-                  }
-                },
-                {
-                  "type": "group",
-                  "section": {
-                    "key": "landscape:Group Title",
-                    "items": [
-                      {
-                        "type": "row",
-                        "key": "sliderLandscapeDevPanelGroupTitleFontSize"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderLandscapeDevPanelGroupLineHeight"
-                      }
-                    ],
-                    "rowKeys": [
-                      "sliderLandscapeDevPanelGroupTitleFontSize",
-                      "sliderLandscapeDevPanelGroupLineHeight"
-                    ],
-                    "subgroups": []
-                  }
-                },
-                {
-                  "type": "group",
-                  "section": {
-                    "key": "landscape:Setting Title",
-                    "items": [
-                      {
-                        "type": "row",
-                        "key": "sliderLandscapeDevPanelSettingTitleFontSize"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderLandscapeDevPanelValueFontSize"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderLandscapeDevPanelSettingsLineHeight"
-                      }
-                    ],
-                    "rowKeys": [
-                      "sliderLandscapeDevPanelSettingTitleFontSize",
-                      "sliderLandscapeDevPanelValueFontSize",
-                      "sliderLandscapeDevPanelSettingsLineHeight"
-                    ],
-                    "subgroups": []
-                  }
-                },
-                {
-                  "type": "group",
-                  "section": {
-                    "key": "landscape:TABS",
-                    "items": [
-                      {
-                        "type": "row",
-                        "key": "sliderLandscapeDevPanelTabFontSize"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderLandscapeDevPanelTabLineHeight"
-                      }
-                    ],
-                    "rowKeys": [
-                      "sliderLandscapeDevPanelTabFontSize",
-                      "sliderLandscapeDevPanelTabLineHeight"
-                    ],
-                    "subgroups": []
-                  }
-                },
-                {
-                  "type": "group",
-                  "section": {
-                    "key": "landscape:BUTTONS",
-                    "items": [
-                      {
-                        "type": "row",
-                        "key": "sliderLandscapeDevPanelButtonFontSize"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderLandscapeDevPanelButtonLineHeight"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderLandscapeDevPanelButtonHeight"
-                      }
-                    ],
-                    "rowKeys": [
-                      "sliderLandscapeDevPanelButtonFontSize",
-                      "sliderLandscapeDevPanelButtonLineHeight",
-                      "sliderLandscapeDevPanelButtonHeight"
-                    ],
-                    "subgroups": []
-                  }
-                }
-              ],
-              "rowKeys": [],
-              "subgroups": [
-                {
-                  "key": "landscape:Dev Panel Title",
-                  "items": [
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapeDevPanelTitleFontSize"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapeDevPanelTitleLetterSpacing"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapeDevPanelTitleLineHeight"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapeDevPanelButtonTextBorder"
-                    }
-                  ],
-                  "rowKeys": [
-                    "sliderLandscapeDevPanelTitleFontSize",
-                    "sliderLandscapeDevPanelTitleLetterSpacing",
-                    "sliderLandscapeDevPanelTitleLineHeight",
-                    "sliderLandscapeDevPanelButtonTextBorder"
-                  ],
-                  "subgroups": []
-                },
-                {
-                  "key": "landscape:Group Title",
-                  "items": [
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapeDevPanelGroupTitleFontSize"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapeDevPanelGroupLineHeight"
-                    }
-                  ],
-                  "rowKeys": [
-                    "sliderLandscapeDevPanelGroupTitleFontSize",
-                    "sliderLandscapeDevPanelGroupLineHeight"
-                  ],
-                  "subgroups": []
-                },
-                {
-                  "key": "landscape:Setting Title",
-                  "items": [
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapeDevPanelSettingTitleFontSize"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapeDevPanelValueFontSize"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapeDevPanelSettingsLineHeight"
-                    }
-                  ],
-                  "rowKeys": [
-                    "sliderLandscapeDevPanelSettingTitleFontSize",
-                    "sliderLandscapeDevPanelValueFontSize",
-                    "sliderLandscapeDevPanelSettingsLineHeight"
-                  ],
-                  "subgroups": []
-                },
-                {
-                  "key": "landscape:TABS",
-                  "items": [
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapeDevPanelTabFontSize"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapeDevPanelTabLineHeight"
-                    }
-                  ],
-                  "rowKeys": [
-                    "sliderLandscapeDevPanelTabFontSize",
-                    "sliderLandscapeDevPanelTabLineHeight"
-                  ],
-                  "subgroups": []
-                },
-                {
-                  "key": "landscape:BUTTONS",
-                  "items": [
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapeDevPanelButtonFontSize"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapeDevPanelButtonLineHeight"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapeDevPanelButtonHeight"
-                    }
-                  ],
-                  "rowKeys": [
-                    "sliderLandscapeDevPanelButtonFontSize",
-                    "sliderLandscapeDevPanelButtonLineHeight",
-                    "sliderLandscapeDevPanelButtonHeight"
-                  ],
-                  "subgroups": []
-                }
-              ]
-            }
-          }
-        ],
-        "rowKeys": [],
-        "subgroups": [
-          {
-            "key": "landscape:MECHANICS",
-            "items": [
-              {
-                "type": "row",
-                "key": "sliderLandscapeDevPanelScrollStrength"
-              }
-            ],
-            "rowKeys": [
-              "sliderLandscapeDevPanelScrollStrength"
-            ],
-            "subgroups": []
-          },
-          {
-            "key": "landscape:PANEL UI",
-            "items": [],
-            "rowKeys": [],
-            "subgroups": []
-          },
-          {
-            "key": "landscape:TEXT",
-            "items": [
-              {
-                "type": "group",
-                "section": {
-                  "key": "landscape:Dev Panel Title",
-                  "items": [
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapeDevPanelTitleFontSize"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapeDevPanelTitleLetterSpacing"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapeDevPanelTitleLineHeight"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapeDevPanelButtonTextBorder"
-                    }
-                  ],
-                  "rowKeys": [
-                    "sliderLandscapeDevPanelTitleFontSize",
-                    "sliderLandscapeDevPanelTitleLetterSpacing",
-                    "sliderLandscapeDevPanelTitleLineHeight",
-                    "sliderLandscapeDevPanelButtonTextBorder"
-                  ],
-                  "subgroups": []
-                }
-              },
-              {
-                "type": "group",
-                "section": {
-                  "key": "landscape:Group Title",
-                  "items": [
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapeDevPanelGroupTitleFontSize"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapeDevPanelGroupLineHeight"
-                    }
-                  ],
-                  "rowKeys": [
-                    "sliderLandscapeDevPanelGroupTitleFontSize",
-                    "sliderLandscapeDevPanelGroupLineHeight"
-                  ],
-                  "subgroups": []
-                }
-              },
-              {
-                "type": "group",
-                "section": {
-                  "key": "landscape:Setting Title",
-                  "items": [
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapeDevPanelSettingTitleFontSize"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapeDevPanelValueFontSize"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapeDevPanelSettingsLineHeight"
-                    }
-                  ],
-                  "rowKeys": [
-                    "sliderLandscapeDevPanelSettingTitleFontSize",
-                    "sliderLandscapeDevPanelValueFontSize",
-                    "sliderLandscapeDevPanelSettingsLineHeight"
-                  ],
-                  "subgroups": []
-                }
-              },
-              {
-                "type": "group",
-                "section": {
-                  "key": "landscape:TABS",
-                  "items": [
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapeDevPanelTabFontSize"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapeDevPanelTabLineHeight"
-                    }
-                  ],
-                  "rowKeys": [
-                    "sliderLandscapeDevPanelTabFontSize",
-                    "sliderLandscapeDevPanelTabLineHeight"
-                  ],
-                  "subgroups": []
-                }
-              },
-              {
-                "type": "group",
-                "section": {
-                  "key": "landscape:BUTTONS",
-                  "items": [
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapeDevPanelButtonFontSize"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapeDevPanelButtonLineHeight"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapeDevPanelButtonHeight"
-                    }
-                  ],
-                  "rowKeys": [
-                    "sliderLandscapeDevPanelButtonFontSize",
-                    "sliderLandscapeDevPanelButtonLineHeight",
-                    "sliderLandscapeDevPanelButtonHeight"
-                  ],
-                  "subgroups": []
-                }
-              }
-            ],
-            "rowKeys": [],
-            "subgroups": [
-              {
-                "key": "landscape:Dev Panel Title",
-                "items": [
-                  {
-                    "type": "row",
-                    "key": "sliderLandscapeDevPanelTitleFontSize"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderLandscapeDevPanelTitleLetterSpacing"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderLandscapeDevPanelTitleLineHeight"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderLandscapeDevPanelButtonTextBorder"
-                  }
-                ],
-                "rowKeys": [
-                  "sliderLandscapeDevPanelTitleFontSize",
-                  "sliderLandscapeDevPanelTitleLetterSpacing",
-                  "sliderLandscapeDevPanelTitleLineHeight",
-                  "sliderLandscapeDevPanelButtonTextBorder"
-                ],
-                "subgroups": []
-              },
-              {
-                "key": "landscape:Group Title",
-                "items": [
-                  {
-                    "type": "row",
-                    "key": "sliderLandscapeDevPanelGroupTitleFontSize"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderLandscapeDevPanelGroupLineHeight"
-                  }
-                ],
-                "rowKeys": [
-                  "sliderLandscapeDevPanelGroupTitleFontSize",
-                  "sliderLandscapeDevPanelGroupLineHeight"
-                ],
-                "subgroups": []
-              },
-              {
-                "key": "landscape:Setting Title",
-                "items": [
-                  {
-                    "type": "row",
-                    "key": "sliderLandscapeDevPanelSettingTitleFontSize"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderLandscapeDevPanelValueFontSize"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderLandscapeDevPanelSettingsLineHeight"
-                  }
-                ],
-                "rowKeys": [
-                  "sliderLandscapeDevPanelSettingTitleFontSize",
-                  "sliderLandscapeDevPanelValueFontSize",
-                  "sliderLandscapeDevPanelSettingsLineHeight"
-                ],
-                "subgroups": []
-              },
-              {
-                "key": "landscape:TABS",
-                "items": [
-                  {
-                    "type": "row",
-                    "key": "sliderLandscapeDevPanelTabFontSize"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderLandscapeDevPanelTabLineHeight"
-                  }
-                ],
-                "rowKeys": [
-                  "sliderLandscapeDevPanelTabFontSize",
-                  "sliderLandscapeDevPanelTabLineHeight"
-                ],
-                "subgroups": []
-              },
-              {
-                "key": "landscape:BUTTONS",
-                "items": [
-                  {
-                    "type": "row",
-                    "key": "sliderLandscapeDevPanelButtonFontSize"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderLandscapeDevPanelButtonLineHeight"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderLandscapeDevPanelButtonHeight"
-                  }
-                ],
-                "rowKeys": [
-                  "sliderLandscapeDevPanelButtonFontSize",
-                  "sliderLandscapeDevPanelButtonLineHeight",
-                  "sliderLandscapeDevPanelButtonHeight"
-                ],
-                "subgroups": []
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "key": "landscape:Debug",
-        "items": [
-          {
-            "type": "group",
-            "section": {
-              "key": "landscape:Object Axes",
-              "items": [],
-              "rowKeys": [],
-              "subgroups": []
-            }
-          },
-          {
-            "type": "group",
-            "section": {
-              "key": "landscape:Settings",
-              "items": [],
-              "rowKeys": [],
-              "subgroups": []
-            }
-          },
-          {
-            "type": "group",
-            "section": {
-              "key": "landscape:Sensors",
-              "items": [],
-              "rowKeys": [],
-              "subgroups": []
-            }
-          },
-          {
-            "type": "group",
-            "section": {
-              "key": "landscape:Phone Model Log",
-              "items": [],
-              "rowKeys": [],
-              "subgroups": []
-            }
-          }
-        ],
-        "rowKeys": [],
-        "subgroups": [
-          {
-            "key": "landscape:Object Axes",
-            "items": [],
-            "rowKeys": [],
-            "subgroups": []
-          },
-          {
-            "key": "landscape:Settings",
-            "items": [],
-            "rowKeys": [],
-            "subgroups": []
-          },
-          {
-            "key": "landscape:Sensors",
-            "items": [],
-            "rowKeys": [],
-            "subgroups": []
-          },
-          {
-            "key": "landscape:Phone Model Log",
-            "items": [],
-            "rowKeys": [],
-            "subgroups": []
-          }
-        ]
-      },
-      {
         "key": "landscape:Camera",
         "items": [
           {
@@ -8407,6 +8469,20 @@
     "desktop:Toon Shading": true,
     "desktop:Saved Toon Shading": true,
     "desktop:Background": true,
+    "mobile:Dev Panel": true,
+    "mobile:MECHANICS": false,
+    "mobile:PANEL UI": false,
+    "mobile:TEXT": false,
+    "mobile:Dev Panel Title": false,
+    "mobile:Group Title": false,
+    "mobile:Setting Title": false,
+    "mobile:TABS": false,
+    "mobile:BUTTONS": false,
+    "mobile:Debug": false,
+    "mobile:Object Axes": false,
+    "mobile:Settings": false,
+    "mobile:Sensors": false,
+    "mobile:Phone Model Log": false,
     "mobile:PHONE MODEL": false,
     "mobile:OFFSET": false,
     "mobile:PHONE ROTATION": false,
@@ -8438,20 +8514,6 @@
     "mobile:Palm Facing": true,
     "mobile:Ground Plane": false,
     "mobile:Finger Gizmos": false,
-    "mobile:Dev Panel": true,
-    "mobile:MECHANICS": false,
-    "mobile:PANEL UI": false,
-    "mobile:TEXT": false,
-    "mobile:Dev Panel Title": false,
-    "mobile:Group Title": false,
-    "mobile:Setting Title": false,
-    "mobile:TABS": false,
-    "mobile:BUTTONS": false,
-    "mobile:Debug": false,
-    "mobile:Object Axes": false,
-    "mobile:Settings": false,
-    "mobile:Sensors": false,
-    "mobile:Phone Model Log": false,
     "mobile:Camera": false,
     "mobile:Saved Cameras": false,
     "mobile:Lighting": false,
@@ -8459,6 +8521,20 @@
     "mobile:Toon Shading": false,
     "mobile:Saved Toon Shading": false,
     "mobile:Background": false,
+    "landscape:Dev Panel": true,
+    "landscape:MECHANICS": true,
+    "landscape:PANEL UI": true,
+    "landscape:TEXT": true,
+    "landscape:Dev Panel Title": true,
+    "landscape:Group Title": true,
+    "landscape:Setting Title": true,
+    "landscape:TABS": true,
+    "landscape:BUTTONS": true,
+    "landscape:Debug": true,
+    "landscape:Object Axes": false,
+    "landscape:Settings": false,
+    "landscape:Sensors": true,
+    "landscape:Phone Model Log": false,
     "landscape:PHONE MODEL": false,
     "landscape:OFFSET": false,
     "landscape:PHONE ROTATION": false,
@@ -8490,20 +8566,6 @@
     "landscape:Palm Facing": false,
     "landscape:Ground Plane": false,
     "landscape:Finger Gizmos": false,
-    "landscape:Dev Panel": true,
-    "landscape:MECHANICS": true,
-    "landscape:PANEL UI": true,
-    "landscape:TEXT": true,
-    "landscape:Dev Panel Title": true,
-    "landscape:Group Title": true,
-    "landscape:Setting Title": true,
-    "landscape:TABS": true,
-    "landscape:BUTTONS": true,
-    "landscape:Debug": true,
-    "landscape:Object Axes": false,
-    "landscape:Settings": false,
-    "landscape:Sensors": true,
-    "landscape:Phone Model Log": false,
     "landscape:Camera": true,
     "landscape:Saved Cameras": true,
     "landscape:Lighting": true,
@@ -8786,7 +8848,9 @@
     "mobile:RECURSIVE RENDER": null,
     "landscape:RECURSIVE RENDER": null,
     "sliderMobileScreenTextureOffsetX": null,
-    "sliderLandscapeScreenTextureOffsetX": null
+    "sliderLandscapeScreenTextureOffsetX": null,
+    "textScreenLevelScaleRange": null,
+    "textScreenLevelScaleCurve": null
   },
   "devTextOverridesManual": [
     "desktop:New Group",
