@@ -7,10 +7,15 @@ append-only history.
 
 ## Currently working on
 
-**Nothing in progress right now** — the last active item was a real bug
-fix on `RESPONSIVE DISPLACE` (mobile): reports of X drifting/jumping and
-Y/Z being inconsistent/delayed/overshooting, all on the same device,
-both Displace Modes. Root-caused to `integratePhoneDisplacement()`
+**Nothing in progress right now** — the last active item made Double
+Tap Reset instant: `resetPhoneRotationBaseline()`/
+`resetPhoneDisplaceBaseline()` already reset the underlying state, but
+the per-frame slerp/lerp damping was still easing the DISPLAYED
+rotation/offset toward that target over several frames — both functions
+now also snap the live displayed value directly. See CHANGELOG's
+matching entry. Before that: a real bug fix on `RESPONSIVE DISPLACE`
+(mobile): reports of X drifting/jumping and Y/Z being inconsistent/
+delayed/overshooting, all on the same device, both Displace Modes. Root-caused to `integratePhoneDisplacement()`
 fully freezing velocity/position (no decay at all) whenever
 `e.acceleration` came back momentarily null — a known intermittent
 real-device behavior — then discarding the whole elapsed gap once a

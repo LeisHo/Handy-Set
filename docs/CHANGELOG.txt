@@ -5692,6 +5692,33 @@ simulation above. `index.html` cache-buster: `main.js` `?v=175` ->
 `?v=176`.
 
 --------------------------------------------------------------------------------
+2026-09-30  -  Make Double Tap Reset instant, bypassing rotation/displace
+damping
+
+Direct request: "When I do double tap to reset. Make it instant instead
+of tweened and affected by damping."
+
+`resetPhoneRotationBaseline()`/`resetPhoneDisplaceBaseline()` already
+reset the underlying state (`phoneGyroQuat`, the absolute-mode baseline,
+the desktop cursor baselines, the displacement velocity/position) -- but
+`applyPhoneModelTransform()`'s own per-frame
+`slerp(cfg.phoneRotationDamping)`/`lerp(cfg.phoneDisplaceDamping)` would
+still ease the DISPLAYED quaternion/offset toward that new target
+gradually over several damped frames, rather than snapping there
+immediately.
+
+Both reset functions now also write the new target directly onto the
+live displayed value: `phoneModelWrapper.quaternion.copy(computePhoneCombinedQuat())`
+and `_phoneDisplaceCurrentVec.set(0,0,0)`. Both reads are pure functions
+of state already reset a moment earlier, so this is a correct,
+deterministic snap -- the normal per-frame path recomputing the same
+thing again right after is harmless.
+
+Not independently browser/device-verified (standing project convention)
+-- verified via `node --check` and code tracing only. `index.html`
+cache-buster: `main.js` `?v=176` -> `?v=177`.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
