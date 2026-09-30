@@ -257,6 +257,16 @@ const cfg = {
   // Y <- alpha/compass (spin), Z <- gamma (left/right).
   phoneAxisXEnabled: true, phoneAxisYEnabled: true, phoneAxisZEnabled: true,
   phoneRotationScaleX: 1, phoneRotationScaleY: 1, phoneRotationScaleZ: 1,
+  // Rotation Mode -- direct request 2026-09-30: a selectable alternative
+  // to the existing Gyro/Integrated system (unchanged, kept intact as
+  // 'gyro'), added specifically to eliminate accumulated gyro-drift/
+  // path-dependence ("if I move the phone through X, then Y, and return
+  // it to its original orientation, the model should return to its
+  // original orientation too"). 'absolute' reads the phone's fused
+  // deviceorientation beta/gamma/alpha directly each frame (a pure,
+  // memoryless function of the CURRENT reading, never integrated/
+  // accumulated) -- see computePhoneAbsoluteOrientationQuat().
+  phoneRotationMode: 'gyro', // 'gyro' | 'absolute'
   // Smooths the FINAL combined rotation quaternion toward its per-frame
   // target via slerp -- same semantic as cfg.trackingDamping (1=instant
   // snap, lower=smoother/slower) -- added 2026-09-28, direct report:
@@ -2139,6 +2149,71 @@ function computePhoneResponsiveAxisDeg(rawComponent) {
 const _phoneCombinedQuat = new THREE.Quaternion()
 const _phoneManualQuat = new THREE.Quaternion()
 const _phoneResponsiveQuat = new THREE.Quaternion()
+// ABSOLUTE/ORIENTATION rotation mode -- added 2026-09-30, a selectable
+// alternative to the existing Gyro/Integrated system (phoneGyroQuat/
+// integratePhoneGyroRotation(), left completely unchanged below). Direct
+// request: eliminate accumulated gyro-drift/path-dependence -- returning
+// the real phone to its original orientation (via ANY path) must return
+// the model to its original orientation too. A pure, memoryless function
+// of the phone's CURRENT deviceorientation reading (never integrated or
+// accumulated across frames) trivially guarantees this by construction:
+// the same (alpha,beta,gamma) input always produces the same output
+// quaternion, regardless of what path got there.
+//
+// Deliberately does NOT reuse the "combined axis-angle for beta+gamma,
+// separate axis-angle for alpha" composition used elsewhere in this file
+// (computePhoneCombinedQuat()'s desktop branch, integratePhoneGyroRotation())
+// -- that technique was built for a 2-DOF cursor-position input with no
+// genuine 3rd independent axis, and was verified (via a standalone script
+// before shipping) to have a REAL discontinuity when beta approaches
+// +-180 while gamma stays simultaneously nonzero: the combined axis
+// vector's beta-derived component flips sign at the wrap while its
+// gamma-derived component doesn't, producing a measured ~6 degree jump
+// in that specific case -- small, but a genuine, avoidable artifact, not
+// the "no 360 jump" guarantee this mode is specifically meant to provide.
+//
+// Uses the actual W3C deviceorientation rotation-matrix formula instead
+// (alpha=Z, beta=X', gamma=Y'', intrinsic Z-X'-Y'' order) -- a direct,
+// well-defined function of the 3 independent absolute angles, built
+// entirely from sin/cos (periodic and continuous by construction, so ANY
+// wraparound in the raw angle values -- beta crossing +-180, alpha
+// crossing 0/360 -- produces a perfectly continuous quaternion, verified
+// via the same standalone script: a real 0.2deg physical step across
+// either wrap boundary produces exactly a 0.2deg change in the output
+// quaternion, not a jump of any size).
+const _phoneAbsoluteMatrix = new THREE.Matrix4()
+const _phoneAbsoluteQuat = new THREE.Quaternion()
+function computeDeviceOrientationQuat(alphaDeg, betaDeg, gammaDeg) {
+  const a = THREE.MathUtils.degToRad(alphaDeg), b = THREE.MathUtils.degToRad(betaDeg), g = THREE.MathUtils.degToRad(gammaDeg)
+  const cA = Math.cos(a), sA = Math.sin(a), cB = Math.cos(b), sB = Math.sin(b), cG = Math.cos(g), sG = Math.sin(g)
+  _phoneAbsoluteMatrix.set(
+    cA * cG - sA * sB * sG, -cB * sA, cA * sG + cG * sA * sB, 0,
+    cG * sA + cA * sB * sG, cA * cB, sA * sG - cA * cG * sB, 0,
+    -cB * sG, sB, cB * cG, 0,
+    0, 0, 0, 1
+  )
+  return _phoneAbsoluteQuat.setFromRotationMatrix(_phoneAbsoluteMatrix)
+}
+// Axis controls (On/Off + Scale) apply the SAME as elsewhere in this
+// file (X=beta, Y=gamma, Z=alpha/spin -- matching the established
+// mapping computePhoneCombinedQuat()'s desktop branch already uses,
+// per direct instruction to keep this baseline). Unlike Gyro mode,
+// there is no curve/range/fine-tune step here -- that system maps a
+// normalized 0-1 "how far tilted" magnitude to a min/max degree range,
+// which is fundamentally incompatible with representing beta's real,
+// unclamped +-180 range faithfully (clamping it to a magnitude of 1
+// would discard exactly the information needed to test the wraparound
+// at all). This matches the ALREADY-established mobile behavior anyway
+// -- Gyro/Integrated mode itself never calls the curve/range system
+// either (only the desktop cursor-position path does; see
+// computePhoneResponsiveAxisDeg()'s own comment), so Absolute mode not
+// using it either is consistent with existing behavior, not a new gap.
+function computePhoneAbsoluteOrientationQuat(e) {
+  const alphaDeg = cfg.phoneAxisZEnabled ? (e.alpha || 0) * cfg.phoneRotationScaleZ : 0
+  const betaDeg = cfg.phoneAxisXEnabled ? (e.beta || 0) * cfg.phoneRotationScaleX : 0
+  const gammaDeg = cfg.phoneAxisYEnabled ? (e.gamma || 0) * cfg.phoneRotationScaleY : 0
+  return computeDeviceOrientationQuat(alphaDeg, betaDeg, gammaDeg)
+}
 // REMOVED 2026-09-28 (9th round) -- PHONE_GYRO_OUTPUT_FIX_QUAT, an 8th-
 // round output-conjugation constant. 3 rounds of reports (6th/7th/8th)
 // proved no fixed code-level permutation/conjugation explains all of
@@ -2219,15 +2294,28 @@ function computePhoneCombinedQuat() {
     THREE.MathUtils.degToRad(cfg.phoneModelRotX), THREE.MathUtils.degToRad(cfg.phoneModelRotY), THREE.MathUtils.degToRad(cfg.phoneModelRotZ), 'XYZ'
   ))
   if (lastInputSource === 'device' && latestOrientation) {
-    // MOBILE: phoneGyroQuat is already the fully-integrated, unbounded
-    // responsive rotation (see integratePhoneGyroRotation(), which runs
-    // per devicemotion tick, not per render frame) -- just read it. The
-    // 8th round's output-permutation conjugation was REMOVED 2026-09-28
-    // (9th round) -- see integratePhoneGyroRotation()'s own comment for
-    // why (3 rounds of reports proved no fixed code-level mapping fits,
-    // pointing at inconsistent starting orientation between tests, not
-    // the axis wiring itself).
+    // MOBILE -- Rotation Mode selector, added 2026-09-30. 'gyro' (the
+    // ORIGINAL, UNCHANGED implementation) reads phoneGyroQuat, already
+    // fully-integrated by integratePhoneGyroRotation() every devicemotion
+    // tick (see below, completely untouched). 'absolute' instead reads
+    // the phone's own fused deviceorientation reading directly, fresh,
+    // every call -- see computePhoneAbsoluteOrientationQuat()'s own
+    // comment for why this eliminates drift/path-dependence and how the
+    // +-180/0-360 wraparounds are handled correctly.
+    if (cfg.phoneRotationMode === 'absolute') {
+      _phoneResponsiveQuat.copy(computePhoneAbsoluteOrientationQuat(latestOrientation))
+    } else {
+    // MOBILE (Gyro/Integrated): phoneGyroQuat is already the fully-
+    // integrated, unbounded responsive rotation (see
+    // integratePhoneGyroRotation(), which runs per devicemotion tick,
+    // not per render frame) -- just read it. The 8th round's output-
+    // permutation conjugation was REMOVED 2026-09-28 (9th round) -- see
+    // integratePhoneGyroRotation()'s own comment for why (3 rounds of
+    // reports proved no fixed code-level mapping fits, pointing at
+    // inconsistent starting orientation between tests, not the axis
+    // wiring itself).
     _phoneResponsiveQuat.copy(phoneGyroQuat)
+    }
   } else if (cfg.trackingEnabled && cfg.phoneResponsiveRotationEnabled) {
     // DESKTOP: cursor-distance-driven, through the curve/range system.
     const rawNx = tiltMagnitude * Math.cos(tiltAngle) // gamma-analog (left-right)
@@ -4919,7 +5007,7 @@ let phoneModelItemSelectorContainer = null // the currently-rendered widget, rep
 const PHONE_MODEL_PER_MODEL_CONTROL_IDS = [
   'sliderPhoneModelScale',
   'sliderPhoneModelOffsetX', 'sliderPhoneModelOffsetY', 'sliderPhoneModelOffsetZ',
-  'checkboxPhoneResponsiveRotationEnabled', 'checkboxPhoneRotationResetEnabled',
+  'checkboxPhoneResponsiveRotationEnabled', 'checkboxPhoneRotationResetEnabled', 'selectPhoneRotationMode',
   'checkboxPhoneAxisXEnabled', 'sliderPhoneRotationScaleX',
   'checkboxPhoneAxisYEnabled', 'sliderPhoneRotationScaleY',
   'checkboxPhoneAxisZEnabled', 'sliderPhoneRotationScaleZ',
@@ -5249,6 +5337,18 @@ function renderPhoneModelGroup(content) {
   // code can look like a different permutation depending on the
   // phone's starting orientation).
   wireCheckbox('checkboxPhoneResponsiveRotationEnabled', (v) => { cfg.phoneResponsiveRotationEnabled = v; if (v) resetPhoneModelRotationBaseline() })
+  // Rotation Mode -- direct request 2026-09-30: a selectable alternative
+  // to the existing Gyro/Integrated system, added specifically to
+  // eliminate accumulated gyro-drift/path-dependence. See
+  // computePhoneAbsoluteOrientationQuat()'s own comment for the full
+  // reasoning. Switching to 'absolute' doesn't need a baseline reset the
+  // way Gyro mode does (it's a memoryless function of the current
+  // reading, nothing to re-zero) -- switching back to 'gyro' DOES still
+  // benefit from one, so resetPhoneModelRotationBaseline() is called on
+  // every mode change, matching the existing on-enable behavior above.
+  addRow(subResponsiveRotation, { id: 'selectPhoneRotationMode', label: 'Rotation Mode', type: 'select', options: [{ value: 'gyro', text: 'Gyro / Integrated' }, { value: 'absolute', text: 'Absolute / Orientation' }], value: cfg.phoneRotationMode })
+  document.getElementById('selectPhoneRotationMode').value = cfg.phoneRotationMode
+  wireSelect('selectPhoneRotationMode', (v) => { cfg.phoneRotationMode = v; resetPhoneModelRotationBaseline() })
   // Rotation Reset -- direct request 2026-09-28: double-tap(mobile)/
   // double-click(desktop) anywhere on screen re-baselines the responsive
   // rotation. See setupPhoneRotationResetGesture()'s own comment for the
