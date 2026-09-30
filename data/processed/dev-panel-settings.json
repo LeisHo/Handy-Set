@@ -109,7 +109,7 @@
     "sliderPhoneRotationDamping": 1,
     "textPhoneResponsiveRotationRange": "{\"min\":-57,\"max\":45}",
     "textPhoneResponsiveRotationCurve": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"natural\"}",
-    "checkboxPhoneResponsiveDisplaceEnabled": false,
+    "checkboxPhoneResponsiveDisplaceEnabled": true,
     "selectPhoneDisplaceMode": "acceleration",
     "checkboxPhoneDisplaceAxisXEnabled": true,
     "sliderPhoneDisplaceScaleX": 1,
@@ -199,9 +199,9 @@
     "checkboxDeviceInfoEnabled": true
   },
   "layout": {
-    "left": 27,
+    "left": 6,
     "top": 27,
-    "width": 350,
+    "width": 697,
     "height": 541
   },
   "devPanelStyle": {
@@ -1771,6 +1771,97 @@
           {
             "type": "group",
             "section": {
+              "key": "desktop:RECURSIVE RENDER",
+              "items": [
+                {
+                  "type": "row",
+                  "key": "sliderScreenRecursionLevels"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderScreenRenderResolution"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderScreenTextureScale"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderScreenTextureRotation"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderScreenTextureScaleX"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderScreenTextureScaleY"
+                },
+                {
+                  "type": "row",
+                  "key": "checkboxScreenToScale"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderScreenEmissionIntensity"
+                },
+                {
+                  "type": "row",
+                  "key": "checkboxScreenMirrorAlternatingX"
+                },
+                {
+                  "type": "row",
+                  "key": "checkboxScreenMirrorAlternatingY"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderScreenTextureOffsetX"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderScreenTextureOffsetY"
+                },
+                {
+                  "type": "row",
+                  "key": "checkboxScreenMirrorPhaseX"
+                },
+                {
+                  "type": "row",
+                  "key": "checkboxScreenMirrorPhaseY"
+                },
+                {
+                  "type": "row",
+                  "key": "textScreenLevelScaleRange"
+                },
+                {
+                  "type": "row",
+                  "key": "textScreenLevelScaleCurve"
+                }
+              ],
+              "rowKeys": [
+                "sliderScreenRecursionLevels",
+                "sliderScreenRenderResolution",
+                "sliderScreenTextureScale",
+                "sliderScreenTextureRotation",
+                "sliderScreenTextureScaleX",
+                "sliderScreenTextureScaleY",
+                "checkboxScreenToScale",
+                "sliderScreenEmissionIntensity",
+                "checkboxScreenMirrorAlternatingX",
+                "checkboxScreenMirrorAlternatingY",
+                "sliderScreenTextureOffsetX",
+                "sliderScreenTextureOffsetY",
+                "checkboxScreenMirrorPhaseX",
+                "checkboxScreenMirrorPhaseY",
+                "textScreenLevelScaleRange",
+                "textScreenLevelScaleCurve"
+              ],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "group",
+            "section": {
               "key": "desktop:RESPONSIVE BEHAVIOUR - PHONE",
               "items": [
                 {
@@ -2066,97 +2157,6 @@
                 }
               ]
             }
-          },
-          {
-            "type": "group",
-            "section": {
-              "key": "desktop:RECURSIVE RENDER",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "sliderScreenRecursionLevels"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderScreenRenderResolution"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderScreenTextureScale"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderScreenTextureRotation"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderScreenTextureScaleX"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderScreenTextureScaleY"
-                },
-                {
-                  "type": "row",
-                  "key": "checkboxScreenToScale"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderScreenEmissionIntensity"
-                },
-                {
-                  "type": "row",
-                  "key": "checkboxScreenMirrorAlternatingX"
-                },
-                {
-                  "type": "row",
-                  "key": "checkboxScreenMirrorAlternatingY"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderScreenTextureOffsetX"
-                },
-                {
-                  "type": "row",
-                  "key": "sliderScreenTextureOffsetY"
-                },
-                {
-                  "type": "row",
-                  "key": "checkboxScreenMirrorPhaseX"
-                },
-                {
-                  "type": "row",
-                  "key": "checkboxScreenMirrorPhaseY"
-                },
-                {
-                  "type": "row",
-                  "key": "textScreenLevelScaleRange"
-                },
-                {
-                  "type": "row",
-                  "key": "textScreenLevelScaleCurve"
-                }
-              ],
-              "rowKeys": [
-                "sliderScreenRecursionLevels",
-                "sliderScreenRenderResolution",
-                "sliderScreenTextureScale",
-                "sliderScreenTextureRotation",
-                "sliderScreenTextureScaleX",
-                "sliderScreenTextureScaleY",
-                "checkboxScreenToScale",
-                "sliderScreenEmissionIntensity",
-                "checkboxScreenMirrorAlternatingX",
-                "checkboxScreenMirrorAlternatingY",
-                "sliderScreenTextureOffsetX",
-                "sliderScreenTextureOffsetY",
-                "checkboxScreenMirrorPhaseX",
-                "checkboxScreenMirrorPhaseY",
-                "textScreenLevelScaleRange",
-                "textScreenLevelScaleCurve"
-              ],
-              "subgroups": []
-            }
           }
         ],
         "rowKeys": [
@@ -2207,6 +2207,94 @@
               "sliderPhoneModelRotX",
               "sliderPhoneModelRotY",
               "sliderPhoneModelRotZ"
+            ],
+            "subgroups": []
+          },
+          {
+            "key": "desktop:RECURSIVE RENDER",
+            "items": [
+              {
+                "type": "row",
+                "key": "sliderScreenRecursionLevels"
+              },
+              {
+                "type": "row",
+                "key": "sliderScreenRenderResolution"
+              },
+              {
+                "type": "row",
+                "key": "sliderScreenTextureScale"
+              },
+              {
+                "type": "row",
+                "key": "sliderScreenTextureRotation"
+              },
+              {
+                "type": "row",
+                "key": "sliderScreenTextureScaleX"
+              },
+              {
+                "type": "row",
+                "key": "sliderScreenTextureScaleY"
+              },
+              {
+                "type": "row",
+                "key": "checkboxScreenToScale"
+              },
+              {
+                "type": "row",
+                "key": "sliderScreenEmissionIntensity"
+              },
+              {
+                "type": "row",
+                "key": "checkboxScreenMirrorAlternatingX"
+              },
+              {
+                "type": "row",
+                "key": "checkboxScreenMirrorAlternatingY"
+              },
+              {
+                "type": "row",
+                "key": "sliderScreenTextureOffsetX"
+              },
+              {
+                "type": "row",
+                "key": "sliderScreenTextureOffsetY"
+              },
+              {
+                "type": "row",
+                "key": "checkboxScreenMirrorPhaseX"
+              },
+              {
+                "type": "row",
+                "key": "checkboxScreenMirrorPhaseY"
+              },
+              {
+                "type": "row",
+                "key": "textScreenLevelScaleRange"
+              },
+              {
+                "type": "row",
+                "key": "textScreenLevelScaleCurve"
+              }
+            ],
+            "rowKeys": [
+              "sliderScreenRecursionLevels",
+              "sliderScreenRenderResolution",
+              "sliderScreenTextureScale",
+              "sliderScreenTextureRotation",
+              "sliderScreenTextureScaleX",
+              "sliderScreenTextureScaleY",
+              "checkboxScreenToScale",
+              "sliderScreenEmissionIntensity",
+              "checkboxScreenMirrorAlternatingX",
+              "checkboxScreenMirrorAlternatingY",
+              "sliderScreenTextureOffsetX",
+              "sliderScreenTextureOffsetY",
+              "checkboxScreenMirrorPhaseX",
+              "checkboxScreenMirrorPhaseY",
+              "textScreenLevelScaleRange",
+              "textScreenLevelScaleCurve"
             ],
             "subgroups": []
           },
@@ -2505,94 +2593,6 @@
                 "subgroups": []
               }
             ]
-          },
-          {
-            "key": "desktop:RECURSIVE RENDER",
-            "items": [
-              {
-                "type": "row",
-                "key": "sliderScreenRecursionLevels"
-              },
-              {
-                "type": "row",
-                "key": "sliderScreenRenderResolution"
-              },
-              {
-                "type": "row",
-                "key": "sliderScreenTextureScale"
-              },
-              {
-                "type": "row",
-                "key": "sliderScreenTextureRotation"
-              },
-              {
-                "type": "row",
-                "key": "sliderScreenTextureScaleX"
-              },
-              {
-                "type": "row",
-                "key": "sliderScreenTextureScaleY"
-              },
-              {
-                "type": "row",
-                "key": "checkboxScreenToScale"
-              },
-              {
-                "type": "row",
-                "key": "sliderScreenEmissionIntensity"
-              },
-              {
-                "type": "row",
-                "key": "checkboxScreenMirrorAlternatingX"
-              },
-              {
-                "type": "row",
-                "key": "checkboxScreenMirrorAlternatingY"
-              },
-              {
-                "type": "row",
-                "key": "sliderScreenTextureOffsetX"
-              },
-              {
-                "type": "row",
-                "key": "sliderScreenTextureOffsetY"
-              },
-              {
-                "type": "row",
-                "key": "checkboxScreenMirrorPhaseX"
-              },
-              {
-                "type": "row",
-                "key": "checkboxScreenMirrorPhaseY"
-              },
-              {
-                "type": "row",
-                "key": "textScreenLevelScaleRange"
-              },
-              {
-                "type": "row",
-                "key": "textScreenLevelScaleCurve"
-              }
-            ],
-            "rowKeys": [
-              "sliderScreenRecursionLevels",
-              "sliderScreenRenderResolution",
-              "sliderScreenTextureScale",
-              "sliderScreenTextureRotation",
-              "sliderScreenTextureScaleX",
-              "sliderScreenTextureScaleY",
-              "checkboxScreenToScale",
-              "sliderScreenEmissionIntensity",
-              "checkboxScreenMirrorAlternatingX",
-              "checkboxScreenMirrorAlternatingY",
-              "sliderScreenTextureOffsetX",
-              "sliderScreenTextureOffsetY",
-              "checkboxScreenMirrorPhaseX",
-              "checkboxScreenMirrorPhaseY",
-              "textScreenLevelScaleRange",
-              "textScreenLevelScaleCurve"
-            ],
-            "subgroups": []
           }
         ]
       },
@@ -8946,10 +8946,10 @@
     "desktop:PHONE MODEL": false,
     "desktop:OFFSET": true,
     "desktop:PHONE ROTATION": true,
+    "desktop:RECURSIVE RENDER": true,
     "desktop:RESPONSIVE BEHAVIOUR - PHONE": false,
     "desktop:Responsive Rotation": true,
     "desktop:RESPONSIVE DISPLACE": false,
-    "desktop:RECURSIVE RENDER": false,
     "desktop:HAND MODEL": true,
     "desktop:Field Layout": true,
     "desktop:Pose": true,
