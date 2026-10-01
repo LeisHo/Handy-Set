@@ -113,7 +113,19 @@ dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5
 // top-level group to a subgroup of PHONE MODEL > RESPONSIVE BEHAVIOUR -
 // PHONE, per direct request -- another real group-nesting change since
 // the 'a' bump above.
-const HANDYSET_SETTINGS_SCHEMA_VERSION = '2026-09-29b'
+//
+// Bumped again (2026-10-01): the per-axis Rotation/Displace curve-editor
+// refactor removed 4 row ids (textPhoneResponsiveRotationRange/Curve,
+// textPhoneResponsiveDisplaceRange/Curve) and replaced them with 18 new
+// per-axis ones (textPhoneRotationRange/CurveX/Y/Z,
+// textPhoneDisplaceRange/CurveX/Y/Z, sliderPhoneDisplaceX/Y/ZReferenceM)
+// inside the SAME, unrenamed groups (Responsive Rotation / RESPONSIVE
+// DISPLACE) -- a row-id change, not caught by the group-level examples
+// above, but the same underlying risk this guard exists for. Missed at
+// the time; caught after a direct report that other controls (the Mirror
+// checkboxes) elsewhere in the dev panel appeared to have vanished --
+// consistent with this exact symptom.
+const HANDYSET_SETTINGS_SCHEMA_VERSION = '2026-10-01'
 try {
   if (localStorage.getItem('handysetSettingsSchemaVersion') !== HANDYSET_SETTINGS_SCHEMA_VERSION) {
     localStorage.removeItem('devPanelSettings')
@@ -563,15 +575,28 @@ const cfg = {
   // 0-1 range), Rotation's raw nx/ny are already normalized tilt
   // values (0-1, from cursor-distance/tiltMagnitude), so the curve's
   // own X axis already reads directly as "how far tilted," matching
-  // the X="recorded... rotation" half of the clarification. Defaults
-  // match the old shared range/curve exactly (min 0/max 30,
-  // catmullrom identity-ish 0,0 -> 1,1), so nothing changes until
-  // these are retuned. See computePhoneResponsiveAxisDeg()'s own
-  // comment for the full formula and computePhoneCombinedQuat()'s
-  // desktop branch for how each axis's raw signed input is chosen.
-  phoneRotationRangeX: '{"min":0,"max":30}', phoneRotationCurveX: '{"points":[{"x":0,"y":0},{"x":1,"y":1}],"method":"catmullrom"}',
-  phoneRotationRangeY: '{"min":0,"max":30}', phoneRotationCurveY: '{"points":[{"x":0,"y":0},{"x":1,"y":1}],"method":"catmullrom"}',
-  phoneRotationRangeZ: '{"min":0,"max":30}', phoneRotationCurveZ: '{"points":[{"x":0,"y":0},{"x":1,"y":1}],"method":"catmullrom"}',
+  // the X="recorded... rotation" half of the clarification.
+  //
+  // CORRECTED 2026-10-01, direct request: "make the input form 0
+  // upwards. if i set it to 30, assume it means -30 to 30. Set default
+  // to 90." `min` is effectively always 0 now (the range-bar's own
+  // track no longer offers negative values -- see its UI row's own
+  // trackMin, renderPhoneModelGroup()) -- a single degree value the
+  // user sets as `max` is understood as the SYMMETRIC output ceiling
+  // in both directions, which the existing magnitude-then-sign formula
+  // (computePhoneResponsiveAxisDeg()) already produces: `max` is the
+  // largest magnitude the curve can output, applied with
+  // Math.sign(rawComponent) -- so max=30 already meant "-30 to 30" in
+  // effect even before this correction; what changed is the UI no
+  // longer lets `min` go negative (which was never a meaningful degree
+  // value anyway) and the default moved from 30 to 90. Curve-editor X
+  // (0-1, raw tilt magnitude) is unaffected by this change -- it
+  // already applies identically regardless of tilt direction, which is
+  // what "the same applies to the curve editor, so X applies to both"
+  // confirms, not a new behavior to build.
+  phoneRotationRangeX: '{"min":0,"max":90}', phoneRotationCurveX: '{"points":[{"x":0,"y":0},{"x":1,"y":1}],"method":"catmullrom"}',
+  phoneRotationRangeY: '{"min":0,"max":90}', phoneRotationCurveY: '{"points":[{"x":0,"y":0},{"x":1,"y":1}],"method":"catmullrom"}',
+  phoneRotationRangeZ: '{"min":0,"max":90}', phoneRotationCurveZ: '{"points":[{"x":0,"y":0},{"x":1,"y":1}],"method":"catmullrom"}',
   // Debug > Object Axes -- ported from 3JS ENGINE's own feature (see that
   // project's src/main.js, "World Axes / Object Axes visualization").
   objectAxesEnabled: false, objectAxesRenderInFront: false,
@@ -2479,9 +2504,9 @@ let screenRenderTargets = null // [RT_A, RT_B], created once and reused -- ping-
 // dev-panel build time (matching Displace's own parser, not Rotation's
 // prior behavior -- see that call site's own comment for why).
 const phoneRotationAxisParsed = {
-  X: { range: { min: 0, max: 30 }, curve: [{ x: 0, y: 0 }, { x: 1, y: 1 }], method: 'catmullrom' },
-  Y: { range: { min: 0, max: 30 }, curve: [{ x: 0, y: 0 }, { x: 1, y: 1 }], method: 'catmullrom' },
-  Z: { range: { min: 0, max: 30 }, curve: [{ x: 0, y: 0 }, { x: 1, y: 1 }], method: 'catmullrom' }
+  X: { range: { min: 0, max: 90 }, curve: [{ x: 0, y: 0 }, { x: 1, y: 1 }], method: 'catmullrom' },
+  Y: { range: { min: 0, max: 90 }, curve: [{ x: 0, y: 0 }, { x: 1, y: 1 }], method: 'catmullrom' },
+  Z: { range: { min: 0, max: 90 }, curve: [{ x: 0, y: 0 }, { x: 1, y: 1 }], method: 'catmullrom' }
 }
 function parsePhoneResponsiveRotationConfig() {
   ;['X', 'Y', 'Z'].forEach((axis) => {
@@ -6808,9 +6833,16 @@ function renderPhoneModelGroup(content) {
   ;['X', 'Y', 'Z'].forEach((axis) => {
     const rangeKey = 'phoneRotationRange' + axis
     const curveKey = 'phoneRotationCurve' + axis
-    let rangeDefault = { min: 0, max: 30 }
+    let rangeDefault = { min: 0, max: 90 }
     try { rangeDefault = JSON.parse(cfg[rangeKey]) } catch (e) { /* keep fallback */ }
-    addRow(subResponsiveRotation, { id: 'textPhoneRotationRange' + axis, label: axis + ' Axis Min / Max Rotation (Deg)', type: 'range-bar', trackMin: -180, trackMax: 180, unit: '°', defaultValue: rangeDefault })
+    // trackMin 0 (was -180), default max 90 (was 30) -- direct request
+    // 2026-10-01: "make the input form 0 upwards. if i set it to 30,
+    // assume it means -30 to 30. Set default to 90." The track no
+    // longer offers a negative value at all; whatever `max` is set to
+    // is the symmetric output ceiling in both directions (already true
+    // of the underlying magnitude-then-sign formula -- see cfg's own
+    // phoneRotationRangeX declaration comment).
+    addRow(subResponsiveRotation, { id: 'textPhoneRotationRange' + axis, label: axis + ' Axis Min / Max Rotation (Deg, Symmetric ±)', type: 'range-bar', trackMin: 0, trackMax: 180, unit: '°', defaultValue: rangeDefault })
     let lastSeenRange = document.getElementById('textPhoneRotationRange' + axis).value
     curveWidgetResyncs.push(() => {
       const el = document.getElementById('textPhoneRotationRange' + axis)
@@ -6821,7 +6853,7 @@ function renderPhoneModelGroup(content) {
     })
     let curveDefault = { points: [{ x: 0, y: 0 }, { x: 1, y: 1 }], method: 'catmullrom' }
     try { curveDefault = JSON.parse(cfg[curveKey]) } catch (e) { /* keep fallback */ }
-    addRow(subResponsiveRotation, { id: 'textPhoneRotationCurve' + axis, label: axis + ' Axis Rotation Curve (Tilt -> Rotation)', type: 'curve-editor', defaultPoints: curveDefault.points, defaultMethod: curveDefault.method, caption: 'X: ' + axis + ' Axis Tilt Magnitude (0-1)  ·  Y: Rotation Fraction (0=Min, 1=Max)' })
+    addRow(subResponsiveRotation, { id: 'textPhoneRotationCurve' + axis, label: axis + ' Axis Rotation Curve (Tilt -> Rotation)', type: 'curve-editor', defaultPoints: curveDefault.points, defaultMethod: curveDefault.method, caption: 'X: ' + axis + ' Axis Tilt Magnitude, Either Direction (0-1)  ·  Y: Rotation Fraction (0=Min, 1=Max)' })
     let lastSeenCurve = document.getElementById('textPhoneRotationCurve' + axis).value
     curveWidgetResyncs.push(() => {
       const el = document.getElementById('textPhoneRotationCurve' + axis)
