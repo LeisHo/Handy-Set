@@ -460,12 +460,24 @@ const cfg = {
   // show and comfortably below the 5-90 deg/s range its own real
   // deliberate-motion tests show.
   phoneDisplaceStationaryGateEnabled: true, phoneDisplaceStationaryGateDegPerSec: 2.0,
-  // World Units, same convention as phoneModelOffsetX/Y/Z (which this is
-  // added onto) -- see computePhoneDisplaceAxisUnits()'s own comment for
-  // how a leaky-integrated acceleration signal (in meters, unbounded
-  // otherwise) gets normalized into this curve/range's 0-1 domain.
-  phoneResponsiveDisplaceRange: '{"min":0,"max":20}',
-  phoneResponsiveDisplaceCurve: '{"points":[{"x":0,"y":0},{"x":1,"y":1}],"method":"monotone"}',
+  // Per-axis Min/Max Range + Curve + X Reference -- added 2026-10-01,
+  // direct request ("Make me a displacement min max slider and a curved
+  // editor for all 3 axes") then refined ("x to be recorded... displacement
+  // distance, and y is output percentage.. that way i can filter out
+  // small unintentional movements"). Replaces the old single SHARED
+  // Range/Curve (phoneResponsiveDisplaceRange/Curve, removed -- its own
+  // dev-panel UI row had already been lost in an unrelated cleanup pass
+  // earlier this session, confirmed via grep before removing: no addRow()
+  // anywhere still referenced it). X Reference replaces the old hardcoded
+  // PHONE_DISPLACE_REFERENCE_METERS constant -- the real displacement
+  // distance (meters) that reads as curve-X=1.0 (100%) -- now one
+  // independently-tunable value per axis instead of one constant shared
+  // by all 3. Default 0.35 matches the old shared constant exactly, so
+  // nothing changes until these are retuned. See
+  // computePhoneDisplaceAxisUnits()'s own comment for the full formula.
+  phoneDisplaceRangeX: '{"min":0,"max":20}', phoneDisplaceCurveX: '{"points":[{"x":0,"y":0},{"x":1,"y":1}],"method":"monotone"}', phoneDisplaceXReferenceM: 0.35,
+  phoneDisplaceRangeY: '{"min":0,"max":20}', phoneDisplaceCurveY: '{"points":[{"x":0,"y":0},{"x":1,"y":1}],"method":"monotone"}', phoneDisplaceYReferenceM: 0.35,
+  phoneDisplaceRangeZ: '{"min":0,"max":20}', phoneDisplaceCurveZ: '{"points":[{"x":0,"y":0},{"x":1,"y":1}],"method":"monotone"}', phoneDisplaceZReferenceM: 0.35,
   // Virtual Screen / RECURSIVE RENDER -- direct request 2026-09-29:
   // render the app's own 3D scene onto the phone GLB's 'Screen Face'
   // mesh, recursion-capped (see renderVirtualScreen()'s own comment for
@@ -2468,12 +2480,24 @@ function parsePhoneResponsiveRotationConfig() {
 // user manually drags that widget at least once. Not touching Rotation's
 // existing behavior (out of scope for this task), just not repeating the
 // same gap in this new, otherwise-identical parser.
-let phoneResponsiveDisplaceRangeParsed = { min: 0, max: 20 }
-let phoneResponsiveDisplaceCurveParsed = [{ x: 0, y: 0 }, { x: 1, y: 1 }]
-let phoneResponsiveDisplaceCurveMethod = 'monotone'
+// Per-axis parsed state -- one {range, curve, method} triple per axis,
+// keyed by axis letter so computePhoneDisplaceAxisUnits() (below) can
+// look up the right one generically instead of 3 near-duplicate
+// functions. parsePhoneResponsiveDisplaceConfig() re-parses all 3 at
+// once (called both from curveWidgetResyncs, on a detected value change,
+// AND once explicitly at dev-panel build time -- see that call site's
+// own comment for why this matters for a Sync-restored non-default value).
+const phoneDisplaceAxisParsed = {
+  X: { range: { min: 0, max: 20 }, curve: [{ x: 0, y: 0 }, { x: 1, y: 1 }], method: 'monotone' },
+  Y: { range: { min: 0, max: 20 }, curve: [{ x: 0, y: 0 }, { x: 1, y: 1 }], method: 'monotone' },
+  Z: { range: { min: 0, max: 20 }, curve: [{ x: 0, y: 0 }, { x: 1, y: 1 }], method: 'monotone' }
+}
 function parsePhoneResponsiveDisplaceConfig() {
-  try { phoneResponsiveDisplaceRangeParsed = JSON.parse(cfg.phoneResponsiveDisplaceRange) } catch (e) { /* keep last-good value */ }
-  try { const parsed = JSON.parse(cfg.phoneResponsiveDisplaceCurve); phoneResponsiveDisplaceCurveParsed = (parsed.points || parsed).slice().sort((a, b) => a.x - b.x); phoneResponsiveDisplaceCurveMethod = parsed.method || 'monotone' } catch (e) { /* keep last-good value */ }
+  ;['X', 'Y', 'Z'].forEach((axis) => {
+    const slot = phoneDisplaceAxisParsed[axis]
+    try { slot.range = JSON.parse(cfg['phoneDisplaceRange' + axis]) } catch (e) { /* keep last-good value */ }
+    try { const parsed = JSON.parse(cfg['phoneDisplaceCurve' + axis]); slot.curve = (parsed.points || parsed).slice().sort((a, b) => a.x - b.x); slot.method = parsed.method || 'monotone' } catch (e) { /* keep last-good value */ }
+  })
 }
 let screenLevelScaleRangeParsed = { min: 1, max: 1 }
 let screenLevelScaleCurveParsed = [{ x: 0, y: 0 }, { x: 1, y: 1 }]
@@ -2585,16 +2609,26 @@ function computePhoneResponsiveAxisDeg(rawComponent) {
 // real deliberate push once that bias is no longer dominating (a
 // standalone sim: a 2.5 m/s^2 push for 0.5s, on top of a lingering 0.1
 // m/s^2 bias, reads ~0.35m peak after high-pass filtering).
-const PHONE_DISPLACE_REFERENCE_METERS = 0.35
 const PHONE_DISPLACE_DEADZONE = 0.02 // same role as PHONE_RESPONSIVE_DEADZONE, own constant since it gates a METERS ratio, not a degrees-equivalent one
-function computePhoneDisplaceAxisUnits(rawMeters, axisEnabled, axisScale, axisInverted) {
+// axis: 'X'/'Y'/'Z' -- looks up that axis's own X Reference (replacing
+// the old single shared PHONE_DISPLACE_REFERENCE_METERS) and its own
+// Range/Curve (phoneDisplaceAxisParsed, populated by
+// parsePhoneResponsiveDisplaceConfig()). xReference is the real
+// displacement distance (meters) that reads as curve-X=1.0 -- small
+// real movements/jitter stay well left on the curve, so Y (the curve's
+// own output, 0-1 = 0-100%) can be shaped to read ~0% there, directly
+// filtering out unintentional movement without a separate deadzone
+// mechanism.
+function computePhoneDisplaceAxisUnits(rawMeters, axisEnabled, axisScale, axisInverted, axis) {
   if (!cfg.responsiveDisplaceGlobalEnabled) return 0
   if (!cfg.phoneResponsiveDisplaceEnabled) return 0
   if (!axisEnabled) return 0
-  const t = THREE.MathUtils.clamp(Math.abs(rawMeters) / PHONE_DISPLACE_REFERENCE_METERS, 0, 1)
+  const xReference = cfg['phoneDisplace' + axis + 'ReferenceM'] || 0.35
+  const t = THREE.MathUtils.clamp(Math.abs(rawMeters) / xReference, 0, 1)
   if (t < PHONE_DISPLACE_DEADZONE) return 0
-  const curveY = THREE.MathUtils.clamp(window.evaluateCurveEditorPoints(phoneResponsiveDisplaceCurveParsed, t, phoneResponsiveDisplaceCurveMethod), 0, 1)
-  const { min, max } = phoneResponsiveDisplaceRangeParsed
+  const slot = phoneDisplaceAxisParsed[axis]
+  const curveY = THREE.MathUtils.clamp(window.evaluateCurveEditorPoints(slot.curve, t, slot.method), 0, 1)
+  const { min, max } = slot.range
   // Clamped to >= 0, added 2026-10-01 -- root cause of "I see the phone,
   // but the moment I move it jumps out of frame", confirmed from the
   // user's own actual synced Range: {min:-20, max:20}. `magnitude` here
@@ -2622,9 +2656,9 @@ function computePhoneDisplaceAxisUnits(rawMeters, axisEnabled, axisScale, axisIn
 const _phoneDisplaceResultVec = new THREE.Vector3()
 function computePhoneResponsiveDisplacement() {
   return _phoneDisplaceResultVec.set(
-    computePhoneDisplaceAxisUnits(phoneDisplacePosX, cfg.phoneDisplaceAxisXEnabled, cfg.phoneDisplaceScaleX, cfg.phoneDisplaceInvertX),
-    computePhoneDisplaceAxisUnits(phoneDisplacePosY, cfg.phoneDisplaceAxisYEnabled, cfg.phoneDisplaceScaleY, cfg.phoneDisplaceInvertY),
-    computePhoneDisplaceAxisUnits(phoneDisplacePosZ, cfg.phoneDisplaceAxisZEnabled, cfg.phoneDisplaceScaleZ, cfg.phoneDisplaceInvertZ)
+    computePhoneDisplaceAxisUnits(phoneDisplacePosX, cfg.phoneDisplaceAxisXEnabled, cfg.phoneDisplaceScaleX, cfg.phoneDisplaceInvertX, 'X'),
+    computePhoneDisplaceAxisUnits(phoneDisplacePosY, cfg.phoneDisplaceAxisYEnabled, cfg.phoneDisplaceScaleY, cfg.phoneDisplaceInvertY, 'Y'),
+    computePhoneDisplaceAxisUnits(phoneDisplacePosZ, cfg.phoneDisplaceAxisZEnabled, cfg.phoneDisplaceScaleZ, cfg.phoneDisplaceInvertZ, 'Z')
   )
 }
 const _phoneCombinedQuat = new THREE.Quaternion()
@@ -5483,4 +5517,2221 @@ function wireSlider(id, onInput) {
     const vEl = document.getElementById(id.replace(/^slider/, 'value'))
     if (vEl) vEl.textContent = v
   })
-}
+}function wireDeviceSlider(id, cfgKey) {
+  // For controls with device checkboxes, route to device-specific cfg values
+  const el = document.getElementById(id)
+  if (!el) return
+  el.addEventListener('input', (e) => {
+    const v = parseFloat(e.target.value)
+    const activeTab = getActiveDevPanelTab()
+    if (activeTab?.id === 'mobileTab') cfg[cfgKey + 'Mobile'] = v
+    else if (activeTab?.id === 'landscapeTab') cfg[cfgKey + 'Landscape'] = v
+    else cfg[cfgKey] = v
+    requestRender()
+    const vEl = document.getElementById(id.replace(/^slider/, 'value'))
+    if (vEl) vEl.textContent = v
+  })
+}
+function wireCheckbox(id, onChange) { const el = document.getElementById(id); if (el) el.addEventListener('change', (e) => { onChange(e.target.checked); requestRender() }) }
+function wireColor(id, onChange) { const el = document.getElementById(id); if (el) el.addEventListener('input', (e) => { onChange(e.target.value); requestRender() }) }
+function wireTextInput(id, onChange) { const el = document.getElementById(id); if (el) el.addEventListener('input', (e) => { onChange(e.target.value); requestRender() }) }
+function wireSelect(id, onChange) { const el = document.getElementById(id); if (el) el.addEventListener('change', (e) => { onChange(e.target.value); requestRender() }) }
+
+// REMOVED 2026-09-28 -- elLocal/commitTextControl/buildReactiveRangeWidget/
+// buildReactiveCurveWidget (the hand-built dual-handle range bar and
+// draggable-point SVG curve editor this project ported from HANDY
+// DANDIES) are dead code now that all 12 curve/range fields (Reactive
+// Arm Length, Responsive Wrist Splay, the 3 wrist-axis clamps,
+// Responsive Arm Rotation at Base, Responsive Pose Tween, Phone
+// Responsive Rotation) are migrated to devPanel.js's own generic
+// type:'curve-editor'/'range-bar' controls (CLAUDE.md §12 template
+// re-sync, 2026-09-28) -- see each field's own "MIGRATED 2026-09-28"
+// comment for the replacement registration pattern.
+
+// ---------------------------------------------------------------------
+// Mobile/Landscape mirroring for the Phone Tilt group's own min/max
+// range sliders and curve graphs -- direct report 2026-09-27: "when I
+// check the show in mobile checkbox, the min max sliders and curve
+// graphs aren't showing up in mobile." Root cause, confirmed by direct
+// comparison against the real .claude/TEMPLATE_DEV_PANEL.html (not
+// assumed): these widgets are built on top of a hidden `type: 'text'`
+// control, and devPanel.js's own automatic per-device mirroring
+// (ensureDynamicTargetRow()) explicitly excludes 'text'/'number'
+// controls -- the shared template's own documented, permanent scope
+// limit ("outside this system's scope for now"). The "Show in Mobile/
+// Landscape" checkbox itself still exists (added by devPanel.js's own
+// generic backfill pass, independent of this), so it can be checked --
+// checking it just silently did nothing.
+//
+// Fixed with a SEPARATE, HANDYSET-owned mirroring mechanism, scoped to
+// the 3 curve/range controls actually in the Phone Tilt group
+// (Responsive Arm Rotation at Base's range+curve, Responsive Pose
+// Tween's curve). Per direct confirmation (AskUserQuestion, 2026-09-27):
+// the mirror is a SHARED-VALUE mirror -- Mobile/Landscape show the
+// exact same widget, editing the SAME cfg field as Desktop -- NOT an
+// independently-tunable per-device copy (none of these 3 fields have a
+// per-device variant anywhere else in this file, so "independent"
+// wouldn't mean anything real for them).
+//
+// REMOVED 2026-09-28 -- this whole Mobile/Landscape mirroring mechanism
+// (formerly PHONE_TILT_MIRROR_WIDGETS/findNestedGroupContent/
+// syncPhoneTiltWidgetMirrors) existed solely to hand-roll a "Show in
+// Mobile/Landscape" equivalent for textBaseArmRotationRange/
+// textBaseArmRotationCurve/textPoseTweenCurve, back when those 3 fields
+// were plain type:'text' rows with no device-checkbox support of their
+// own. All 3 (and every other curve/range field in this file) are now
+// migrated to the template's generic type:'range-bar'/'curve-editor'
+// controls (see each one's own "MIGRATED 2026-09-28" comment), which
+// set ctrl.skipDeviceCheckbox = true internally -- these control types
+// are desktop-only by design, the same precedent as Mouse Log (see the
+// workspace CLAUDE.md's own §12f-1 gotcha note). Disclosed trade-off:
+// these 3 fields (and every other migrated curve/range field) lose
+// their prior Mobile/Landscape mirroring capability as a direct,
+// deliberate consequence of adopting the template's generic engine --
+// consistent with every other curve/range/list-picker control in the
+// dev panel, none of which have ever had a device-specific variant.
+
+// Labels match HANDY DANDIES' own DEV_GROUPS exactly (grepped from its
+// main.js, not reconstructed) — including the thumb's own 2 irregular
+// labels ("Thumb Tip Splay" / "Thumb 2nd Segment Curl" instead of the
+// "2nd Segment Splay" / "Mid-Only Curl" pattern every other finger uses).
+function addFingerSliders(content, finger) {
+  const F = finger.charAt(0).toUpperCase() + finger.slice(1)
+  const splay2Label = finger === 'thumb' ? `${F} Tip Splay (%)` : `${F} 2nd Segment Splay (%)`
+  const midOnlyLabel = finger === 'thumb' ? `${F} 2nd Segment Curl (%)` : `${F} Mid-Only Curl (%)`
+  const defs = [
+    [FINGER_CURL_KEY[finger], `${F} Curl (%)`, -200, 200], [FINGER_SPLAY_KEY[finger], `${F} Splay (%)`, -200, 200],
+    [FINGER_SPLAY2_KEY[finger], splay2Label, -200, 200], [FINGER_CURL_BIAS_KEY[finger], `${F} Curl Bias (Base <-> Tip) (%)`, -100, 100],
+    [FINGER_BASE_ONLY_CURL_KEY[finger], `${F} Base-Only Curl (%)`, -200, 200], [FINGER_MID_ONLY_CURL_KEY[finger], midOnlyLabel, -200, 200],
+    [FINGER_TIP_ONLY_CURL_KEY[finger], `${F} Tip-Only Curl (%)`, -200, 200], [FINGER_TIP_TWIST_KEY[finger], `${F} Tip Twist (%)`, -100, 100]
+  ]
+  defs.forEach(([key, label, mn, mx]) => {
+    const id = 'slider' + key
+    addRow(content, { id, label, type: 'slider', min: mn, max: mx, step: 1, value: cfg[key] })
+    wireSlider(id, (v) => { cfg[key] = v; applyCurl(finger) })
+  })
+}
+
+function capturePoseFromCfg() { const o = {}; POSE_PRESET_KEYS.forEach((k) => { o[k] = cfg[k] }); return o }
+function captureCameraFromLive() { return { x: camera.position.x, y: camera.position.y, z: camera.position.z, fov: camera.fov, tx: controls.target.x, ty: controls.target.y, tz: controls.target.z, zoom: cfg.cameraZoom } }
+function captureLightingFromLive() { const o = {}; LIGHTING_PRESET_KEYS.forEach((k) => { o[k] = cfg[k] }); return o }
+
+// FIXED 2026-09-27, direct report: "double check the saed cameras. it
+// doesnt seem to save still." Root cause, confirmed by directly
+// inspecting localStorage after a real Save click: `buildListPicker()`
+// only ever mutated its own `items` array IN MEMORY, then called
+// `saveDevPanelSettings()` hoping it would persist -- but that
+// (devPanel.js-owned) function only ever captures state from
+// REGISTERED dev-panel controls (hidden inputs, sliders, etc.). A raw
+// JS array like SAVED_CAMERAS has no such registration, so it was
+// COMPLETELY INVISIBLE to Sync -- confirmed live: `devPanelSettings` in
+// localStorage has no field for it at all, only the standard
+// controls/layout/style keys. This silently affected ALL FIVE
+// list-pickers built by this function (Saved Tween Sequences, Poses,
+// Cameras, Lighting, Toon Shading), not just Cameras -- every
+// Save/Overwrite/Rename/Delete/+Group/Import ever appeared to work
+// (the in-memory array and its DOM list both updated) but reset back
+// to the hardcoded seed data on every reload.
+//
+// Fixed with a dedicated persistence layer per list-picker, keyed by
+// the new required `opts.storageKey`, following the EXACT pattern
+// already proven for defaultPose/defaultCamera/defaultLighting/
+// defaultToon (saveFieldAsDefault()/loadFieldDefaultIfSaved(), below):
+// localStorage (always-on baseline, per CLAUDE.md §12l) plus an async
+// GET-merge-POST to the same git-tracked settings endpoint when it's
+// configured/reachable. persistListPickerItems() is called after every
+// mutation (in addition to, not instead of, the existing
+// saveDevPanelSettings() call); loadListPickerItemsFromLocalStorage()
+// runs synchronously at module load (mirroring the schema-version
+// guard at the top of this file) so every reference to the array
+// (Tween's own SAVED_POSES read included) sees the restored data
+// before anything else runs; loadListPickerItemsFromRemoteData() is
+// called from loadRemoteSettingsOnStartup() (this file's own single
+// shared startup GET), alongside the other loadFieldDefaultIfSaved()
+// logic.
+function persistListPickerItems(storageKey, items) {
+  try { localStorage.setItem('handyset_listPicker_' + storageKey, JSON.stringify(items)) } catch (e) { /* localStorage unavailable -- remote save below is the fallback */ }
+  ;(async () => {
+    try {
+      const getResp = await fetch(SAVE_SETTINGS_ENDPOINT, { cache: 'no-store' })
+      const getBody = await getResp.json().catch(() => ({}))
+      const base = (getResp.ok && getBody.ok === true && getBody.settings && typeof getBody.settings === 'object') ? getBody.settings : {}
+      const merged = Object.assign({}, base, { ['listPicker_' + storageKey]: items })
+      await fetch(SAVE_SETTINGS_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Dev-Panel-Secret': DEV_PANEL_SAVE_SECRET },
+        body: JSON.stringify(merged)
+      })
+    } catch (e) { /* offline/unreachable/not-yet-deployed -- localStorage above already covers the same-browser case */ }
+  })()
+}
+// Synchronous, local-only restore -- called once per array, at module
+// scope, so it runs before ANYTHING (including other code that captured
+// a reference to the same array) reads it.
+function loadListPickerItemsFromLocalStorage(storageKey, items) {
+  try {
+    const raw = localStorage.getItem('handyset_listPicker_' + storageKey)
+    if (!raw) return
+    const parsed = JSON.parse(raw)
+    if (Array.isArray(parsed) && parsed.length) { items.length = 0; items.push(...parsed) }
+  } catch (e) { /* corrupt/unavailable -- keep the hardcoded seed data */ }
+}
+// Synchronous merge of an already-fetched remote list-picker array into
+// the live `items` array -- called from loadRemoteSettingsOnStartup()
+// (below), which does the single shared GET for every remote-restorable
+// field (defaultPose/Camera/Lighting/Toon and now these 5 arrays) rather
+// than this function performing its own separate fetch per list -- 5
+// extra round-trips at startup for no benefit over the 1 already made.
+function loadListPickerItemsFromRemoteData(remoteArr, items) {
+  if (Array.isArray(remoteArr) && remoteArr.length) { items.length = 0; items.push(...remoteArr) }
+}
+// Full list-picker widget, ported to match HANDY DANDIES' own
+// buildListPickerRow()/renderListPickerRows() (src/devpanel/devPanel.js
+// there) as closely as practical in the time available: Save/Overwrite/
+// Use/Rename/Delete/+Group buttons, optional Export Selected/Import
+// (checkbox-per-item clipboard JSON, only on Saved Poses — matching HANDY
+// DANDIES, where only its own savedPoses control has these 2 buttons),
+// a scrollable item list with group headers. `items` is mutated IN
+// PLACE (push/splice, never reassigned) so other code already holding a
+// reference to the same array (e.g. Tween's own SAVED_POSES read) sees
+// live updates without needing its own refresh call.
+function buildListPicker(content, opts) {
+  const container = document.createElement('div')
+  container.className = 'dp-list-picker-row-container'
+  const listEl = document.createElement('div')
+  listEl.className = 'dp-list-picker'
+  container.appendChild(listEl)
+
+  function mkBtn(text) { const b = document.createElement('button'); b.type = 'button'; b.textContent = text; return b }
+  const btnRow = document.createElement('div')
+  btnRow.className = 'dev-buttons'
+  const saveBtn = mkBtn('Save'), overwriteBtn = mkBtn('Overwrite'), useBtn = mkBtn('Use'), renameBtn = mkBtn('Rename'), deleteBtn = mkBtn('Delete'), groupBtn = mkBtn('+ Group')
+  btnRow.append(saveBtn, overwriteBtn, useBtn, renameBtn, deleteBtn, groupBtn)
+  container.appendChild(btnRow)
+  let exportBtn = null, importBtn = null
+  if (opts.exportable || opts.importable) {
+    const btnRow2 = document.createElement('div')
+    btnRow2.className = 'dev-buttons'
+    if (opts.exportable) { exportBtn = mkBtn('Export Selected'); btnRow2.appendChild(exportBtn) }
+    if (opts.importable) { importBtn = mkBtn('Import'); btnRow2.appendChild(importBtn) }
+    container.appendChild(btnRow2)
+  }
+  content.appendChild(container)
+
+  const items = opts.items
+  const state = { selected: items.find((i) => i.name === opts.defaultName) || null, exportChecked: new Set() }
+
+  function renderItem(it, parentEl) {
+    const row = document.createElement('div')
+    row.className = 'dp-list-picker-item'
+    if (state.selected === it) row.classList.add('dp-list-picker-item-selected')
+    if (opts.exportable) {
+      const cb = document.createElement('input')
+      cb.type = 'checkbox'
+      cb.checked = state.exportChecked.has(it)
+      cb.addEventListener('click', (e) => { e.stopPropagation(); if (cb.checked) state.exportChecked.add(it); else state.exportChecked.delete(it) })
+      row.appendChild(cb)
+    }
+    const label = document.createElement('span')
+    label.className = 'dp-list-picker-item-label'
+    label.textContent = it.name
+    row.appendChild(label)
+    row.addEventListener('click', () => { state.selected = it; render() })
+    parentEl.appendChild(row)
+  }
+  function render() {
+    listEl.innerHTML = ''
+    const groups = {}
+    const ungrouped = []
+    items.forEach((it) => { if (it.group) { (groups[it.group] = groups[it.group] || []).push(it) } else ungrouped.push(it) })
+    ungrouped.forEach((it) => renderItem(it, listEl))
+    Object.keys(groups).forEach((gname) => {
+      const header = document.createElement('div')
+      header.className = 'dp-list-picker-group-header'
+      header.textContent = '▾ ' + gname
+      listEl.appendChild(header)
+      groups[gname].forEach((it) => renderItem(it, listEl))
+    })
+  }
+  render()
+
+  saveBtn.addEventListener('click', () => {
+    const label = opts.itemLabel || 'Item'
+    const name = prompt(label + ' name:', label + ' ' + (items.length + 1))
+    if (!name) return
+    const data = opts.captureCurrent ? opts.captureCurrent() : {}
+    const existing = items.find((it) => it.name === name)
+    if (existing) {
+      if (!confirm(`"${name}" already exists. Overwrite it?`)) return
+      Object.assign(existing, data, { name })
+    } else {
+      items.push(Object.assign({ name }, data))
+    }
+    render()
+    // Persist the updated items array to localStorage + git via Sync
+    if (typeof saveDevPanelSettings === 'function') {
+      saveDevPanelSettings()
+    }
+    if (opts.storageKey) persistListPickerItems(opts.storageKey, items)
+  })
+  overwriteBtn.addEventListener('click', () => {
+    if (!state.selected) return
+    const data = opts.captureCurrent ? opts.captureCurrent() : {}
+    Object.assign(state.selected, data, { name: state.selected.name })
+    render()
+    // Persist the updated items array to localStorage + git via Sync
+    if (typeof saveDevPanelSettings === 'function') {
+      saveDevPanelSettings()
+    }
+    if (opts.storageKey) persistListPickerItems(opts.storageKey, items)
+  })
+  // requestRender(): shared by all 5 list-pickers (Poses/Cameras/Lighting/
+  // Toon Shading/Tween Sequences) via this one function -- opts.onUse()
+  // applies the preset directly (applyPoseValuesToHand/applyCameraPreset/
+  // etc), none of which go through wireSlider/wireCheckbox, so on-demand
+  // rendering would otherwise never see this as a "setting modified".
+  useBtn.addEventListener('click', () => { if (state.selected && opts.onUse) { opts.onUse(state.selected); requestRender() } })
+  renameBtn.addEventListener('click', () => {
+    if (!state.selected) return
+    const name = prompt('Rename to:', state.selected.name)
+    if (!name || name === state.selected.name) return
+    state.selected.name = name
+    render()
+    if (typeof saveDevPanelSettings === 'function') saveDevPanelSettings()
+    if (opts.storageKey) persistListPickerItems(opts.storageKey, items)
+  })
+  deleteBtn.addEventListener('click', () => {
+    if (!state.selected) return
+    const idx = items.indexOf(state.selected)
+    if (idx >= 0) items.splice(idx, 1)
+    state.selected = null
+    render()
+    if (typeof saveDevPanelSettings === 'function') saveDevPanelSettings()
+    if (opts.storageKey) persistListPickerItems(opts.storageKey, items)
+  })
+  groupBtn.addEventListener('click', () => {
+    if (!state.selected) { alert('Select an item first, then + Group.'); return }
+    const gname = prompt('Group name:')
+    if (!gname) return
+    state.selected.group = gname
+    render()
+    if (typeof saveDevPanelSettings === 'function') saveDevPanelSettings()
+    if (opts.storageKey) persistListPickerItems(opts.storageKey, items)
+  })
+  if (exportBtn) exportBtn.addEventListener('click', () => {
+    const chosen = items.filter((it) => state.exportChecked.has(it))
+    if (!chosen.length) { alert('Check at least one item to export.'); return }
+    navigator.clipboard.writeText(JSON.stringify(chosen, null, 2)).then(() => alert('Copied ' + chosen.length + ' item(s) to clipboard.'))
+  })
+  if (importBtn) importBtn.addEventListener('click', async () => {
+    try {
+      const text = await navigator.clipboard.readText()
+      const parsed = JSON.parse(text)
+      const arr = Array.isArray(parsed) ? parsed : [parsed]
+      arr.forEach((item) => {
+        const existing = items.find((it) => it.name === item.name)
+        if (existing) Object.assign(existing, item)
+        else items.push(item)
+      })
+      render()
+      if (typeof saveDevPanelSettings === 'function') saveDevPanelSettings()
+      if (opts.storageKey) persistListPickerItems(opts.storageKey, items)
+    } catch (e) { alert('Import failed: ' + e.message) }
+  })
+  return state
+}
+function renderPresetPicker(content, title, items, defaultName, applyFn, captureFn, opts) {
+  const sub = addSubgroup(content, title)
+  buildListPicker(sub, Object.assign({ items, defaultName, itemLabel: title.replace(/^Saved /, '').replace(/s$/, ''), captureCurrent: captureFn, onUse: applyFn }, opts || {}))
+  // "Set as Default" — a sibling control AFTER the list-picker, not part
+  // of it (matches Hando exactly: it's a separate `type: 'button'` DEV_GROUPS
+  // entry, never one of buildListPickerRow's own buttons). Captures LIVE
+  // current state (the same captureFn the list-picker's own Save button
+  // uses), not whatever's merely selected in the list — "save what's
+  // tuned right now as the default," per Hando's saveToonAsDefault() etc.
+  // Omitted when opts.defaultFieldKey isn't passed (Tween Sequences has
+  // no default mechanism in Hando either — confirmed by direct source
+  // inspection, not assumed).
+  if (opts && opts.defaultFieldKey) {
+    const btnRow = document.createElement('div')
+    btnRow.className = 'dev-buttons'
+    const defaultBtn = document.createElement('button')
+    defaultBtn.type = 'button'
+    defaultBtn.textContent = 'Set as Default'
+    btnRow.appendChild(defaultBtn)
+    sub.appendChild(btnRow)
+    defaultBtn.addEventListener('click', () => saveFieldAsDefault(opts.defaultFieldKey, captureFn, defaultBtn))
+  }
+}
+
+function renderPoseGroup(content) {
+  // ROTATION / THUMB split, and a dedicated Pose Offset subgroup: this
+  // matches your OWN LIVE Handy Dandies panel's actual current layout
+  // (grepped from data/processed/dev-panel-settings.json's `order` +
+  // `textOverrides`), not the base code's original "Whole-Hand Rotation &
+  // Thumb" bundle — you split ROTATION out from THUMB there yourself via
+  // drag-and-drop, and that saved state is the real source of truth.
+  const subRotation = addSubgroup(content, 'ROTATION')
+  ;[['modelRotX', -180, 180, 'Whole-Hand Rotation X (Deg)'], ['modelRotY', -180, 180, 'Whole-Hand Rotation Y (Deg)'], ['modelRotZ', -180, 180, 'Whole-Hand Rotation Z (Deg)']].forEach(([k, mn, mx, label]) => {
+    addRow(subRotation, { id: 'slider' + k, label, type: 'slider', min: mn, max: mx, step: 1, value: cfg[k] })
+    wireSlider('slider' + k, (v) => { cfg[k] = v; applyPoseValuesToHand(cfg) })
+  })
+
+  // MIRROR -- direct request: 3 checkboxes mirroring the hand along each
+  // of the MODEL'S OWN 3 axes (applied as a per-axis sign on h.clone.scale
+  // -- see applyModelRootTransform()'s own comment). Each one re-applies
+  // the full pose (applyPoseValuesToHand) rather than just
+  // applyModelRootTransform alone, since curl/splay/twist's own axis math
+  // (rotateOnTrueWorldAxis -> getBoneWorldQuaternionRobust) depends on
+  // h.clone's CURRENT scale too -- a stale finger pose would otherwise sit
+  // one frame behind the new mirror state.
+  const subMirror = addSubgroup(content, 'MIRROR')
+  ;[['handMirrorX', 'Mirror X'], ['handMirrorY', 'Mirror Y'], ['handMirrorZ', 'Mirror Z']].forEach(([k, label]) => {
+    addRow(subMirror, { id: 'checkbox' + k, label, type: 'checkbox' })
+    document.getElementById('checkbox' + k).checked = cfg[k]
+    wireCheckbox('checkbox' + k, (v) => { cfg[k] = v; applyPoseValuesToHand(cfg) })
+  })
+
+  const subBaseRotation = addSubgroup(content, 'Whole-Hand Rotation at Base')
+  ;[['baseRotationX', -180, 180, 'Base Rotation X (Deg)'], ['baseRotationY', -180, 180, 'Base Rotation Y (Deg)'], ['baseRotationZ', -180, 180, 'Base Rotation Z (Deg)']].forEach(([k, mn, mx, label]) => {
+    addRow(subBaseRotation, { id: 'slider' + k, label, type: 'slider', min: mn, max: mx, step: 1, value: cfg[k] })
+    wireSlider('slider' + k, (v) => { cfg[k] = v; applyBaseArmRotation() })
+  })
+
+  const subThumb = addSubgroup(content, 'THUMB')
+  addFingerSliders(subThumb, 'thumb')
+
+  const subWrist = addSubgroup(content, 'Wrist')
+  ;[['wristRotation', -360, 360, 'Wrist Rotation (Deg)'], ['wristBend', -90, 90, 'Wrist Bend (Deg)'], ['wristSplay', -30, 30, 'Wrist Splay (Deg)']].forEach(([k, mn, mx, label]) => {
+    addRow(subWrist, { id: 'slider' + k, label, type: 'slider', min: mn, max: mx, step: 1, value: cfg[k] })
+    wireSlider('slider' + k, (v) => { cfg[k] = v; applyPoseValuesToHand(cfg) })
+  })
+  // Wrist axis clamps -- direct request 2026-09-25, after diagnosing why
+  // a saved pose's own Wrist Splay plus Responsive Wrist Splay's live
+  // contribution can sum past any anatomical limit (e.g. -55 + -71 =
+  // -126) with nothing capping the total. Each clamps the FINAL combined
+  // angle actually applied to that axis (applyWristPoseToSkeleton()),
+  // not either contributing source alone.
+  // MIGRATED 2026-09-28 to devPanel.js's own generic 'range-bar' control
+  // type (CLAUDE.md §12r) -- same {min,max} JSON value format the old
+  // HANDYSET-owned buildReactiveRangeWidget() already used, so the SAME
+  // control id carries the existing saved value across with zero
+  // transformation. cfg[key] is kept in sync via the same
+  // curveWidgetResyncs polling pattern used elsewhere in this file
+  // (the generic range-bar widget itself has no onExternalChange hook --
+  // it just sets its own hidden input's value, on both a live drag AND a
+  // Reset/Sync/Undo restore).
+  ;[
+    ['wristRotationClampRange', 'Min / Max Wrist Rotation (Deg)', -360, 360, parseWristClampConfig],
+    ['wristBendClampRange', 'Min / Max Wrist Bend (Deg)', -90, 90, parseWristClampConfig],
+    ['wristSplayClampRange', 'Min / Max Wrist Splay (Deg, Combined)', -180, 180, parseWristClampConfig]
+  ].forEach(([key, label, trackMin, trackMax, parseFn]) => {
+    let defaultValue = { min: trackMin, max: trackMax }
+    try { defaultValue = JSON.parse(cfg[key]) } catch (e) { /* keep fallback */ }
+    addRow(subWrist, { id: 'text' + key, label, type: 'range-bar', trackMin, trackMax, unit: '°', defaultValue })
+    let lastSeen = document.getElementById('text' + key).value
+    curveWidgetResyncs.push(() => {
+      const el = document.getElementById('text' + key)
+      if (!el || el.value === lastSeen) return
+      lastSeen = el.value
+      cfg[key] = el.value
+      parseFn()
+      applyPoseValuesToHand(cfg)
+    })
+  })
+  // Reactive Arm Length -- ported from HANDY DANDIES (see cfg's own
+  // declaration comment for the single-hand distance-input adaptation:
+  // tiltMagnitude stands in for HANDY DANDIES' per-field live distance
+  // range). "Default Arm Length" is the label HANDY DANDIES itself uses
+  // for the non-reactive fallback slider.
+  addRow(subWrist, { id: 'checkboxCropWristEnabled', label: 'Crop Wrist (Master On/Off)', type: 'checkbox' })
+  document.getElementById('checkboxCropWristEnabled').checked = cfg.cropWristEnabled
+  wireCheckbox('checkboxCropWristEnabled', (v) => { cfg.cropWristEnabled = v; updateWristCrop() })
+  addRow(subWrist, { id: 'sliderHideWrist', label: 'Default Arm Length (Crop %, Reactive Off)', type: 'slider', min: 0, max: 100, step: 1, value: cfg.hideWrist })
+  wireSlider('sliderHideWrist', (v) => { cfg.hideWrist = v; updateWristCrop() })
+  addRow(subWrist, { id: 'checkboxReactiveArmLengthEnabled', label: 'Reactive Arm Length (By Cursor Distance)', type: 'checkbox' })
+  document.getElementById('checkboxReactiveArmLengthEnabled').checked = cfg.reactiveArmLengthEnabled
+  wireCheckbox('checkboxReactiveArmLengthEnabled', (v) => { cfg.reactiveArmLengthEnabled = v; updateWristCrop() })
+  // MIGRATED 2026-09-28 to devPanel.js's own generic 'range-bar'/
+  // 'curve-editor' control types (CLAUDE.md §12r) -- same ids preserve
+  // the existing saved values (range: identical {min,max} format;
+  // curve: existing array wrapped into {points,method:'catmullrom'} at
+  // the cfg-default and settings-file level, matching HANDYSET's own
+  // pre-existing Catmull-Rom evaluation exactly). cfg.armLength* is kept
+  // in sync via curveWidgetResyncs polling (see the wrist-clamp loop
+  // above for why -- these generic widgets have no onExternalChange hook).
+  {
+    let rangeDefault = { min: 0, max: 100 }
+    try { rangeDefault = JSON.parse(cfg.armLengthRange) } catch (e) { /* keep fallback */ }
+    addRow(subWrist, { id: 'textArmLengthRange', label: 'Min / Max Arm Length (Crop %)', type: 'range-bar', trackMin: 0, trackMax: 100, unit: '%', defaultValue: rangeDefault })
+    let lastSeenRange = document.getElementById('textArmLengthRange').value
+    curveWidgetResyncs.push(() => {
+      const el = document.getElementById('textArmLengthRange')
+      if (!el || el.value === lastSeenRange) return
+      lastSeenRange = el.value
+      cfg.armLengthRange = el.value
+      parseArmLengthConfig()
+    })
+    const curveParsed = JSON.parse(cfg.armLengthCurve)
+    addRow(subWrist, { id: 'textArmLengthCurve', label: 'Length Scaling Curve (Distance -> Crop)', type: 'curve-editor', defaultPoints: curveParsed.points, defaultMethod: curveParsed.method, caption: 'X: Tilt/Cursor Distance From Center (0-1)  ·  Y: Crop (0=None, 1=Full)' })
+    let lastSeenCurve = document.getElementById('textArmLengthCurve').value
+    curveWidgetResyncs.push(() => {
+      const el = document.getElementById('textArmLengthCurve')
+      if (!el || el.value === lastSeenCurve) return
+      lastSeenCurve = el.value
+      cfg.armLengthCurve = el.value
+      parseArmLengthConfig()
+    })
+  }
+
+  ;['index', 'middle', 'ring', 'pinky'].forEach((f) => {
+    const sub = addSubgroup(content, f.charAt(0).toUpperCase() + f.slice(1))
+    addFingerSliders(sub, f)
+  })
+
+  const subOffset = addSubgroup(content, 'Pose Offset')
+  ;[['poseOffsetX', -20, 20, 'Pose Offset X (World Units)'], ['poseOffsetY', -20, 20, 'Pose Offset Y (World Units)'], ['poseOffsetZ', -20, 20, 'Pose Offset Z (World Units)']].forEach(([k, mn, mx, label]) => {
+    addRow(subOffset, { id: 'slider' + k, label, type: 'slider', min: mn, max: mx, step: 0.1, value: cfg[k] })
+    wireSlider('slider' + k, (v) => { cfg[k] = v; applyPoseValuesToHand(cfg) })
+  })
+  addRow(subOffset, { id: 'sliderPoseScale', label: 'Pose Scale (x)', type: 'slider', min: 0.1, max: 3, step: 0.05, value: cfg.poseScale })
+  wireSlider('sliderPoseScale', (v) => { cfg.poseScale = v; applyPoseValuesToHand(cfg) })
+
+  renderPresetPicker(content, 'Saved Poses', SAVED_POSES, DEFAULT_POSE_NAME, applyPosePreset, capturePoseFromCfg, { exportable: true, importable: true, defaultFieldKey: 'defaultPose', storageKey: 'poses' })
+}
+
+// Ported from HANDY DANDIES (its own top-level "Responsive Wrist Splay"
+// group — same structure as Reactive Arm Length above, different unit
+// (degrees) and application (adds onto cfg.wristSplay every frame while
+// reactive, via applyReactiveWristSplayFrame() in animate() — see that
+// function's own comment). Single-hand distance-input adaptation: see
+// cfg's own declaration comment. RESTORED 2026-09-21 after direct
+// instruction to leave this group in place.
+function renderResponsiveWristSplayGroup(content) {
+  addRow(content, { id: 'checkboxWristSplayResponsiveEnabled', label: 'Responsive Wrist Splay (Master On/Off)', type: 'checkbox' })
+  document.getElementById('checkboxWristSplayResponsiveEnabled').checked = cfg.wristSplayResponsiveEnabled
+  wireCheckbox('checkboxWristSplayResponsiveEnabled', (v) => { cfg.wristSplayResponsiveEnabled = v; applyPoseValuesToHand(cfg) })
+  addRow(content, { id: 'sliderWristSplayDefault', label: 'Default Wrist Splay (Deg, Reactive Off)', type: 'slider', min: -180, max: 180, step: 1, value: cfg.wristSplayDefault })
+  wireSlider('sliderWristSplayDefault', (v) => { cfg.wristSplayDefault = v; applyPoseValuesToHand(cfg) })
+  addRow(content, { id: 'checkboxWristSplayReactiveEnabled', label: 'Reactive Wrist Splay (By Cursor Distance)', type: 'checkbox' })
+  document.getElementById('checkboxWristSplayReactiveEnabled').checked = cfg.wristSplayReactiveEnabled
+  wireCheckbox('checkboxWristSplayReactiveEnabled', (v) => { cfg.wristSplayReactiveEnabled = v; applyPoseValuesToHand(cfg) })
+  // MIGRATED 2026-09-28 -- see Reactive Arm Length's own matching comment.
+  {
+    let rangeDefault = { min: -180, max: 180 }
+    try { rangeDefault = JSON.parse(cfg.wristSplayRange) } catch (e) { /* keep fallback */ }
+    addRow(content, { id: 'textWristSplayRange', label: 'Min / Max Wrist Splay (Deg)', type: 'range-bar', trackMin: -180, trackMax: 180, unit: '°', defaultValue: rangeDefault })
+    let lastSeenRange = document.getElementById('textWristSplayRange').value
+    curveWidgetResyncs.push(() => {
+      const el = document.getElementById('textWristSplayRange')
+      if (!el || el.value === lastSeenRange) return
+      lastSeenRange = el.value
+      cfg.wristSplayRange = el.value
+      parseWristSplayConfig()
+    })
+    const curveParsed = JSON.parse(cfg.wristSplayCurve)
+    addRow(content, { id: 'textWristSplayCurve', label: 'Splay Scaling Curve (Distance -> Splay)', type: 'curve-editor', defaultPoints: curveParsed.points, defaultMethod: curveParsed.method, caption: 'X: Cursor Distance From Arm Base / Phone Tilt (0-1)  ·  Y: Splay Fraction (0=Min End, 1=Max End)' })
+    let lastSeenCurve = document.getElementById('textWristSplayCurve').value
+    curveWidgetResyncs.push(() => {
+      const el = document.getElementById('textWristSplayCurve')
+      if (!el || el.value === lastSeenCurve) return
+      lastSeenCurve = el.value
+      cfg.wristSplayCurve = el.value
+      parseWristSplayConfig()
+    })
+  }
+}
+
+function renderCameraGroup(content) {
+  addRow(content, { id: 'sliderCameraX', label: 'Camera X Position (x)', type: 'slider', min: -500, max: 500, step: 0.5, value: cfg.cameraX })
+  wireSlider('sliderCameraX', (v) => { cfg.cameraX = v; camera.position.x = v })
+  addRow(content, { id: 'sliderCameraY', label: 'Camera Y Position (x)', type: 'slider', min: -500, max: 500, step: 0.5, value: cfg.cameraY })
+  wireSlider('sliderCameraY', (v) => { cfg.cameraY = v; camera.position.y = v })
+  addRow(content, { id: 'sliderCameraZ', label: 'Camera Z Position (x)', type: 'slider', min: -500, max: 500, step: 0.5, value: cfg.cameraZ })
+  wireSlider('sliderCameraZ', (v) => { cfg.cameraZ = v; camera.position.z = v })
+  addRow(content, { id: 'sliderCameraFov', label: 'Field Of View (Deg)', type: 'slider', min: 15, max: 90, step: 1, value: cfg.cameraFov })
+  wireSlider('sliderCameraFov', (v) => { cfg.cameraFov = v; camera.fov = v; camera.updateProjectionMatrix() })
+  addRow(content, { id: 'sliderCameraZoom', label: 'Zoom (Distance To Pan Target) (x)', type: 'slider', min: 1, max: 500, step: 0.5, value: cfg.cameraZoom })
+  wireSlider('sliderCameraZoom', (v) => { cfg.cameraZoom = v; setCameraDistance(v) })
+  addRow(content, { id: 'checkboxLockCameraPan', label: 'Lock Camera Pan', type: 'checkbox' })
+  document.getElementById('checkboxLockCameraPan').checked = cfg.lockCameraPan
+  wireCheckbox('checkboxLockCameraPan', (v) => { cfg.lockCameraPan = v; applyCameraLockState() })
+  addRow(content, { id: 'checkboxLockCameraZoom', label: 'Lock Camera Zoom', type: 'checkbox' })
+  document.getElementById('checkboxLockCameraZoom').checked = cfg.lockCameraZoom
+  wireCheckbox('checkboxLockCameraZoom', (v) => { cfg.lockCameraZoom = v; applyCameraLockState() })
+  addRow(content, { id: 'checkboxLockCameraRotate', label: 'Lock Camera Rotate', type: 'checkbox' })
+  document.getElementById('checkboxLockCameraRotate').checked = cfg.lockCameraRotate
+  wireCheckbox('checkboxLockCameraRotate', (v) => { cfg.lockCameraRotate = v; applyCameraLockState() })
+  addRow(content, { id: 'sliderCameraYaw', label: 'Camera Yaw (Deg)', type: 'slider', min: -180, max: 180, step: 1, value: cfg.cameraYaw })
+  wireSlider('sliderCameraYaw', (v) => { cfg.cameraYaw = v; setCameraYawPitch(cfg.cameraYaw, cfg.cameraPitch) })
+  addRow(content, { id: 'sliderCameraPitch', label: 'Camera Pitch (Deg)', type: 'slider', min: -89, max: 89, step: 1, value: cfg.cameraPitch })
+  wireSlider('sliderCameraPitch', (v) => { cfg.cameraPitch = v; setCameraYawPitch(cfg.cameraYaw, cfg.cameraPitch) })
+  addRow(content, { id: 'checkboxCameraMaxExtentsEnabled', label: 'Set Default Camera As Max Extents', type: 'checkbox' })
+  document.getElementById('checkboxCameraMaxExtentsEnabled').checked = cfg.cameraMaxExtentsEnabled
+  wireCheckbox('checkboxCameraMaxExtentsEnabled', (v) => { cfg.cameraMaxExtentsEnabled = v; updateCameraMaxExtentsBound() })
+  renderPresetPicker(content, 'Saved Cameras', SAVED_CAMERAS, DEFAULT_CAMERA_NAME, applyCameraPreset, captureCameraFromLive, { defaultFieldKey: 'defaultCamera', storageKey: 'cameras' })
+  // Apply once at build time too -- previously only ran from the 3 lock
+  // checkboxes' own wireCheckbox callbacks, so a RESTORED "locked" state
+  // (e.g. from Sync) never actually disabled OrbitControls or the
+  // sliders until the user re-toggled the checkbox.
+  applyCameraLockState()
+}
+// Moves the camera along the existing camera->target line to a new
+// distance, preserving viewing direction (ported concept from Handy
+// Dandies' own setCameraDistance()).
+function setCameraDistance(distance) {
+  const dir = camera.position.clone().sub(controls.target)
+  const len = dir.length()
+  if (len < 1e-6) return
+  dir.multiplyScalar(distance / len)
+  camera.position.copy(controls.target).add(dir)
+  controls.update()
+}
+// Direct request 2026-09-28: "When I lock pan, zoom, or rotate, lock
+// the relevant sliders as well. Those 2 should be in sync. I guess FOV
+// can just not be locked ever." Maps each OrbitControls lock to the
+// sliders that control the same motion by another means: Pan -> the 3
+// camera position sliders (X/Y/Z); Zoom -> the Zoom slider; Rotate ->
+// Yaw/Pitch. FOV is deliberately never touched.
+function setSliderLocked(id, locked) {
+  const input = document.getElementById(id)
+  if (!input) return
+  input.disabled = locked
+  const row = input.closest('.dev-row')
+  if (row) row.classList.toggle('dev-row-locked', locked)
+}
+function applyCameraLockState() {
+  controls.enablePan = !cfg.lockCameraPan
+  controls.enableZoom = !cfg.lockCameraZoom
+  controls.enableRotate = !cfg.lockCameraRotate
+  ;['sliderCameraX', 'sliderCameraY', 'sliderCameraZ'].forEach((id) => setSliderLocked(id, cfg.lockCameraPan))
+  setSliderLocked('sliderCameraZoom', cfg.lockCameraZoom)
+  ;['sliderCameraYaw', 'sliderCameraPitch'].forEach((id) => setSliderLocked(id, cfg.lockCameraRotate))
+}
+// Extract yaw and pitch from camera direction (ported from HANDO)
+// Yaw: rotation around Y axis, Pitch: rotation around X axis
+//
+// FIXED 2026-10-01, direct report: "my camera yaw and pitch sliders dont
+// work. when i click and drag one the other gets affected." Root cause:
+// `dir` here used `target - camera.position` (camera-to-target), but
+// setCameraYawPitch() (below) places the camera via `target +
+// dist*dir_set` -- which requires `dir_set` to mean target-to-camera, the
+// OPPOSITE convention. Checked HANDO's own real source before fixing (per
+// this project's standing rule) and found the IDENTICAL mismatch there
+// too -- this isn't a porting error, it's a genuine latent bug in the
+// shared original formula, apparently never caught because nothing in
+// HANDO resyncs an idle slider from a live read-back every frame the way
+// syncCameraPanelFromLive() does here.
+//
+// Verified algebraically: with the old `target - camera.position`
+// convention, setting (yaw, pitch) and immediately reading it back via
+// this function gives (yaw+180 mod 360, -pitch) -- a consistent, provable
+// round-trip corruption, not just float noise. Since
+// syncCameraPanelFromLive() calls this EVERY frame and resyncs whichever
+// slider does NOT currently have focus, dragging Yaw (which calls
+// setCameraYawPitch(newYaw, cfg.cameraPitch) -- cfg.cameraPitch itself
+// never changes) immediately shows the corrupted NEGATED pitch on the
+// Pitch slider every subsequent frame, even though the underlying
+// cfg.cameraPitch was never touched -- exactly the reported symptom,
+// and symmetrically for dragging Pitch affecting Yaw's display.
+//
+// Fixed by using `camera.position - target` (target-to-camera) instead,
+// matching setCameraYawPitch()'s own placement convention exactly. Reduces
+// the round-trip to a mathematical identity: re-verified algebraically
+// (dirGet = normalize(camera.position - target) = normalize(dist*dirSet)
+// = dirSet exactly, so pitchGet = pitch and yawGet = yaw with zero error).
+function getCameraYawPitch() {
+  const dir = camera.position.clone().sub(controls.target)
+  const dist = dir.length() || 1
+  dir.normalize()
+  const pitch = Math.asin(Math.max(-1, Math.min(1, dir.y))) * 180 / Math.PI
+  const yaw = Math.atan2(dir.x, dir.z) * 180 / Math.PI
+  return { yaw, pitch, dist }
+}
+
+// Rotate by moving the camera (not target) to a point at current distance
+// along the new yaw/pitch direction (ported from HANDO)
+function setCameraYawPitch(yawDeg, pitchDeg) {
+  const dist = getCameraYawPitch().dist
+  const yaw = yawDeg * Math.PI / 180
+  const pitch = pitchDeg * Math.PI / 180
+  const dir = new THREE.Vector3(Math.cos(pitch) * Math.sin(yaw), Math.sin(pitch), Math.cos(pitch) * Math.cos(yaw))
+  camera.position.copy(controls.target).addScaledVector(dir, dist)
+  controls.update()
+}
+// Simplified vs. Handy Dandies' own version: clamps zoom distance only
+// (controls.maxDistance), not the full pan-target clamped-to-boundary-
+// sphere behavior (enforceCameraPanExtent()) — that additionally requires
+// per-frame animate()-loop enforcement Handy Dandies has and this project
+// doesn't yet. Flagged rather than silently presented as a full port.
+function updateCameraMaxExtentsBound() {
+  controls.maxDistance = cfg.cameraMaxExtentsEnabled ? cfg.cameraZoom : Infinity
+}
+
+function renderPhoneTiltGroup(content) {
+  // "Phone Tilt" is this project's own deliberate rename of Handy
+  // Dandies' "Cursor Tracking" group (explicit instruction when this
+  // project was first spec'd out) -- but the SETTINGS inside keep Handy
+  // Dandies' exact labels ("Cursor Target Depth", "Palm Faces Cursor",
+  // etc.) even though "cursor" is a slight misnomer for a phone-tilt
+  // mechanic, since you asked for exact setting names. Flag if you'd
+  // rather these say "Tilt" instead of "Cursor" throughout.
+  const subTarget = addSubgroup(content, 'Target')
+  addRow(subTarget, { id: 'checkboxTrackingEnabled', label: 'Tracking Enabled', type: 'checkbox' })
+  document.getElementById('checkboxTrackingEnabled').checked = cfg.trackingEnabled
+  // Added 2026-09-28 (9th round on the Phone Model axis-mapping feature)
+  // -- see checkboxPhoneResponsiveRotationEnabled's own comment; this is
+  // the broader gate and needs the same guaranteed-clean-start treatment.
+  wireCheckbox('checkboxTrackingEnabled', (v) => { cfg.trackingEnabled = v; if (v) { requestMotionPermissionIfNeeded(); resetPhoneModelRotationBaseline() } })
+  addRow(subTarget, { id: 'sliderTargetDepthFactor', label: 'Cursor Target Depth (x Field Radius)', type: 'slider', min: -2, max: 2, step: 0.05, value: cfg.targetDepthFactor })
+  wireSlider('sliderTargetDepthFactor', (v) => { cfg.targetDepthFactor = v })
+  addRow(subTarget, { id: 'checkboxShowTargetMarker', label: 'Show Target Marker', type: 'checkbox' })
+  document.getElementById('checkboxShowTargetMarker').checked = cfg.showTargetMarker
+  wireCheckbox('checkboxShowTargetMarker', (v) => { cfg.showTargetMarker = v; targetMarkerMesh.visible = v; forearmBaseMarkerMesh.visible = v })
+
+  const subPalm = addSubgroup(content, 'Palm Facing')
+  addRow(subPalm, { id: 'checkboxPalmFacesCursor', label: 'Palm Faces Cursor', type: 'checkbox' })
+  document.getElementById('checkboxPalmFacesCursor').checked = cfg.palmFacesCursor
+  wireCheckbox('checkboxPalmFacesCursor', (v) => { cfg.palmFacesCursor = v })
+  // Rolls around the forearm's own Y axis, anchored at its base -- see
+  // animate()'s own comment. Always additive onto Palm Faces Cursor's
+  // own dynamic angle, matching HANDY DANDIES' own composition pattern
+  // (though not its axis).
+  addRow(subPalm, { id: 'sliderPalmFaceRotationOffset', label: 'Palm Face Rotation (Deg)', type: 'slider', min: -180, max: 180, step: 1, value: cfg.palmFaceRotationOffset })
+  wireSlider('sliderPalmFaceRotationOffset', (v) => { cfg.palmFaceRotationOffset = v })
+
+  // Responsive Arm Rotation at Base -- direct request 2026-09-27, see
+  // cfg's own declaration comment. Control order matches the request's
+  // own list exactly: On/Off, fine-tune, min/max range, curve.
+  const subBaseArmRotation = addSubgroup(content, 'Responsive Arm Rotation at Base')
+  addRow(subBaseArmRotation, { id: 'checkboxBaseArmRotationResponsiveEnabled', label: 'Responsive Arm Rotation at Base (On/Off)', type: 'checkbox' })
+  document.getElementById('checkboxBaseArmRotationResponsiveEnabled').checked = cfg.baseArmRotationResponsiveEnabled
+  wireCheckbox('checkboxBaseArmRotationResponsiveEnabled', (v) => { cfg.baseArmRotationResponsiveEnabled = v; applyBaseArmRotation(computeResponsiveBaseArmRotationDeg(armBaseDistanceT)) })
+  addRow(subBaseArmRotation, { id: 'sliderBaseArmRotationFineTune', label: 'Rotation Fine-Tune (Deg)', type: 'slider', min: -90, max: 90, step: 1, value: cfg.baseArmRotationFineTune })
+  wireSlider('sliderBaseArmRotationFineTune', (v) => { cfg.baseArmRotationFineTune = v; applyBaseArmRotation(computeResponsiveBaseArmRotationDeg(armBaseDistanceT)) })
+  // MIGRATED 2026-09-28 -- see Reactive Arm Length's own matching comment.
+  {
+    let rangeDefault = { min: -180, max: 180 }
+    try { rangeDefault = JSON.parse(cfg.baseArmRotationRange) } catch (e) { /* keep fallback */ }
+    addRow(subBaseArmRotation, { id: 'textBaseArmRotationRange', label: 'Min / Max Rotation (Deg)', type: 'range-bar', trackMin: -180, trackMax: 180, unit: '°', defaultValue: rangeDefault })
+    let lastSeenRange = document.getElementById('textBaseArmRotationRange').value
+    curveWidgetResyncs.push(() => {
+      const el = document.getElementById('textBaseArmRotationRange')
+      if (!el || el.value === lastSeenRange) return
+      lastSeenRange = el.value
+      cfg.baseArmRotationRange = el.value
+      parseBaseArmRotationConfig()
+    })
+    const curveParsed = JSON.parse(cfg.baseArmRotationCurve)
+    addRow(subBaseArmRotation, { id: 'textBaseArmRotationCurve', label: 'Rotation Curve (Distance -> Rotation)', type: 'curve-editor', defaultPoints: curveParsed.points, defaultMethod: curveParsed.method, caption: 'X: Cursor Distance From Arm Base / Phone Tilt (0-1)  ·  Y: Rotation Fraction (0=Min, 1=Max)' })
+    let lastSeenCurve = document.getElementById('textBaseArmRotationCurve').value
+    curveWidgetResyncs.push(() => {
+      const el = document.getElementById('textBaseArmRotationCurve')
+      if (!el || el.value === lastSeenCurve) return
+      lastSeenCurve = el.value
+      cfg.baseArmRotationCurve = el.value
+      parseBaseArmRotationConfig()
+    })
+  }
+
+  // Responsive Pose Tween -- direct request 2026-09-27, see cfg's own
+  // declaration comment (Default pose = DEFAULT_POSE_NAME, Target pose
+  // = a picker over SAVED_POSES).
+  const subPoseTween = addSubgroup(content, 'Responsive Pose Tween')
+  addRow(subPoseTween, { id: 'checkboxPoseTweenResponsiveEnabled', label: 'Responsive Pose Tween (On/Off)', type: 'checkbox' })
+  document.getElementById('checkboxPoseTweenResponsiveEnabled').checked = cfg.poseTweenResponsiveEnabled
+  wireCheckbox('checkboxPoseTweenResponsiveEnabled', (v) => { cfg.poseTweenResponsiveEnabled = v; if (!v) applyPoseValuesToHand(cfg) })
+  const poseTweenOptions = [{ value: '', text: '(choose a target pose)' }].concat(SAVED_POSES.map((p) => ({ value: p.name, text: p.name })))
+  addRow(subPoseTween, { id: 'selectPoseTweenTargetPoseName', label: 'Target Pose', type: 'select', options: poseTweenOptions, value: cfg.poseTweenTargetPoseName })
+  document.getElementById('selectPoseTweenTargetPoseName').value = cfg.poseTweenTargetPoseName
+  wireSelect('selectPoseTweenTargetPoseName', (v) => { cfg.poseTweenTargetPoseName = v })
+  // MIGRATED 2026-09-28 -- see Reactive Arm Length's own matching comment.
+  {
+    const curveParsed = JSON.parse(cfg.poseTweenCurve)
+    addRow(subPoseTween, { id: 'textPoseTweenCurve', label: 'Tween Curve (Distance -> Tween Progress)', type: 'curve-editor', defaultPoints: curveParsed.points, defaultMethod: curveParsed.method, caption: 'X: Cursor Distance From Arm Base / Phone Tilt (0-1)  ·  Y: Tween Progress (0=Default Pose, 1=Target Pose)' })
+    let lastSeenCurve = document.getElementById('textPoseTweenCurve').value
+    curveWidgetResyncs.push(() => {
+      const el = document.getElementById('textPoseTweenCurve')
+      if (!el || el.value === lastSeenCurve) return
+      lastSeenCurve = el.value
+      cfg.poseTweenCurve = el.value
+      parsePoseTweenConfig()
+    })
+  }
+}
+
+// Item Selector for PHONE MODEL's own model list -- direct request
+// 2026-09-29. Reuses the SAME .dp-list-picker/.dp-list-picker-item CSS
+// classes this file's own hand-built preset pickers (Saved Poses/
+// Cameras/Lighting/Toon/Tween, buildListPicker()) already use, for
+// visual consistency -- but is its OWN, separate, hand-built widget,
+// not that function reused: buildListPicker() is built around
+// capturing/naming/reapplying scalar dev-panel STATE (its own Save
+// button prompts for a name and calls a captureCurrent() callback) --
+// it has no file-import concept at all, which is the entire point of
+// this control, so reusing it would have meant bolting import logic
+// onto a control never designed for it rather than a small purpose-
+// built one.
+let phoneModelItemSelectorParent = null // the PHONE MODEL group's own content div, cached so loadPhoneModelManifest() can re-render in place after an async manifest fetch resolves
+let phoneModelItemSelectorContainer = null // the currently-rendered widget, replaced (not appended twice) on every re-render
+
+// Per-Model Settings -- direct request 2026-09-29: "make sure all
+// slider settings within the phone model group saves per model."
+// Every control under PHONE MODEL (Scale/Offset, RESPONSIVE
+// BEHAVIOUR - PHONE's Responsive Rotation, and its own nested
+// RECURSIVE RENDER) is captured under the OLD model's own key right
+// before a switch, and the NEW model's own saved values (if any) are
+// restored right after -- so tuning one model's screen brightness/
+// scale doesn't silently bleed onto the next model selected.
+// A model never previously tuned simply keeps whatever values are
+// currently showing (no entry to restore), matching how a fresh
+// control naturally behaves. Deliberately excludes
+// checkboxPhoneModelEnabled and the Item Selector's own hidden
+// selection control -- those are properties of the FEATURE, not of
+// one specific model.
+//
+// CORRECTED, same day: Phone Model Rotation X/Y/Z was originally
+// included here too, but per direct correction ("every phone model is
+// oriented the same way in regards to world XYZ. so when rotating the
+// recursie rendering, the rotations should all be the same") it's
+// REMOVED from this list -- Rotation stays ONE SHARED value across
+// every model, same as before this feature existed, since a
+// per-model default would be actively wrong given all models share
+// the same base orientation. This also means the Y=180 value set
+// during this session's own live diagnostic testing (investigating
+// "the screen face in the Iphone 17 max pro model isnt showing up")
+// is now that ONE SHARED rotation for every model, not an
+// iPhone-specific override -- if that turns out wrong for other
+// models, the real cause of the iPhone visibility report was likely
+// something else entirely (camera framing during testing, not a
+// genuine per-model orientation difference), not a reason to
+// reintroduce per-model rotation.
+const PHONE_MODEL_PER_MODEL_CONTROL_IDS = [
+  'sliderPhoneModelScale',
+  'sliderPhoneModelOffsetX', 'sliderPhoneModelOffsetY', 'sliderPhoneModelOffsetZ',
+  'checkboxPhoneResponsiveRotationEnabled', 'checkboxPhoneRotationResetEnabled', 'selectPhoneRotationMode',
+  'checkboxPhoneAxisXEnabled', 'sliderPhoneRotationScaleX',
+  'checkboxPhoneAxisYEnabled', 'sliderPhoneRotationScaleY',
+  'checkboxPhoneAxisZEnabled', 'sliderPhoneRotationScaleZ',
+  'sliderPhoneResponsiveRotationFineTune', 'sliderPhoneRotationDamping',
+  'textPhoneResponsiveRotationRange', 'textPhoneResponsiveRotationCurve',
+  // Responsive Displace -- added 2026-09-30, same per-model treatment as
+  // Responsive Rotation directly above (a smaller/lighter phone model
+  // might reasonably want different displace tuning than a larger one).
+  'checkboxPhoneResponsiveDisplaceEnabled', 'selectPhoneDisplaceMode',
+  'checkboxPhoneDisplaceResetEnabled',
+  'checkboxPhoneDisplaceAxisXEnabled', 'sliderPhoneDisplaceScaleX', 'checkboxPhoneDisplaceInvertX',
+  'checkboxPhoneDisplaceAxisYEnabled', 'sliderPhoneDisplaceScaleY', 'checkboxPhoneDisplaceInvertY',
+  'checkboxPhoneDisplaceAxisZEnabled', 'sliderPhoneDisplaceScaleZ', 'checkboxPhoneDisplaceInvertZ',
+  'sliderPhoneDisplaceDamping', 'sliderPhoneDisplaceVelDecayRate', 'sliderPhoneDisplacePosDecayRate',
+  'checkboxPhoneDisplaceStationaryGateEnabled', 'sliderPhoneDisplaceStationaryGateDegPerSec',
+  'textPhoneResponsiveDisplaceRange', 'textPhoneResponsiveDisplaceCurve',
+  'checkboxScreenRenderEnabled', 'sliderScreenRecursionLevels',
+  'sliderScreenRenderResolution', 'sliderScreenTextureScale',
+  'textScreenLevelScaleRange', 'textScreenLevelScaleCurve',
+  'sliderScreenTextureRotation', 'sliderScreenTextureScaleX',
+  'sliderScreenTextureScaleY', 'checkboxScreenToScale',
+  'sliderScreenTextureOffsetX', 'sliderScreenTextureOffsetY',
+  'sliderScreenEmissionIntensity',
+  'checkboxScreenMirrorAlternatingX', 'checkboxScreenMirrorAlternatingY',
+  'checkboxScreenMirrorPhaseX', 'checkboxScreenMirrorPhaseY',
+]
+let phoneModelPerModelSettings = {} // { [modelFile]: { [controlId]: value } } -- persisted via hiddenPhoneModelPerModelSettings below
+
+function capturePhoneModelPerModelSettings(modelFile) {
+  if (!modelFile) return
+  const snapshot = {}
+  PHONE_MODEL_PER_MODEL_CONTROL_IDS.forEach((id) => {
+    const el = document.getElementById(id)
+    if (!el) return
+    snapshot[id] = el.type === 'checkbox' ? el.checked : el.value
+  })
+  phoneModelPerModelSettings[modelFile] = snapshot
+  persistPhoneModelPerModelSettings()
+}
+
+function applyPhoneModelPerModelSettings(modelFile) {
+  const snapshot = phoneModelPerModelSettings[modelFile]
+  if (!snapshot) return // never tuned before -- leave current values as-is, same as a fresh control's default
+  PHONE_MODEL_PER_MODEL_CONTROL_IDS.forEach((id) => {
+    const el = document.getElementById(id)
+    if (!el || !(id in snapshot)) return
+    if (el.type === 'checkbox') el.checked = snapshot[id]
+    else el.value = snapshot[id]
+    // CORRECTED 2026-09-29: this used to dispatch only 'input', on the
+    // (wrong) assumption that it drives every wireSlider()/
+    // wireCheckbox() callback alike. wireCheckbox() (main.js) actually
+    // listens for 'change', not 'input' -- confirmed live: a checkbox's
+    // .checked visually updated correctly on a model switch, but its
+    // own cfg field silently never changed, since the listener that
+    // writes to cfg never fired. Every checkbox in
+    // PHONE_MODEL_PER_MODEL_CONTROL_IDS (Responsive Rotation On/Off,
+    // the 3 per-axis enables, Rotation Reset On/Off, Recursive Render
+    // On/Off, To Scale, both Mirror Alternating checkboxes) was
+    // affected -- looked switched, silently wasn't. Dispatching BOTH
+    // events covers wireSlider()/wireColor()/wireTextInput() (which
+    // listen for 'input') and wireCheckbox() (which listens for
+    // 'change') without needing to know which kind of control each id
+    // is. The 2 curve/range-bar controls
+    // (textPhoneResponsiveRotationRange/Curve) don't reliably react to
+    // either dispatched event (devPanel.js's own widgets there are
+    // POLLED -- see curveWidgetResyncs elsewhere in this file) but DO
+    // react to their own poll tick noticing el.value changed, which
+    // setting el.value above already satisfies regardless.
+    el.dispatchEvent(new Event('input', { bubbles: true }))
+    el.dispatchEvent(new Event('change', { bubbles: true }))
+  })
+}
+
+function persistPhoneModelPerModelSettings() {
+  const el = document.getElementById('hiddenPhoneModelPerModelSettings')
+  if (el) el.value = JSON.stringify(phoneModelPerModelSettings)
+}
+
+// Hand Model Item Selector -- visually mirrors renderPhoneModelItemSelector()
+// below (same .dp-list-picker-row-container/.dp-list-picker-item CSS, same
+// clickable-row pattern), deliberately narrower: no per-model settings
+// capture/apply and no Import GLB flow (see HAND_MODEL_OPTIONS' own
+// declaration comment for why neither has a hand-model equivalent).
+//
+// The hidden, Sync-participating text control mirroring the current
+// selection is NOT optional polish -- it's the exact same fix 4 OTHER
+// hand-built dev-panel widgets in this file already needed (curve/range
+// fields, the 5 list-pickers, the Phone Model Item Selector itself, each
+// documented in this project's own CLAUDE.md as a recurring bug class):
+// a plain clickable <div> row is never registered with devPanel.js's
+// generic capture/restore pipeline the way addRow()'s own standard
+// controls automatically are, so without this the selected hand model
+// would never actually survive a Sync/Reset/Undo round-trip.
+let handModelItemSelectorContainer = null
+function renderHandModelItemSelector(parentContent) {
+  const parent = parentContent
+  if (!parent) return
+  if (handModelItemSelectorContainer) handModelItemSelectorContainer.remove()
+
+  const container = document.createElement('div')
+  container.className = 'dp-list-picker-row-container'
+  const label = document.createElement('span')
+  label.className = 'dev-label'
+  label.textContent = 'Model'
+  container.appendChild(label)
+
+  const listEl = document.createElement('div')
+  listEl.className = 'dp-list-picker'
+  container.appendChild(listEl)
+
+  if (!cfg.handModelFile && HAND_MODEL_OPTIONS.length) cfg.handModelFile = HAND_MODEL_OPTIONS[0].value
+  const hiddenRow = addRow(container, { id: 'hiddenHandModelFile', label: 'Model File (internal)', type: 'text', inputType: 'text', value: cfg.handModelFile, skipDeviceCheckbox: true })
+  hiddenRow.style.display = 'none'
+  const hiddenInput = hiddenRow.querySelector('#hiddenHandModelFile')
+  let lastSeenHandModelFile = hiddenInput.value
+  hiddenInput.addEventListener('input', () => {
+    if (hiddenInput.value === lastSeenHandModelFile) return
+    lastSeenHandModelFile = hiddenInput.value
+    cfg.handModelFile = hiddenInput.value
+    loadHandModel(cfg.handModelFile)
+    renderHandModelItemSelector(parent)
+  })
+
+  HAND_MODEL_OPTIONS.forEach((opt) => {
+    const row = document.createElement('div')
+    row.className = 'dp-list-picker-item' + (opt.value === cfg.handModelFile ? ' dp-list-picker-item-selected' : '')
+    row.textContent = opt.text
+    row.addEventListener('click', () => {
+      if (opt.value === cfg.handModelFile) return
+      cfg.handModelFile = opt.value
+      lastSeenHandModelFile = opt.value
+      hiddenInput.value = opt.value
+      loadHandModel(opt.value)
+      renderHandModelItemSelector(parent)
+    })
+    listEl.appendChild(row)
+  })
+
+  parent.appendChild(container)
+  handModelItemSelectorContainer = container
+}
+
+function renderPhoneModelItemSelector(parentContent) {
+  const parent = parentContent || phoneModelItemSelectorParent
+  if (!parent) return // manifest resolved before the dev panel was ever built -- the next real build reads PHONE_MODEL_OPTIONS fresh anyway
+  phoneModelItemSelectorParent = parent
+  if (phoneModelItemSelectorContainer) phoneModelItemSelectorContainer.remove()
+
+  const container = document.createElement('div')
+  container.className = 'dp-list-picker-row-container'
+  const label = document.createElement('span')
+  label.className = 'dev-label'
+  label.textContent = 'Model'
+  container.appendChild(label)
+
+  const listEl = document.createElement('div')
+  listEl.className = 'dp-list-picker'
+  container.appendChild(listEl)
+
+  if (!cfg.phoneModelFile && PHONE_MODEL_OPTIONS.length) cfg.phoneModelFile = PHONE_MODEL_OPTIONS[0].value
+  // Hidden, Sync-participating control for the CURRENT selection --
+  // found missing 2026-09-29 while investigating "it isn't working
+  // like before": the Item Selector's own rows are plain clickable
+  // <div>s, never registered with devPanel.js's generic capture/
+  // restore pipeline the way the old <select> automatically was (every
+  // addRow() call auto-registers into HANDYSET_CONTROLS) -- confirmed
+  // live via the real git-tracked settings file, which had
+  // `selectPhoneModelFile: null` even after real Sync round-trips,
+  // meaning the selected model was NEVER actually persisted and every
+  // fresh load silently fell back to PHONE_MODEL_OPTIONS[0]. This
+  // hidden text row rides the exact same generic pipeline every other
+  // custom widget in this file uses for the same reason (see the
+  // curve/range fields' own "MIGRATED"/20th-CHANGELOG-entry history).
+  const hiddenRow = addRow(container, { id: 'hiddenPhoneModelFile', label: 'Model File (internal)', type: 'text', inputType: 'text', value: cfg.phoneModelFile, skipDeviceCheckbox: true })
+  hiddenRow.style.display = 'none'
+  // CORRECTED 2026-09-29: `container` (built above via
+  // document.createElement) is still DETACHED from the live document at
+  // this point -- it only gets appended to `parent` further down in this
+  // function. document.getElementById() can't find an id that only
+  // exists inside a detached subtree, so this threw
+  // "Cannot read properties of null (reading 'value')" on every real
+  // page load, which silently aborted ensureDevPanelBuilt() partway
+  // through renderHandysetDevGroups() (devPanelBuilt never got set to
+  // true) -- the next caller (e.g. loadRemoteSettingsOnStartup()'s own
+  // explicit ensureDevPanelBuilt() call) then re-ran the WHOLE build
+  // from scratch, reproducing the exact same throw at the exact same
+  // point every time. Net effect: 2 real, fully-built copies of HAND
+  // MODEL and PHONE MODEL (both addGroup() calls complete before this
+  // line), and every group declared AFTER Phone Model in
+  // renderHandysetDevGroups() (RECURSIVE RENDER, Camera, Lighting, Toon
+  // Shading, Background, Ground Plane, Finger Gizmos) missing entirely
+  // on BOTH attempts -- confirmed live via console error + a direct DOM
+  // section dump on the real deployed site. Fixed by querying within the
+  // row itself (works whether or not it's attached to `document` yet)
+  // instead of a global getElementById lookup.
+  const hiddenInput = hiddenRow.querySelector('#hiddenPhoneModelFile')
+  let lastSeenPhoneModelFile = hiddenInput.value
+
+  // Per-Model Settings persistence -- a hidden JSON control, same
+  // Sync-participation pattern as hiddenPhoneModelFile above. Rides
+  // the generic pipeline for Copy/Save/Reset/Undo; its own restore
+  // listener re-parses into the in-memory phoneModelPerModelSettings
+  // object whenever an EXTERNAL restore (Sync/Reset/Undo) changes it.
+  const settingsRow = addRow(container, { id: 'hiddenPhoneModelPerModelSettings', label: 'Per-Model Settings (internal)', type: 'text', inputType: 'text', value: JSON.stringify(phoneModelPerModelSettings), skipDeviceCheckbox: true })
+  settingsRow.style.display = 'none'
+  const settingsInput = settingsRow.querySelector('#hiddenPhoneModelPerModelSettings')
+  let lastSeenPerModelSettingsJson = settingsInput.value
+  settingsInput.addEventListener('input', () => {
+    if (settingsInput.value === lastSeenPerModelSettingsJson) return
+    lastSeenPerModelSettingsJson = settingsInput.value
+    try { phoneModelPerModelSettings = JSON.parse(settingsInput.value) || {} } catch (e) { /* leave whatever's already in memory */ }
+  })
+
+  // Fires on BOTH a user-driven change (the row click handler below
+  // also sets .value directly) and an EXTERNAL restore (Reset/Undo/a
+  // Sync-load, which devPanel.js applies by setting .value then
+  // dispatching a real 'input' event) -- covers both without needing 2
+  // separate code paths.
+  hiddenInput.addEventListener('input', () => {
+    if (hiddenInput.value === lastSeenPhoneModelFile) return
+    const previousFile = cfg.phoneModelFile
+    lastSeenPhoneModelFile = hiddenInput.value
+    cfg.phoneModelFile = hiddenInput.value
+    capturePhoneModelPerModelSettings(previousFile)
+    // Deferred one macrotask: this fires from an EXTERNAL restore
+    // (Sync/Reset/Undo), where devPanel.js's applyControlValues() may
+    // restore hiddenPhoneModelPerModelSettings (this file's own JSON
+    // dictionary) in the SAME synchronous pass, in either order --
+    // reading phoneModelPerModelSettings synchronously here could see
+    // a stale (pre-restore) copy if this control's own restore runs
+    // first. setTimeout(fn, 0) guarantees the whole restore loop (a
+    // single synchronous forEach) has finished before this reads it,
+    // regardless of which control's own registration order comes first.
+    setTimeout(() => applyPhoneModelPerModelSettings(cfg.phoneModelFile), 0)
+    if (cfg.phoneModelEnabled) loadPhoneModel(cfg.phoneModelFile)
+    renderPhoneModelItemSelector()
+  })
+  PHONE_MODEL_OPTIONS.forEach((opt) => {
+    const row = document.createElement('div')
+    row.className = 'dp-list-picker-item' + (opt.value === cfg.phoneModelFile ? ' dp-list-picker-item-selected' : '')
+    row.textContent = opt.text
+    row.addEventListener('click', () => {
+      const previousFile = cfg.phoneModelFile
+      cfg.phoneModelFile = opt.value
+      lastSeenPhoneModelFile = opt.value
+      hiddenInput.value = opt.value
+      capturePhoneModelPerModelSettings(previousFile)
+      applyPhoneModelPerModelSettings(opt.value)
+      if (cfg.phoneModelEnabled) loadPhoneModel(opt.value)
+      renderPhoneModelItemSelector()
+    })
+    listEl.appendChild(row)
+  })
+
+  const btnRow = document.createElement('div')
+  btnRow.className = 'dev-buttons'
+  const importBtn = document.createElement('button')
+  importBtn.type = 'button'
+  importBtn.textContent = 'Import GLB...'
+  const fileInput = document.createElement('input')
+  fileInput.type = 'file'
+  fileInput.accept = '.glb'
+  fileInput.style.display = 'none'
+  importBtn.addEventListener('click', () => fileInput.click())
+  fileInput.addEventListener('change', () => {
+    const file = fileInput.files && fileInput.files[0]
+    fileInput.value = '' // clears the input so importing the SAME filename again later still fires a 'change' event
+    if (file) importPhoneModelFile(file)
+  })
+  btnRow.appendChild(importBtn)
+  btnRow.appendChild(fileInput)
+  container.appendChild(btnRow)
+
+  const statusEl = document.createElement('div')
+  statusEl.id = 'phoneModelImportStatus'
+  statusEl.style.cssText = 'font-size:11px; opacity:0.8; margin-top:4px;'
+  container.appendChild(statusEl)
+
+  parent.appendChild(container)
+  phoneModelItemSelectorContainer = container
+}
+// Import flow, direct request 2026-09-29: "Allow me to import glb
+// models, If I import a glb model with the same name as an existing
+// import, provide a popup to ask if i should overwrite." Loads the
+// imported file LOCALLY and instantly via a blob: URL (GLTFLoader loads
+// from one exactly like any other URL) -- the import "works" for this
+// session even if the upload below fails or the device is offline, a
+// disclosed, deliberate degradation, not a bug. The upload then
+// persists it for real via /api/upload-phone-model (Git Data API, see
+// that file's own comment for why it can't just reuse save-settings.js's
+// simpler Contents-API pattern), and swaps the list entry's value from
+// the temporary blob: URL to the real permanent path once that commit
+// actually succeeds.
+async function importPhoneModelFile(file) {
+  const setStatus = (msg) => { const el = document.getElementById('phoneModelImportStatus'); if (el) el.textContent = msg }
+  const realPath = PHONE_MODEL_DIR + '/' + file.name
+  const existing = PHONE_MODEL_OPTIONS.find((o) => o.value === realPath || o.text === file.name.replace(/\.glb$/i, ''))
+  let overwrite = false
+  if (existing) {
+    overwrite = confirm(`"${file.name}" already exists. Overwrite it?`)
+    if (!overwrite) { setStatus('Import cancelled.'); return }
+  }
+
+  const blobUrl = URL.createObjectURL(file)
+  if (existing) existing.value = blobUrl
+  else PHONE_MODEL_OPTIONS = PHONE_MODEL_OPTIONS.concat([{ value: blobUrl, text: file.name.replace(/\.glb$/i, '') }])
+  cfg.phoneModelFile = blobUrl
+  cfg.phoneModelEnabled = true
+  const enabledCb = document.getElementById('checkboxPhoneModelEnabled')
+  if (enabledCb) enabledCb.checked = true
+  loadPhoneModel(blobUrl)
+  renderPhoneModelItemSelector()
+  setStatus('Loaded locally — uploading to GitHub for permanent storage…')
+
+  try {
+    const buf = await file.arrayBuffer()
+    const resp = await fetch(PHONE_MODEL_MANIFEST_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/octet-stream',
+        'X-Dev-Panel-Secret': DEV_PANEL_SAVE_SECRET,
+        'X-Dev-Panel-Model-Filename': file.name,
+        'X-Dev-Panel-Overwrite': overwrite ? 'true' : 'false'
+      },
+      body: buf
+    })
+    const body = await resp.json().catch(() => ({}))
+    if (!resp.ok || body.ok !== true) throw new Error(body.error || ('HTTP ' + resp.status))
+    const entry = PHONE_MODEL_OPTIONS.find((o) => o.value === blobUrl)
+    if (entry) entry.value = realPath
+    if (cfg.phoneModelFile === blobUrl) cfg.phoneModelFile = realPath
+    setStatus('Saved to GitHub.')
+    setTimeout(() => setStatus(''), 4000)
+    renderPhoneModelItemSelector()
+  } catch (err) {
+    setStatus('GitHub upload failed (still usable locally this session): ' + err.message)
+  }
+}
+
+// PHONE MODEL -- direct request 2026-09-27, a loadable smartphone GLB
+// asset with its own On/Off, Model picker, Scale, Offset, Rotation, and
+// (nested 2 levels: RESPONSIVE BEHAVIOUR - PHONE > Responsive Rotation)
+// its own phone-tilt-driven reactive rotation. See the Phone Model
+// section above (loadPhoneModel/applyPhoneModelTransform/etc.) for the
+// actual scene-graph mechanics.
+function renderPhoneModelGroup(content) {
+  addRow(content, { id: 'checkboxPhoneModelEnabled', label: 'Phone Model On/Off', type: 'checkbox' })
+  document.getElementById('checkboxPhoneModelEnabled').checked = cfg.phoneModelEnabled
+  wireCheckbox('checkboxPhoneModelEnabled', (v) => { setPhoneModelEnabled(v) })
+
+  // Item Selector (was a plain <select>) -- direct request 2026-09-29:
+  // "Make the Object Model Selector a Item Selector actually. Allow me
+  // to import glb models." See renderPhoneModelItemSelector()/
+  // importPhoneModelFile() below.
+  renderPhoneModelItemSelector(content)
+
+  addRow(content, { id: 'sliderPhoneModelScale', label: 'Model Scale (x100)', type: 'slider', min: 0.5, max: 5, step: 'any', value: cfg.phoneModelScale })
+  wireSlider('sliderPhoneModelScale', (v) => { cfg.phoneModelScale = v; applyPhoneModelTransform() })
+
+  const subOffset = addSubgroup(content, 'OFFSET')
+  addRow(subOffset, { id: 'sliderPhoneModelOffsetX', label: 'X Offset (World Units)', type: 'slider', min: -200, max: 200, step: 'any', value: cfg.phoneModelOffsetX })
+  wireSlider('sliderPhoneModelOffsetX', (v) => { cfg.phoneModelOffsetX = v; applyPhoneModelTransform() })
+  addRow(subOffset, { id: 'sliderPhoneModelOffsetY', label: 'Y Offset (World Units)', type: 'slider', min: -200, max: 200, step: 'any', value: cfg.phoneModelOffsetY })
+  wireSlider('sliderPhoneModelOffsetY', (v) => { cfg.phoneModelOffsetY = v; applyPhoneModelTransform() })
+  addRow(subOffset, { id: 'sliderPhoneModelOffsetZ', label: 'Z Offset (World Units)', type: 'slider', min: -200, max: 200, step: 'any', value: cfg.phoneModelOffsetZ })
+  wireSlider('sliderPhoneModelOffsetZ', (v) => { cfg.phoneModelOffsetZ = v; applyPhoneModelTransform() })
+
+  // Named "PHONE ROTATION", not "ROTATION" -- direct report 2026-09-27:
+  // the plain name literally collided with Pose's own pre-existing
+  // "ROTATION" subgroup (modelRotX/Y/Z, renderPoseGroup() above).
+  // data-sid identity is flat per device tab, not scoped by parent, so
+  // 2 subgroups sharing one name anywhere in the same tab is a real
+  // bug, not just a cosmetic clash -- it confused devPanel.js's own
+  // sectionOrder reconciliation badly enough that this group's real
+  // rows ended up missing while an empty phantom "ROTATION" appeared
+  // elsewhere in HAND MODEL. Any future subgroup name should be
+  // checked against every OTHER addGroup()/addSubgroup() call in this
+  // file first (grep for the literal string), not assumed safe just
+  // because it reads fine in isolation.
+  const subRotation = addSubgroup(content, 'PHONE ROTATION')
+  addRow(subRotation, { id: 'sliderPhoneModelRotX', label: 'X Rotation (Deg)', type: 'slider', min: -180, max: 180, step: 1, value: cfg.phoneModelRotX })
+  wireSlider('sliderPhoneModelRotX', (v) => { cfg.phoneModelRotX = v; applyPhoneModelTransform() })
+  addRow(subRotation, { id: 'sliderPhoneModelRotY', label: 'Y Rotation (Deg)', type: 'slider', min: -180, max: 180, step: 1, value: cfg.phoneModelRotY })
+  wireSlider('sliderPhoneModelRotY', (v) => { cfg.phoneModelRotY = v; applyPhoneModelTransform() })
+  addRow(subRotation, { id: 'sliderPhoneModelRotZ', label: 'Z Rotation (Deg)', type: 'slider', min: -180, max: 180, step: 1, value: cfg.phoneModelRotZ })
+  wireSlider('sliderPhoneModelRotZ', (v) => { cfg.phoneModelRotZ = v; applyPhoneModelTransform() })
+
+  // RESPONSIVE BEHAVIOUR - PHONE (level 2, per direct correction) >
+  // Responsive Rotation (level 3) -- 4 controls, same pattern as
+  // Responsive Arm Rotation at Base (On/Off, Fine-Tune, Min/Max Range,
+  // Curve). See computePhoneResponsiveAxisDeg()'s own comment for how one
+  // shared curve/range drives all 3 axes independently.
+  const subResponsiveBehaviour = addSubgroup(content, 'RESPONSIVE BEHAVIOUR - PHONE')
+  const subResponsiveRotation = addSubgroup(subResponsiveBehaviour, 'Responsive Rotation')
+  addRow(subResponsiveRotation, { id: 'checkboxPhoneResponsiveRotationEnabled', label: 'Responsive Rotation (On/Off)', type: 'checkbox' })
+  document.getElementById('checkboxPhoneResponsiveRotationEnabled').checked = cfg.phoneResponsiveRotationEnabled
+  // Added 2026-09-28 (9th round on the axis-mapping feature) -- forces a
+  // known-clean starting orientation (phoneGyroQuat.identity()) every
+  // time this turns ON, so re-testing an axis after toggling this off
+  // and back on can't silently inherit leftover accumulated rotation
+  // from a previous test. See integratePhoneGyroRotation()'s own
+  // comment for why this matters (3 rounds of reports proved the SAME
+  // code can look like a different permutation depending on the
+  // phone's starting orientation).
+  wireCheckbox('checkboxPhoneResponsiveRotationEnabled', (v) => { cfg.phoneResponsiveRotationEnabled = v; if (v) resetPhoneModelRotationBaseline() })
+  // Rotation Mode -- direct request 2026-09-30: a selectable alternative
+  // to the existing Gyro/Integrated system, added specifically to
+  // eliminate accumulated gyro-drift/path-dependence. See
+  // computePhoneAbsoluteOrientationQuat()'s own comment for the full
+  // reasoning. Switching to 'absolute' doesn't need a baseline reset the
+  // way Gyro mode does (it's a memoryless function of the current
+  // reading, nothing to re-zero) -- switching back to 'gyro' DOES still
+  // benefit from one, so resetPhoneModelRotationBaseline() is called on
+  // every mode change, matching the existing on-enable behavior above.
+  addRow(subResponsiveRotation, { id: 'selectPhoneRotationMode', label: 'Rotation Mode', type: 'select', options: [{ value: 'gyro', text: 'Gyro / Integrated' }, { value: 'absolute', text: 'Absolute / Orientation' }], value: cfg.phoneRotationMode })
+  document.getElementById('selectPhoneRotationMode').value = cfg.phoneRotationMode
+  wireSelect('selectPhoneRotationMode', (v) => { cfg.phoneRotationMode = v; resetPhoneModelRotationBaseline() })
+  // Rotation Reset -- direct request 2026-09-28: double-tap(mobile)/
+  // double-click(desktop) anywhere on screen re-baselines the responsive
+  // rotation. See setupPhoneRotationResetGesture()'s own comment for the
+  // gesture-detection details.
+  addRow(subResponsiveRotation, { id: 'checkboxPhoneRotationResetEnabled', label: 'Rotation Reset On/Off', type: 'checkbox' })
+  document.getElementById('checkboxPhoneRotationResetEnabled').checked = cfg.phoneRotationResetEnabled
+  wireCheckbox('checkboxPhoneRotationResetEnabled', (v) => { cfg.phoneRotationResetEnabled = v })
+  // Per-axis on/off + scale -- direct request 2026-09-28. X=beta
+  // (up/down), Y=alpha/compass (spin), Z=gamma (left/right) -- matches
+  // computePhoneCombinedQuat()'s own world-axis assignment. Y now
+  // applies on desktop too (direct request 2026-09-29 -- see that
+  // function's own "Y axis (spin) on desktop" comment), not just
+  // mobile -- same checkbox/slider, no new controls needed.
+  // Scale sliders allow NEGATIVE values (direct request 2026-09-29:
+  // "-1... rotate in the other direction at the same scale") -- every
+  // use of these cfg fields is already a plain multiply against a
+  // signed degree value, so widening the range is the only change
+  // needed; a negative scale already flips direction correctly.
+  addRow(subResponsiveRotation, { id: 'checkboxPhoneAxisXEnabled', label: 'X Axis Rotation On/Off', type: 'checkbox' })
+  document.getElementById('checkboxPhoneAxisXEnabled').checked = cfg.phoneAxisXEnabled
+  wireCheckbox('checkboxPhoneAxisXEnabled', (v) => { cfg.phoneAxisXEnabled = v })
+  addRow(subResponsiveRotation, { id: 'sliderPhoneRotationScaleX', label: 'X Axis Rotation Scale (x)', type: 'slider', min: -3, max: 3, step: 'any', value: cfg.phoneRotationScaleX })
+  wireSlider('sliderPhoneRotationScaleX', (v) => { cfg.phoneRotationScaleX = v })
+  addRow(subResponsiveRotation, { id: 'checkboxPhoneAxisYEnabled', label: 'Y Axis Rotation On/Off', type: 'checkbox' })
+  document.getElementById('checkboxPhoneAxisYEnabled').checked = cfg.phoneAxisYEnabled
+  wireCheckbox('checkboxPhoneAxisYEnabled', (v) => { cfg.phoneAxisYEnabled = v })
+  addRow(subResponsiveRotation, { id: 'sliderPhoneRotationScaleY', label: 'Y Axis Rotation Scale (x)', type: 'slider', min: -3, max: 3, step: 'any', value: cfg.phoneRotationScaleY })
+  wireSlider('sliderPhoneRotationScaleY', (v) => { cfg.phoneRotationScaleY = v })
+  addRow(subResponsiveRotation, { id: 'checkboxPhoneAxisZEnabled', label: 'Z Axis Rotation On/Off', type: 'checkbox' })
+  document.getElementById('checkboxPhoneAxisZEnabled').checked = cfg.phoneAxisZEnabled
+  wireCheckbox('checkboxPhoneAxisZEnabled', (v) => { cfg.phoneAxisZEnabled = v })
+  addRow(subResponsiveRotation, { id: 'sliderPhoneRotationScaleZ', label: 'Z Axis Rotation Scale (x)', type: 'slider', min: -3, max: 3, step: 'any', value: cfg.phoneRotationScaleZ })
+  wireSlider('sliderPhoneRotationScaleZ', (v) => { cfg.phoneRotationScaleZ = v })
+  addRow(subResponsiveRotation, { id: 'sliderPhoneResponsiveRotationFineTune', label: 'Rotation Fine-Tune (Deg)', type: 'slider', min: -90, max: 90, step: 1, value: cfg.phoneResponsiveRotationFineTune })
+  wireSlider('sliderPhoneResponsiveRotationFineTune', (v) => { cfg.phoneResponsiveRotationFineTune = v })
+  // Added 2026-09-28, direct report: "the rotation motion is jittery and
+  // not smooth." Same 1=instant/lower=smoother semantic as cfg.trackingDamping.
+  addRow(subResponsiveRotation, { id: 'sliderPhoneRotationDamping', label: 'Rotation Damping (1=Instant)', type: 'slider', min: 0.05, max: 1, step: 0.01, value: cfg.phoneRotationDamping })
+  wireSlider('sliderPhoneRotationDamping', (v) => { cfg.phoneRotationDamping = v })
+  // MIGRATED 2026-09-28 -- see Reactive Arm Length's own matching comment.
+  {
+    let rangeDefault = { min: 0, max: 30 }
+    try { rangeDefault = JSON.parse(cfg.phoneResponsiveRotationRange) } catch (e) { /* keep fallback */ }
+    addRow(subResponsiveRotation, { id: 'textPhoneResponsiveRotationRange', label: 'Min / Max Rotation (Deg)', type: 'range-bar', trackMin: -180, trackMax: 180, unit: '°', defaultValue: rangeDefault })
+    let lastSeenRange = document.getElementById('textPhoneResponsiveRotationRange').value
+    curveWidgetResyncs.push(() => {
+      const el = document.getElementById('textPhoneResponsiveRotationRange')
+      if (!el || el.value === lastSeenRange) return
+      lastSeenRange = el.value
+      cfg.phoneResponsiveRotationRange = el.value
+      parsePhoneResponsiveRotationConfig()
+    })
+    const curveParsed = JSON.parse(cfg.phoneResponsiveRotationCurve)
+    addRow(subResponsiveRotation, { id: 'textPhoneResponsiveRotationCurve', label: 'Rotation Curve (Tilt -> Rotation)', type: 'curve-editor', defaultPoints: curveParsed.points, defaultMethod: curveParsed.method, caption: 'X: Per-Axis Tilt Magnitude (0-1)  ·  Y: Rotation Fraction (0=Min, 1=Max)' })
+    let lastSeenCurve = document.getElementById('textPhoneResponsiveRotationCurve').value
+    curveWidgetResyncs.push(() => {
+      const el = document.getElementById('textPhoneResponsiveRotationCurve')
+      if (!el || el.value === lastSeenCurve) return
+      lastSeenCurve = el.value
+      cfg.phoneResponsiveRotationCurve = el.value
+      parsePhoneResponsiveRotationConfig()
+    })
+  }
+
+  // RESPONSIVE BEHAVIOUR - PHONE > RESPONSIVE DISPLACE -- added
+  // 2026-09-30, direct request (per the *DC*RESPONSIVE DISPLACE* dev-
+  // panel shorthand, CLAUDE.md §12g): mirrors Responsive Rotation's own
+  // control set 1:1 (On/Off, a 2-mode selector, per-axis On/Off+Scale,
+  // Fine-Tune, Min/Max Range, Curve, Damping) for POSITIONAL displacement
+  // instead of tilt. See integratePhoneDisplacement()'s own comment for
+  // the leaky double-integration math and the real, disclosed drift
+  // trade-off, and computePhoneDisplaceAxisUnits()'s comment for how the
+  // curve/range mapping works. parsePhoneResponsiveDisplaceConfig() is
+  // called once here explicitly (unlike Rotation's own parser, which is
+  // ONLY ever triggered by a detected widget-value CHANGE -- see that
+  // parser's own comment) so a Sync-restored non-default range/curve is
+  // actually in effect from the first frame, not just from the first time
+  // the user touches the widget.
+  parsePhoneResponsiveDisplaceConfig()
+  const subResponsiveDisplace = addSubgroup(subResponsiveBehaviour, 'RESPONSIVE DISPLACE')
+  addRow(subResponsiveDisplace, { id: 'checkboxPhoneResponsiveDisplaceEnabled', label: 'Responsive Displace (On/Off)', type: 'checkbox' })
+  document.getElementById('checkboxPhoneResponsiveDisplaceEnabled').checked = cfg.phoneResponsiveDisplaceEnabled
+  // Requests motion permission on enable -- ADDED 2026-09-30, now that
+  // Displace is independent of Tracking Enabled (whose own checkbox used
+  // to be the only thing that ever called this), enabling Displace ALONE
+  // (Tracking Enabled off) needs its own trigger or mobile's real
+  // devicemotion listener never gets attached at all. See
+  // initMotionInput()'s own matching fix for the page-load case.
+  wireCheckbox('checkboxPhoneResponsiveDisplaceEnabled', (v) => { cfg.phoneResponsiveDisplaceEnabled = v; if (v) requestMotionPermissionIfNeeded() })
+  // Displace Mode -- direct request: "i also want the 2 calclation
+  // types, simialr to rotation, one with acceleration, and i guess the
+  // other is the real world position." See integratePhoneDisplacement()'s
+  // own comment for exactly what each mode computes.
+  addRow(subResponsiveDisplace, { id: 'selectPhoneDisplaceMode', label: 'Displace Mode', type: 'select', options: [{ value: 'acceleration', text: 'Acceleration / Local Frame' }, { value: 'worldPosition', text: 'Real World Position' }], value: cfg.phoneDisplaceMode })
+  document.getElementById('selectPhoneDisplaceMode').value = cfg.phoneDisplaceMode
+  wireSelect('selectPhoneDisplaceMode', (v) => { cfg.phoneDisplaceMode = v })
+  // Displace Reset -- added 2026-09-30, direct request: "add a
+  // displacement reset checkbox. Similar to the rotation, a double tap
+  // will place the phone back in its starting location." Independently
+  // toggleable from Rotation's own "Rotation Reset On/Off" -- both share
+  // the SAME double-tap/double-click gesture (setupPhoneRotationResetGesture()),
+  // not 2 separate gestures.
+  addRow(subResponsiveDisplace, { id: 'checkboxPhoneDisplaceResetEnabled', label: 'Displace Reset On/Off', type: 'checkbox' })
+  document.getElementById('checkboxPhoneDisplaceResetEnabled').checked = cfg.phoneDisplaceResetEnabled
+  wireCheckbox('checkboxPhoneDisplaceResetEnabled', (v) => { cfg.phoneDisplaceResetEnabled = v })
+  // Per-axis on/off + scale + invert -- X=left-right, Y=up-down,
+  // Z=perpendicular to the phone face/depth (direct correction of the
+  // user's own first message, which said Y for this). Matches the raw
+  // W3C devicemotion.acceleration.x/y/z convention directly -- see cfg's
+  // own phoneResponsiveDisplaceEnabled declaration comment for why no
+  // axis reshuffling was needed here, unlike Rotation's own beta/gamma/
+  // alpha mapping. Invert -- direct request: "provide me some ui to flip
+  // axes. so i dont need to go through you to fix it" -- see cfg's own
+  // phoneDisplaceInvertX declaration comment.
+  addRow(subResponsiveDisplace, { id: 'checkboxPhoneDisplaceAxisXEnabled', label: 'X Axis Displace On/Off', type: 'checkbox' })
+  document.getElementById('checkboxPhoneDisplaceAxisXEnabled').checked = cfg.phoneDisplaceAxisXEnabled
+  wireCheckbox('checkboxPhoneDisplaceAxisXEnabled', (v) => { cfg.phoneDisplaceAxisXEnabled = v })
+  addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplaceScaleX', label: 'X Axis Displace Scale (x)', type: 'slider', min: -3, max: 3, step: 'any', value: cfg.phoneDisplaceScaleX })
+  wireSlider('sliderPhoneDisplaceScaleX', (v) => { cfg.phoneDisplaceScaleX = v })
+  addRow(subResponsiveDisplace, { id: 'checkboxPhoneDisplaceInvertX', label: 'Invert X Axis Displace', type: 'checkbox' })
+  document.getElementById('checkboxPhoneDisplaceInvertX').checked = cfg.phoneDisplaceInvertX
+  wireCheckbox('checkboxPhoneDisplaceInvertX', (v) => { cfg.phoneDisplaceInvertX = v })
+  addRow(subResponsiveDisplace, { id: 'checkboxPhoneDisplaceAxisYEnabled', label: 'Y Axis Displace On/Off', type: 'checkbox' })
+  document.getElementById('checkboxPhoneDisplaceAxisYEnabled').checked = cfg.phoneDisplaceAxisYEnabled
+  wireCheckbox('checkboxPhoneDisplaceAxisYEnabled', (v) => { cfg.phoneDisplaceAxisYEnabled = v })
+  addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplaceScaleY', label: 'Y Axis Displace Scale (x)', type: 'slider', min: -3, max: 3, step: 'any', value: cfg.phoneDisplaceScaleY })
+  wireSlider('sliderPhoneDisplaceScaleY', (v) => { cfg.phoneDisplaceScaleY = v })
+  addRow(subResponsiveDisplace, { id: 'checkboxPhoneDisplaceInvertY', label: 'Invert Y Axis Displace', type: 'checkbox' })
+  document.getElementById('checkboxPhoneDisplaceInvertY').checked = cfg.phoneDisplaceInvertY
+  wireCheckbox('checkboxPhoneDisplaceInvertY', (v) => { cfg.phoneDisplaceInvertY = v })
+  addRow(subResponsiveDisplace, { id: 'checkboxPhoneDisplaceAxisZEnabled', label: 'Z Axis Displace On/Off (Perpendicular To Face)', type: 'checkbox' })
+  document.getElementById('checkboxPhoneDisplaceAxisZEnabled').checked = cfg.phoneDisplaceAxisZEnabled
+  wireCheckbox('checkboxPhoneDisplaceAxisZEnabled', (v) => { cfg.phoneDisplaceAxisZEnabled = v })
+  addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplaceScaleZ', label: 'Z Axis Displace Scale (x)', type: 'slider', min: -3, max: 3, step: 'any', value: cfg.phoneDisplaceScaleZ })
+  wireSlider('sliderPhoneDisplaceScaleZ', (v) => { cfg.phoneDisplaceScaleZ = v })
+  addRow(subResponsiveDisplace, { id: 'checkboxPhoneDisplaceInvertZ', label: 'Invert Z Axis Displace', type: 'checkbox' })
+  document.getElementById('checkboxPhoneDisplaceInvertZ').checked = cfg.phoneDisplaceInvertZ
+  wireCheckbox('checkboxPhoneDisplaceInvertZ', (v) => { cfg.phoneDisplaceInvertZ = v })
+  addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplaceDamping', label: 'Displace Damping (1=Instant)', type: 'slider', min: 0.05, max: 1, step: 0.01, value: cfg.phoneDisplaceDamping })
+  wireSlider('sliderPhoneDisplaceDamping', (v) => { cfg.phoneDisplaceDamping = v })
+  addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplaceVelDecayRate', label: 'Displace Velocity Decay Rate (1/s)', type: 'slider', min: 0.5, max: 10, step: 0.1, value: cfg.phoneDisplaceVelDecayRate })
+  wireSlider('sliderPhoneDisplaceVelDecayRate', (v) => { cfg.phoneDisplaceVelDecayRate = v })
+  addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplacePosDecayRate', label: 'Displace Position Decay Rate (1/s)', type: 'slider', min: 0.02, max: 5, step: 0.01, value: cfg.phoneDisplacePosDecayRate })
+  wireSlider('sliderPhoneDisplacePosDecayRate', (v) => { cfg.phoneDisplacePosDecayRate = v })
+  addRow(subResponsiveDisplace, { id: 'checkboxPhoneDisplaceStationaryGateEnabled', label: 'Stationary Gate (Suppress Drift When Still)', type: 'checkbox' })
+  document.getElementById('checkboxPhoneDisplaceStationaryGateEnabled').checked = cfg.phoneDisplaceStationaryGateEnabled
+  wireCheckbox('checkboxPhoneDisplaceStationaryGateEnabled', (v) => { cfg.phoneDisplaceStationaryGateEnabled = v })
+  addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplaceStationaryGateDegPerSec', label: 'Stationary Gate Threshold (Deg/s)', type: 'slider', min: 0.1, max: 10, step: 0.1, value: cfg.phoneDisplaceStationaryGateDegPerSec })
+  wireSlider('sliderPhoneDisplaceStationaryGateDegPerSec', (v) => { cfg.phoneDisplaceStationaryGateDegPerSec = v })
+  {
+    let rangeDefault = { min: 0, max: 20 }
+    try { rangeDefault = JSON.parse(cfg.phoneResponsiveDisplaceRange) } catch (e) { /* keep fallback */ }
+    addRow(subResponsiveDisplace, { id: 'textPhoneResponsiveDisplaceRange', label: 'Min / Max Displacement (World Units)', type: 'range-bar', trackMin: -100, trackMax: 100, unit: '', defaultValue: rangeDefault })
+    let lastSeenRange = document.getElementById('textPhoneResponsiveDisplaceRange').value
+    curveWidgetResyncs.push(() => {
+      const el = document.getElementById('textPhoneResponsiveDisplaceRange')
+      if (!el || el.value === lastSeenRange) return
+      lastSeenRange = el.value
+      cfg.phoneResponsiveDisplaceRange = el.value
+      parsePhoneResponsiveDisplaceConfig()
+    })
+    const curveParsed = JSON.parse(cfg.phoneResponsiveDisplaceCurve)
+    addRow(subResponsiveDisplace, { id: 'textPhoneResponsiveDisplaceCurve', label: 'Displacement Curve (Movement -> Displace)', type: 'curve-editor', defaultPoints: curveParsed.points, defaultMethod: curveParsed.method, caption: 'X: Leaky-Integrated Movement Magnitude (0-1)  ·  Y: Displacement Fraction (0=Min, 1=Max)' })
+    let lastSeenCurve = document.getElementById('textPhoneResponsiveDisplaceCurve').value
+    curveWidgetResyncs.push(() => {
+      const el = document.getElementById('textPhoneResponsiveDisplaceCurve')
+      if (!el || el.value === lastSeenCurve) return
+      lastSeenCurve = el.value
+      cfg.phoneResponsiveDisplaceCurve = el.value
+      parsePhoneResponsiveDisplaceConfig()
+    })
+  }
+
+  // CORRECTED 2026-09-29, direct request: "The recurrsive render group
+  // should be int he phone model group under the repsonsive behaviour
+  // group" -- moved from a top-level sibling group (its original
+  // placement, see renderRecursiveRenderGroup()'s own header comment
+  // for that history) to a subgroup of RESPONSIVE BEHAVIOUR - PHONE.
+  // Its own title-bar On/Off toggle (makeDevGroupToggleable()) used to
+  // require a top-level group -- rather than silently lose that
+  // feature or refuse the move, devPanel.js's makeDevGroupToggleable()
+  // itself was widened to work at any nesting depth (see its own
+  // comment), the same fix shape window.findGroupContent() already got
+  // via findNestedGroupContent() for a different reason.
+  renderRecursiveRenderGroup(addSubgroup(subResponsiveBehaviour, 'RECURSIVE RENDER'))
+}
+
+// RECURSIVE RENDER -- toggleable group (direct request 2026-09-29:
+// "place them in a new toggleable group called 'RECURSIVE RENDER'").
+// CORRECTED, same day: originally built as its own TOP-LEVEL group
+// specifically because devPanel.js's own makeDevGroupToggleable() only
+// looked up its title via a direct-child selector -- per a later direct
+// request ("The recurrsive render group should be int he phone model
+// group under the repsonsive behaviour group") it's now nested inside
+// PHONE MODEL > RESPONSIVE BEHAVIOUR - PHONE instead (see its own call
+// site, renderPhoneModelGroup()). Rather than lose its title-bar On/Off
+// toggle to make that nesting possible, makeDevGroupToggleable() itself
+// was generalized to work at any depth (its own comment) -- the same
+// fix shape window.findGroupContent() already got via
+// findNestedGroupContent() for group CONTENT lookups.
+function renderRecursiveRenderGroup(content) {
+  addRow(content, { id: 'checkboxScreenRenderEnabled', label: 'Recursive Render On/Off', type: 'checkbox' })
+  document.getElementById('checkboxScreenRenderEnabled').checked = cfg.screenRenderEnabled
+  wireCheckbox('checkboxScreenRenderEnabled', (v) => { setScreenRenderEnabled(v) })
+  addRow(content, { id: 'sliderScreenRecursionLevels', label: 'Recursion Levels', type: 'slider', min: 1, max: 10, step: 1, value: cfg.screenRecursionLevels })
+  wireSlider('sliderScreenRecursionLevels', (v) => { cfg.screenRecursionLevels = v })
+  addRow(content, { id: 'sliderScreenRenderResolution', label: 'Render Resolution (%)', type: 'slider', min: 10, max: 200, step: 5, value: cfg.screenRenderResolution })
+  wireSlider('sliderScreenRenderResolution', (v) => { cfg.screenRenderResolution = v })
+  // Texture transform controls -- direct request 2026-09-29.
+  addRow(content, { id: 'sliderScreenTextureScale', label: 'Texture Scale (x)', type: 'slider', min: 0.1, max: 5, step: 'any', value: cfg.screenTextureScale })
+  wireSlider('sliderScreenTextureScale', (v) => { cfg.screenTextureScale = v })
+  // Per-Level Scale (Min/Max + Curve) -- direct request 2026-09-29, see
+  // cfg.screenLevelScaleRange's own comment. Multiplies into Texture
+  // Scale above rather than replacing it (see computeScreenLevelScale()).
+  {
+    let levelRangeDefault = { min: 1, max: 1 }
+    try { levelRangeDefault = JSON.parse(cfg.screenLevelScaleRange) } catch (e) { /* keep fallback */ }
+    addRow(content, { id: 'textScreenLevelScaleRange', label: 'Min / Max Scale (Per Level)', type: 'range-bar', trackMin: 0, trackMax: 5, unit: 'x', defaultValue: levelRangeDefault })
+    let lastSeenLevelScaleRange = document.getElementById('textScreenLevelScaleRange').value
+    curveWidgetResyncs.push(() => {
+      const el = document.getElementById('textScreenLevelScaleRange')
+      if (!el || el.value === lastSeenLevelScaleRange) return
+      lastSeenLevelScaleRange = el.value
+      cfg.screenLevelScaleRange = el.value
+      parseScreenLevelScaleConfig()
+    })
+    const levelCurveParsed = JSON.parse(cfg.screenLevelScaleCurve)
+    addRow(content, { id: 'textScreenLevelScaleCurve', label: 'Scale Curve (Level -> Scale)', type: 'curve-editor', defaultPoints: levelCurveParsed.points, defaultMethod: levelCurveParsed.method, caption: 'X: Recursion Level (Left=First, Right=Last)  ·  Y: Scale Fraction (0=Min, 1=Max)' })
+    let lastSeenLevelScaleCurve = document.getElementById('textScreenLevelScaleCurve').value
+    curveWidgetResyncs.push(() => {
+      const el = document.getElementById('textScreenLevelScaleCurve')
+      if (!el || el.value === lastSeenLevelScaleCurve) return
+      lastSeenLevelScaleCurve = el.value
+      cfg.screenLevelScaleCurve = el.value
+      parseScreenLevelScaleConfig()
+    })
+  }
+  addRow(content, { id: 'sliderScreenTextureRotation', label: 'Texture Rotation (Deg)', type: 'slider', min: -180, max: 180, step: 1, value: cfg.screenTextureRotation })
+  wireSlider('sliderScreenTextureRotation', (v) => { cfg.screenTextureRotation = v })
+  addRow(content, { id: 'sliderScreenTextureOffsetX', label: 'Texture X Offset', type: 'slider', min: -1, max: 1, step: 'any', value: cfg.screenTextureOffsetX })
+  wireDeviceSlider('sliderScreenTextureOffsetX', 'screenTextureOffsetX')
+  addRow(content, { id: 'sliderScreenTextureOffsetY', label: 'Texture Y Offset', type: 'slider', min: -1, max: 1, step: 'any', value: cfg.screenTextureOffsetY })
+  wireDeviceSlider('sliderScreenTextureOffsetY', 'screenTextureOffsetY')
+  addRow(content, { id: 'sliderScreenTextureScaleX', label: 'Texture X Scale (x)', type: 'slider', min: 0.1, max: 5, step: 'any', value: cfg.screenTextureScaleX })
+  wireDeviceSlider('sliderScreenTextureScaleX', 'screenTextureScaleX')
+  addRow(content, { id: 'sliderScreenTextureScaleY', label: 'Texture Y Scale (x)', type: 'slider', min: 0.1, max: 5, step: 'any', value: cfg.screenTextureScaleY })
+  wireDeviceSlider('sliderScreenTextureScaleY', 'screenTextureScaleY')
+  // Emission Intensity -- direct report: "When i use the Pixel 9A
+  // model, the screen is very dim." See cfg.screenEmissionIntensity's
+  // own comment for why this multiplies .color rather than a real
+  // .emissiveIntensity (phoneScreenRenderMaterial is an unlit
+  // MeshBasicMaterial, which has no emissive property at all).
+  addRow(content, { id: 'sliderScreenEmissionIntensity', label: 'Screen Emission Intensity (x)', type: 'slider', min: 0, max: 5, step: 0.05, value: cfg.screenEmissionIntensity })
+  wireSlider('sliderScreenEmissionIntensity', (v) => { cfg.screenEmissionIntensity = v })
+  // Mirror Alternating X/Y -- direct request: "provide me 2 checkboxes.
+  // If checked it will mirror alternating in the x axis, and another
+  // for the y axis." See applyScreenTextureTransform()'s own comment
+  // for the parity logic these actually drive.
+  addRow(content, { id: 'checkboxScreenMirrorAlternatingX', label: 'Mirror Alternating (X Axis)', type: 'checkbox' })
+  document.getElementById('checkboxScreenMirrorAlternatingX').checked = cfg.screenMirrorAlternatingX
+  wireCheckbox('checkboxScreenMirrorAlternatingX', (v) => { cfg.screenMirrorAlternatingX = v })
+  addRow(content, { id: 'checkboxScreenMirrorAlternatingY', label: 'Mirror Alternating (Y Axis)', type: 'checkbox' })
+  document.getElementById('checkboxScreenMirrorAlternatingY').checked = cfg.screenMirrorAlternatingY
+  wireCheckbox('checkboxScreenMirrorAlternatingY', (v) => { cfg.screenMirrorAlternatingY = v })
+  // Mirror Order/Phase X/Y -- direct request 2026-09-29: "add 2
+  // checkboxes, 1 for each axis. It will determine the mirroring
+  // order. so if off, it maybe 010101, when on it will be 101010
+  // etc." See applyScreenTextureTransform()'s own comment for the
+  // depth-parity logic these flip.
+  addRow(content, { id: 'checkboxScreenMirrorPhaseX', label: 'Mirror Order (X Axis)', type: 'checkbox' })
+  document.getElementById('checkboxScreenMirrorPhaseX').checked = cfg.screenMirrorPhaseX
+  wireCheckbox('checkboxScreenMirrorPhaseX', (v) => { cfg.screenMirrorPhaseX = v })
+  addRow(content, { id: 'checkboxScreenMirrorPhaseY', label: 'Mirror Order (Y Axis)', type: 'checkbox' })
+  document.getElementById('checkboxScreenMirrorPhaseY').checked = cfg.screenMirrorPhaseY
+  wireCheckbox('checkboxScreenMirrorPhaseY', (v) => { cfg.screenMirrorPhaseY = v })
+  // "To Scale" -- direct report: "whenever my actual browser size is
+  // different from the model mesh size, the rendered image gets scaled
+  // incorrectly." Locks the X/Y Scale sliders (setSliderLocked(), same
+  // helper Camera Lock Pan/Zoom/Rotate already uses) while on, since
+  // their effective value is computed automatically instead -- see
+  // applyScreenTextureTransform()'s own comment.
+  addRow(content, { id: 'checkboxScreenToScale', label: 'To Scale (Lock X/Y to Live Aspect)', type: 'checkbox' })
+  document.getElementById('checkboxScreenToScale').checked = cfg.screenToScaleEnabled
+  wireCheckbox('checkboxScreenToScale', (v) => { cfg.screenToScaleEnabled = v; syncScreenToScaleLock() })
+  syncScreenToScaleLock()
+  // Moves checkboxScreenRenderEnabled into the group's own title bar and
+  // dims the rest of the group while off -- must run after the rows
+  // above are actually in the DOM, which they are by this point.
+  if (typeof window.makeDevGroupToggleable === 'function') window.makeDevGroupToggleable('desktop', 'RECURSIVE RENDER', 'checkboxScreenRenderEnabled')
+}
+function syncScreenToScaleLock() {
+  setSliderLocked('sliderScreenTextureScaleX', cfg.screenToScaleEnabled)
+  setSliderLocked('sliderScreenTextureScaleY', cfg.screenToScaleEnabled)
+}
+
+function renderLightingGroup(content) {
+  addRow(content, { id: 'sliderKeyAzimuth', label: 'Key Light Azimuth (Deg)', type: 'slider', min: 0, max: 360, step: 1, value: cfg.keyAzimuth })
+  wireSlider('sliderKeyAzimuth', (v) => { cfg.keyAzimuth = v; updateKeyLightPosition() })
+  addRow(content, { id: 'sliderKeyElevation', label: 'Key Light Elevation (Deg)', type: 'slider', min: -89, max: 89, step: 1, value: cfg.keyElevation })
+  wireSlider('sliderKeyElevation', (v) => { cfg.keyElevation = v; updateKeyLightPosition() })
+  addRow(content, { id: 'sliderKeyTargetHeight', label: 'Key Light Aim Height (%)', type: 'slider', min: -100, max: 100, step: 1, value: cfg.keyTargetHeight })
+  wireSlider('sliderKeyTargetHeight', (v) => { cfg.keyTargetHeight = v; updateKeyLightPosition() })
+  addRow(content, { id: 'sliderKeyIntensity', label: 'Key Light Intensity (x)', type: 'slider', min: 0, max: 6, step: 0.1, value: cfg.keyIntensity })
+  wireSlider('sliderKeyIntensity', (v) => { cfg.keyIntensity = v; keyLight.intensity = v })
+  addRow(content, { id: 'colorKeyColor', label: 'Key Light Color', type: 'color', value: cfg.keyColor })
+  wireColor('colorKeyColor', (v) => { cfg.keyColor = v; keyLight.color.set(v) })
+  addRow(content, { id: 'sliderAmbientIntensity', label: 'Ambient Intensity (x)', type: 'slider', min: 0, max: 3, step: 0.05, value: cfg.ambientIntensity })
+  wireSlider('sliderAmbientIntensity', (v) => { cfg.ambientIntensity = v; hemiLight.intensity = v })
+  addRow(content, { id: 'colorAmbientSkyColor', label: 'Ambient Sky Color', type: 'color', value: cfg.ambientSkyColor })
+  wireColor('colorAmbientSkyColor', (v) => { cfg.ambientSkyColor = v; hemiLight.color.set(v) })
+  addRow(content, { id: 'colorAmbientGroundColor', label: 'Ambient Ground Color', type: 'color', value: cfg.ambientGroundColor })
+  wireColor('colorAmbientGroundColor', (v) => { cfg.ambientGroundColor = v; hemiLight.groundColor.set(v) })
+  renderPresetPicker(content, 'Saved Lighting', SAVED_LIGHTING, DEFAULT_LIGHTING_NAME, applyLightingPreset, captureLightingFromLive, { defaultFieldKey: 'defaultLighting', storageKey: 'lighting' })
+}
+
+function renderToonGroup(content) {
+  addRow(content, { id: 'sliderToonSteps', label: 'Toon Steps (Count)', type: 'slider', min: 2, max: 6, step: 1, value: cfg.toonSteps })
+  wireSlider('sliderToonSteps', (v) => { cfg.toonSteps = v; rebuildGradientMap() })
+  addRow(content, { id: 'sliderToonStepThreshold', label: 'Toon Step Threshold (Bias)', type: 'slider', min: 0.2, max: 5, step: 0.05, value: cfg.toonStepThreshold })
+  wireSlider('sliderToonStepThreshold', (v) => { cfg.toonStepThreshold = v; rebuildGradientMap() })
+  addRow(content, { id: 'sliderToonShadowFloor', label: 'Toon Shadow Floor (%)', type: 'slider', min: 0, max: 90, step: 1, value: cfg.toonShadowFloor })
+  wireSlider('sliderToonShadowFloor', (v) => { cfg.toonShadowFloor = v; rebuildGradientMap() })
+  addRow(content, { id: 'sliderToonLightCeiling', label: 'Toon Light Ceiling (%)', type: 'slider', min: 10, max: 100, step: 1, value: cfg.toonLightCeiling })
+  wireSlider('sliderToonLightCeiling', (v) => { cfg.toonLightCeiling = v; rebuildGradientMap() })
+  addRow(content, { id: 'colorToonBaseTint', label: 'Toon Base Tint', type: 'color', value: cfg.toonBaseTint })
+  wireColor('colorToonBaseTint', (v) => { cfg.toonBaseTint = v; hands.forEach((h) => h.skinnedMesh.material.color.set(v)) })
+  // Rim-light + texture/duotone-tint controls — ported from HANDY DANDIES'
+  // own createToonMaterial() shader injection (added this round; the
+  // first build's Toon Shading group didn't have these at all).
+  addRow(content, { id: 'sliderTextureInfluence', label: 'Texture Influence (%)', type: 'slider', min: 0, max: 100, step: 1, value: cfg.textureInfluence })
+  wireSlider('sliderTextureInfluence', (v) => { cfg.textureInfluence = v; setToonUniform('textureInfluence', v / 100) })
+  addRow(content, { id: 'colorToonTint', label: 'Toon Texture Tint', type: 'color', value: cfg.toonTint })
+  wireColor('colorToonTint', (v) => { cfg.toonTint = v; setToonUniform('toonTint', new THREE.Color(v)) })
+  addRow(content, { id: 'sliderRimIntensity', label: 'Rim Light Intensity (x)', type: 'slider', min: 0, max: 3, step: 0.05, value: cfg.rimIntensity })
+  wireSlider('sliderRimIntensity', (v) => { cfg.rimIntensity = v; setToonUniform('rimIntensity', v) })
+  addRow(content, { id: 'sliderRimPower', label: 'Rim Light Power (x)', type: 'slider', min: 0.5, max: 8, step: 0.1, value: cfg.rimPower })
+  wireSlider('sliderRimPower', (v) => { cfg.rimPower = v; setToonUniform('rimPower', v) })
+  addRow(content, { id: 'colorRimColor', label: 'Rim Light Color', type: 'color', value: cfg.rimColor })
+  wireColor('colorRimColor', (v) => { cfg.rimColor = v; setToonUniform('rimColor', new THREE.Color(v)) })
+
+  // Outline subgroup removed per direct request ("Remove Outline settings
+  // group. I dont need that.") — outlinePass itself stays permanently
+  // disabled (cfg.outlineEnabled's own literal default, never toggled by
+  // anything now) rather than removing the composer pass entirely, so
+  // removing this is a pure UI/config change, not a rendering-pipeline one.
+
+  renderPresetPicker(content, 'Saved Toon Shading', SAVED_TOON, null, applyToonPreset, captureToonFromCfg, { exportable: true, importable: true, defaultFieldKey: 'defaultToon', storageKey: 'toon' })
+}
+
+// Ordered multi-select widget — ported concept from Hando's own
+// buildMultiSelectRow()/renderMultiSelectRows() (devPanel.js there): a
+// reorderable vertical list of per-row pose dropdowns (or Hold entries),
+// with "+ Add"/"+ Hold" above and a "Remove" button per row. Re-implemented
+// from scratch against this project's own real devPanel.js API (Hando's
+// own buildGroupedDropdown()/setupReorder()/commit() infra isn't part of
+// the raw template this project is built on) using native HTML5 drag-and-
+// drop for reordering rather than Hando's own pointer-capture-based
+// engine drag system — a deliberate, disclosed simplification of the
+// REORDER MECHANISM only; the actual UI/interaction shape (dropdown-per-
+// row, Hold entries, +Add defaulting to "whatever comes after the
+// previous row's pick", +Hold defaulting to the last Hold's own percent)
+// matches Hando's exactly.
+function buildMultiSelectWidget(content, opts) {
+  const container = document.createElement('div')
+  container.className = 'dp-multi-select-row-container'
+  const addBtnRow = document.createElement('div')
+  // Also 'dev-buttons' (the same class Save/Overwrite/Use/etc. use on the
+  // list-picker above) so "+ Add"/"+ Hold" get the panel's own real
+  // button styling instead of default browser white/gray -- direct
+  // request ("currently they are default white/gray buttons... match
+  // hando"), which itself uses this exact same template-driven look.
+  addBtnRow.className = 'dp-multi-select-add-row dev-buttons'
+  const addBtn = document.createElement('button'); addBtn.type = 'button'; addBtn.textContent = '+ Add'
+  const holdBtn = document.createElement('button'); holdBtn.type = 'button'; holdBtn.textContent = '+ Hold'
+  addBtnRow.append(addBtn, holdBtn)
+  container.appendChild(addBtnRow)
+  const listEl = document.createElement('div')
+  listEl.className = 'dp-multi-select-list'
+  container.appendChild(listEl)
+  content.appendChild(container)
+
+  function render() {
+    listEl.innerHTML = ''
+    opts.values.forEach((val, i) => {
+      const row = document.createElement('div')
+      row.className = 'dp-multi-select-row'
+      row.draggable = true
+      const handle = document.createElement('span')
+      handle.className = 'dp-multi-select-row-handle'
+      handle.textContent = '⠿'
+      row.appendChild(handle)
+      const removeBtn = document.createElement('button')
+      removeBtn.type = 'button'; removeBtn.textContent = 'Remove'
+      removeBtn.addEventListener('click', () => { opts.values.splice(i, 1); opts.onChange(opts.values); render() })
+      if (isHoldEntry(val)) {
+        row.classList.add('dp-multi-select-hold-row')
+        const label = document.createElement('span')
+        label.className = 'dp-multi-select-hold-label'
+        label.textContent = 'Hold'
+        const slider = document.createElement('input')
+        slider.type = 'range'; slider.min = 0; slider.max = 100; slider.step = 1; slider.value = val.percent
+        const numInput = document.createElement('input')
+        numInput.type = 'text'; numInput.value = val.percent
+        const apply = (v) => {
+          v = parseFloat(v)
+          if (isNaN(v)) return
+          v = Math.max(0, v)
+          slider.value = Math.min(v, 100)
+          numInput.value = v
+          opts.values[i] = { type: 'hold', percent: v }
+          opts.onChange(opts.values)
+        }
+        slider.addEventListener('input', () => apply(slider.value))
+        numInput.addEventListener('change', () => apply(numInput.value))
+        row.append(label, slider, numInput, removeBtn)
+      } else {
+        const select = document.createElement('select')
+        opts.options().forEach((o) => { const el = document.createElement('option'); el.value = o.value; el.textContent = o.text; select.appendChild(el) })
+        select.value = val
+        select.addEventListener('change', () => { opts.values[i] = select.value; opts.onChange(opts.values) })
+        row.append(select, removeBtn)
+      }
+      row.addEventListener('dragstart', (e) => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(i)); row.classList.add('dragging') })
+      row.addEventListener('dragend', () => row.classList.remove('dragging'))
+      row.addEventListener('dragover', (e) => e.preventDefault())
+      row.addEventListener('drop', (e) => {
+        e.preventDefault()
+        const fromIdx = parseInt(e.dataTransfer.getData('text/plain'), 10)
+        if (isNaN(fromIdx) || fromIdx === i) return
+        const [moved] = opts.values.splice(fromIdx, 1)
+        opts.values.splice(i, 0, moved)
+        opts.onChange(opts.values)
+        render()
+      })
+      listEl.appendChild(row)
+    })
+  }
+  addBtn.addEventListener('click', () => {
+    const names = opts.options().map((o) => o.value)
+    const prevValue = opts.values[opts.values.length - 1]
+    const prevIndex = names.indexOf(prevValue)
+    const next = prevIndex >= 0 ? names[Math.min(prevIndex + 1, names.length - 1)] : names[0]
+    opts.values.push(next || '')
+    opts.onChange(opts.values)
+    render()
+  })
+  holdBtn.addEventListener('click', () => {
+    const lastHold = opts.values.slice().reverse().find(isHoldEntry)
+    opts.values.push({ type: 'hold', percent: lastHold ? lastHold.percent : 25 })
+    opts.onChange(opts.values)
+    render()
+  })
+  render()
+}
+
+function renderTweenGroup(content) {
+  buildMultiSelectWidget(content, {
+    values: cfg.tweenPoses,
+    options: () => SAVED_POSES.map((p) => ({ value: p.name, text: p.name })),
+    onChange: () => { applyTweenAtT(cfg.tweenT) }
+  })
+  addRow(content, { id: 'sliderTweenT', label: 'Tween (0=First, 1=Last)', type: 'slider', min: 0, max: 1, step: 0.001, value: cfg.tweenT })
+  wireSlider('sliderTweenT', (v) => { cfg.tweenT = v; applyTweenAtT(v) })
+  addRow(content, { id: 'sliderTweenFrameCount', label: 'Export Frame Count', type: 'slider', min: 1, max: 30, step: 1, value: cfg.tweenFrameCount })
+  wireSlider('sliderTweenFrameCount', (v) => { cfg.tweenFrameCount = v })
+  addRow(content, { id: 'textExportFramePrefix', label: 'Export Filename Prefix', type: 'text', inputType: 'text', value: cfg.exportFramePrefix })
+  document.getElementById('textExportFramePrefix').addEventListener('change', (e) => { cfg.exportFramePrefix = e.target.value })
+
+  renderPresetPicker(content, 'Saved Tween Sequences', SAVED_TWEEN_SEQUENCES, null,
+    (item) => { cfg.tweenPoses = (item.tweenPoses || []).slice(); applyTweenAtT(cfg.tweenT) },
+    () => ({ tweenPoses: cfg.tweenPoses.slice() }),
+    { storageKey: 'tweenSequences' })
+
+  const exportBtnRow = document.createElement('div'); exportBtnRow.className = 'dev-buttons'
+  const exportBtn = document.createElement('button'); exportBtn.type = 'button'; exportBtn.textContent = 'Export Tween PNG Sequence'
+  exportBtnRow.appendChild(exportBtn); content.appendChild(exportBtnRow)
+  exportBtn.addEventListener('click', () => exportTweenSequence(exportBtn))
+}
+
+// =======================================================================
+// Device Information (Debug -> Settings) — client-side-only diagnostic
+// display of whatever the browser's own User-Agent Client Hints (or,
+// absent that, the traditional User-Agent string) actually expose about
+// the visiting device. Never sent to a server, never persisted beyond the
+// normal dev-panel settings blob, no fingerprinting. See
+// src/deviceInfo.js for the detection logic itself.
+// =======================================================================
+let latestDeviceInfo = null
+let deviceInfoDisplayEl = null
+let deviceInfoRawEl = null
+function kvRow(label, value) {
+  const row = document.createElement('div')
+  row.style.cssText = 'display:flex; justify-content:space-between; gap:10px; padding:1px 0;'
+  const l = document.createElement('span'); l.textContent = label; l.style.opacity = '0.7'
+  const v = document.createElement('span'); v.textContent = value == null || value === '' ? '—' : String(value); v.style.textAlign = 'right'
+  row.appendChild(l); row.appendChild(v)
+  return row
+}
+function renderDeviceInfoDisplay(info) {
+  if (!deviceInfoDisplayEl) return
+  deviceInfoDisplayEl.innerHTML = ''
+  const confidenceLabel = { confirmed: 'Confirmed', inferred: 'Inferred', unavailable: 'Unavailable' }[info.modelConfidence] || info.modelConfidence
+  deviceInfoDisplayEl.appendChild(kvRow('Device Type', info.deviceType))
+  deviceInfoDisplayEl.appendChild(kvRow('Brand', info.brand))
+  deviceInfoDisplayEl.appendChild(kvRow('Model', info.model || 'Not exposed by browser'))
+  deviceInfoDisplayEl.appendChild(kvRow('Platform', info.platform))
+  deviceInfoDisplayEl.appendChild(kvRow('OS Version', info.platformVersion))
+  deviceInfoDisplayEl.appendChild(kvRow('Browser', info.browser))
+  deviceInfoDisplayEl.appendChild(kvRow('Browser Version', info.browserVersion))
+  deviceInfoDisplayEl.appendChild(kvRow('Mobile', info.mobile === null ? null : (info.mobile ? 'Yes' : 'No')))
+  deviceInfoDisplayEl.appendChild(kvRow('Model Source', info.modelSource))
+  deviceInfoDisplayEl.appendChild(kvRow('Confidence', confidenceLabel))
+  deviceInfoDisplayEl.appendChild(kvRow('UA Client Hints Supported', info.userAgentDataSupported ? 'Yes' : 'No'))
+  if (deviceInfoRawEl) deviceInfoRawEl.textContent = JSON.stringify(info.raw, null, 2)
+}
+async function refreshDeviceInfo() {
+  try {
+    latestDeviceInfo = await detectDeviceInfo()
+  } catch (err) {
+    // detectDeviceInfo() itself never throws by design, but this display
+    // must never break the app even if that guarantee is ever violated.
+    latestDeviceInfo = { deviceType: 'unknown', brand: null, model: null, platform: null, platformVersion: null, browser: null, browserVersion: null, mobile: null, modelSource: 'unavailable', modelConfidence: 'unavailable', userAgentDataSupported: !!navigator.userAgentData, raw: { error: String((err && err.message) || err) } }
+  }
+  renderDeviceInfoDisplay(latestDeviceInfo)
+}
+function renderDeviceInfoSettings(debugContent) {
+  const settingsSub = addSubgroup(debugContent, 'Settings')
+  addRow(settingsSub, { id: 'checkboxDeviceInfoEnabled', label: 'Device Information', type: 'checkbox' })
+  document.getElementById('checkboxDeviceInfoEnabled').checked = cfg.deviceInfoEnabled
+
+  const panel = document.createElement('div')
+  panel.style.cssText = 'font-size:11px; margin-top:4px; padding:6px 8px; background:rgba(255,255,255,0.06); border:1px solid var(--dev-accent-color, #0ff); border-radius:4px;'
+  panel.style.display = cfg.deviceInfoEnabled ? '' : 'none'
+  deviceInfoDisplayEl = document.createElement('div')
+  panel.appendChild(deviceInfoDisplayEl)
+
+  const refreshRow = document.createElement('div'); refreshRow.className = 'dev-buttons'; refreshRow.style.marginTop = '6px'
+  const refreshBtn = document.createElement('button'); refreshBtn.type = 'button'; refreshBtn.textContent = 'Refresh'
+  refreshRow.appendChild(refreshBtn)
+  panel.appendChild(refreshRow)
+  refreshBtn.addEventListener('click', () => refreshDeviceInfo())
+
+  const rawDetails = document.createElement('details')
+  rawDetails.style.marginTop = '6px'
+  const rawSummary = document.createElement('summary')
+  rawSummary.textContent = 'Raw diagnostic data'
+  rawSummary.style.cssText = 'cursor:pointer; opacity:0.75; font-size:10px;'
+  deviceInfoRawEl = document.createElement('pre')
+  deviceInfoRawEl.style.cssText = 'font: 10px/1.4 ui-monospace, Consolas, monospace; white-space:pre-wrap; word-break:break-all; margin:4px 0 0; opacity:0.85; max-height:160px; overflow-y:auto;'
+  rawDetails.appendChild(rawSummary)
+  rawDetails.appendChild(deviceInfoRawEl)
+  panel.appendChild(rawDetails)
+
+  settingsSub.appendChild(panel)
+
+  wireCheckbox('checkboxDeviceInfoEnabled', (v) => {
+    cfg.deviceInfoEnabled = v
+    panel.style.display = v ? '' : 'none'
+    if (v && !latestDeviceInfo) refreshDeviceInfo()
+  })
+  if (cfg.deviceInfoEnabled) refreshDeviceInfo()
+}
+
+function renderDebugExtras() {
+  /* eslint-disable-next-line no-undef */
+  const debugContent = findGroupContent('desktop', 'Debug', 'renderDebugExtras', 'debugExtras')
+  if (!debugContent) return
+  // Global Responsive Rotation/Displace overrides -- direct request:
+  // "global on off switches for the responsive rotation and the
+  // responsive displacement... this will override that [the individual
+  // Phone Model checkboxes]... when I'm switching between phone models, I
+  // don't have to keep turning them on and off individually." AND-combined
+  // with each feature's own existing checkbox at every real gate -- see
+  // cfg.responsiveRotationGlobalEnabled's own declaration comment.
+  addRow(debugContent, { id: 'checkboxResponsiveRotationGlobalEnabled', label: 'Responsive Rotation (Global Override)', type: 'checkbox' })
+  document.getElementById('checkboxResponsiveRotationGlobalEnabled').checked = cfg.responsiveRotationGlobalEnabled
+  wireCheckbox('checkboxResponsiveRotationGlobalEnabled', (v) => { cfg.responsiveRotationGlobalEnabled = v; if (v) resetPhoneModelRotationBaseline() })
+  addRow(debugContent, { id: 'checkboxResponsiveDisplaceGlobalEnabled', label: 'Responsive Displacement (Global Override)', type: 'checkbox' })
+  document.getElementById('checkboxResponsiveDisplaceGlobalEnabled').checked = cfg.responsiveDisplaceGlobalEnabled
+  wireCheckbox('checkboxResponsiveDisplaceGlobalEnabled', (v) => { cfg.responsiveDisplaceGlobalEnabled = v })
+  addRow(debugContent, { id: 'checkboxShowGridHelper', label: 'Show Grid Helper', type: 'checkbox' })
+  document.getElementById('checkboxShowGridHelper').checked = cfg.showGridHelper
+  wireCheckbox('checkboxShowGridHelper', (v) => { cfg.showGridHelper = v; gridHelper.visible = v })
+  addRow(debugContent, { id: 'checkboxShowAxesHelper', label: 'Show World Axes Gizmo', type: 'checkbox' })
+  document.getElementById('checkboxShowAxesHelper').checked = cfg.showAxesHelper
+  wireCheckbox('checkboxShowAxesHelper', (v) => { cfg.showAxesHelper = v; updateWorldAxes() })
+  addRow(debugContent, { id: 'sliderWorldAxesLength', label: 'World Axes Line Length', type: 'slider', min: 10, max: 200, step: 5, value: cfg.worldAxesLength })
+  wireSlider('sliderWorldAxesLength', (v) => { cfg.worldAxesLength = v; updateWorldAxes() })
+  addRow(debugContent, { id: 'sliderWorldAxesThickness', label: 'World Axes Line Thickness', type: 'slider', min: 1, max: 10, step: 0.5, value: cfg.worldAxesThickness })
+  wireSlider('sliderWorldAxesThickness', (v) => { cfg.worldAxesThickness = v; updateWorldAxes() })
+  addRow(debugContent, { id: 'checkboxShowWireframe', label: 'Show Wireframe', type: 'checkbox' })
+  wireCheckbox('checkboxShowWireframe', (v) => { cfg.showWireframe = v; hands.forEach((h) => { h.skinnedMesh.material.wireframe = v }) })
+  // CORRECTED 2026-09-30, direct report: "The Pause button... should be
+  // stylized the same as other buttons. It should use the button color
+  // and font etc." Was a bare .dev-row with an unstyled <button> -- real
+  // dev-panel buttons get their look from `.dev-buttons button` (Button
+  // Color/font/border-radius/hover), which only applies inside a
+  // `.dev-buttons` container (the same wrapper class Save/Use/Delete/Set
+  // Default already use), not a plain `.dev-row`.
+  const pauseRow = document.createElement('div'); pauseRow.className = 'dev-buttons'
+  // id required for Set Hotkey (devPanel.js) -- every hotkey-bindable
+  // control is looked up by id (triggerHotkey()/renderAllHotkeyBadges()),
+  // and this button never had one, which is the other half of why it
+  // couldn't be hotkeyed (see devPanel.js's own .dev-buttons container fix).
+  const pauseBtn = document.createElement('button'); pauseBtn.id = 'buttonPauseToggle'; pauseBtn.textContent = 'PAUSE'
+  pauseRow.appendChild(pauseBtn); debugContent.appendChild(pauseRow)
+  pauseBtn.addEventListener('click', () => { isPaused = !isPaused; pauseBtn.textContent = isPaused ? 'RESUME' : 'PAUSE'; requestRender() })
+
+  // All-logs controls -- direct requests: "provide a clear all logs
+  // button and copy all logs button" / "and a pause and resume logs
+  // button." Sits above the 3 individual logs below (Mouse Log is
+  // devPanel.js's own built-in subgroup, appearing even earlier in the
+  // panel; Sensors/Phone Model Log are HANDYSET's own, right below) so
+  // it reads as a shared master-controls row for all of them. See
+  // clearAllLogs()/copyAllLogsText()/toggleAllLogsPaused()'s own
+  // comments for what each spans.
+  const allLogsRow = document.createElement('div'); allLogsRow.className = 'dev-buttons'
+  const clearAllLogsBtn = document.createElement('button'); clearAllLogsBtn.textContent = 'CLEAR ALL LOGS'
+  const copyAllLogsBtn = document.createElement('button'); copyAllLogsBtn.textContent = 'COPY ALL LOGS'
+  const pauseAllLogsBtn = document.createElement('button'); pauseAllLogsBtn.textContent = 'PAUSE LOGS'
+  allLogsRow.append(clearAllLogsBtn, copyAllLogsBtn, pauseAllLogsBtn)
+  debugContent.appendChild(allLogsRow)
+  clearAllLogsBtn.addEventListener('click', clearAllLogs)
+  copyAllLogsBtn.addEventListener('click', () => copyAllLogsText(copyAllLogsBtn))
+  pauseAllLogsBtn.addEventListener('click', () => toggleAllLogsPaused(pauseAllLogsBtn))
+
+  const sensorSub = addSubgroup(debugContent, 'Sensors')
+  if (!isTouchDevice) {
+    const note = document.createElement('div')
+    note.style.cssText = 'font-size:10px; color:#888; padding:2px 0 6px;'
+    note.textContent = 'No sensor data on Desktop.'
+    sensorSub.appendChild(note)
+  }
+  addRow(sensorSub, { id: 'checkboxSensorStream', label: 'Stream Sensor Data', type: 'checkbox' })
+  wireCheckbox('checkboxSensorStream', (v) => { cfg.sensorStreamEnabled = v; restartSensorTimer(); restartPhoneModelLogTimer() })
+  addRow(sensorSub, { id: 'sliderSensorInterval', label: 'Sample Interval (Ms)', type: 'slider', min: 50, max: 2000, step: 50, value: cfg.sensorIntervalMs })
+  wireSlider('sliderSensorInterval', (v) => { cfg.sensorIntervalMs = v; restartSensorTimer(); restartPhoneModelLogTimer() })
+  // Per-sensor log toggles -- direct request 2026-09-28.
+  addRow(sensorSub, { id: 'checkboxSensorLogAccel', label: 'Log Accelerometer', type: 'checkbox' })
+  document.getElementById('checkboxSensorLogAccel').checked = cfg.sensorLogAccel
+  wireCheckbox('checkboxSensorLogAccel', (v) => { cfg.sensorLogAccel = v })
+  // Diagnostic -- added 2026-09-30, see cfg.sensorLogLinearAccel's own
+  // declaration comment. Shows the EXACT gravity-subtracted value
+  // Responsive Displace consumes, distinct from "Log Accelerometer"
+  // above (raw accelerationIncludingGravity).
+  addRow(sensorSub, { id: 'checkboxSensorLogLinearAccel', label: 'Log Linear Accel (No Gravity, Used By Displace)', type: 'checkbox' })
+  document.getElementById('checkboxSensorLogLinearAccel').checked = cfg.sensorLogLinearAccel
+  wireCheckbox('checkboxSensorLogLinearAccel', (v) => { cfg.sensorLogLinearAccel = v })
+  addRow(sensorSub, { id: 'checkboxSensorLogGyro', label: 'Log Gyroscope', type: 'checkbox' })
+  document.getElementById('checkboxSensorLogGyro').checked = cfg.sensorLogGyro
+  wireCheckbox('checkboxSensorLogGyro', (v) => { cfg.sensorLogGyro = v })
+  addRow(sensorSub, { id: 'checkboxSensorLogCompass', label: 'Log Compass', type: 'checkbox' })
+  document.getElementById('checkboxSensorLogCompass').checked = cfg.sensorLogCompass
+  wireCheckbox('checkboxSensorLogCompass', (v) => { cfg.sensorLogCompass = v })
+  // Absolute orientation angle (deviceorientation.beta/gamma), NOT the
+  // same as Gyro's rotationRate alpha/beta/gamma above -- direct request
+  // 2026-09-28, added after the user asked what the difference was.
+  addRow(sensorSub, { id: 'checkboxSensorLogOrientBeta', label: 'Log Beta (Front/Back Tilt Angle)', type: 'checkbox' })
+  document.getElementById('checkboxSensorLogOrientBeta').checked = cfg.sensorLogOrientBeta
+  wireCheckbox('checkboxSensorLogOrientBeta', (v) => { cfg.sensorLogOrientBeta = v })
+  addRow(sensorSub, { id: 'checkboxSensorLogOrientGamma', label: 'Log Gamma (Left/Right Tilt Angle)', type: 'checkbox' })
+  document.getElementById('checkboxSensorLogOrientGamma').checked = cfg.sensorLogOrientGamma
+  wireCheckbox('checkboxSensorLogOrientGamma', (v) => { cfg.sensorLogOrientGamma = v })
+  const sensorBtnRow = document.createElement('div')
+  sensorBtnRow.className = 'dev-buttons'
+  const sensorCopyBtn = document.createElement('button')
+  sensorCopyBtn.type = 'button'
+  sensorCopyBtn.textContent = 'COPY'
+  const sensorSaveBtn = document.createElement('button')
+  sensorSaveBtn.type = 'button'
+  sensorSaveBtn.textContent = 'SAVE'
+  const sensorClearBtn = document.createElement('button')
+  sensorClearBtn.type = 'button'
+  sensorClearBtn.textContent = 'CLEAR'
+  sensorBtnRow.append(sensorCopyBtn, sensorSaveBtn, sensorClearBtn)
+  sensorSub.appendChild(sensorBtnRow)
+  sensorCopyBtn.addEventListener('click', () => copySensorLog(sensorCopyBtn))
+  sensorSaveBtn.addEventListener('click', saveSensorLog)
+  sensorClearBtn.addEventListener('click', clearSensorLog)
+  sensorLogEl = document.createElement('div')
+  sensorLogEl.className = 'dev-mouse-log'
+  sensorSub.appendChild(sensorLogEl)
+
+  // Phone Model Log -- direct request 2026-09-28: logs the Phone Model's
+  // own position/rotation, at the same rate as the Sensors log above
+  // (shares cfg.sensorIntervalMs and the Stream Sensor Data checkbox),
+  // with timestamps. See restartPhoneModelLogTimer()'s own comment for
+  // why it's NOT gated to touch devices the way the Sensors log is.
+  const phoneModelLogSub = addSubgroup(debugContent, 'Phone Model Log')
+  const phoneModelLogBtnRow = document.createElement('div')
+  phoneModelLogBtnRow.className = 'dev-buttons'
+  const phoneModelLogCopyBtn = document.createElement('button')
+  phoneModelLogCopyBtn.type = 'button'
+  phoneModelLogCopyBtn.textContent = 'COPY'
+  const phoneModelLogSaveBtn = document.createElement('button')
+  phoneModelLogSaveBtn.type = 'button'
+  phoneModelLogSaveBtn.textContent = 'SAVE'
+  const phoneModelLogClearBtn = document.createElement('button')
+  phoneModelLogClearBtn.type = 'button'
+  phoneModelLogClearBtn.textContent = 'CLEAR'
+  phoneModelLogBtnRow.append(phoneModelLogCopyBtn, phoneModelLogSaveBtn, phoneModelLogClearBtn)
+  phoneModelLogSub.appendChild(phoneModelLogBtnRow)
+  phoneModelLogCopyBtn.addEventListener('click', () => copyPhoneModelLog(phoneModelLogCopyBtn))
+  phoneModelLogSaveBtn.addEventListener('click', savePhoneModelLog)
+  phoneModelLogClearBtn.addEventListener('click', clearPhoneModelLog)
+  phoneModelLogEl = document.createElement('div')
+  phoneModelLogEl.className = 'dev-mouse-log'
+  phoneModelLogSub.appendChild(phoneModelLogEl)
+
+  // Object Axes -- ported from 3JS ENGINE's own Debug/Diagnostics
+  // subgroup (its src/main.js), per direct request. World Axes wasn't
+  // requested, so only this half was ported.
+  const objectAxesContent = addSubgroup(debugContent, 'Object Axes')
+  addRow(objectAxesContent, { id: 'checkboxObjectAxesEnabled', label: 'Object Axes On/Off', type: 'checkbox' })
+  document.getElementById('checkboxObjectAxesEnabled').checked = cfg.objectAxesEnabled
+  wireCheckbox('checkboxObjectAxesEnabled', (v) => { cfg.objectAxesEnabled = v; objectAxesGroups.forEach((group) => { group.visible = v }) })
+  addRow(objectAxesContent, { id: 'checkboxObjectAxesRenderInFront', label: 'Render In Front', type: 'checkbox' })
+  document.getElementById('checkboxObjectAxesRenderInFront').checked = cfg.objectAxesRenderInFront
+  wireCheckbox('checkboxObjectAxesRenderInFront', (v) => { cfg.objectAxesRenderInFront = v; objectAxesGroups.forEach((group) => applyFatAxesRenderState(group, v, cfg.objectAxesThickness)) })
+  addRow(objectAxesContent, { id: 'sliderObjectAxesThickness', label: 'Line Thickness (Px)', type: 'slider', min: 1, max: 10, step: 0.5, value: cfg.objectAxesThickness })
+  wireSlider('sliderObjectAxesThickness', (v) => { cfg.objectAxesThickness = v; objectAxesGroups.forEach((group) => applyFatAxesRenderState(group, cfg.objectAxesRenderInFront, v)) })
+  addRow(objectAxesContent, { id: 'sliderObjectAxesLength', label: 'Line Length (World Units)', type: 'slider', min: 1, max: 200, step: 1, value: cfg.objectAxesLength })
+  wireSlider('sliderObjectAxesLength', (v) => { cfg.objectAxesLength = v; objectAxesGroups.forEach((group) => rebuildFatAxesLength(group, v)) })
+  const objectAxesPickerLabel = document.createElement('div')
+  objectAxesPickerLabel.className = 'dev-label'
+  objectAxesPickerLabel.style.marginTop = '6px'
+  objectAxesPickerLabel.textContent = 'Objects (check to show its axes — multi-select):'
+  objectAxesContent.appendChild(objectAxesPickerLabel)
+  const objectAxesPickerListEl = document.createElement('div')
+  objectAxesPickerListEl.id = 'objectAxesPickerList'
+  objectAxesPickerListEl.className = 'dev-list-picker'
+  objectAxesContent.appendChild(objectAxesPickerListEl)
+  renderObjectAxesPicker()
+
+  renderDeviceInfoSettings(debugContent)
+}
+
+function renderHandysetDevGroups() {
+  // HAND MODEL -- direct request 2026-09-27: a new top-level group holding
+  // Field Layout, Pose, Tween, and the renamed Phone Tilt subgroup, in
+  // that exact order. "Phone Tilt" is renamed "RESPONSIVE BEHAVIOUR -
+  // HAND" (per direct correction, distinguishing it from the new PHONE
+  // MODEL group's own "RESPONSIVE BEHAVIOUR - PHONE" subgroup) -- same
+  // function (renderPhoneTiltGroup), just built into a subgroup instead
+  // of a top-level group and titled differently.
+  const handModelContent = addGroup('HAND MODEL')
+
+  // CORRECTED 2026-09-28, direct request: this row was originally a
+  // Phone Model On/Off duplicate (2026-09-27) -- repurposed into a
+  // Hand Model On/Off toggle instead (drives cfg.hideHands, inverted
+  // sense, kept in sync with Field Layout's own "Hide Hands" checkbox
+  // via syncHandModelEnabledCheckboxes()).
+  addRow(handModelContent, { id: 'checkboxHandModelEnabled', label: 'Hand Model On/Off', type: 'checkbox' })
+  document.getElementById('checkboxHandModelEnabled').checked = !cfg.hideHands
+  wireCheckbox('checkboxHandModelEnabled', (v) => { cfg.hideHands = !v; relayoutField(); syncHandModelEnabledCheckboxes() })
+
+  // Hand Model Selector -- direct request: "provide a hand model selector
+  // liek the phone and load in this geometry... HandiBonesB-IK.glb". See
+  // HAND_MODEL_OPTIONS'/renderHandModelItemSelector()'s own comments.
+  renderHandModelItemSelector(handModelContent)
+
+  const fieldContent = addSubgroup(handModelContent, 'Field Layout')
+  addRow(fieldContent, { id: 'sliderFieldRows', label: 'Rows (Count)', type: 'slider', min: 1, max: 40, step: 1, value: cfg.fieldRows })
+  wireSlider('sliderFieldRows', (v) => { cfg.fieldRows = v; rebuildField() })
+  addRow(fieldContent, { id: 'sliderFieldCols', label: 'Columns (Count)', type: 'slider', min: 1, max: 40, step: 1, value: cfg.fieldCols })
+  wireSlider('sliderFieldCols', (v) => { cfg.fieldCols = v; rebuildField() })
+  addRow(fieldContent, { id: 'sliderRowSpacing', label: 'Row Spacing (World Units)', type: 'slider', min: 2, max: 40, step: 0.5, value: cfg.rowSpacing })
+  wireSlider('sliderRowSpacing', (v) => { cfg.rowSpacing = v; relayoutField() })
+  addRow(fieldContent, { id: 'sliderColumnSpacing', label: 'Column Spacing (World Units)', type: 'slider', min: 2, max: 40, step: 0.5, value: cfg.columnSpacing })
+  wireSlider('sliderColumnSpacing', (v) => { cfg.columnSpacing = v; relayoutField() })
+  addRow(fieldContent, { id: 'sliderHandScale', label: 'Hand Scale (x)', type: 'slider', min: 0.5, max: 5, step: 0.05, value: cfg.handScale })
+  wireSlider('sliderHandScale', (v) => { cfg.handScale = v; relayoutField(); applyPoseValuesToHand(cfg) })
+  addRow(fieldContent, { id: 'sliderAlternateRowOffset', label: 'Alternate Row Offset (World Units)', type: 'slider', min: -20, max: 20, step: 0.5, value: cfg.alternateRowOffset })
+  wireSlider('sliderAlternateRowOffset', (v) => { cfg.alternateRowOffset = v; relayoutField() })
+  addRow(fieldContent, { id: 'sliderProgressiveRowOffset', label: 'Progressive Row Offset (World Units / Row)', type: 'slider', min: -20, max: 20, step: 0.5, value: cfg.progressiveRowOffset })
+  wireSlider('sliderProgressiveRowOffset', (v) => { cfg.progressiveRowOffset = v; relayoutField() })
+  addRow(fieldContent, { id: 'checkboxUseProgressiveOffset', label: 'Use Progressive Offset (Off = Alternate)', type: 'checkbox' })
+  document.getElementById('checkboxUseProgressiveOffset').checked = cfg.useProgressiveOffset
+  wireCheckbox('checkboxUseProgressiveOffset', (v) => { cfg.useProgressiveOffset = v; relayoutField() })
+  addRow(fieldContent, { id: 'checkboxHideHands', label: 'Hide Hands', type: 'checkbox' })
+  document.getElementById('checkboxHideHands').checked = cfg.hideHands
+  wireCheckbox('checkboxHideHands', (v) => { cfg.hideHands = v; relayoutField(); syncHandModelEnabledCheckboxes() })
+
+  renderPoseGroup(addSubgroup(handModelContent, 'Pose'))
+  renderTweenGroup(addSubgroup(handModelContent, 'Tween'))
+  renderPhoneTiltGroup(addSubgroup(handModelContent, 'RESPONSIVE BEHAVIOUR - HAND'))
+
+  renderPhoneModelGroup(addGroup('PHONE MODEL'))
+
+  renderResponsiveWristSplayGroup(addGroup('Responsive Wrist Splay'))
+  renderCameraGroup(addGroup('Camera'))
+  renderLightingGroup(addGroup('Lighting'))
+  renderToonGroup(addGroup('Toon Shading'))
+
+  const bgContent = addGroup('Background')
+  addRow(bgContent, { id: 'colorBgColor', label: 'Background Color', type: 'color', value: cfg.bgColor })
+  wireColor('colorBgColor', (v) => { cfg.bgColor = v; scene.background.set(v) })
+
+  const groundContent = addGroup('Ground Plane')
+  addRow(groundContent, { id: 'checkboxGroundPlaneEnabled', label: 'Ground Plane On/Off', type: 'checkbox' })
+  document.getElementById('checkboxGroundPlaneEnabled').checked = cfg.groundPlaneEnabled
+  wireCheckbox('checkboxGroundPlaneEnabled', (v) => { cfg.groundPlaneEnabled = v; updateGroundPlane() })
+  addRow(groundContent, { id: 'sliderGroundHeight', label: 'Ground Height (World Units)', type: 'slider', min: -200, max: 200, step: 1, value: cfg.groundHeight })
+  wireSlider('sliderGroundHeight', (v) => { cfg.groundHeight = v; updateGroundPlane() })
+  addRow(groundContent, { id: 'colorGroundColor', label: 'Ground Color', type: 'color', value: cfg.groundColor })
+  wireColor('colorGroundColor', (v) => { cfg.groundColor = v; updateGroundPlane() })
+  addRow(groundContent, { id: 'sliderGroundScale', label: 'Ground Scale (Horizontal, World Units)', type: 'slider', min: 10, max: 2000, step: 10, value: cfg.groundScale })
+  wireSlider('sliderGroundScale', (v) => { cfg.groundScale = v; updateGroundPlane() })
+
+  const gizmoContent = addGroup('Finger Gizmos')
+  addRow(gizmoContent, { id: 'checkboxFingerGizmosEnabled', label: 'Finger Gizmos On/Off', type: 'checkbox' })
+  document.getElementById('checkboxFingerGizmosEnabled').checked = cfg.fingerGizmosEnabled
+  wireCheckbox('checkboxFingerGizmosEnabled', (v) => { cfg.fingerGizmosEnabled = v; setFingerGizmosVisible(v) })
+  addRow(gizmoContent, { id: 'sliderFingerGizmoSize', label: 'Gizmo Size (x)', type: 'slider', min: 0.1, max: 5, step: 0.05, value: cfg.fingerGizmoSize })
+  wireSlider('sliderFingerGizmoSize', (v) => { cfg.fingerGizmoSize = v })
+  addRow(gizmoContent, { id: 'colorFingerGizmoColor', label: 'Gizmo Color', type: 'color', value: cfg.fingerGizmoColor })
+  wireColor('colorFingerGizmoColor', (v) => { cfg.fingerGizmoColor = v })
+  addRow(gizmoContent, { id: 'sliderFingerGizmoAxisLength', label: 'Axis Line Length (World Units)', type: 'slider', min: 0.5, max: 20, step: 0.25, value: cfg.fingerGizmoAxisLength })
+  wireSlider('sliderFingerGizmoAxisLength', (v) => { cfg.fingerGizmoAxisLength = v })
+  addRow(gizmoContent, { id: 'sliderFingerGizmoAxisThickness', label: 'Axis Line Thickness (World Units)', type: 'slider', min: 0.02, max: 3, step: 0.02, value: cfg.fingerGizmoAxisThickness })
+  wireSlider('sliderFingerGizmoAxisThickness', (v) => { cfg.fingerGizmoAxisThickness = v })
+
+  renderDebugExtras()
+
+  // REQUIRED — see HANDYSET_CONTROLS' own declaration comment above
+  // addRow(): without this, every control's "Show in Mobile/Landscape"
+  // checkbox toggles and cascades correctly but the Mobile/Landscape row
+  // itself is never actually created.
+  /* eslint-disable-next-line no-undef */
+  registerDevControlArray('HANDYSET_CONTROLS', HANDYSET_CONTROLS)
+}
+window.renderHandysetDevGroups = renderHandysetDevGroups
+
+// =======================================================================
+// Git-tracked dev panel Save (CLAUDE.md §12l upgrade) — writes through to
+// /api/save-settings (a Vercel serverless function, api/save-settings.js)
+// so a Save from any device/browser is visible everywhere, not just
+// localStorage on the one that clicked it. Deliberately does NOT touch
+// devPanel.js (kept a verbatim copy of the template) — this attaches
+// its own additional click listeners to the existing SYNC buttons rather
+// than wrapping/overriding devPanel.js's own saveDevPanelSettings, and
+// polls for devPanel.js's globals (createDevGroupElement etc. load AFTER
+// main.js — see index.html's own script-order comment) before using them.
+// DEV_PANEL_SAVE_SECRET below is the workspace-shared anti-abuse token
+// (CLAUDE.md §12l — same value HANDO/DICKOCLICKO/OKCILCOKCID/HANDY
+// DANDIES all use) — update this AND the Vercel env var together if this
+// project's own Vercel setup used a different value.
+const DEV_PANEL_SAVE_SECRET = 'PkrbMti03M6xm3FEThYXa8gGW_08BOGj'
+const SAVE_SETTINGS_ENDPOINT = '/api/save-settings'
+
+function waitForDevPanelGlobal(name, timeoutMs = 8000) {
+  return new Promise((resolve, reject) => {
+    const start = performance.now()
+    ;(function poll() {
+      if (typeof window[name] === 'function') { resolve(window[name]); return }
+      if (performance.now() - start > timeoutMs) { reject(new Error(name + ' never became available')); return }
+      setTimeout(poll, 50)
+    })()
+  })
+}
+
+function setSyncStatusText(text) {
+  const status = document.getElementById('devSaveSyncStatus')
+  if (status) status.textContent = text
+}
+
+// GET-merge-POST, not a blind overwrite — REQUIRED (real bug, found live
+// 2026-09-21): this used to POST captureFullDevPanelState()'s own
+// snapshot directly, which wholesale-replaced the entire remote settings
+// file. captureFullDevPanelState() (a devPanel.js-owned function) has no
+// knowledge of this project's own extra top-level fields
+// (defaultPose/defaultCamera/defaultLighting/defaultToon, written by
+// saveFieldAsDefault() below) — so clicking the main Save/Sync button
+// after "Set as Default" silently stripped the just-set default field
+// right back out, exactly matching the reported repro ("I click it, and
+// i click save, and on refresh its still the old settings"). Merging
+// onto a fresh GET first preserves any field this function doesn't know
+// about, the same pattern saveFieldAsDefault() already used correctly.
+async function remoteSaveCurrentSettings() {
+  const capture = await waitForDevPanelGlobal('captureFullDevPanelState')
+  const snapshot = capture()
+  const getResp = await fetch(SAVE_SETTINGS_ENDPOINT, { cache: 'no-store' })
+  const getBody = await getResp.json().catch(() => ({}))
+  const base = (getResp.ok && getBody.ok === true && getBody.settings && typeof getBody.settings === 'object') ? getBody.settings : {}
+  const merged = Object.assign({}, base, snapshot)
+  const resp = await fetch(SAVE_SETTINGS_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Dev-Panel-Secret': DEV_PANEL_SAVE_SECRET },
+    body: JSON.stringify(merged)
+  })
+  const data = await resp.json().catch(() => ({ ok: false, error: 'Invalid server response' }))
+  if (!data.ok) throw new Error(data.error || ('HTTP ' + resp.status))
+  return data
+}
+
+function wireRemoteSaveButtons() {
+  const buttons = [
+    document.querySelector('.dev-buttons button[onclick="saveDevPanelSettings()"]'),
+    document.getElementById('devHeaderSyncBtn')
+  ].filter(Boolean)
+  buttons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      remoteSaveCurrentSettings()
+        .then(() => setSyncStatusText('synced to GitHub'))
+        .catch((err) => {
+          console.error(ts() + ' Remote save failed', err)
+          setSyncStatusText('GitHub save failed — ' + err.message)
+        })
+      setTimeout(() => setSyncStatusText(''), 3000)
+    })
+  })
+}
+
+// Generic "Set as Default" mechanism — GET-merge-POST a dedicated top-
+// level field (defaultPose/defaultCamera/defaultLighting/defaultToon)
+// through the same git-tracked settings endpoint the panel's own Sync
+// already uses. Ported from Hando's own saveAsDefaultForModel()/
+// loadDefaultForModelIfSaved() (main.js), simplified: Hando keys its
+// default per MODEL_LIST entry (multi-model project); Handyset has
+// exactly one hand/model, so there's nothing to key by — one flat field
+// per settings category is the direct equivalent. GET-merge-POST (not a
+// blind overwrite) so this never clobbers unrelated fields already saved
+// by a normal panel Sync.
+async function saveFieldAsDefault(fieldKey, captureFn, btn) {
+  const orig = btn.textContent
+  const flash = (msg) => { btn.textContent = msg; setTimeout(() => { btn.textContent = orig }, 2000) }
+  try {
+    const getResp = await fetch(SAVE_SETTINGS_ENDPOINT, { cache: 'no-store' })
+    const getBody = await getResp.json().catch(() => ({}))
+    const base = (getResp.ok && getBody.ok === true && getBody.settings && typeof getBody.settings === 'object') ? getBody.settings : {}
+    const merged = Object.assign({}, base, { [fieldKey]: captureFn() })
+    const postResp = await fetch(SAVE_SETTINGS_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Dev-Panel-Secret': DEV_PANEL_SAVE_SECRET },
+      body: JSON.stringify(merged)
+    })
+    const postBody = await postResp.json().catch(() => ({}))
+    if (postResp.ok && postBody.ok === true) { flash('Saved!'); return }
+    flash('Save failed: ' + (postBody.error || ('HTTP ' + postResp.status)))
+  } catch (err) {
+    flash('Save failed: offline/unreachable')
+  }
+}
+async function loadFieldDefaultIfSaved(fieldKey, useFn) {
+  try {
+    const resp = await fetch(SAVE_SETTINGS_ENDPOINT, { cache: 'no-store' })
+    const body = await resp.json().catch(() => ({}))
+    if (resp.ok && body.ok === true && body.settings && body.settings[fieldKey]) {
+      useFn(body.settings[fieldKey])
+    }
+  } catch (err) { /* offline/unreachable/not-yet-deployed -- keep whatever's already applied */ }
+}
+
+async function loadRemoteSettingsOnStartup() {
+  try {
+    const resp = await fetch(SAVE_SETTINGS_ENDPOINT, { cache: 'no-store' })
+    const data = await resp.json().catch(() => null)
+    if (!data || !data.ok || !data.settings) return
+    const apply = await waitForDevPanelGlobal('applyFullDevPanelState')
+    // Root-caused 2026-09-23 (?dev=1 vs no-dev startup state diverging):
+    // applyFullDevPanelState() -> applyControlValues() writes each saved
+    // value by `document.getElementById(id)` and dispatching a real
+    // 'input'/'change' event -- a control with no DOM element is a silent
+    // no-op (devPanel.js's own applyControlValues: `if (!el) return`).
+    // devPanel.js's own initDevPanelEngine() only builds that DOM eagerly
+    // when `isDevAllowed` (the panel's VISIBILITY gate, per
+    // TEMPLATE_DEV_PANEL.html's own design), so on a plain production
+    // visit (no ?dev=1, not localhost) the panel DOM never existed at
+    // all and this whole remote-settings apply silently did nothing --
+    // confirmed live: cfg.bgColor/wristSplayResponsiveEnabled/etc. read
+    // the raw hardcoded literal defaults in production while correctly
+    // reflecting the git-tracked Sync'd values under ?dev=1. Calling
+    // ensureDevPanelBuilt() here (idempotent -- it no-ops if already
+    // built, per its own `devPanelBuilt` guard) builds the DOM the apply
+    // needs regardless of dev-mode, while the panel itself stays hidden
+    // for a normal visitor exactly as before (visibility is a separate,
+    // pure-CSS `.dev-mode` gate untouched by this).
+    // Merge any remote (git-synced) list-picker items -- Saved Poses/
+    // Cameras/Lighting/Toon Shading/Tween Sequences -- BEFORE the dev
+    // panel gets built below, so a fresh visit whose panel hasn't been
+    // eagerly built yet (the normal production/no-?dev=1 case, since
+    // ensureDevPanelBuilt() below is exactly what builds it) renders the
+    // list-picker widgets already showing the remote data, not just the
+    // localStorage-restored snapshot from this same browser. When the
+    // panel WAS already eagerly built (dev-mode auto-open, which runs
+    // synchronously before this fetch can resolve), the arrays are still
+    // updated correctly here -- only that one picker's already-rendered
+    // list won't visually refresh until next reload, a minor, disclosed
+    // gap given each mutation's own Save/Overwrite reads the live array.
+    if (data.settings.listPicker_poses) loadListPickerItemsFromRemoteData(data.settings.listPicker_poses, SAVED_POSES)
+    if (data.settings.listPicker_cameras) loadListPickerItemsFromRemoteData(data.settings.listPicker_cameras, SAVED_CAMERAS)
+    if (data.settings.listPicker_lighting) loadListPickerItemsFromRemoteData(data.settings.listPicker_lighting, SAVED_LIGHTING)
+    if (data.settings.listPicker_toon) loadListPickerItemsFromRemoteData(data.settings.listPicker_toon, SAVED_TOON)
+    if (data.settings.listPicker_tweenSequences) loadListPickerItemsFromRemoteData(data.settings.listPicker_tweenSequences, SAVED_TWEEN_SEQUENCES)
+    if (typeof window.ensureDevPanelBuilt === 'function') window.ensureDevPanelBuilt()
+    apply(data.settings)
+  } catch (err) {
+    console.warn(ts() + ' Remote dev panel settings unavailable (expected on a plain static server, e.g. local dev):', err.message)
+  }
+}
+
+waitForDevPanelGlobal('saveDevPanelSettings').then(wireRemoteSaveButtons).catch((err) => console.warn(ts() + ' ' + err.message))
+loadRemoteSettingsOnStartup()
+// Best-effort, non-blocking -- if this resolves before the dev panel is
+// ever built, renderPhoneModelItemSelector() just no-ops (per its own
+// `if (!parent) return` guard) and the panel's first real build reads
+// PHONE_MODEL_OPTIONS fresh, already updated by then in the common case.
+loadPhoneModelManifest()
