@@ -6514,6 +6514,61 @@ same standing limitation as every other Phone Tilt/Rotation/Displace
 feature in this project.
 
 --------------------------------------------------------------------------------
+2026-10-01  -  Fix stale-localStorage dev-panel bug (schema-version bump)
+and rework Responsive Rotation's Min/Max Range to a symmetric 0-upward
+input.
+
+Bug: the previous entry's per-axis Rotation/Displace refactor renamed/
+removed 4 row ids (textPhoneResponsiveRotationRange/Curve,
+textPhoneResponsiveDisplaceRange/Curve) and added 18 new per-axis ones,
+all inside EXISTING, unrenamed groups (Responsive Rotation / RESPONSIVE
+DISPLACE) -- a row-id structural change, missed against this project's
+own documented HANDYSET_SETTINGS_SCHEMA_VERSION guard (which exists
+specifically for this class of change, previously only exercised for
+GROUP renames/merges, not individual row ids within an unchanged group).
+Surfaced via a direct report that other, unrelated dev-panel controls
+(the Mirror checkboxes -- Hand Mirror X/Y/Z in Pose, Screen Mirror
+Alternating/Phase X/Y in Recursive Render) appeared to have vanished,
+even though both were confirmed present and correctly wired in the real
+source via direct code inspection. Fixed by bumping the schema-version
+constant (2026-09-29b -> 2026-10-01), which clears a visitor's stale
+localStorage automatically on next load (does not touch the git-tracked
+settings file, same as every prior bump).
+
+Rotation range rework: direct request, "for rotation min max, make the
+input form 0 upwards. if i set it to 30, assume it means -30 to 30. Set
+default to 90. And the same applies to the curve editor, so X applies to
+both." The range-bar's own track no longer offers a negative value
+(trackMin 0, was -180) -- the single number left (what was previously
+"max") is the symmetric output ceiling in both directions, which the
+existing magnitude-then-sign formula (computePhoneResponsiveAxisDeg())
+already produces -- so this is a UI/default change, not a new formula.
+Default raised from 30 to 90 in cfg, the UI fallback, and
+phoneRotationAxisParsed's own initial object. The curve-editor's own X
+axis (0-1, raw tilt magnitude) already applies identically to both tilt
+directions (sign is handled separately, after the curve) -- confirmed
+this is what "the same applies... X applies to both" meant (not a new
+behavior to build), and strengthened its own caption text to say so
+explicitly ("Tilt Magnitude, Either Direction").
+
+Also surgically patched the 3 already-synced live values in
+dev-panel-settings.json (textPhoneRotationRangeX/Y/Z) back to the new
+default -- the live values held negative mins and odd maxes
+({min:-111,max:98} / {min:-112,max:99} / {min:-74,max:70}), clearly
+leftover from dragging the OLD, unconstrained track rather than
+intentional tuning, and inconsistent with the new 0-upward semantics.
+Checked for newer remote commits both before and after the patch (none
+found -- local main already matched origin/main, 0 ahead/0 behind, both
+times). Verified via a scoped diff before committing: exactly 3 lines
+changed, `controls` object's own key count unchanged (224).
+
+Verification: `node --check` passes; zero duplicate function/const/let
+declarations. Live browser-pane verification skipped per this project's
+own standing instruction (CLAUDE.md Gotchas) -- not independently
+confirmed that the schema-version bump actually resolves the reported
+symptom, since that can only be observed in a real browser session.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

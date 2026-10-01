@@ -7,18 +7,27 @@ append-only history.
 
 ## Currently working on
 
-**Nothing in progress right now** — the per-axis Min/Max Range + Curve
-Editor feature (direct request) is DONE: Displace got its 3x Range-bar +
-3x Curve-editor + 3x Reference-distance slider UI (backend already
-existed from before the truncation); Rotation needed a real restructuring
-of `computePhoneCombinedQuat()`'s desktop branch (independent per-axis
+**Nothing in progress right now.** Most recent work: fixed a stale-
+localStorage dev-panel bug (the per-axis curve-editor refactor below
+renamed/removed row ids without bumping `HANDYSET_SETTINGS_SCHEMA_VERSION`
+— this project's own documented guard for exactly this change class,
+caught via a report that unrelated Mirror checkboxes had seemingly
+vanished) and reworked Responsive Rotation's Min/Max Range to a
+symmetric 0-upward input (default 90, was 30) per direct request — see
+CHANGELOG's matching 2026-10-01 entry.
+
+Before that: the per-axis Min/Max Range + Curve Editor feature (direct
+request) — Displace got its 3x Range-bar + 3x Curve-editor + 3x
+Reference-distance slider UI (backend already existed from before the
+truncation); Rotation needed a real restructuring of
+`computePhoneCombinedQuat()`'s desktop branch (independent per-axis
 curve evaluation replacing the old combine-then-split-by-direction
 approach), verified via a standalone regression/independence/composition
 script (15/15 checks). See CHANGELOG's matching 2026-10-01 entry for the
 full account, including the EOL-normalization side effect found and fixed
 in passing.
 
-**Just fixed before that:** a CRITICAL regression —
+**Before that:** a CRITICAL regression —
 commit `36e3e6c` (a concurrent session) had truncated main.js by ~2200
 lines, deleting the ENTIRE HANDYSET-specific dev panel UI construction
 layer (every render function, `window.renderHandysetDevGroups`, the
