@@ -457,7 +457,11 @@ const cfg = {
   // locks their sliders, instead of the user tuning them by hand.
   screenTextureScale: 1, screenTextureRotation: 0,
   screenTextureOffsetX: 0, screenTextureOffsetY: 0,
+  screenTextureOffsetXMobile: 0, screenTextureOffsetYMobile: 0,
+  screenTextureOffsetXLandscape: 0, screenTextureOffsetYLandscape: 0,
   screenTextureScaleX: 1, screenTextureScaleY: 1,
+  screenTextureScaleXMobile: 1, screenTextureScaleYMobile: 1,
+  screenTextureScaleXLandscape: 1, screenTextureScaleYLandscape: 1,
   // Per-Level Scale (Min/Max + Curve) -- direct request 2026-09-29:
   // "provide a min max scale slider and a curve editor. The min max
   // will determine the min max scale of successive renders. The curve
@@ -2322,7 +2326,13 @@ const PHONE_MODEL_MANIFEST_ENDPOINT = '/api/upload-phone-model'
 let PHONE_MODEL_OPTIONS = [
   { value: 'data/processed/SMARTPHONE MODELS/P5_Project_1.glb', text: 'P5 Project 1' },
   { value: 'data/processed/SMARTPHONE MODELS/Pixel 9A.glb', text: 'Pixel 9A' },
-  { value: 'data/processed/SMARTPHONE MODELS/Iphone17MaxPro.glb', text: 'iPhone 17 Max Pro' }
+  { value: 'data/processed/SMARTPHONE MODELS/Iphone17MaxPro.glb', text: 'iPhone 17 Max Pro' },
+  { value: 'data/processed/SMARTPHONE MODELS/Galaxy S2.glb', text: 'Galaxy S2' },
+  { value: 'data/processed/SMARTPHONE MODELS/Motorola Razr.glb', text: 'Motorola Razr' },
+  { value: 'data/processed/SMARTPHONE MODELS/Nothing2.glb', text: 'Nothing2' },
+  { value: 'data/processed/SMARTPHONE MODELS/Samsung Galaxy S26.glb', text: 'Samsung Galaxy S26' },
+  { value: 'data/processed/SMARTPHONE MODELS/iPhone 17 Max.glb', text: 'iPhone 17 Max' },
+  { value: 'data/processed/SMARTPHONE MODELS/S4.glb', text: 'S4' }
 ] // hardcoded fallback, used only if BOTH the live manifest fetch (GitHub, via the API endpoint) AND the static same-origin manifest.json fail (e.g. fully offline)
 // REMOVED 2026-09-29 -- a per-model `scale` field (manifest.json) plus
 // an automatic scale-to-hand-length computation were both tried here
@@ -3889,8 +3899,12 @@ function setScreenRenderEnabled(enabled) {
 // every deeper depth alternating cleanly from there via compounding.
 function applyScreenTextureTransform(texture, isFinalDisplay, depth, levels) {
   if (!texture) return
-  let scaleX = cfg.screenTextureScaleX || 1
-  let scaleY = cfg.screenTextureScaleY || 1
+  const activeTab = getActiveDevPanelTab()
+  let deviceSuffix = ''
+  if (activeTab?.id === 'mobileTab') deviceSuffix = 'Mobile'
+  else if (activeTab?.id === 'landscapeTab') deviceSuffix = 'Landscape'
+  let scaleX = cfg['screenTextureScaleX' + deviceSuffix] || 1
+  let scaleY = cfg['screenTextureScaleY' + deviceSuffix] || 1
   if (cfg.screenToScaleEnabled) {
     // CORRECTED 2026-09-29, direct report: "the render still looks
     // stretched in one of the axes... regardless of my browser
@@ -3956,7 +3970,7 @@ function applyScreenTextureTransform(texture, isFinalDisplay, depth, levels) {
   texture.center.set(phoneScreenUvCenter.x, phoneScreenUvCenter.y)
   texture.repeat.set(mirrorX / (overall * scaleX), mirrorY / (overall * scaleY))
   texture.rotation = THREE.MathUtils.degToRad(cfg.screenTextureRotation || 0)
-  texture.offset.set(cfg.screenTextureOffsetX || 0, cfg.screenTextureOffsetY || 0)
+  texture.offset.set(cfg['screenTextureOffsetX' + deviceSuffix] || 0, cfg['screenTextureOffsetY' + deviceSuffix] || 0)
   // CORRECTED 2026-09-29 (2nd round), direct report "it didint work"
   // after the updateMatrix() fix (kept below) shipped and was tested
   // live. Live console instrumentation on Pixel 9A (8 levels, Mirror X
@@ -5356,6 +5370,21 @@ function wireSlider(id, onInput) {
   el.addEventListener('input', (e) => {
     const v = parseFloat(e.target.value)
     onInput(v)
+    requestRender()
+    const vEl = document.getElementById(id.replace(/^slider/, 'value'))
+    if (vEl) vEl.textContent = v
+  })
+}
+function wireDeviceSlider(id, cfgKey) {
+  // For controls with device checkboxes, route to device-specific cfg values
+  const el = document.getElementById(id)
+  if (!el) return
+  el.addEventListener('input', (e) => {
+    const v = parseFloat(e.target.value)
+    const activeTab = getActiveDevPanelTab()
+    if (activeTab?.id === 'mobileTab') cfg[cfgKey + 'Mobile'] = v
+    else if (activeTab?.id === 'landscapeTab') cfg[cfgKey + 'Landscape'] = v
+    else cfg[cfgKey] = v
     requestRender()
     const vEl = document.getElementById(id.replace(/^slider/, 'value'))
     if (vEl) vEl.textContent = v
@@ -6786,13 +6815,13 @@ function renderRecursiveRenderGroup(content) {
   addRow(content, { id: 'sliderScreenTextureRotation', label: 'Texture Rotation (Deg)', type: 'slider', min: -180, max: 180, step: 1, value: cfg.screenTextureRotation })
   wireSlider('sliderScreenTextureRotation', (v) => { cfg.screenTextureRotation = v })
   addRow(content, { id: 'sliderScreenTextureOffsetX', label: 'Texture X Offset', type: 'slider', min: -1, max: 1, step: 'any', value: cfg.screenTextureOffsetX })
-  wireSlider('sliderScreenTextureOffsetX', (v) => { cfg.screenTextureOffsetX = v })
+  wireDeviceSlider('sliderScreenTextureOffsetX', 'screenTextureOffsetX')
   addRow(content, { id: 'sliderScreenTextureOffsetY', label: 'Texture Y Offset', type: 'slider', min: -1, max: 1, step: 'any', value: cfg.screenTextureOffsetY })
-  wireSlider('sliderScreenTextureOffsetY', (v) => { cfg.screenTextureOffsetY = v })
+  wireDeviceSlider('sliderScreenTextureOffsetY', 'screenTextureOffsetY')
   addRow(content, { id: 'sliderScreenTextureScaleX', label: 'Texture X Scale (x)', type: 'slider', min: 0.1, max: 5, step: 'any', value: cfg.screenTextureScaleX })
-  wireSlider('sliderScreenTextureScaleX', (v) => { cfg.screenTextureScaleX = v })
+  wireDeviceSlider('sliderScreenTextureScaleX', 'screenTextureScaleX')
   addRow(content, { id: 'sliderScreenTextureScaleY', label: 'Texture Y Scale (x)', type: 'slider', min: 0.1, max: 5, step: 'any', value: cfg.screenTextureScaleY })
-  wireSlider('sliderScreenTextureScaleY', (v) => { cfg.screenTextureScaleY = v })
+  wireDeviceSlider('sliderScreenTextureScaleY', 'screenTextureScaleY')
   // Emission Intensity -- direct report: "When i use the Pixel 9A
   // model, the screen is very dim." See cfg.screenEmissionIntensity's
   // own comment for why this multiplies .color rather than a real
