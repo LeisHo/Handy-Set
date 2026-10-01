@@ -6721,11 +6721,11 @@ function renderPhoneModelGroup(content) {
   // file first (grep for the literal string), not assumed safe just
   // because it reads fine in isolation.
   const subRotation = addSubgroup(content, 'PHONE ROTATION')
-  addRow(subRotation, { id: 'sliderPhoneModelRotX', label: 'X Rotation (Deg)', type: 'slider', min: -180, max: 180, step: 1, value: cfg.phoneModelRotX })
+  addRow(subRotation, { id: 'sliderPhoneModelRotX', label: 'X Rotation (Deg)', type: 'slider', min: -90, max: 89, step: 1, value: cfg.phoneModelRotX })
   wireSlider('sliderPhoneModelRotX', (v) => { cfg.phoneModelRotX = v; applyPhoneModelTransform() })
-  addRow(subRotation, { id: 'sliderPhoneModelRotY', label: 'Y Rotation (Deg)', type: 'slider', min: -180, max: 180, step: 1, value: cfg.phoneModelRotY })
+  addRow(subRotation, { id: 'sliderPhoneModelRotY', label: 'Y Rotation (Deg)', type: 'slider', min: -90, max: 89, step: 1, value: cfg.phoneModelRotY })
   wireSlider('sliderPhoneModelRotY', (v) => { cfg.phoneModelRotY = v; applyPhoneModelTransform() })
-  addRow(subRotation, { id: 'sliderPhoneModelRotZ', label: 'Z Rotation (Deg)', type: 'slider', min: -180, max: 180, step: 1, value: cfg.phoneModelRotZ })
+  addRow(subRotation, { id: 'sliderPhoneModelRotZ', label: 'Z Rotation (Deg)', type: 'slider', min: -90, max: 89, step: 1, value: cfg.phoneModelRotZ })
   wireSlider('sliderPhoneModelRotZ', (v) => { cfg.phoneModelRotZ = v; applyPhoneModelTransform() })
 
   // RESPONSIVE BEHAVIOUR - PHONE (level 2, per direct correction) >
