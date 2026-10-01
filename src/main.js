@@ -5670,30 +5670,45 @@ function wireDeviceSlider(id, cfgKey) {
 // regardless of what the Mobile slider is dragged to -- exactly the
 // reported symptom.
 //
-// Fixed by POLLING (curveWidgetResyncs, the already-established pattern
-// in this file for exactly "an element that doesn't exist until later
-// and devPanel.js's own generic engine won't wire for me") rather than
-// trying to attach a live event listener -- the cloned element doesn't
-// exist until "Show in Mobile/Landscape" is checked, and can be
-// removed/recreated later (unchecking the visibility checkbox deletes
-// the row entirely -- see `ensureDynamicTargetRow()`'s own `!visible`
-// branch). Reads the DOM value directly rather than devDeviceValues, so
-// this works correctly whether the row is independent OR mirroring
-// Desktop (devPanel.js's own `applyDesktopMirror()` already keeps a
-// non-independent clone's DOM value in sync with Desktop -- no separate
-// branch needed here).
+// CORRECTED 2026-10-01, SAME DAY -- the first fix (a curveWidgetResyncs
+// poll) correctly bridged the VALUE into cfg, but a direct follow-up
+// report ("when i update mobile tab settings, othing happens, but if i
+// save ad refresh, they show up. make it isntantneous") surfaced a
+// 2nd, deeper issue: this project uses ON-DEMAND rendering (see
+// requestRender()'s own top-of-file comment) -- the render loop fully
+// STOPS once idle, and only requestRender() restarts it.
+// curveWidgetResyncs itself only runs AS PART OF animate()'s own body,
+// so once the loop goes idle (the normal state whenever nothing else is
+// animating), the poll never gets scheduled again at all, no matter how
+// long you wait -- dragging the Mobile slider alone never called
+// requestRender(), so the change sat in the DOM, correctly detectable,
+// but with nobody left to detect it. Save+refresh "worked" only because
+// a page load naturally triggers several renders in a row (plenty of
+// chances for the poll to catch up once), not because anything was
+// actually fixed.
+//
+// Switched to EVENT DELEGATION instead of polling: one `document`-level
+// 'input' listener per device (not per-element), checking `e.target.id`
+// -- since `document` always exists, this needs no knowledge of
+// whether the cloned element exists yet, survives it being removed/
+// recreated (unchecking/rechecking "Show in Mobile/Landscape"), and
+// fires on the REAL native 'input' event the slider already dispatches
+// on every drag tick (confirmed bubbles by default, same as the
+// synthetic events devPanel.js's own applyControlValues() dispatches
+// with `{ bubbles: true }` for Sync/Reset/Undo restores -- both paths
+// are covered by the same listener). Critically, this ALSO calls
+// requestRender() directly in the handler, which a poll can never do
+// for itself once the loop it depends on has already stopped.
 function wireDeviceSliderMirror(desktopId, cfgKey) {
   ;['Mobile', 'Landscape'].forEach((device) => {
     const id = desktopId.replace(/^(slider|color|select|checkbox)/, '$1' + device)
     const fullCfgKey = cfgKey + device
-    let lastSeen = null
-    curveWidgetResyncs.push(() => {
-      const el = document.getElementById(id)
-      if (!el) return
-      const v = parseFloat(el.value)
-      if (Number.isNaN(v) || v === lastSeen) return
-      lastSeen = v
+    document.addEventListener('input', (e) => {
+      if (!e.target || e.target.id !== id) return
+      const v = parseFloat(e.target.value)
+      if (Number.isNaN(v)) return
       cfg[fullCfgKey] = v
+      requestRender()
     })
   })
 }
