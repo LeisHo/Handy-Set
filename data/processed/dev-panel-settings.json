@@ -129,7 +129,7 @@
     "textPhoneResponsiveDisplaceRange": "{\"min\":0,\"max\":8}",
     "textPhoneResponsiveDisplaceCurve": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"monotone\"}",
     "checkboxScreenRenderEnabled": true,
-    "sliderScreenRecursionLevels": 30,
+    "sliderScreenRecursionLevels": 10,
     "sliderScreenRenderResolution": 200,
     "sliderScreenTextureScale": 1.20516163222046,
     "textScreenLevelScaleRange": "{\"min\":1,\"max\":1}",
@@ -211,7 +211,7 @@
   "layout": {
     "left": 26,
     "top": 27,
-    "width": 350,
+    "width": 669,
     "height": 521
   },
   "devPanelStyle": {
@@ -5725,6 +5725,10 @@
                 },
                 {
                   "type": "row",
+                  "key": "sliderMobileScreenTextureOffsetY"
+                },
+                {
+                  "type": "row",
                   "key": "textScreenLevelScaleRange"
                 },
                 {
@@ -5734,6 +5738,7 @@
               ],
               "rowKeys": [
                 "sliderMobileScreenTextureOffsetX",
+                "sliderMobileScreenTextureOffsetY",
                 "textScreenLevelScaleRange",
                 "textScreenLevelScaleCurve"
               ],
@@ -5744,89 +5749,51 @@
             "type": "group",
             "section": {
               "key": "mobile:RESPONSIVE BEHAVIOUR - PHONE",
+              "items": [],
+              "rowKeys": [],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "group",
+            "section": {
+              "key": "mobile:Responsive Rotation",
               "items": [
                 {
-                  "type": "group",
-                  "section": {
-                    "key": "mobile:Responsive Rotation",
-                    "items": [
-                      {
-                        "type": "row",
-                        "key": "textPhoneResponsiveRotationRange"
-                      },
-                      {
-                        "type": "row",
-                        "key": "textPhoneResponsiveRotationCurve"
-                      }
-                    ],
-                    "rowKeys": [
-                      "textPhoneResponsiveRotationRange",
-                      "textPhoneResponsiveRotationCurve"
-                    ],
-                    "subgroups": []
-                  }
+                  "type": "row",
+                  "key": "textPhoneResponsiveRotationRange"
                 },
                 {
-                  "type": "group",
-                  "section": {
-                    "key": "mobile:RESPONSIVE DISPLACE",
-                    "items": [
-                      {
-                        "type": "row",
-                        "key": "textPhoneResponsiveDisplaceRange"
-                      },
-                      {
-                        "type": "row",
-                        "key": "textPhoneResponsiveDisplaceCurve"
-                      }
-                    ],
-                    "rowKeys": [
-                      "textPhoneResponsiveDisplaceRange",
-                      "textPhoneResponsiveDisplaceCurve"
-                    ],
-                    "subgroups": []
-                  }
+                  "type": "row",
+                  "key": "textPhoneResponsiveRotationCurve"
                 }
               ],
-              "rowKeys": [],
-              "subgroups": [
+              "rowKeys": [
+                "textPhoneResponsiveRotationRange",
+                "textPhoneResponsiveRotationCurve"
+              ],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "group",
+            "section": {
+              "key": "mobile:RESPONSIVE DISPLACE",
+              "items": [
                 {
-                  "key": "mobile:Responsive Rotation",
-                  "items": [
-                    {
-                      "type": "row",
-                      "key": "textPhoneResponsiveRotationRange"
-                    },
-                    {
-                      "type": "row",
-                      "key": "textPhoneResponsiveRotationCurve"
-                    }
-                  ],
-                  "rowKeys": [
-                    "textPhoneResponsiveRotationRange",
-                    "textPhoneResponsiveRotationCurve"
-                  ],
-                  "subgroups": []
+                  "type": "row",
+                  "key": "textPhoneResponsiveDisplaceRange"
                 },
                 {
-                  "key": "mobile:RESPONSIVE DISPLACE",
-                  "items": [
-                    {
-                      "type": "row",
-                      "key": "textPhoneResponsiveDisplaceRange"
-                    },
-                    {
-                      "type": "row",
-                      "key": "textPhoneResponsiveDisplaceCurve"
-                    }
-                  ],
-                  "rowKeys": [
-                    "textPhoneResponsiveDisplaceRange",
-                    "textPhoneResponsiveDisplaceCurve"
-                  ],
-                  "subgroups": []
+                  "type": "row",
+                  "key": "textPhoneResponsiveDisplaceCurve"
                 }
-              ]
+              ],
+              "rowKeys": [
+                "textPhoneResponsiveDisplaceRange",
+                "textPhoneResponsiveDisplaceCurve"
+              ],
+              "subgroups": []
             }
           }
         ],
@@ -5853,6 +5820,10 @@
               },
               {
                 "type": "row",
+                "key": "sliderMobileScreenTextureOffsetY"
+              },
+              {
+                "type": "row",
                 "key": "textScreenLevelScaleRange"
               },
               {
@@ -5862,6 +5833,7 @@
             ],
             "rowKeys": [
               "sliderMobileScreenTextureOffsetX",
+              "sliderMobileScreenTextureOffsetY",
               "textScreenLevelScaleRange",
               "textScreenLevelScaleCurve"
             ],
@@ -5869,89 +5841,45 @@
           },
           {
             "key": "mobile:RESPONSIVE BEHAVIOUR - PHONE",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
+          {
+            "key": "mobile:Responsive Rotation",
             "items": [
               {
-                "type": "group",
-                "section": {
-                  "key": "mobile:Responsive Rotation",
-                  "items": [
-                    {
-                      "type": "row",
-                      "key": "textPhoneResponsiveRotationRange"
-                    },
-                    {
-                      "type": "row",
-                      "key": "textPhoneResponsiveRotationCurve"
-                    }
-                  ],
-                  "rowKeys": [
-                    "textPhoneResponsiveRotationRange",
-                    "textPhoneResponsiveRotationCurve"
-                  ],
-                  "subgroups": []
-                }
+                "type": "row",
+                "key": "textPhoneResponsiveRotationRange"
               },
               {
-                "type": "group",
-                "section": {
-                  "key": "mobile:RESPONSIVE DISPLACE",
-                  "items": [
-                    {
-                      "type": "row",
-                      "key": "textPhoneResponsiveDisplaceRange"
-                    },
-                    {
-                      "type": "row",
-                      "key": "textPhoneResponsiveDisplaceCurve"
-                    }
-                  ],
-                  "rowKeys": [
-                    "textPhoneResponsiveDisplaceRange",
-                    "textPhoneResponsiveDisplaceCurve"
-                  ],
-                  "subgroups": []
-                }
+                "type": "row",
+                "key": "textPhoneResponsiveRotationCurve"
               }
             ],
-            "rowKeys": [],
-            "subgroups": [
+            "rowKeys": [
+              "textPhoneResponsiveRotationRange",
+              "textPhoneResponsiveRotationCurve"
+            ],
+            "subgroups": []
+          },
+          {
+            "key": "mobile:RESPONSIVE DISPLACE",
+            "items": [
               {
-                "key": "mobile:Responsive Rotation",
-                "items": [
-                  {
-                    "type": "row",
-                    "key": "textPhoneResponsiveRotationRange"
-                  },
-                  {
-                    "type": "row",
-                    "key": "textPhoneResponsiveRotationCurve"
-                  }
-                ],
-                "rowKeys": [
-                  "textPhoneResponsiveRotationRange",
-                  "textPhoneResponsiveRotationCurve"
-                ],
-                "subgroups": []
+                "type": "row",
+                "key": "textPhoneResponsiveDisplaceRange"
               },
               {
-                "key": "mobile:RESPONSIVE DISPLACE",
-                "items": [
-                  {
-                    "type": "row",
-                    "key": "textPhoneResponsiveDisplaceRange"
-                  },
-                  {
-                    "type": "row",
-                    "key": "textPhoneResponsiveDisplaceCurve"
-                  }
-                ],
-                "rowKeys": [
-                  "textPhoneResponsiveDisplaceRange",
-                  "textPhoneResponsiveDisplaceCurve"
-                ],
-                "subgroups": []
+                "type": "row",
+                "key": "textPhoneResponsiveDisplaceCurve"
               }
-            ]
+            ],
+            "rowKeys": [
+              "textPhoneResponsiveDisplaceRange",
+              "textPhoneResponsiveDisplaceCurve"
+            ],
+            "subgroups": []
           }
         ]
       },
@@ -7616,6 +7544,10 @@
                 },
                 {
                   "type": "row",
+                  "key": "sliderLandscapeScreenTextureOffsetY"
+                },
+                {
+                  "type": "row",
                   "key": "textScreenLevelScaleRange"
                 },
                 {
@@ -7625,6 +7557,7 @@
               ],
               "rowKeys": [
                 "sliderLandscapeScreenTextureOffsetX",
+                "sliderLandscapeScreenTextureOffsetY",
                 "textScreenLevelScaleRange",
                 "textScreenLevelScaleCurve"
               ],
@@ -7635,89 +7568,51 @@
             "type": "group",
             "section": {
               "key": "landscape:RESPONSIVE BEHAVIOUR - PHONE",
+              "items": [],
+              "rowKeys": [],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "group",
+            "section": {
+              "key": "landscape:Responsive Rotation",
               "items": [
                 {
-                  "type": "group",
-                  "section": {
-                    "key": "landscape:Responsive Rotation",
-                    "items": [
-                      {
-                        "type": "row",
-                        "key": "textPhoneResponsiveRotationRange"
-                      },
-                      {
-                        "type": "row",
-                        "key": "textPhoneResponsiveRotationCurve"
-                      }
-                    ],
-                    "rowKeys": [
-                      "textPhoneResponsiveRotationRange",
-                      "textPhoneResponsiveRotationCurve"
-                    ],
-                    "subgroups": []
-                  }
+                  "type": "row",
+                  "key": "textPhoneResponsiveRotationRange"
                 },
                 {
-                  "type": "group",
-                  "section": {
-                    "key": "landscape:RESPONSIVE DISPLACE",
-                    "items": [
-                      {
-                        "type": "row",
-                        "key": "textPhoneResponsiveDisplaceRange"
-                      },
-                      {
-                        "type": "row",
-                        "key": "textPhoneResponsiveDisplaceCurve"
-                      }
-                    ],
-                    "rowKeys": [
-                      "textPhoneResponsiveDisplaceRange",
-                      "textPhoneResponsiveDisplaceCurve"
-                    ],
-                    "subgroups": []
-                  }
+                  "type": "row",
+                  "key": "textPhoneResponsiveRotationCurve"
                 }
               ],
-              "rowKeys": [],
-              "subgroups": [
+              "rowKeys": [
+                "textPhoneResponsiveRotationRange",
+                "textPhoneResponsiveRotationCurve"
+              ],
+              "subgroups": []
+            }
+          },
+          {
+            "type": "group",
+            "section": {
+              "key": "landscape:RESPONSIVE DISPLACE",
+              "items": [
                 {
-                  "key": "landscape:Responsive Rotation",
-                  "items": [
-                    {
-                      "type": "row",
-                      "key": "textPhoneResponsiveRotationRange"
-                    },
-                    {
-                      "type": "row",
-                      "key": "textPhoneResponsiveRotationCurve"
-                    }
-                  ],
-                  "rowKeys": [
-                    "textPhoneResponsiveRotationRange",
-                    "textPhoneResponsiveRotationCurve"
-                  ],
-                  "subgroups": []
+                  "type": "row",
+                  "key": "textPhoneResponsiveDisplaceRange"
                 },
                 {
-                  "key": "landscape:RESPONSIVE DISPLACE",
-                  "items": [
-                    {
-                      "type": "row",
-                      "key": "textPhoneResponsiveDisplaceRange"
-                    },
-                    {
-                      "type": "row",
-                      "key": "textPhoneResponsiveDisplaceCurve"
-                    }
-                  ],
-                  "rowKeys": [
-                    "textPhoneResponsiveDisplaceRange",
-                    "textPhoneResponsiveDisplaceCurve"
-                  ],
-                  "subgroups": []
+                  "type": "row",
+                  "key": "textPhoneResponsiveDisplaceCurve"
                 }
-              ]
+              ],
+              "rowKeys": [
+                "textPhoneResponsiveDisplaceRange",
+                "textPhoneResponsiveDisplaceCurve"
+              ],
+              "subgroups": []
             }
           }
         ],
@@ -7744,6 +7639,10 @@
               },
               {
                 "type": "row",
+                "key": "sliderLandscapeScreenTextureOffsetY"
+              },
+              {
+                "type": "row",
                 "key": "textScreenLevelScaleRange"
               },
               {
@@ -7753,6 +7652,7 @@
             ],
             "rowKeys": [
               "sliderLandscapeScreenTextureOffsetX",
+              "sliderLandscapeScreenTextureOffsetY",
               "textScreenLevelScaleRange",
               "textScreenLevelScaleCurve"
             ],
@@ -7760,89 +7660,45 @@
           },
           {
             "key": "landscape:RESPONSIVE BEHAVIOUR - PHONE",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
+          },
+          {
+            "key": "landscape:Responsive Rotation",
             "items": [
               {
-                "type": "group",
-                "section": {
-                  "key": "landscape:Responsive Rotation",
-                  "items": [
-                    {
-                      "type": "row",
-                      "key": "textPhoneResponsiveRotationRange"
-                    },
-                    {
-                      "type": "row",
-                      "key": "textPhoneResponsiveRotationCurve"
-                    }
-                  ],
-                  "rowKeys": [
-                    "textPhoneResponsiveRotationRange",
-                    "textPhoneResponsiveRotationCurve"
-                  ],
-                  "subgroups": []
-                }
+                "type": "row",
+                "key": "textPhoneResponsiveRotationRange"
               },
               {
-                "type": "group",
-                "section": {
-                  "key": "landscape:RESPONSIVE DISPLACE",
-                  "items": [
-                    {
-                      "type": "row",
-                      "key": "textPhoneResponsiveDisplaceRange"
-                    },
-                    {
-                      "type": "row",
-                      "key": "textPhoneResponsiveDisplaceCurve"
-                    }
-                  ],
-                  "rowKeys": [
-                    "textPhoneResponsiveDisplaceRange",
-                    "textPhoneResponsiveDisplaceCurve"
-                  ],
-                  "subgroups": []
-                }
+                "type": "row",
+                "key": "textPhoneResponsiveRotationCurve"
               }
             ],
-            "rowKeys": [],
-            "subgroups": [
+            "rowKeys": [
+              "textPhoneResponsiveRotationRange",
+              "textPhoneResponsiveRotationCurve"
+            ],
+            "subgroups": []
+          },
+          {
+            "key": "landscape:RESPONSIVE DISPLACE",
+            "items": [
               {
-                "key": "landscape:Responsive Rotation",
-                "items": [
-                  {
-                    "type": "row",
-                    "key": "textPhoneResponsiveRotationRange"
-                  },
-                  {
-                    "type": "row",
-                    "key": "textPhoneResponsiveRotationCurve"
-                  }
-                ],
-                "rowKeys": [
-                  "textPhoneResponsiveRotationRange",
-                  "textPhoneResponsiveRotationCurve"
-                ],
-                "subgroups": []
+                "type": "row",
+                "key": "textPhoneResponsiveDisplaceRange"
               },
               {
-                "key": "landscape:RESPONSIVE DISPLACE",
-                "items": [
-                  {
-                    "type": "row",
-                    "key": "textPhoneResponsiveDisplaceRange"
-                  },
-                  {
-                    "type": "row",
-                    "key": "textPhoneResponsiveDisplaceCurve"
-                  }
-                ],
-                "rowKeys": [
-                  "textPhoneResponsiveDisplaceRange",
-                  "textPhoneResponsiveDisplaceCurve"
-                ],
-                "subgroups": []
+                "type": "row",
+                "key": "textPhoneResponsiveDisplaceCurve"
               }
-            ]
+            ],
+            "rowKeys": [
+              "textPhoneResponsiveDisplaceRange",
+              "textPhoneResponsiveDisplaceCurve"
+            ],
+            "subgroups": []
           }
         ]
       },
@@ -9327,7 +9183,9 @@
     "sliderMobilePhoneRotationScaleZ": null,
     "sliderLandscapePhoneRotationScaleZ": null,
     "selectMobilePhoneRotationMode": null,
-    "selectLandscapePhoneRotationMode": null
+    "selectLandscapePhoneRotationMode": null,
+    "sliderMobileScreenTextureOffsetY": null,
+    "sliderLandscapeScreenTextureOffsetY": null
   },
   "devTextOverridesManual": [
     "desktop:New Group",
@@ -9417,7 +9275,8 @@
     "sliderPhoneRotationScaleY": false,
     "checkboxPhoneAxisZEnabled": false,
     "sliderPhoneRotationScaleZ": false,
-    "selectPhoneRotationMode": false
+    "selectPhoneRotationMode": false,
+    "sliderScreenTextureOffsetY": true
   },
   "devIndependence": {
     "mobile": {},
