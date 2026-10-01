@@ -7,8 +7,29 @@ append-only history.
 
 ## Currently working on
 
-**Nothing in progress right now** — the last active item added Clear
-All Logs / Copy All Logs / Pause-Resume Logs buttons spanning all 3
+**Nothing in progress right now** — the last active item switched
+Responsive Displace's whole data source: a real controlled device test
+(reset/move-one-axis/reset per axis, flat then tilted) revealed Sensor
+Log was logging `accelerationIncludingGravity` while Displace actually
+consumed the DIFFERENT `e.acceleration` field, which had never been
+directly observed and whose gravity-exclusion quality is device-
+dependent. Cross-referencing the real logged data (raw accel + actual
+orientation at each sample) through a standalone gravity-subtraction
+script confirmed accelerationIncludingGravity's own big swings during
+the "Up" test were a pure rotation artifact (properly gravity-subtracted
+linear accel stayed small/bounded through the same window), and found
+compass (alpha) is highly unstable at steep tilt on this device —
+directly explaining Real World Position mode's own jumpiness. Switched
+to computing linear acceleration from accelerationIncludingGravity minus
+a manually-computed gravity vector (the standard AHRS technique),
+verified against 2 known orientations via script. Added a "Log Linear
+Accel" diagnostic field so the next test shows the actual signal driving
+Displacement. Could NOT re-derive the Y/Z axis mapping from this round's
+data (no clean dominant spike per axis, and the Phone Model Log output
+wasn't included in what was pasted) — the existing swap is left in place
+but flagged as unverified against this new source. See CHANGELOG's
+matching entry. Before that: added Clear All Logs / Copy All Logs /
+Pause-Resume Logs buttons spanning all 3
 Debug-group logs (Mouse Log, Sensors, Phone Model Log) — Mouse Log's own
 state is private to `devPanel.js`, so 3 small bare-global helper
 functions were exposed there for `main.js` to reach it. See CHANGELOG's

@@ -5755,6 +5755,66 @@ cache-busters: `main.js` `?v=177` -> `?v=178`, `devPanel.js` `?v=13` ->
 `?v=14`.
 
 --------------------------------------------------------------------------------
+2026-09-30  -  Switch Responsive Displace to accelerationIncludingGravity
++ manual gravity subtraction
+
+Direct real-device test (reset/move-one-axis/reset, repeated per axis,
+flat then tilted 90 degrees). Cross-referencing the pasted Sensor Log
+against this feature's own code found a real gap: Sensor Log logs
+`accelerationIncludingGravity`, while Responsive Displace was reading
+`e.acceleration` (the browser's own pre-filtered, gravity-EXCLUDED
+"linear acceleration") -- two different signals, and `e.acceleration`
+had never actually been directly observed/logged at all this whole time.
+
+Ran the user's own real sensor data (raw accel + logged Compass/Orient
+beta/gamma at each sample) through a standalone script computing proper
+gravity-subtracted linear acceleration using the device's ACTUAL logged
+orientation at each instant. Findings:
+- During the "Up" test, raw `accelerationIncludingGravity` swings ~9-10
+  m/s² (the phone rotated ~86° -- gravity's own component shifted
+  between axes), but once gravity is subtracted using the real logged
+  orientation, linear acceleration stays small and bounded throughout
+  the SAME window -- confirming this is a rotation signature, not a
+  translation one, and strongly suggesting the OLD `e.acceleration`-
+  based code (whose actual values were never observed) was contaminated
+  by exactly this on this device/browser.
+- Compass (alpha) is highly unstable at steep tilt angles on this
+  device -- e.g. jumping 230.9° -> 268.0° -> 325.4° -> 178.0° within
+  about a second with no corresponding beta/gamma jump. This directly
+  explains 'Real World Position' mode's own jumpiness independent of
+  the gravity issue: that mode rotates acceleration into world frame
+  using alpha, so one bad compass sample produces a spurious rotation
+  of otherwise-real data.
+
+`e.acceleration`'s own gravity-exclusion quality is device/browser-
+dependent and can be null or unreliable on some hardware -- switched to
+computing linear acceleration ourselves from `accelerationIncludingGravity`
+(more universally available) minus a gravity vector computed from the
+device's own current orientation, the standard AHRS/IMU technique,
+verified via a standalone script against 2 known real-world orientations
+(flat screen-up, held vertically upright) before shipping -- both
+correctly reduce to ~0 linear acceleration at rest. Falls back to
+`e.acceleration` directly if no orientation reading is available yet.
+
+Also added a new "Log Linear Accel (No Gravity, Used By Displace)"
+Sensors-log checkbox (default on) that logs the EXACT same computed
+value Displacement consumes, extracted into a shared
+`computePhoneLinearAccelDeviceLocal()` helper -- so a future test
+directly shows the real signal driving this feature instead of the raw
+gravity-included reading, making the next axis-correspondence check far
+more reliable.
+
+Could NOT re-derive the Y/Z axis mapping from this round's data -- once
+gravity is properly subtracted, the Left/Right/Forward segments show
+small, noisy linear values with no clean dominant spike attributable to
+one axis in this particular test, and the Phone Model Log (the actual
+position/rotation output) wasn't included in what was pasted. The
+existing Y/Z swap is left in place, UNVERIFIED against this new data
+source -- flagged clearly in code for re-evaluation once a fresh test is
+run with the new diagnostic log in place. `index.html` cache-buster:
+`main.js` `?v=178` -> `?v=179`.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
