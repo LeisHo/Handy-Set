@@ -129,11 +129,11 @@
     "checkboxPhoneDisplaceAxisZEnabled": true,
     "sliderPhoneDisplaceScaleZ": 1,
     "checkboxPhoneDisplaceInvertZ": false,
-    "sliderPhoneDisplaceDamping": 0.23,
-    "sliderPhoneDisplaceVelDecayRate": 5.5,
-    "sliderPhoneDisplacePosDecayRate": 0.02,
+    "sliderPhoneDisplaceDamping": 0.15,
+    "sliderPhoneDisplaceVelDecayRate": 3,
+    "sliderPhoneDisplacePosDecayRate": 0.08,
     "checkboxPhoneDisplaceStationaryGateEnabled": true,
-    "sliderPhoneDisplaceStationaryGateDegPerSec": 10,
+    "sliderPhoneDisplaceStationaryGateDegPerSec": 2,
     "textPhoneDisplaceRangeX": "{\"min\":0,\"max\":20}",
     "textPhoneDisplaceCurveX": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"monotone\"}",
     "sliderPhoneDisplaceXReferenceM": 0.35,
@@ -144,7 +144,7 @@
     "textPhoneDisplaceCurveZ": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"monotone\"}",
     "sliderPhoneDisplaceZReferenceM": 0.35,
     "checkboxScreenRenderEnabled": true,
-    "sliderScreenRecursionLevels": 20,
+    "sliderScreenRecursionLevels": 10,
     "sliderScreenRenderResolution": 200,
     "sliderScreenTextureScale": 1.2,
     "textScreenLevelScaleRange": "{\"min\":1,\"max\":1}",
@@ -227,9 +227,9 @@
   },
   "layout": {
     "left": 35,
-    "top": 344,
+    "top": 109,
     "width": 350,
-    "height": 436
+    "height": 671
   },
   "devPanelStyle": {
     "titleFontSize": 17,
@@ -907,8 +907,15 @@
             "type": "group",
             "section": {
               "key": "desktop:Hotkeys",
-              "items": [],
-              "rowKeys": [],
+              "items": [
+                {
+                  "type": "row",
+                  "key": "sliderDevHotkeySequenceWindow"
+                }
+              ],
+              "rowKeys": [
+                "sliderDevHotkeySequenceWindow"
+              ],
               "subgroups": []
             }
           }
@@ -1437,8 +1444,15 @@
           },
           {
             "key": "desktop:Hotkeys",
-            "items": [],
-            "rowKeys": [],
+            "items": [
+              {
+                "type": "row",
+                "key": "sliderDevHotkeySequenceWindow"
+              }
+            ],
+            "rowKeys": [
+              "sliderDevHotkeySequenceWindow"
+            ],
             "subgroups": []
           }
         ]
