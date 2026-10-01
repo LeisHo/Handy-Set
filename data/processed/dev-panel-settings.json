@@ -100,7 +100,7 @@
     "sliderPhoneModelRotX": 0,
     "sliderPhoneModelRotY": 0,
     "sliderPhoneModelRotZ": 0,
-    "checkboxPhoneResponsiveRotationEnabled": true,
+    "checkboxPhoneResponsiveRotationEnabled": false,
     "selectPhoneRotationMode": "gyro",
     "checkboxPhoneRotationResetEnabled": true,
     "checkboxPhoneAxisXEnabled": true,
