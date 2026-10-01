@@ -7,16 +7,18 @@ append-only history.
 
 ## Currently working on
 
-**In progress:** per-axis Min/Max Range + Curve Editor + X Reference
-sliders for Responsive Displace and Rotation (direct request), with the
-curve's X-axis now representing a real physical quantity (displacement
-distance in meters, or raw tilt input) rather than a pre-normalized 0-1
-value — the X Reference slider is what maps real units onto the curve's
-X=1.0 point, letting small real movements be explicitly shaped to read
-0% output. Backend half done for Displace (`computePhoneDisplaceAxisUnits`
-now per-axis); UI half + the Rotation side still to come.
+**Nothing in progress right now** — the per-axis Min/Max Range + Curve
+Editor feature (direct request) is DONE: Displace got its 3x Range-bar +
+3x Curve-editor + 3x Reference-distance slider UI (backend already
+existed from before the truncation); Rotation needed a real restructuring
+of `computePhoneCombinedQuat()`'s desktop branch (independent per-axis
+curve evaluation replacing the old combine-then-split-by-direction
+approach), verified via a standalone regression/independence/composition
+script (15/15 checks). See CHANGELOG's matching 2026-10-01 entry for the
+full account, including the EOL-normalization side effect found and fixed
+in passing.
 
-**Just fixed, found while starting the above:** a CRITICAL regression —
+**Just fixed before that:** a CRITICAL regression —
 commit `36e3e6c` (a concurrent session) had truncated main.js by ~2200
 lines, deleting the ENTIRE HANDYSET-specific dev panel UI construction
 layer (every render function, `window.renderHandysetDevGroups`, the
@@ -335,6 +337,22 @@ Pushed to `https://github.com/LeisHo/Handy-Set`
 
 ## Recently completed
 
+- **Per-axis Min/Max Range + Curve Editor for Responsive Rotation and
+  Displace, plus a critical truncation discovery/restoration found while
+  starting it.** Displace: 3x Range-bar + Curve-editor + Reference-
+  distance slider UI wired to its already-existing per-axis backend.
+  Rotation: `computePhoneCombinedQuat()`'s desktop branch restructured
+  from "combine nx/ny into one radial magnitude, split by direction" to
+  genuinely independent per-axis curve evaluation — verified via a
+  standalone script (15/15 checks: sign-regression, independence, axis-
+  angle composition preserved). Separately: a concurrent session's commit
+  (`36e3e6c`) had truncated `main.js` by ~2200 lines mid-function,
+  deleting the entire HANDYSET-specific dev-panel UI layer and the
+  git-tracked remote Save/Sync subsystem — found, surfaced to the user,
+  and fully restored (verified zero duplicate declarations) before this
+  feature could even be built, since the UI layer it needed had been
+  deleted. See `docs/CHANGELOG.txt`'s matching 2026-10-01 entries for
+  the full account.
 - **SUPERSEDED, same day — the per-model `manifest.json` `scale` field
   bullet that used to sit here is REVERTED, per direct instruction:
   "No, I don't want you to override my personal settings, but make by

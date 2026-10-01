@@ -6430,6 +6430,90 @@ full feature account once the UI half lands. `index.html` cache-buster:
 `main.js` `?v=189` -> `?v=190`.
 
 --------------------------------------------------------------------------------
+2026-10-01  -  Build per-axis Min/Max Range + Curve editors for Responsive
+Rotation and Displace, finishing the feature begun before the truncation
+(previous entry). Direct request: "Make me a displacement min max slider
+and a curved editor for all 3 axes. Do the same for the rotation. If the
+existing curve editor becomes redundant get rid of it," then "i want x to
+be recorded acceleration or rotation, or displacement distance, and y is
+output percentage.. that way i can filter out small unintentional
+movements."
+
+Displace: Displace's backend (per-axis cfg, phoneDisplaceAxisParsed,
+computePhoneDisplaceAxisUnits(rawMeters, ..., axis)) already existed from
+before the truncation was found -- this pass wired in its UI: 3x Range-bar
++ 3x Curve-editor + 3x Reference-distance slider (the real METERS that
+read as curve-X=1.0, one independently-tunable value per axis, replacing
+the old single shared PHONE_DISPLACE_REFERENCE_METERS constant) inside
+RESPONSIVE DISPLACE, built via a loop over X/Y/Z rather than 9 unrolled
+widget blocks. Also calls parsePhoneResponsiveDisplaceConfig() once
+explicitly at build time (not just from curveWidgetResyncs on a detected
+change) so a Sync-restored non-default value takes effect from the first
+frame.
+
+Rotation: this needed a real restructuring, not just new UI. The OLD
+desktop tilt math (computePhoneCombinedQuat()'s desktop branch) combined
+nx/ny into ONE radial magnitude (combinedT = hypot(ny,nx)), ran that
+through ONE shared curve, then split the result proportionally back into
+betaDeg/gammaDeg by direction cosine -- meaning a diagonal tilt's output
+always tracked the SAME curve as a single-axis tilt of equal radial
+distance, which isn't "3 independent axes." computePhoneResponsiveAxisDeg()
+now takes an axis parameter ('X'/'Y'/'Z') and looks up that axis's own
+{range, curve, method} from a new phoneRotationAxisParsed object (mirrors
+phoneDisplaceAxisParsed's own shape); the desktop branch now computes
+betaDeg = computePhoneResponsiveAxisDeg(ny, 'X') and gammaDeg =
+computePhoneResponsiveAxisDeg(-nx, 'Y') directly -- each axis independently
+mapped through its own curve, no more combine-then-split. alphaDeg (spin,
+Z) already used nx as its own separate mechanism; it now reads the 'Z'
+curve too. Sign conventions preserved exactly (betaDeg's sign already
+followed ny, gammaDeg's followed -nx in the old formula, and
+computePhoneResponsiveAxisDeg() already returns magnitude*sign(raw), so
+passing the signed raw value directly reproduces the old signs with no
+extra Math.sign() call needed) -- confirmed via a standalone, dependency-
+free Node script (no `three` package available in this project outside
+the browser CDN importmap, so the verification reimplements the handful
+of quaternion/vector operations needed) checking: (A) regression -- for a
+PURE single-axis tilt with all 3 axes sharing the shipped-default
+curve/range, the new independent formula reproduces the old split formula
+exactly (byte-identical, since direction-cosine splitting is a no-op when
+only one component is nonzero); (B) genuine independence -- with
+DIFFERENT ranges per axis, a compound diagonal tilt's 2 outputs now
+scale by their OWN axis's range ratio (12x), not by the input's own 1:1
+ratio, proving each axis truly uses its own curve; (C) the existing
+documented "ONE axis-angle rotation, never sequential Euler" fix (see
+this file's own prior entries on cross-axis distortion) is untouched --
+betaDeg/gammaDeg still compose into a single
+normalize(betaDeg,0,gammaDeg)-axis rotation. 15/15 checks passed.
+
+UI: the old single Min/Max Range + Curve pair in RESPONSIVE BEHAVIOUR -
+PHONE > Responsive Rotation is replaced with 3 per-axis pairs (same
+loop-over-X/Y/Z pattern as Displace). parsePhoneResponsiveRotationConfig()
+is now also called once explicitly at build time (previously it was ONLY
+ever triggered by a curveWidgetResyncs-detected value change, meaning a
+Sync-restored non-default range/curve silently didn't take effect until
+the user manually touched the widget at least once -- not a regression,
+Rotation never had this gap closed before; closed now to match Displace's
+own, already-correct behavior).
+
+Also: found and fixed in passing (not a deliberate edit) -- the prior
+session's truncation-restore commit (642a0b9) appended its ~2200-line
+replacement tail via `cat ... >> src/main.js`, which carried the git-
+extracted source's own LF line endings onto an otherwise-consistently-
+CRLF file. This session's edits normalized the file back to uniform CRLF
+(confirmed: `git diff -b`/`--ignore-space-at-eol` shows the REAL content
+change was ~199 lines / 128 insertions+71 deletions, matching the actual
+edits described above -- the much larger raw diff stat was purely the EOL
+normalization). `index.html` cache-buster: `main.js` `?v=190` -> `?v=191`.
+
+Verification: `node --check` passes; zero duplicate function/const/let
+declarations (grepped). Live browser-pane verification skipped per this
+project's own standing instruction (see CLAUDE.md's Gotchas section --
+this sandbox's browser proxy can't reliably reach this project's dev
+server). Not independently confirmed against a real device/browser --
+same standing limitation as every other Phone Tilt/Rotation/Displace
+feature in this project.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
