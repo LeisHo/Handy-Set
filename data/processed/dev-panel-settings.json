@@ -112,11 +112,11 @@
     "sliderPhoneResponsiveRotationFineTune": 43,
     "sliderPhoneRotationDamping": 1,
     "textPhoneRotationRangeX": "{\"min\":0,\"max\":90}",
-    "textPhoneRotationCurveX": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"catmullrom\"}",
+    "textPhoneRotationCurveX": "{\"points\":[{\"x\":0,\"y\":1},{\"x\":1,\"y\":0}],\"method\":\"catmullrom\"}",
     "textPhoneRotationRangeY": "{\"min\":0,\"max\":90}",
-    "textPhoneRotationCurveY": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"catmullrom\"}",
+    "textPhoneRotationCurveY": "{\"points\":[{\"x\":0,\"y\":1},{\"x\":1,\"y\":0}],\"method\":\"catmullrom\"}",
     "textPhoneRotationRangeZ": "{\"min\":0,\"max\":90}",
-    "textPhoneRotationCurveZ": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"catmullrom\"}",
+    "textPhoneRotationCurveZ": "{\"points\":[{\"x\":0,\"y\":1},{\"x\":1,\"y\":0}],\"method\":\"catmullrom\"}",
     "checkboxPhoneResponsiveDisplaceEnabled": false,
     "selectPhoneDisplaceMode": "worldPosition",
     "checkboxPhoneDisplaceResetEnabled": true,
@@ -228,7 +228,7 @@
   "layout": {
     "left": 32,
     "top": 76,
-    "width": 350,
+    "width": 336,
     "height": 671
   },
   "devPanelStyle": {
