@@ -96,7 +96,7 @@
     "sliderPhoneModelRotX": 0,
     "sliderPhoneModelRotY": 0,
     "sliderPhoneModelRotZ": 0,
-    "checkboxPhoneResponsiveRotationEnabled": true,
+    "checkboxPhoneResponsiveRotationEnabled": false,
     "selectPhoneRotationMode": "gyro",
     "checkboxPhoneRotationResetEnabled": true,
     "checkboxPhoneAxisXEnabled": true,
@@ -109,20 +109,20 @@
     "sliderPhoneRotationDamping": 1,
     "textPhoneResponsiveRotationRange": "{\"min\":-57,\"max\":45}",
     "textPhoneResponsiveRotationCurve": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"natural\"}",
-    "checkboxPhoneResponsiveDisplaceEnabled": false,
+    "checkboxPhoneResponsiveDisplaceEnabled": true,
     "selectPhoneDisplaceMode": "acceleration",
     "checkboxPhoneDisplaceResetEnabled": true,
     "checkboxPhoneDisplaceAxisXEnabled": true,
-    "sliderPhoneDisplaceScaleX": 0.25,
+    "sliderPhoneDisplaceScaleX": 1,
     "checkboxPhoneDisplaceInvertX": false,
-    "checkboxPhoneDisplaceAxisYEnabled": false,
-    "sliderPhoneDisplaceScaleY": 0.25,
+    "checkboxPhoneDisplaceAxisYEnabled": true,
+    "sliderPhoneDisplaceScaleY": 1,
     "checkboxPhoneDisplaceInvertY": false,
     "checkboxPhoneDisplaceAxisZEnabled": true,
-    "sliderPhoneDisplaceScaleZ": 0.5,
+    "sliderPhoneDisplaceScaleZ": 1,
     "checkboxPhoneDisplaceInvertZ": false,
     "sliderPhoneResponsiveDisplaceFineTune": 0,
-    "sliderPhoneDisplaceDamping": 0.66,
+    "sliderPhoneDisplaceDamping": 1,
     "textPhoneResponsiveDisplaceRange": "{\"min\":-20,\"max\":20}",
     "textPhoneResponsiveDisplaceCurve": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"monotone\"}",
     "checkboxScreenRenderEnabled": false,
@@ -192,6 +192,7 @@
     "checkboxSensorStream": false,
     "sliderSensorInterval": 200,
     "checkboxSensorLogAccel": true,
+    "checkboxSensorLogLinearAccel": true,
     "checkboxSensorLogGyro": true,
     "checkboxSensorLogCompass": true,
     "checkboxSensorLogOrientBeta": true,
@@ -1545,6 +1546,10 @@
                 {
                   "type": "row",
                   "key": "checkboxSensorLogOrientGamma"
+                },
+                {
+                  "type": "row",
+                  "key": "checkboxSensorLogLinearAccel"
                 }
               ],
               "rowKeys": [
@@ -1554,7 +1559,8 @@
                 "checkboxSensorLogGyro",
                 "checkboxSensorLogCompass",
                 "checkboxSensorLogOrientBeta",
-                "checkboxSensorLogOrientGamma"
+                "checkboxSensorLogOrientGamma",
+                "checkboxSensorLogLinearAccel"
               ],
               "subgroups": []
             }
@@ -1674,6 +1680,10 @@
               {
                 "type": "row",
                 "key": "checkboxSensorLogOrientGamma"
+              },
+              {
+                "type": "row",
+                "key": "checkboxSensorLogLinearAccel"
               }
             ],
             "rowKeys": [
@@ -1683,7 +1693,8 @@
               "checkboxSensorLogGyro",
               "checkboxSensorLogCompass",
               "checkboxSensorLogOrientBeta",
-              "checkboxSensorLogOrientGamma"
+              "checkboxSensorLogOrientGamma",
+              "checkboxSensorLogLinearAccel"
             ],
             "subgroups": []
           },
@@ -9019,7 +9030,7 @@
     "desktop:RECURSIVE RENDER": false,
     "desktop:RESPONSIVE BEHAVIOUR - PHONE": false,
     "desktop:Responsive Rotation": true,
-    "desktop:RESPONSIVE DISPLACE": true,
+    "desktop:RESPONSIVE DISPLACE": false,
     "desktop:HAND MODEL": true,
     "desktop:Field Layout": true,
     "desktop:Pose": true,
