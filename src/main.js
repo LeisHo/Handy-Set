@@ -150,6 +150,18 @@ const HAND_MODEL_OPTIONS = [
 // directly by control event listeners further down.
 // ---------------------------------------------------------------------
 const cfg = {
+  // Global overrides for Responsive Rotation/Displace -- added 2026-10-01,
+  // direct request: "global on off switches for the responsive rotation
+  // and the responsive displacement... I understand that they do overlap
+  // with the individual checkboxes within the phone group, but this will
+  // override that. That way, when I'm switching between phone models, I
+  // don't have to keep turning them on and off individually." Lives in
+  // the Debug group (not Phone Model), AND-combined with each feature's
+  // own existing checkbox at every real gate -- the per-feature checkbox
+  // keeps its own stored value untouched either way; this purely gates
+  // whether that value can take effect. Default true (matches the
+  // existing checkboxes being the only gate until this is turned off).
+  responsiveRotationGlobalEnabled: true, responsiveDisplaceGlobalEnabled: true,
   // Field Layout — defaults to a single centered hand (1 row x 1 col);
   // per direct request, the full multi-hand field controls are ported
   // even though only 1x1 is used today, so more hands can be added later.
@@ -2506,6 +2518,7 @@ function computeScreenLevelScale(depth, levels) {
 const PHONE_RESPONSIVE_DEADZONE = 0.02 // ~1deg-equivalent (0.02 * 45)
 function computePhoneResponsiveAxisDeg(rawComponent) {
   if (!cfg.trackingEnabled) return 0
+  if (!cfg.responsiveRotationGlobalEnabled) return 0
   if (!cfg.phoneResponsiveRotationEnabled) return 0
   if (Math.abs(rawComponent) < PHONE_RESPONSIVE_DEADZONE) return 0
   const t = THREE.MathUtils.clamp(Math.abs(rawComponent), 0, 1)
@@ -2575,6 +2588,7 @@ function computePhoneResponsiveAxisDeg(rawComponent) {
 const PHONE_DISPLACE_REFERENCE_METERS = 0.35
 const PHONE_DISPLACE_DEADZONE = 0.02 // same role as PHONE_RESPONSIVE_DEADZONE, own constant since it gates a METERS ratio, not a degrees-equivalent one
 function computePhoneDisplaceAxisUnits(rawMeters, axisEnabled, axisScale, axisInverted) {
+  if (!cfg.responsiveDisplaceGlobalEnabled) return 0
   if (!cfg.phoneResponsiveDisplaceEnabled) return 0
   if (!axisEnabled) return 0
   const t = THREE.MathUtils.clamp(Math.abs(rawMeters) / PHONE_DISPLACE_REFERENCE_METERS, 0, 1)
@@ -2906,7 +2920,7 @@ function computePhoneCombinedQuat() {
 // beta=X/gamma=Y/alpha=Z-in-slot-order assumption this comment
 // originally described.
 function integratePhoneGyroRotation(e) {
-  if (!cfg.trackingEnabled || !cfg.phoneResponsiveRotationEnabled || !e.rotationRate) {
+  if (!cfg.trackingEnabled || !cfg.responsiveRotationGlobalEnabled || !cfg.phoneResponsiveRotationEnabled || !e.rotationRate) {
     phoneGyroLastTimestamp = null // clean restart, no big jump, whenever this resumes
     return
   }
@@ -3186,7 +3200,7 @@ function computePhoneLinearAccelDeviceLocal(e) {
   return null
 }
 function integratePhoneDisplacement(e) {
-  if (!cfg.phoneResponsiveDisplaceEnabled) {
+  if (!cfg.responsiveDisplaceGlobalEnabled || !cfg.phoneResponsiveDisplaceEnabled) {
     phoneDisplaceLastTimestamp = null // clean restart, no big jump, whenever this resumes -- same convention as integratePhoneGyroRotation's own phoneGyroLastTimestamp
     return
   }
@@ -3328,7 +3342,7 @@ let phoneDisplaceDesktopLastFrameTime = null
 // relative to mobile.
 const PHONE_DISPLACE_DESKTOP_SENSITIVITY = 8
 function updatePhoneDisplaceDesktopFrame() {
-  if (lastInputSource !== 'mouse' || !cfg.phoneResponsiveDisplaceEnabled) {
+  if (lastInputSource !== 'mouse' || !cfg.responsiveDisplaceGlobalEnabled || !cfg.phoneResponsiveDisplaceEnabled) {
     phoneDisplaceDesktopLastNdcX = null
     phoneDisplaceDesktopLastFrameTime = null
     return
@@ -7246,6 +7260,19 @@ function renderDebugExtras() {
   /* eslint-disable-next-line no-undef */
   const debugContent = findGroupContent('desktop', 'Debug', 'renderDebugExtras', 'debugExtras')
   if (!debugContent) return
+  // Global Responsive Rotation/Displace overrides -- direct request:
+  // "global on off switches for the responsive rotation and the
+  // responsive displacement... this will override that [the individual
+  // Phone Model checkboxes]... when I'm switching between phone models, I
+  // don't have to keep turning them on and off individually." AND-combined
+  // with each feature's own existing checkbox at every real gate -- see
+  // cfg.responsiveRotationGlobalEnabled's own declaration comment.
+  addRow(debugContent, { id: 'checkboxResponsiveRotationGlobalEnabled', label: 'Responsive Rotation (Global Override)', type: 'checkbox' })
+  document.getElementById('checkboxResponsiveRotationGlobalEnabled').checked = cfg.responsiveRotationGlobalEnabled
+  wireCheckbox('checkboxResponsiveRotationGlobalEnabled', (v) => { cfg.responsiveRotationGlobalEnabled = v; if (v) resetPhoneModelRotationBaseline() })
+  addRow(debugContent, { id: 'checkboxResponsiveDisplaceGlobalEnabled', label: 'Responsive Displacement (Global Override)', type: 'checkbox' })
+  document.getElementById('checkboxResponsiveDisplaceGlobalEnabled').checked = cfg.responsiveDisplaceGlobalEnabled
+  wireCheckbox('checkboxResponsiveDisplaceGlobalEnabled', (v) => { cfg.responsiveDisplaceGlobalEnabled = v })
   addRow(debugContent, { id: 'checkboxShowGridHelper', label: 'Show Grid Helper', type: 'checkbox' })
   document.getElementById('checkboxShowGridHelper').checked = cfg.showGridHelper
   wireCheckbox('checkboxShowGridHelper', (v) => { cfg.showGridHelper = v; gridHelper.visible = v })
