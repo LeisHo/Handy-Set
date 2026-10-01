@@ -7,9 +7,28 @@ append-only history.
 
 ## Currently working on
 
-**Nothing in progress right now** — the last active item added a Mirror
-group to Pose (`handMirrorX/Y/Z`, 3 checkboxes mirroring the hand along
-each of the model's own local axes). Read HANDO's real "demirror"
+**In progress:** a Hand Model Selector (Item Selector UI mirroring the
+existing Phone Model selector pattern, loading
+`data/processed/HAND3D/HandiBonesB-IK.glb` as a new selectable hand
+geometry alongside the current default `Hand2.glb`). Confirmed via direct
+GLB parsing that the new file shares the EXACT SAME bone names as the
+current rig (`rHand`, `rIndex1/2/3`, `rForearmBend`, etc. — just with
+extra non-functional helper/IK-target nodes), so the existing bone-name-
+based pose system should work unchanged once the model is swapped —
+investigating the current model-load flow (`handLoader.load()`,
+`rebuildField()`) to determine what needs to become re-runnable for a
+dynamic swap, following `loadPhoneModel()`'s own proven pattern.
+
+Most recently completed (interleaved with the above): fixed the Camera
+Yaw/Pitch sliders cross-corrupting each other's displayed value — a
+direction-convention mismatch between `getCameraYawPitch()` and
+`setCameraYawPitch()` (confirmed as a genuine latent bug already present
+in HANDO's own real source, not introduced while porting). See
+CHANGELOG's matching 2026-10-01 entry.
+
+Before that: added a Mirror group to Pose (`handMirrorX/Y/Z`, 3
+checkboxes mirroring the hand along each of the model's own local axes).
+Read HANDO's real "demirror"
 technique directly before implementing (per this project's own standing
 rule), but it doesn't transfer verbatim — HANDO mirrors via a dedicated
 ancestor node OUTSIDE the posed skeleton and cancels the reflection with

@@ -6032,6 +6032,43 @@ display-level settings (Field Layout, Toon Shading) already work in this
 file.
 
 --------------------------------------------------------------------------------
+2026-10-01  -  Fix Camera Yaw/Pitch sliders cross-corrupting each other's
+displayed value
+
+Direct report: "my camera yaw and pitch sliders dont work. when i click
+and drag one the other gets affected." Root cause: `getCameraYawPitch()`
+computed its direction as `controls.target - camera.position` (camera-to-
+target), but `setCameraYawPitch()` places the camera via `target +
+dist*dir` -- which requires the OPPOSITE convention (target-to-camera).
+Checked HANDO's own real source first (per this project's standing rule)
+and found the IDENTICAL mismatch there, confirming this is a genuine
+latent bug inherited from the shared original formula, not introduced
+while porting -- apparently never caught in HANDO because nothing there
+re-syncs an idle slider from a live camera read-back every frame the way
+`syncCameraPanelFromLive()` does here.
+
+Verified algebraically before touching anything: setting (yaw, pitch) via
+the old formula and immediately reading it back via the same (mismatched)
+function returns (yaw+180 mod 360, -pitch) -- a provable, consistent
+round-trip corruption, not float noise. Since `syncCameraPanelFromLive()`
+runs every frame and skips resyncing ONLY the slider the user currently
+has focus on, dragging Yaw (whose own handler calls
+`setCameraYawPitch(newYaw, cfg.cameraPitch)` -- cfg.cameraPitch itself
+never changes) immediately displayed a NEGATED pitch value on the Pitch
+slider on every subsequent frame, even though the underlying
+cfg.cameraPitch was never touched -- exactly the reported symptom, and
+symmetrically the other way when dragging Pitch.
+
+Fixed by flipping `getCameraYawPitch()`'s direction to
+`camera.position - controls.target`, matching `setCameraYawPitch()`'s own
+placement convention exactly -- reduces the round-trip to a mathematical
+identity. Verified via a standalone script: 56 (yaw, pitch) combinations
+spanning the full slider ranges round-trip to within 5.7e-14 degrees
+(floating-point noise) with the fix, vs. the old formula's provable
+~180deg/double-sign errors. `index.html` cache-buster: `main.js` `?v=182`
+-> `?v=183`.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
