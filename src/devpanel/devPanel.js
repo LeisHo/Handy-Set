@@ -536,8 +536,10 @@
     // hotkeys on mobile").
     // ----------------------------------------------------------------
     const devHotkeyIsTouchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
-    let devHotkeys = {}; // { [keySequence]: { id, type: 'checkbox'|'button'|'slider' } }
+    let devHotkeys = {}; // { [keySequence]: { id, type: 'checkbox'|'button'|'slider'|'header', action?: 'click' } }
+    // New format also supports modifiers: { 'ctrl+s': {...}, 'shift+d': {...}, 'a': {...}, 'ab': {...} }
     let devSetHotkeyArmed = false;
+    let devSetHotkeyHeaderMode = false; // true when assigning hotkeys to header buttons specifically
     // Which element/control types are eligible -- explicitly excludes
     // dropdowns (<select>), curve editors and color pickers (neither is
     // a plain checkbox/range/button element so both are naturally
@@ -634,7 +636,9 @@
         const badge = document.createElement('span');
         badge.className = 'dev-hotkey-badge';
         badge.dataset.hotkeyTarget = controlId;
-        badge.textContent = key;
+        // Display modifier keys nicely: 'ctrl+s' becomes 'Ctrl+S', 'shift+d' becomes 'Shift+D'
+        const displayKey = key.split('+').map(k => k.charAt(0).toUpperCase() + k.slice(1)).join('+');
+        badge.textContent = displayKey;
         badge.title = 'Double-click to edit, double-right-click to delete';
         let lastContextmenuAt = 0;
         badge.addEventListener('dblclick', (e) => {
@@ -656,7 +660,8 @@
     }
     // Opens the inline edit textbox (used both for a brand-new binding
     // from the Set Hotkey click-capture below, and for double-click-to-
-    // edit on an existing badge).
+    // edit on an existing badge). Supports both single keys (a, ab) and
+    // modifier combos (ctrl+s, shift+d, etc).
     function startHotkeyEdit(row, controlId, controlType, existingKey) {
         // Scoped by data-hotkey-target -- same reasoning as
         // renderHotkeyBadgeForRow()'s own matching fix.
@@ -666,19 +671,38 @@
         input.type = 'text';
         input.className = 'dev-hotkey-input';
         input.dataset.hotkeyTarget = controlId;
-        input.maxLength = 2;
+        input.placeholder = 'e.g., a, ab, ctrl+s, shift+d';
         if (existingKey) input.value = existingKey;
         insertHotkeyElementIntoRow(row, input, document.getElementById(controlId));
         input.focus(); input.select();
         let settled = false;
         function commit() {
             if (settled) return; settled = true;
-            const typed = input.value.trim().toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 2);
+            const typed = input.value.trim().toLowerCase();
             input.remove();
             if (typed) {
-                pushDevPanelUndoSnapshot(); devRedoStack = [];
-                if (existingKey && existingKey !== typed) delete devHotkeys[existingKey];
-                devHotkeys[typed] = { id: controlId, type: controlType };
+                // Normalize: allow ctrl+a, shift+b, alt+c, meta+d
+                const normalized = typed.replace(/[^a-z0-9+]/g, '').replace(/\++/g, '+');
+                const parts = normalized.split('+');
+                const validModifiers = ['ctrl', 'shift', 'alt', 'meta'];
+                const modParts = parts.filter(p => validModifiers.includes(p));
+                const keyPart = parts.find(p => !validModifiers.includes(p));
+
+                let finalKey = '';
+                if (modParts.length > 0 && keyPart) {
+                    finalKey = [...modParts, keyPart].join('+');
+                } else if (keyPart && /^[a-z0-9]{1,2}$/.test(keyPart)) {
+                    finalKey = keyPart;
+                }
+
+                if (finalKey) {
+                    pushDevPanelUndoSnapshot(); devRedoStack = [];
+                    if (existingKey && existingKey !== finalKey) delete devHotkeys[existingKey];
+                    devHotkeys[finalKey] = { id: controlId, type: controlType };
+                } else if (existingKey) {
+                    pushDevPanelUndoSnapshot(); devRedoStack = [];
+                    delete devHotkeys[existingKey];
+                }
             } else if (existingKey) {
                 // Committed empty while editing an existing hotkey -- treat
                 // as a delete, same as double-right-click would.
@@ -700,6 +724,98 @@
         });
         input.addEventListener('click', (ev) => ev.stopPropagation());
     }
+    // Modal hotkey input for header buttons (no inline badge display)
+    function startHotkeyEditForHeaderBtn(btnEl, btnId) {
+        // Create a floating modal overlay for modifier-key input
+        let modal = document.getElementById('devHeaderHotkeyModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'devHeaderHotkeyModal';
+            modal.className = 'dev-hotkey-modal';
+            modal.style.cssText = `
+                position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+                background: #1a1a1a; border: 1px solid #444; border-radius: 4px;
+                padding: 16px; z-index: 10000; min-width: 250px;
+                color: #ccc; font-family: monospace; font-size: 12px;
+            `;
+            document.body.appendChild(modal);
+        }
+        const btnLabel = btnEl.textContent || btnId;
+        const existingKey = findExistingHotkeyKeyForControl(btnId);
+        modal.innerHTML = `
+            <div style="margin-bottom: 8px; color: #aaa;">Set hotkey for: <strong>${btnLabel}</strong></div>
+            <div style="margin-bottom: 8px; font-size: 10px; color: #888;">
+                Press any key or modifier+key combination<br>
+                (e.g., Ctrl+S, Shift+D, or just 'A')
+            </div>
+            ${existingKey ? `<div style="margin-bottom: 8px; color: #6a6;">Current: <strong>${existingKey}</strong></div>` : ''}
+            <div id="devHeaderHotkeyDisplay" style="padding: 8px; background: #0a0a0a; border: 1px solid #333; border-radius: 2px; margin-bottom: 8px; color: #6af; text-align: center;">
+                Waiting for input...
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <button id="devHeaderHotkeyClearBtn" style="flex: 1; padding: 4px; background: #8b4513; border: none; border-radius: 2px; color: #fff; cursor: pointer;">Clear</button>
+                <button id="devHeaderHotkeyCloseBtn" style="flex: 1; padding: 4px; background: #333; border: none; border-radius: 2px; color: #ccc; cursor: pointer;">Close</button>
+            </div>
+        `;
+        modal.style.display = 'block';
+
+        let capturedKey = '';
+        const display = modal.querySelector('#devHeaderHotkeyDisplay');
+        const clearBtn = modal.querySelector('#devHeaderHotkeyClearBtn');
+        const closeBtn = modal.querySelector('#devHeaderHotkeyCloseBtn');
+
+        function closeModal() {
+            modal.style.display = 'none';
+            document.removeEventListener('keydown', keyHandler);
+            document.removeEventListener('click', outsideHandler);
+        }
+
+        function keyHandler(e) {
+            if (e.key === 'Escape') { closeModal(); return; }
+            if (!/^[a-z0-9]$/i.test(e.key)) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+
+            const modString = [
+                e.ctrlKey ? 'ctrl' : '',
+                e.shiftKey ? 'shift' : '',
+                e.altKey ? 'alt' : '',
+                e.metaKey ? 'meta' : ''
+            ].filter(Boolean).join('+');
+            capturedKey = modString ? modString + '+' + e.key.toLowerCase() : e.key.toLowerCase();
+            display.textContent = capturedKey;
+            display.style.color = '#af6';
+        }
+
+        function outsideHandler(e) {
+            if (!modal.contains(e.target) && !btnEl.contains(e.target)) closeModal();
+        }
+
+        clearBtn.addEventListener('click', () => {
+            pushDevPanelUndoSnapshot(); devRedoStack = [];
+            const oldKey = findExistingHotkeyKeyForControl(btnId);
+            if (oldKey) delete devHotkeys[oldKey];
+            capturedKey = '';
+            display.textContent = 'Cleared';
+            display.style.color = '#f66';
+            setTimeout(closeModal, 600);
+        });
+
+        closeBtn.addEventListener('click', () => {
+            if (capturedKey) {
+                pushDevPanelUndoSnapshot(); devRedoStack = [];
+                const oldKey = findExistingHotkeyKeyForControl(btnId);
+                if (oldKey && oldKey !== capturedKey) delete devHotkeys[oldKey];
+                devHotkeys[capturedKey] = { id: btnId, type: 'header', action: 'click' };
+            }
+            closeModal();
+        });
+
+        document.addEventListener('keydown', keyHandler);
+        document.addEventListener('click', outsideHandler);
+    }
+
     // The capturing click listener that actually implements "click Set
     // Hotkey, then click a checkbox/button/slider" -- same "capturing
     // listener on devPanel, gated by an armed flag" shape as Delete
@@ -727,6 +843,19 @@
             // clicking outside the panel (mirrors Delete Group's own
             // outside-click disarm, added below).
         }, true);
+
+        // Header button hotkey assignment (modal-based, no badge display)
+        const headerBtns = document.querySelectorAll('.dev-header-icon-btn, .dev-collapse-btn, .dev-hide-btn');
+        headerBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                if (!devSetHotkeyArmed) return;
+                if (!btn.id) { console.warn(ts() + ' Set Hotkey: header button has no id'); return; }
+                e.preventDefault();
+                e.stopPropagation();
+                startHotkeyEditForHeaderBtn(btn, btn.id);
+            }, true);
+        });
+
         document.addEventListener('click', (e) => {
             if (devPanel.contains(e.target)) return;
             if (devSetHotkeyArmed) disarmSetHotkey();
@@ -809,7 +938,7 @@
             // file's own established convention (CLAUDE.md's own restore-
             // dispatch gotcha documents this exact requirement).
             el.dispatchEvent(new Event('change', { bubbles: true }));
-        } else if (entry.type === 'button') {
+        } else if (entry.type === 'button' || entry.type === 'header') {
             pushDevPanelUndoSnapshot(); devRedoStack = [];
             el.click();
             // Safety net for main.js's on-demand-rendering flag (2026-09-29)
@@ -826,7 +955,27 @@
         if (devHotkeyIsTouchDevice) return;
         document.addEventListener('keydown', (e) => {
             if (activeSliderHotkey) { handleSliderHotkeyModeKey(e); return; }
-            if (isTypingIntoAnInput(e)) return; // never hijack normal typing, including the hotkey-edit textbox itself
+            if (isTypingIntoAnInput(e)) return;
+
+            // Check for modifier+key combos first (Ctrl+X, Shift+Y, etc.)
+            // These trigger immediately, not buffered like single keys
+            if ((e.ctrlKey || e.altKey || e.metaKey) && /^[a-z0-9]$/i.test(e.key)) {
+                e.preventDefault();
+                e.stopPropagation();
+                const modString = [
+                    e.ctrlKey ? 'ctrl' : '',
+                    e.shiftKey ? 'shift' : '',
+                    e.altKey ? 'alt' : '',
+                    e.metaKey ? 'meta' : ''
+                ].filter(Boolean).join('+');
+                const comboKey = modString ? modString + '+' + e.key.toLowerCase() : '';
+                if (devHotkeys[comboKey]) {
+                    triggerHotkey(devHotkeys[comboKey]);
+                }
+                return;
+            }
+
+            // Single alphanumeric keys: use the existing buffer system
             if (!/^[a-z0-9]$/i.test(e.key)) return;
             hotkeyKeyBuffer += e.key.toLowerCase();
             if (hotkeyKeyBuffer.length > 2) hotkeyKeyBuffer = hotkeyKeyBuffer.slice(-2);
@@ -952,13 +1101,15 @@
             // in either shape (e.g. a plain .dev-buttons button has no
             // separate label element, just its own text).
             const targetContainer = el ? el.closest('.dev-row, .dev-buttons') : null;
-            const label = targetContainer?.querySelector('.dev-label')?.textContent || entry.id;
+            const label = targetContainer?.querySelector('.dev-label')?.textContent || (el?.textContent) || entry.id;
             const row = document.createElement('div');
             row.className = 'dev-row';
             row.style.cssText = 'display:flex; align-items:center; gap:6px;';
             const badge = document.createElement('span');
             badge.className = 'dev-hotkey-badge';
-            badge.textContent = key;
+            // Display modifier keys nicely: 'ctrl+s' becomes 'Ctrl+S'
+            const displayKey = key.split('+').map(k => k.charAt(0).toUpperCase() + k.slice(1)).join('+');
+            badge.textContent = displayKey;
             badge.title = 'Double-click to edit, double-right-click to delete';
             let lastContextmenuAt = 0;
             badge.addEventListener('dblclick', (e) => {
