@@ -440,6 +440,14 @@ const cfg = {
   // reasoning. Defaults match the prior hardcoded values exactly, so
   // nothing changes until these are retuned.
   phoneDisplaceVelDecayRate: 3.0, phoneDisplacePosDecayRate: 0.08,
+  // Stationary gate -- added 2026-10-01, see integratePhoneDisplacement()'s
+  // own comment for the full root-cause account (orientation-sensor
+  // settling leaking into gravity subtraction, producing a slow drift a
+  // constant-bias filter can't fully cancel). Default ON, 2.0 deg/s --
+  // comfortably above the ~0 deg/s this project's own real "static" tests
+  // show and comfortably below the 5-90 deg/s range its own real
+  // deliberate-motion tests show.
+  phoneDisplaceStationaryGateEnabled: true, phoneDisplaceStationaryGateDegPerSec: 2.0,
   // World Units, same convention as phoneModelOffsetX/Y/Z (which this is
   // added onto) -- see computePhoneDisplaceAxisUnits()'s own comment for
   // how a leaky-integrated acceleration signal (in meters, unbounded
@@ -3238,6 +3246,35 @@ function integratePhoneDisplacement(e) {
       ax = filterPhoneDisplaceRawComponent(linear.x - phoneDisplaceBiasX)
       ay = filterPhoneDisplaceRawComponent(linear.z - phoneDisplaceBiasZ)
       az = filterPhoneDisplaceRawComponent(linear.y - phoneDisplaceBiasY)
+      // Stationary gate -- added 2026-10-01, direct report + real data:
+      // "And there is still drift when phone is static." The pasted log
+      // showed a MONOTONIC, non-random climb (never changing sign) in
+      // LinearAccel while raw accelerationIncludingGravity stayed exactly
+      // constant (x/y/z frozen) -- the only thing changing was Orient
+      // β/γ, drifting smoothly by 0.5-1.4deg over ~8s. Root cause: the
+      // device's own orientation estimate was still settling (compass/
+      // gyro sensor fusion), and since gravity subtraction
+      // (computePhoneLinearAccelDeviceLocal) depends on that orientation,
+      // a slowly-DRIFTING (not constant) orientation produces a slowly-
+      // drifting "linear acceleration" residual that the bias high-pass
+      // filter (tuned to cancel roughly-CONSTANT bias) can never fully
+      // catch up to -- it's always chasing a moving target. Verified via
+      // a standalone replay of the real data: gating integration on near-
+      // zero gyroscope rotation rate (the real device's own Gyro α/β/γ
+      // read ~0.00 throughout this entire "static" test) reduces the
+      // predicted drift from a peak of 0.063m to exactly 0.000m, while
+      // every one of this project's own real deliberate-motion tests this
+      // session showed Gyro values in the 5-90deg/s range during actual
+      // movement -- comfortably clear of a low gating threshold, so this
+      // should not suppress real intentional motion. Gated AFTER the bias
+      // filter update above (not before) so bias tracking keeps learning
+      // normally during stationary periods -- if anything, a still phone
+      // is the CLEANEST signal to learn true bias from; only the final
+      // ax/ay/az fed to the position integrator is forced to zero.
+      if (cfg.phoneDisplaceStationaryGateEnabled && e.rotationRate) {
+        const gyroMag = Math.hypot(e.rotationRate.alpha || 0, e.rotationRate.beta || 0, e.rotationRate.gamma || 0)
+        if (gyroMag < cfg.phoneDisplaceStationaryGateDegPerSec) { ax = 0; ay = 0; az = 0 }
+      }
       if (cfg.phoneDisplaceMode === 'worldPosition' && latestOrientation) {
         const q = computeDeviceOrientationQuat(latestOrientation.alpha || 0, latestOrientation.beta || 0, latestOrientation.gamma || 0)
         _phoneDisplaceWorldVec.set(ax, ay, az).applyQuaternion(q)
@@ -6239,6 +6276,7 @@ const PHONE_MODEL_PER_MODEL_CONTROL_IDS = [
   'checkboxPhoneDisplaceAxisYEnabled', 'sliderPhoneDisplaceScaleY', 'checkboxPhoneDisplaceInvertY',
   'checkboxPhoneDisplaceAxisZEnabled', 'sliderPhoneDisplaceScaleZ', 'checkboxPhoneDisplaceInvertZ',
   'sliderPhoneDisplaceDamping', 'sliderPhoneDisplaceVelDecayRate', 'sliderPhoneDisplacePosDecayRate',
+  'checkboxPhoneDisplaceStationaryGateEnabled', 'sliderPhoneDisplaceStationaryGateDegPerSec',
   'textPhoneResponsiveDisplaceRange', 'textPhoneResponsiveDisplaceCurve',
   'checkboxScreenRenderEnabled', 'sliderScreenRecursionLevels',
   'sliderScreenRenderResolution', 'sliderScreenTextureScale',
@@ -6785,6 +6823,11 @@ function renderPhoneModelGroup(content) {
   wireSlider('sliderPhoneDisplaceVelDecayRate', (v) => { cfg.phoneDisplaceVelDecayRate = v })
   addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplacePosDecayRate', label: 'Displace Position Decay Rate (1/s)', type: 'slider', min: 0.02, max: 5, step: 0.01, value: cfg.phoneDisplacePosDecayRate })
   wireSlider('sliderPhoneDisplacePosDecayRate', (v) => { cfg.phoneDisplacePosDecayRate = v })
+  addRow(subResponsiveDisplace, { id: 'checkboxPhoneDisplaceStationaryGateEnabled', label: 'Stationary Gate (Suppress Drift When Still)', type: 'checkbox' })
+  document.getElementById('checkboxPhoneDisplaceStationaryGateEnabled').checked = cfg.phoneDisplaceStationaryGateEnabled
+  wireCheckbox('checkboxPhoneDisplaceStationaryGateEnabled', (v) => { cfg.phoneDisplaceStationaryGateEnabled = v })
+  addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplaceStationaryGateDegPerSec', label: 'Stationary Gate Threshold (Deg/s)', type: 'slider', min: 0.1, max: 10, step: 0.1, value: cfg.phoneDisplaceStationaryGateDegPerSec })
+  wireSlider('sliderPhoneDisplaceStationaryGateDegPerSec', (v) => { cfg.phoneDisplaceStationaryGateDegPerSec = v })
   {
     let rangeDefault = { min: 0, max: 20 }
     try { rangeDefault = JSON.parse(cfg.phoneResponsiveDisplaceRange) } catch (e) { /* keep fallback */ }
