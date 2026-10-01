@@ -9197,7 +9197,7 @@
     "desktop:RECURSIVE RENDER": true,
     "desktop:RESPONSIVE BEHAVIOUR - PHONE": false,
     "desktop:Responsive Rotation": true,
-    "desktop:RESPONSIVE DISPLACE": false,
+    "desktop:RESPONSIVE DISPLACE": true,
     "desktop:HAND MODEL": true,
     "desktop:Field Layout": true,
     "desktop:Pose": true,
