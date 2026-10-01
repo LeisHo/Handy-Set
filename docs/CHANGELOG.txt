@@ -6740,6 +6740,73 @@ touched remotely), so no stash was needed, unlike the previous entry's
 merge.
 
 --------------------------------------------------------------------------------
+2026-10-01  -  Make Mobile/Landscape texture-offset edits take effect
+instantly (CORRECTED, same-day follow-up to the previous entry's fix).
+
+Direct report: "when i update mobile tab settings, othing happens, but
+if i save ad refresh, they show up. make it isntantneous." The previous
+fix (wireDeviceSliderMirror(), a curveWidgetResyncs poll) correctly
+bridged the EDITED VALUE into cfg -- confirmed working by the user's own
+report, since save+refresh DID show the change -- but missed a 2nd,
+deeper property of this project's architecture: on-demand rendering
+(see requestRender()'s own top-of-file comment). The render loop fully
+STOPS once idle (`renderLoopRunning = false`), and only requestRender()
+restarts it. curveWidgetResyncs only runs AS PART OF animate()'s own
+per-frame body -- once the loop goes idle (the normal resting state
+whenever nothing else is actively animating), the poll never gets
+scheduled again, no matter how long you wait. Dragging the Mobile
+slider alone never called requestRender() (no project-level listener
+was ever attached to the cloned element to begin with -- that's the
+whole reason the FIRST bug existed), so the render loop could easily
+already be idle at the moment of the edit, meaning the poll never got a
+chance to run and pick up the change. Save+refresh "worked" only
+because a page load naturally triggers several renders in a row (the
+initial load itself, remote-settings restores, etc.), giving the poll
+enough chances to catch up once -- not because the live-editing path
+was actually fixed.
+
+Replaced the poll with EVENT DELEGATION: one `document`-level 'input'
+listener per device (not per-element, not per-control -- registered
+once when wireDeviceSliderMirror() is called), checking `e.target.id`
+against the expected Mobile/Landscape id. This needs no knowledge of
+whether the cloned element exists yet (delegation naturally covers
+anything that bubbles an event up to `document`, regardless of when it
+was created), survives the element being removed/recreated
+(unchecking/rechecking "Show in Mobile/Landscape" -- confirmed via the
+standalone test's own case 4, a brand-new element object with the same
+id, zero re-wiring needed) -- and, critically, calls `requestRender()`
+DIRECTLY inside the event handler, which the poll could never do for
+itself once the loop it depends on had already stopped. Fires on the
+REAL native 'input' event the slider already dispatches on every drag
+tick (confirmed bubbles by default) AND on the synthetic events
+devPanel.js's own `applyControlValues()` dispatches with
+`{ bubbles: true }` for Sync/Reset/Undo restores -- one listener covers
+both paths.
+
+Verified via a standalone simulation against a fake delegated-event
+document (9/9 checks): delegation fires correctly for an element
+created AFTER the listener was registered (the entire point of using
+delegation over direct wiring); an unrelated control's own 'input'
+event doesn't cross-fire; Mobile and Landscape update independently of
+each other; `requestRender()` is called exactly once per real edit (not
+zero, not duplicated); a "removed and recreated" element (same id, new
+object, simulating the visibility checkbox being unchecked then
+rechecked) keeps working with no re-wiring needed.
+
+Verification: `node --check` passes; zero duplicate function/const/let
+declarations. Live browser-pane verification skipped per this project's
+own standing instruction -- not independently confirmed that dragging
+now actually feels instantaneous on a real device/browser, only that
+the underlying event-delegation + requestRender() mechanism is correct
+in isolation.
+
+Note: committing this also required a 3rd fast-forward past 3 more
+remote commits (further live Save Settings activity) -- again no file
+overlap against the working tree's own uncommitted Blender asset
+changes (only dev-panel-settings.json touched remotely), so no stash
+was needed.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

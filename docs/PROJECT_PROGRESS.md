@@ -7,19 +7,28 @@ append-only history.
 
 ## Currently working on
 
-**Nothing in progress right now.** Most recent work: found and fixed a
-new, previously-undocumented dev-panel bug class — `wireDeviceSlider()`
-only ever wires the DESKTOP element, so an "Independent from Desktop"
-Mobile/Landscape slider's edited value was silently written ONLY into
-devPanel.js's own internal `devDeviceValues` store, never reaching this
-project's `cfg` object at all. Hit Texture X/Y Offset (the reported bug)
-and Texture X/Y Scale (the identical bug on an adjacent control, found
-while fixing the first). Fixed with a new `wireDeviceSliderMirror()`
-helper (the same `curveWidgetResyncs` polling pattern already used
-elsewhere for exactly this "element doesn't exist until later" shape),
-now called after all 4 real `wireDeviceSlider()` sites in the file. See
-CLAUDE.md's Gotchas (new entry) and CHANGELOG's matching 2026-10-01
-entry for the full investigation and verification.
+**Nothing in progress right now.** Most recent work: made Mobile/
+Landscape texture-offset edits take effect instantly. The prior fix
+(below) correctly bridged the edited value into `cfg`, but missed a
+2nd, deeper property of this project's on-demand-rendering architecture
+— the render loop fully stops once idle, and the poll that bridge used
+only runs as part of that loop's own body, so it never got scheduled
+again once idle (dragging the Mobile slider alone never called
+`requestRender()`). Replaced the poll with event delegation
+(`document`-level `'input'` listener, fires regardless of render-loop
+state, calls `requestRender()` directly). Verified via a standalone
+simulation (9/9 checks). See CLAUDE.md's Gotchas (correction appended)
+and CHANGELOG's matching 2026-10-01 entry.
+
+Before that: found and fixed a new, previously-undocumented dev-panel
+bug class — `wireDeviceSlider()` only ever wires the DESKTOP element, so
+an "Independent from Desktop" Mobile/Landscape slider's edited value was
+silently written ONLY into devPanel.js's own internal `devDeviceValues`
+store, never reaching this project's `cfg` object at all. Hit Texture
+X/Y Offset (the reported bug) and Texture X/Y Scale (the identical bug
+on an adjacent control, found while fixing the first). See CLAUDE.md's
+Gotchas and CHANGELOG's matching 2026-10-01 entry for the full
+investigation.
 
 Before that: reworked Rotation's desktop cursor-tracking normalization
 to use half the browser WIDTH alone (`computeDesktopRotationNxNy()`,

@@ -2705,5 +2705,30 @@ wiring, and are still open:
   `wireColor()`/`wireSelect()` have no per-device variant at all in this
   file (only `wireSlider`/`wireDeviceSlider` do) — if a future device-
   aware checkbox/color/select control is ever added, it needs its OWN
-  equivalent mirror-polling helper, not an assumption that this fix
-  already covers it.
+  equivalent mirror bridge, not an assumption that this fix already
+  covers it.
+  **CORRECTED, same day — the polling mechanism above was itself
+  insufficient, not wrong about the value-bridging part.** Direct
+  follow-up: "when i update mobile tab settings, othing happens, but if
+  i save ad refresh, they show up. make it isntantneous." This project
+  uses ON-DEMAND rendering (`requestRender()`'s own top-of-file comment)
+  — the render loop fully stops once idle, and `curveWidgetResyncs`
+  only runs AS PART OF that loop's own per-frame body. Once the loop
+  goes idle (its normal resting state), the poll never gets scheduled
+  again at all, no matter how long you wait — dragging the Mobile
+  slider alone never called `requestRender()` (nothing was ever wired to
+  do so), so the edited value sat correctly in the DOM with nobody left
+  to read it. Save+refresh only *looked* fixed because a page load
+  naturally triggers several renders in a row, giving the poll enough
+  chances to catch up once. `wireDeviceSliderMirror()` now uses EVENT
+  DELEGATION instead — one `document`-level `'input'` listener per
+  device (registered once, not per-element), checking `e.target.id`.
+  This needs no knowledge of whether the cloned element exists yet,
+  survives it being removed/recreated, and — the actual fix for THIS
+  report — calls `requestRender()` directly in the handler, which a
+  poll tied to the render loop can never do for itself once that loop
+  has already stopped. **The general lesson: any future bridge from a
+  devPanel.js-owned dynamic element into `cfg`, in a project using
+  on-demand rendering, needs an explicit `requestRender()` call in its
+  own write path — reaching `cfg` correctly is necessary but not
+  sufficient if nothing then asks for a new frame.**
