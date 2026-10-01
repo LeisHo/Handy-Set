@@ -7,14 +7,28 @@ append-only history.
 
 ## Currently working on
 
-**Nothing in progress right now.** Most recent work: reworked Rotation's
-desktop cursor-tracking normalization to use half the browser WIDTH
-alone (`computeDesktopRotationNxNy()`, `window.innerWidth/2`) instead of
-whichever screen dimension was smaller — cursor movement now reaches the
-curve's own X=1 point exactly at the real screen edge, rather than
-saturating well before it on a typical landscape window. Kept deliberately
-separate from the shared `tiltMagnitude` several other features still
-depend on. See CHANGELOG's matching 2026-10-01 entry.
+**Nothing in progress right now.** Most recent work: found and fixed a
+new, previously-undocumented dev-panel bug class — `wireDeviceSlider()`
+only ever wires the DESKTOP element, so an "Independent from Desktop"
+Mobile/Landscape slider's edited value was silently written ONLY into
+devPanel.js's own internal `devDeviceValues` store, never reaching this
+project's `cfg` object at all. Hit Texture X/Y Offset (the reported bug)
+and Texture X/Y Scale (the identical bug on an adjacent control, found
+while fixing the first). Fixed with a new `wireDeviceSliderMirror()`
+helper (the same `curveWidgetResyncs` polling pattern already used
+elsewhere for exactly this "element doesn't exist until later" shape),
+now called after all 4 real `wireDeviceSlider()` sites in the file. See
+CLAUDE.md's Gotchas (new entry) and CHANGELOG's matching 2026-10-01
+entry for the full investigation and verification.
+
+Before that: reworked Rotation's desktop cursor-tracking normalization
+to use half the browser WIDTH alone (`computeDesktopRotationNxNy()`,
+`window.innerWidth/2`) instead of whichever screen dimension was
+smaller — cursor movement now reaches the curve's own X=1 point exactly
+at the real screen edge, rather than saturating well before it on a
+typical landscape window. Kept deliberately separate from the shared
+`tiltMagnitude` several other features still depend on. See CHANGELOG's
+matching 2026-10-01 entry.
 
 Before that: fixed a stale-localStorage dev-panel bug (the per-axis
 curve-editor refactor below renamed/removed row ids without bumping

@@ -6644,6 +6644,102 @@ genuine live tuning, not stale leftovers -- left untouched rather than
 overwritten with the code's own bare default.
 
 --------------------------------------------------------------------------------
+2026-10-01  -  Fix Texture Offset/Scale never reaching cfg on
+Mobile/Landscape.
+
+Direct report: "texture x and y offset still doesnt wok on either tab. I
+have the cehckboxes checked" -- followed by "they work on dsktop" / "just
+not mobile," confirming Desktop's own value worked (already fixed
+earlier this session via getRuntimeDeviceSuffix()) while Mobile/Landscape
+specifically still didn't.
+
+Investigated by reading devPanel.js directly rather than guessing.
+wireDeviceSlider() (main.js) only ever attaches its 'input' listener to
+the DESKTOP element -- the Mobile/Landscape row is a completely SEPARATE
+element devPanel.js auto-creates on demand
+(ensureDynamicTargetRow(), [JS-4b0]), with its own id. Confirmed the
+exact id convention directly from devPanel.js's own resolveDevControlId()
+regex (`^(slider|color|select|checkbox)(Mobile|Landscape)(.+)$`): the
+device name is inserted right after the type prefix
+(sliderMobileScreenTextureOffsetX), NOT appended at the end the way cfg
+keys are (screenTextureOffsetXMobile) -- a real naming mismatch between
+the DOM id scheme and the cfg key scheme that would have broken any
+naive fix attempt.
+
+That cloned element only ever gets devPanel.js's own generic text-
+readout listener (buildSliderRow() -- confirmed by reading it: one
+`input` listener, repaints the number display only, nothing else).
+When the row is "Independent from Desktop" (the whole point of a
+device-specific texture offset -- otherwise it would just mirror
+Desktop's value, which is useless for this feature), the edited value
+is written ONLY into devPanel.js's own internal `devDeviceValues` store
+(onDevTargetControlEdited()'s own independent branch) and NEVER reaches
+this project's `cfg` object at all -- confirmed by grepping devPanel.js
+for every `devDeviceValues` reference: none of them call back into any
+project-supplied callback; `cfg.screenTextureOffsetXMobile` (etc.)
+stayed frozen at its declared default (0) forever, regardless of how
+far the Mobile slider was dragged. This is a previously-undiscovered,
+genuinely new bug class in this project -- distinct from (though
+related in spirit to) the "hand-built widget invisible to Sync" bug
+class documented elsewhere in this file; this one is about the LIVE
+cfg write never happening at all, not a persistence gap.
+
+Fixed with a new `wireDeviceSliderMirror(desktopId, cfgKey)` helper,
+using the SAME `curveWidgetResyncs` polling pattern already established
+in this file for exactly "an element that doesn't exist until later and
+devPanel.js's own generic engine won't wire for me" (rather than trying
+to attach a live event listener to an element that doesn't exist at
+build time and can be destroyed/recreated later by
+unchecking/rechecking "Show in Mobile/Landscape"). Reads the DOM value
+directly rather than devDeviceValues, so it works correctly whether a
+row is independent OR mirroring Desktop (devPanel.js's own
+applyDesktopMirror() already keeps a non-independent clone's DOM value
+in sync with Desktop -- no separate branch needed). Applied to all 4
+sliders sharing this exact mechanism: Texture X/Y Offset (the reported
+bug) AND Texture X/Y Scale (the identical bug, found while fixing the
+reported one -- same wireDeviceSlider() call, same missing bridge).
+
+Verified via a standalone simulation against a fake DOM/cfg (7/7
+checks): no Mobile element yet -> no-op; element created at 0 -> no
+spurious write; dragged to 0.75 -> cfg updates; Landscape independently
+dragged to -0.4 doesn't affect Mobile's own value; Desktop's own cfg
+value untouched throughout; removing the row (unchecking "Show in
+Mobile") doesn't crash or reset the last value. Also independently
+confirmed the id-generation regex matches devPanel.js's own exactly
+(3/3 cases).
+
+Also fixed in passing (found while investigating, not deliberately
+sought): a single stray bare `\r` byte (no accompanying `\n`) sitting
+exactly at the spot this session's earlier file-truncation restoration
+(`cat ... >> src/main.js`) joined its extracted LF content onto the
+original CRLF file -- surfaced because it broke an Edit tool string
+match (`}function wireDeviceSlider` wouldn't match despite looking
+byte-identical on screen). Patched directly via a Node buffer script
+(found the exact byte offset, replaced the bare `\r` with a proper
+`\r\n`), then confirmed via a full-file scan that no other bare-CR
+bytes exist anywhere in the file. And updated
+`PHONE_MODEL_PER_MODEL_CONTROL_IDS`, which still listed the old SHARED
+`textPhoneResponsiveRotationRange/Curve` and
+`textPhoneResponsiveDisplaceRange/Curve` ids from before this session's
+earlier per-axis refactor -- a harmless no-op (capturePhoneModelPerModelSettings()'s
+own `if (!el) return` guard) but meant per-model switching silently
+never captured or restored Rotation/Displace's own range/curve tuning
+at all; updated to the real 15 per-axis ids now in use.
+
+Verification: `node --check` passes; zero duplicate function/const/let
+declarations; zero remaining bare-CR bytes. Live browser-pane
+verification skipped per this project's own standing instruction --
+not independently confirmed on a real device/browser, same standing
+limitation as everything else in this project.
+
+Note: committing this also required a 2nd fast-forward past 3 more
+remote commits (further live Save Settings activity from the user's own
+session) -- this time with no file overlap against the working tree's
+own uncommitted Blender asset changes (only dev-panel-settings.json was
+touched remotely), so no stash was needed, unlike the previous entry's
+merge.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

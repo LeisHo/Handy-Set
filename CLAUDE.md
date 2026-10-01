@@ -2661,3 +2661,49 @@ wiring, and are still open:
   project (not built via `addRow()`) needs this exact same hidden-
   input-mirror treatment to survive Sync — this bug class has now
   recurred 4 times in this one project alone.**
+- **`wireDeviceSlider()` (main.js) only wires the DESKTOP element — any
+  control using it needs a SEPARATE `wireDeviceSliderMirror()` call too,
+  or its "Independent from Desktop" Mobile/Landscape value is silently
+  never written to `cfg` at all, no matter how it's dragged.** Found
+  2026-10-01, direct report: "texture x and y offset still doesnt wok on
+  either tab. I have the cehckboxes checked" / "they work on dsktop...
+  just not mobile." Root cause, found by reading `devPanel.js` directly
+  rather than guessing: `ensureDynamicTargetRow()` ([JS-4b0]) auto-clones
+  a Mobile/Landscape row with its OWN DOM id — confirmed via
+  `resolveDevControlId()`'s own regex
+  (`^(slider|color|select|checkbox)(Mobile|Landscape)(.+)$`) that the
+  device name is inserted right after the type prefix
+  (`sliderMobileScreenTextureOffsetX`), NOT appended at the end the way
+  cfg keys are (`screenTextureOffsetXMobile`) — a real naming mismatch
+  between the DOM id scheme and the cfg key scheme. That cloned element
+  only ever gets devPanel.js's own generic text-readout listener
+  (`buildSliderRow()`) — when the row is Independent (the entire point
+  of a device-specific value), the edited value is written ONLY into
+  devPanel.js's own internal `devDeviceValues` store
+  (`onDevTargetControlEdited()`'s own independent branch) and NEVER
+  reaches the project's `cfg` object — confirmed by grepping every
+  `devDeviceValues` reference in devPanel.js: none call back into any
+  project-supplied callback. `cfg[key + 'Mobile']` stays frozen at its
+  declared default forever, regardless of what the Mobile slider is
+  dragged to. This is a DIFFERENT bug class from the "hand-built widget
+  invisible to Sync" one directly above (4 recurrences, persistence-only
+  — the control still correctly drove the LIVE render while editing) —
+  this one is about the live `cfg` write never happening at all, for a
+  control built the RIGHT way (`addRow()` + `HANDYSET_CONTROLS`) using
+  the project's own dedicated device-aware wiring helper. Fixed with a
+  new `wireDeviceSliderMirror(desktopId, cfgKey)`, using the SAME
+  `curveWidgetResyncs` polling pattern already established for "an
+  element that doesn't exist until later and devPanel.js's own generic
+  engine won't wire for me" — reads the live DOM value directly (works
+  whether independent OR mirroring Desktop) rather than reading
+  `devDeviceValues`. **Call it right after EVERY `wireDeviceSlider()`
+  call in this file** — found 4 real call sites when fixing this
+  (Texture X/Y Offset, the reported bug; Texture X/Y Scale, the
+  identical bug on an adjacent control) and fixed all 4 in one pass;
+  `wireDeviceSlider()` itself was NOT changed, so any call site missed
+  here will silently reproduce this exact symptom. `wireCheckbox()`/
+  `wireColor()`/`wireSelect()` have no per-device variant at all in this
+  file (only `wireSlider`/`wireDeviceSlider` do) — if a future device-
+  aware checkbox/color/select control is ever added, it needs its OWN
+  equivalent mirror-polling helper, not an assumption that this fix
+  already covers it.
