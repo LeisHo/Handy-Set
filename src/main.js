@@ -5707,14 +5707,14 @@ function getCameraYawPitch() {
   return { yaw, pitch, dist }
 }
 
-// Rotate by moving the target (not camera) to a point at current distance
+// Rotate by moving the camera (not target) to a point at current distance
 // along the new yaw/pitch direction (ported from HANDO)
 function setCameraYawPitch(yawDeg, pitchDeg) {
   const dist = getCameraYawPitch().dist
   const yaw = yawDeg * Math.PI / 180
   const pitch = pitchDeg * Math.PI / 180
   const dir = new THREE.Vector3(Math.cos(pitch) * Math.sin(yaw), Math.sin(pitch), Math.cos(pitch) * Math.cos(yaw))
-  controls.target.copy(camera.position).addScaledVector(dir, dist)
+  camera.position.copy(controls.target).addScaledVector(dir, dist)
   controls.update()
 }
 // Simplified vs. Handy Dandies' own version: clamps zoom distance only
