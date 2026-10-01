@@ -1,6 +1,7 @@
 {
   "controls": {
     "checkboxHandModelEnabled": false,
+    "hiddenHandModelFile": "data/processed/HAND3D/Hand2.glb",
     "sliderFieldRows": 1,
     "sliderFieldCols": 1,
     "sliderRowSpacing": 9.5,
@@ -13,6 +14,9 @@
     "slidermodelRotX": 90,
     "slidermodelRotY": 0,
     "slidermodelRotZ": 0,
+    "checkboxhandMirrorX": false,
+    "checkboxhandMirrorY": false,
+    "checkboxhandMirrorZ": false,
     "sliderbaseRotationX": -27,
     "sliderbaseRotationY": 0,
     "sliderbaseRotationZ": 0,
@@ -93,10 +97,10 @@
     "sliderPhoneModelOffsetX": 0,
     "sliderPhoneModelOffsetY": 31,
     "sliderPhoneModelOffsetZ": 0,
-    "sliderPhoneModelRotX": 0,
+    "sliderPhoneModelRotX": -10,
     "sliderPhoneModelRotY": 0,
     "sliderPhoneModelRotZ": 0,
-    "checkboxPhoneResponsiveRotationEnabled": true,
+    "checkboxPhoneResponsiveRotationEnabled": false,
     "selectPhoneRotationMode": "gyro",
     "checkboxPhoneRotationResetEnabled": true,
     "checkboxPhoneAxisXEnabled": true,
@@ -114,19 +118,19 @@
     "checkboxPhoneDisplaceResetEnabled": true,
     "checkboxPhoneDisplaceAxisXEnabled": true,
     "sliderPhoneDisplaceScaleX": 1,
-    "checkboxPhoneDisplaceInvertX": false,
-    "checkboxPhoneDisplaceAxisYEnabled": true,
+    "checkboxPhoneDisplaceInvertX": true,
+    "checkboxPhoneDisplaceAxisYEnabled": false,
     "sliderPhoneDisplaceScaleY": 1,
     "checkboxPhoneDisplaceInvertY": false,
-    "checkboxPhoneDisplaceAxisZEnabled": true,
+    "checkboxPhoneDisplaceAxisZEnabled": false,
     "sliderPhoneDisplaceScaleZ": 1,
     "checkboxPhoneDisplaceInvertZ": false,
     "sliderPhoneResponsiveDisplaceFineTune": 0,
     "sliderPhoneDisplaceDamping": 1,
-    "textPhoneResponsiveDisplaceRange": "{\"min\":0,\"max\":20}",
+    "textPhoneResponsiveDisplaceRange": "{\"min\":-18,\"max\":12}",
     "textPhoneResponsiveDisplaceCurve": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"monotone\"}",
-    "checkboxScreenRenderEnabled": true,
-    "sliderScreenRecursionLevels": 9,
+    "checkboxScreenRenderEnabled": false,
+    "sliderScreenRecursionLevels": 7,
     "sliderScreenRenderResolution": 200,
     "sliderScreenTextureScale": 1.25,
     "textScreenLevelScaleRange": "{\"min\":1,\"max\":1}",
@@ -155,8 +159,8 @@
     "checkboxLockCameraPan": true,
     "checkboxLockCameraZoom": true,
     "checkboxLockCameraRotate": true,
-    "sliderCameraYaw": 180,
-    "sliderCameraPitch": -89,
+    "sliderCameraYaw": 0,
+    "sliderCameraPitch": 89,
     "checkboxCameraMaxExtentsEnabled": false,
     "sliderKeyAzimuth": 360,
     "sliderKeyElevation": 53,
@@ -188,6 +192,8 @@
     "sliderFingerGizmoAxisThickness": 0.02,
     "checkboxShowGridHelper": false,
     "checkboxShowAxesHelper": true,
+    "sliderWorldAxesLength": 50,
+    "sliderWorldAxesThickness": 1,
     "checkboxShowWireframe": false,
     "checkboxSensorStream": false,
     "sliderSensorInterval": 200,
@@ -207,7 +213,7 @@
     "left": 26,
     "top": 27,
     "width": 350,
-    "height": 529
+    "height": 135
   },
   "devPanelStyle": {
     "titleFontSize": 17,
@@ -885,15 +891,8 @@
             "type": "group",
             "section": {
               "key": "desktop:Hotkeys",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "sliderDevHotkeySequenceWindow"
-                }
-              ],
-              "rowKeys": [
-                "sliderDevHotkeySequenceWindow"
-              ],
+              "items": [],
+              "rowKeys": [],
               "subgroups": []
             }
           }
@@ -1422,15 +1421,8 @@
           },
           {
             "key": "desktop:Hotkeys",
-            "items": [
-              {
-                "type": "row",
-                "key": "sliderDevHotkeySequenceWindow"
-              }
-            ],
-            "rowKeys": [
-              "sliderDevHotkeySequenceWindow"
-            ],
+            "items": [],
+            "rowKeys": [],
             "subgroups": []
           }
         ]
@@ -1587,12 +1579,22 @@
               "rowKeys": [],
               "subgroups": []
             }
+          },
+          {
+            "type": "row",
+            "key": "sliderWorldAxesLength"
+          },
+          {
+            "type": "row",
+            "key": "sliderWorldAxesThickness"
           }
         ],
         "rowKeys": [
           "checkboxShowAxesHelper",
           "checkboxShowGridHelper",
-          "checkboxShowWireframe"
+          "checkboxShowWireframe",
+          "sliderWorldAxesLength",
+          "sliderWorldAxesThickness"
         ],
         "subgroups": [
           {
@@ -3146,6 +3148,32 @@
                     "rowKeys": [],
                     "subgroups": []
                   }
+                },
+                {
+                  "type": "group",
+                  "section": {
+                    "key": "desktop:MIRROR",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "checkboxhandMirrorX"
+                      },
+                      {
+                        "type": "row",
+                        "key": "checkboxhandMirrorY"
+                      },
+                      {
+                        "type": "row",
+                        "key": "checkboxhandMirrorZ"
+                      }
+                    ],
+                    "rowKeys": [
+                      "checkboxhandMirrorX",
+                      "checkboxhandMirrorY",
+                      "checkboxhandMirrorZ"
+                    ],
+                    "subgroups": []
+                  }
                 }
               ],
               "rowKeys": [],
@@ -3506,6 +3534,29 @@
                   "key": "desktop:Saved Poses",
                   "items": [],
                   "rowKeys": [],
+                  "subgroups": []
+                },
+                {
+                  "key": "desktop:MIRROR",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "checkboxhandMirrorX"
+                    },
+                    {
+                      "type": "row",
+                      "key": "checkboxhandMirrorY"
+                    },
+                    {
+                      "type": "row",
+                      "key": "checkboxhandMirrorZ"
+                    }
+                  ],
+                  "rowKeys": [
+                    "checkboxhandMirrorX",
+                    "checkboxhandMirrorY",
+                    "checkboxhandMirrorZ"
+                  ],
                   "subgroups": []
                 }
               ]
@@ -4302,6 +4353,32 @@
                   "rowKeys": [],
                   "subgroups": []
                 }
+              },
+              {
+                "type": "group",
+                "section": {
+                  "key": "desktop:MIRROR",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "checkboxhandMirrorX"
+                    },
+                    {
+                      "type": "row",
+                      "key": "checkboxhandMirrorY"
+                    },
+                    {
+                      "type": "row",
+                      "key": "checkboxhandMirrorZ"
+                    }
+                  ],
+                  "rowKeys": [
+                    "checkboxhandMirrorX",
+                    "checkboxhandMirrorY",
+                    "checkboxhandMirrorZ"
+                  ],
+                  "subgroups": []
+                }
               }
             ],
             "rowKeys": [],
@@ -4662,6 +4739,29 @@
                 "key": "desktop:Saved Poses",
                 "items": [],
                 "rowKeys": [],
+                "subgroups": []
+              },
+              {
+                "key": "desktop:MIRROR",
+                "items": [
+                  {
+                    "type": "row",
+                    "key": "checkboxhandMirrorX"
+                  },
+                  {
+                    "type": "row",
+                    "key": "checkboxhandMirrorY"
+                  },
+                  {
+                    "type": "row",
+                    "key": "checkboxhandMirrorZ"
+                  }
+                ],
+                "rowKeys": [
+                  "checkboxhandMirrorX",
+                  "checkboxhandMirrorY",
+                  "checkboxhandMirrorZ"
+                ],
                 "subgroups": []
               }
             ]
@@ -6317,6 +6417,15 @@
                     "rowKeys": [],
                     "subgroups": []
                   }
+                },
+                {
+                  "type": "group",
+                  "section": {
+                    "key": "mobile:MIRROR",
+                    "items": [],
+                    "rowKeys": [],
+                    "subgroups": []
+                  }
                 }
               ],
               "rowKeys": [],
@@ -6404,6 +6513,12 @@
                 },
                 {
                   "key": "mobile:Saved Poses",
+                  "items": [],
+                  "rowKeys": [],
+                  "subgroups": []
+                },
+                {
+                  "key": "mobile:MIRROR",
                   "items": [],
                   "rowKeys": [],
                   "subgroups": []
@@ -6760,6 +6875,15 @@
                   "rowKeys": [],
                   "subgroups": []
                 }
+              },
+              {
+                "type": "group",
+                "section": {
+                  "key": "mobile:MIRROR",
+                  "items": [],
+                  "rowKeys": [],
+                  "subgroups": []
+                }
               }
             ],
             "rowKeys": [],
@@ -6847,6 +6971,12 @@
               },
               {
                 "key": "mobile:Saved Poses",
+                "items": [],
+                "rowKeys": [],
+                "subgroups": []
+              },
+              {
+                "key": "mobile:MIRROR",
                 "items": [],
                 "rowKeys": [],
                 "subgroups": []
@@ -8178,6 +8308,15 @@
                     "rowKeys": [],
                     "subgroups": []
                   }
+                },
+                {
+                  "type": "group",
+                  "section": {
+                    "key": "landscape:MIRROR",
+                    "items": [],
+                    "rowKeys": [],
+                    "subgroups": []
+                  }
                 }
               ],
               "rowKeys": [],
@@ -8265,6 +8404,12 @@
                 },
                 {
                   "key": "landscape:Saved Poses",
+                  "items": [],
+                  "rowKeys": [],
+                  "subgroups": []
+                },
+                {
+                  "key": "landscape:MIRROR",
                   "items": [],
                   "rowKeys": [],
                   "subgroups": []
@@ -8621,6 +8766,15 @@
                   "rowKeys": [],
                   "subgroups": []
                 }
+              },
+              {
+                "type": "group",
+                "section": {
+                  "key": "landscape:MIRROR",
+                  "items": [],
+                  "rowKeys": [],
+                  "subgroups": []
+                }
               }
             ],
             "rowKeys": [],
@@ -8708,6 +8862,12 @@
               },
               {
                 "key": "landscape:Saved Poses",
+                "items": [],
+                "rowKeys": [],
+                "subgroups": []
+              },
+              {
+                "key": "landscape:MIRROR",
                 "items": [],
                 "rowKeys": [],
                 "subgroups": []
@@ -9058,6 +9218,7 @@
     "desktop:Pinky": true,
     "desktop:Pose Offset": true,
     "desktop:Saved Poses": true,
+    "desktop:MIRROR": false,
     "desktop:Tween": true,
     "desktop:Saved Tween Sequences": true,
     "desktop:RESPONSIVE BEHAVIOUR - HAND": false,
@@ -9111,6 +9272,7 @@
     "mobile:Pinky": false,
     "mobile:Pose Offset": false,
     "mobile:Saved Poses": false,
+    "mobile:MIRROR": false,
     "mobile:Tween": false,
     "mobile:Saved Tween Sequences": false,
     "mobile:RESPONSIVE BEHAVIOUR - HAND": false,
@@ -9165,6 +9327,7 @@
     "landscape:Pinky": true,
     "landscape:Pose Offset": true,
     "landscape:Saved Poses": true,
+    "landscape:MIRROR": false,
     "landscape:Tween": true,
     "landscape:Saved Tween Sequences": true,
     "landscape:RESPONSIVE BEHAVIOUR - HAND": false,
@@ -9469,7 +9632,9 @@
     "textPhoneResponsiveDisplaceRange": null,
     "textPhoneResponsiveDisplaceCurve": null,
     "mobile:RESPONSIVE DISPLACE": null,
-    "landscape:RESPONSIVE DISPLACE": null
+    "landscape:RESPONSIVE DISPLACE": null,
+    "mobile:MIRROR": null,
+    "landscape:MIRROR": null
   },
   "devTextOverridesManual": [
     "desktop:New Group",
