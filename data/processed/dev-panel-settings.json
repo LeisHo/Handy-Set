@@ -151,7 +151,7 @@
     "textScreenLevelScaleCurve": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"linear\"}",
     "sliderScreenTextureRotation": 180,
     "sliderScreenTextureOffsetX": -0.0035,
-    "sliderScreenTextureOffsetY": 0,
+    "sliderScreenTextureOffsetY": 0.376391692167459,
     "sliderScreenTextureScaleX": 1.35,
     "sliderScreenTextureScaleY": 1.2,
     "sliderScreenEmissionIntensity": 1,
@@ -227,9 +227,9 @@
   },
   "layout": {
     "left": 26,
-    "top": 230.58929443359375,
+    "top": 295,
     "width": 350,
-    "height": 548
+    "height": 483
   },
   "devPanelStyle": {
     "titleFontSize": 17,
