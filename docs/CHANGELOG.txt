@@ -6807,6 +6807,133 @@ changes (only dev-panel-settings.json touched remotely), so no stash
 was needed.
 
 --------------------------------------------------------------------------------
+2026-10-01  -  Add Freeze-on-Stop and Tilt (driftless) Displace modes.
+
+Direct report with a real device log: "I move the phone forward and
+backward in a single axis. I pause in between the different movements.
+When I move the phone, the phone in the app moves accordingly, but once
+I stop, it drifts back to it's default position without me telling it
+to." Investigated by replaying the real logged Sensor/Phone Model Log
+data against the actual integrator math rather than guessing -- found
+this is NOT a tunable-decay-rate bug. Stopping a push is itself a real,
+physical deceleration (an opposite-direction acceleration pulse,
+visible directly in the log's own LinearAccel values flipping sign the
+instant motion stops), which cancels most of the velocity the push just
+built up. A complete push-then-stop gesture, double-integrated, nets
+close to zero displacement by the basic physics of impulse-momentum --
+this is the well-known "dead reckoning drift" limitation every
+inertial-only (accelerometer/gyroscope) position-tracking system has
+without an external reference (GPS, vision, etc.) to correct against.
+No amount of decay-rate tuning changes this, because it isn't a
+parameter in the model -- it's a property of what double-integrated
+acceleration data physically represents.
+
+Direct follow-up asked whether the deceleration pulse could just be
+"cancelled out" after the fact -- investigated and explained why this
+isn't viable: there's no way to distinguish "deceleration from my own
+just-finished push" from "a genuine new push in the opposite direction"
+using acceleration data alone (both are just negative-signed
+acceleration); cancelling one would also cancel the other, breaking
+real backward motion -- exactly the gesture the user's own test
+included. Separately, deceleration is part of what actually happened
+physically; artificially cancelling it would mean showing MORE
+displacement than the real phone actually underwent, which directly
+contradicts the user's own stated goal ("I want the virtual movement to
+mirror my real world movement and nothing else").
+
+Proposed and built 2 genuinely different alternatives instead, both
+added as additional Displace Mode options (not replacing the existing
+2, specifically so all 4 could be A/B tested on a real device per
+direct request: "Build 1 and 2 and gimne a drop down to test both as
+well as the current system"):
+
+- 'freeze': the existing Stationary Gate (gyroscope-based on mobile,
+  cursor-delta-based on desktop, already built for a different fix
+  earlier this session) now also gates whether
+  applyPhoneDisplaceSample() gets called AT ALL once motion is judged
+  to have stopped -- not just fed a zero input, which still lets that
+  function's own leaky decay run and erode position every tick
+  regardless of input. Position/velocity now hold EXACTLY fixed, byte-
+  identical, for as long as the gate reads "stationary." Disclosed
+  limitation, found by walking the real log's own Gyro magnitude at the
+  exact moment of the original snap-back: a push's own deceleration is
+  itself real, gyro-correlated motion (a wrist naturally wobbles some
+  when stopping a moving phone) that can keep gyroMag ABOVE the
+  Stationary Gate's threshold for the first several ticks after the
+  push ends -- meaning in the user's own captured case, most of the
+  velocity-cancelling deceleration already happens BEFORE the gate ever
+  trips. This mode freezes whatever's left at that point; it cannot
+  retroactively undo cancellation that already occurred while the gate
+  still considered the phone "moving."
+
+- 'tilt': skips integration (and therefore drift) entirely by never
+  accumulating anything. Reads the phone's CURRENT orientation angle
+  directly every frame (mobile: deviceorientation beta/gamma; desktop:
+  the already-existing computeDesktopRotationNxNy(), the same
+  memoryless cursor-offset signal Rotation's own desktop branch
+  already uses, scaled by 45 to land in a comparable degree-like
+  range) relative to a baseline, mapped straight to displacement with
+  no curve, no range, no reference distance, and no clamp -- the exact
+  same "pure, memoryless function of the current reading" technique
+  Rotation's own 'absolute' mode already uses to eliminate ITS
+  equivalent gyro-integration drift. A held tilt now produces an exact,
+  permanently unchanging displacement, by construction -- there is
+  nothing left in the system that COULD drift. Disclosed limitation
+  (surfaced to the user BEFORE building, not after): this only covers
+  2 of 3 axes. Left-right and forward-back are real, physically
+  absolute angles a phone can report; depth (toward/away from the
+  phone's own face) has no angle equivalent at all, since rotating a
+  phone in place never changes its distance from anything -- only
+  genuine translation does, which is exactly the kind of motion that
+  can't be read without integration (and therefore without the same
+  drift this mode exists to avoid). Z outputs exactly 0 in Tilt mode
+  rather than silently keeping the old, inconsistent drifting behavior
+  on just that one axis. A direct follow-up question ("xyz are all
+  just axes. why wont your fix work for z") was answered explicitly:
+  the asymmetry isn't in the axes themselves, it's in which sensor
+  reading happens to exist as a substitute for each one -- a phone
+  reports exactly 2 independent tilt angles and ZERO depth-equivalent
+  readings, a hard sensor limitation, not a design choice.
+
+Mechanically: integratePhoneDisplacement() and
+updatePhoneDisplaceDesktopFrame() both now skip entirely when Tilt mode
+is selected (neither touches the old integrator state in that mode at
+all), and integratePhoneDisplacement() now tracks an `isStationary`
+flag (previously computed and immediately used/discarded for the
+zero-input path) so 'freeze' mode can also read it to decide whether to
+call applyPhoneDisplaceSample() at all this tick.
+computePhoneResponsiveDisplacement() branches to a separate, simpler
+code path for Tilt mode entirely (no curve/range/reference lookup).
+Baseline re-capture (resetPhoneDisplaceTiltBaseline()) is wired into
+Displace Reset (double-tap/double-click -- called UNCONDITIONALLY
+regardless of which mode is active, matching this file's own
+established "update every baseline every time, never branch on the
+active mode" discipline, since a past bug here came from exactly the
+opposite choice), switching into Tilt mode via the dropdown, and
+enabling Displace while Tilt mode is already selected -- each avoids a
+jump from a stale/zero baseline.
+
+Verified via a standalone simulation (6/6 checks) before shipping:
+Freeze mode holds position byte-identical across simulated "stationary"
+ticks where the old always-decaying behavior would keep changing it
+regardless of new input; Tilt mode's output is proven to be an exact,
+time-independent function of (current angle - baseline) -- 1000
+simulated reads at a constant held angle produce the identical value
+every time (zero drift by construction), and re-baselining to the
+current angle correctly zeroes the output.
+
+Verification: `node --check` passes; zero duplicate function/const/let
+declarations. Live browser-pane verification skipped per this
+project's own standing instruction -- the real A/B comparison between
+all 4 modes can only happen on the user's own real device.
+
+Note: committing this also required a 4th fast-forward past 15 more
+remote commits (continuous live Save Settings activity from the user's
+own active testing session) -- again no file overlap against the
+working tree's own uncommitted Blender asset changes (only
+dev-panel-settings.json touched remotely), so no stash was needed.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

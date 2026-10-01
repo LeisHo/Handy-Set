@@ -2732,3 +2732,80 @@ wiring, and are still open:
   on-demand rendering, needs an explicit `requestRender()` call in its
   own write path — reaching `cfg` correctly is necessary but not
   sufficient if nothing then asks for a new frame.**
+- **Responsive Displace's `'acceleration'`/`'worldPosition'` modes have
+  a FUNDAMENTAL limitation — not a tunable decay-rate bug — where a
+  push-then-stop gesture nets to ~zero displacement once
+  double-integrated, no matter how decay rates are tuned.** Found
+  2026-10-01, direct report with a real device log: "I move the phone
+  forward and backward... I pause in between... once I stop, it drifts
+  back to its default position." Confirmed by replaying the actual
+  logged `LinearAccel` values against the real integrator math: stopping
+  a push IS a real deceleration (an opposite-direction acceleration
+  pulse, directly visible in the log as the sign flipping right as
+  motion stops), which cancels most of the velocity the push just built
+  up — basic impulse-momentum physics, not a software defect. This is
+  the textbook "dead reckoning drift" limitation every inertial-only
+  (accelerometer) position-tracking system has without an external
+  reference (GPS, vision, etc.) — **no amount of retuning
+  `phoneDisplaceVelDecayRate`/`phoneDisplacePosDecayRate` fixes this,
+  because the cancellation isn't caused by decay at all.** A proposed
+  "just cancel the deceleration after the fact" fix was investigated and
+  rejected: there's no way to distinguish "deceleration from my own
+  just-finished push" from "a genuine new push in the opposite
+  direction" using acceleration data alone — both are just
+  negative-signed acceleration — so cancelling one would also cancel
+  real backward motion. It would also mean showing MORE displacement
+  than the phone actually underwent, which directly contradicts
+  "mirror my real movement and nothing else." **If a future report
+  describes this same symptom on `'acceleration'`/`'worldPosition'`
+  mode, don't reach for decay-rate tuning as the fix — it fundamentally
+  cannot work; point the user at the 2 alternative modes below instead.**
+- **2 additional Displace modes exist specifically because of the
+  limitation above — `'freeze'` and `'tilt'` — each solving it a
+  genuinely different way, each with ITS OWN disclosed, real
+  limitation; neither is a strict upgrade over the other.** `'freeze'`:
+  the existing Stationary Gate (gyroscope-based on mobile, cursor-delta
+  on desktop) now gates whether `applyPhoneDisplaceSample()` runs AT
+  ALL once motion is judged stopped — not just fed zero input, which
+  still lets its own leaky decay erode position every tick regardless.
+  **Its own real limitation**, found by walking the real log's Gyro
+  magnitude at the exact moment of the original snap-back: a push's own
+  deceleration is itself real, gyro-correlated motion (stopping a moved
+  phone naturally involves some wrist wobble) that can keep gyroMag
+  ABOVE the gate's threshold for the first several ticks after the push
+  ends — meaning most of the cancellation can already happen BEFORE the
+  gate ever trips. This mode freezes whatever's left at that point; it
+  cannot retroactively undo cancellation that already occurred while
+  still "moving" per the gate. `'tilt'`: skips integration (and
+  therefore drift) entirely — reads the phone's CURRENT orientation
+  angle directly every frame (mobile: `deviceorientation` beta/gamma;
+  desktop: `computeDesktopRotationNxNy()`, the SAME memoryless
+  cursor-offset signal Rotation's own desktop branch already uses)
+  relative to a baseline, mapped straight to displacement with no
+  curve/range/reference/clamp — the same "pure, memoryless function of
+  the current reading" technique Rotation's own `'absolute'` mode
+  already uses to eliminate ITS equivalent drift. **Its own real,
+  disclosed limitation**: only covers X/Y (left-right, forward-back) —
+  Z (depth, toward/away from the phone's own face) has NO angle
+  equivalent at all, since rotating a phone in place never changes its
+  distance from anything; only genuine translation does, which is
+  exactly the kind of motion that can't be read without integration
+  (and therefore without the same drift this mode exists to avoid). Z
+  always reads exactly 0 in Tilt mode — a deliberate choice, not a bug,
+  made rather than silently keeping the old drifting behavior on just
+  that one axis. **The general lesson for the 3-axis asymmetry, in case
+  a future feature hits the same question ("xyz are all just axes, why
+  does X work differently from Z"): the asymmetry is never in the axes
+  themselves, it's in which real sensor reading happens to exist as a
+  substitute for each one.** A phone reports exactly 2 independent tilt
+  angles (beta/gamma) and ZERO depth-equivalent readings — a hard
+  hardware/sensor limitation to check for directly before assuming a
+  3-axis feature should trivially generalize to all 3 the same way.
+  Baseline re-capture (`resetPhoneDisplaceTiltBaseline()`) is called
+  UNCONDITIONALLY from Displace Reset regardless of which mode is
+  active (matching this file's own established "update every baseline
+  every time, never branch on the active mode" discipline — see the
+  Phone Model rotation-reset gotcha earlier in this file for the exact
+  bug class that pattern exists to prevent), on switching INTO Tilt mode
+  via the dropdown, and on enabling Displace while Tilt is already
+  selected.

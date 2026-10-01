@@ -7,7 +7,21 @@ append-only history.
 
 ## Currently working on
 
-**Nothing in progress right now.** Most recent work: made Mobile/
+**Nothing in progress right now.** Most recent work: added 2 new
+Responsive Displace modes — `Freeze on Stop` and `Tilt (Driftless, X/Y
+Only)` — after a real device log revealed that the existing
+`'acceleration'`/`'worldPosition'` modes have a fundamental physics
+limitation (push-then-stop nets to ~zero displacement once
+double-integrated — the classic inertial "dead reckoning" drift, not a
+tunable decay-rate bug). All 4 modes are selectable in the same
+dropdown for A/B testing on a real device. Both new modes have their
+own disclosed, real limitations (Freeze can't undo cancellation that
+already happened before its gate trips; Tilt can't cover the depth
+axis at all) — see CLAUDE.md's new Gotchas entries and CHANGELOG's
+matching 2026-10-01 entry for the full physics reasoning and
+verification.
+
+Before that: made Mobile/
 Landscape texture-offset edits take effect instantly. The prior fix
 (below) correctly bridged the edited value into `cfg`, but missed a
 2nd, deeper property of this project's on-demand-rendering architecture
