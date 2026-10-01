@@ -2725,8 +2725,80 @@ function computePhoneDisplaceAxisUnits(rawMeters, axisEnabled, axisScale, axisIn
   const magnitude = Math.max(0, min + (max - min) * curveY)
   return magnitude * Math.sign(rawMeters) * axisScale * (axisInverted ? -1 : 1)
 }
+// TILT mode -- added 2026-10-01, direct report: "I move the phone
+// forward and backward... I pause in between... once I stop, it drifts
+// back to its default position without me telling it to." Root cause
+// (see integratePhoneDisplacement()'s own comment): 'acceleration'/
+// 'worldPosition' both DOUBLE-INTEGRATE real accelerometer data --
+// stopping a push is itself a real, physical DECELERATION (an
+// opposite-direction acceleration pulse), which cancels the velocity
+// just built up. Once velocity returns to ~0, the integrator has no way
+// to "remember" the user meant to stay displaced -- this is the
+// fundamental, well-known drift limitation of accelerometer-only
+// dead-reckoning, not a tunable decay-rate bug. Direct follow-up: "fix
+// it. I want the virtual movement to mirror my real world movement and
+// nothing else."
+//
+// Fixed with a 3rd mode that DOES NOT integrate anything: reads the
+// phone's CURRENT orientation angle directly (mobile: deviceorientation
+// beta/gamma; desktop: computeDesktopRotationNxNy()'s own memoryless
+// cursor-offset, scaled to a comparable degree-like range) relative to a
+// baseline captured at Displace Reset / mode-switch / enable time, and
+// maps that straight to displacement with NO curve, NO range, NO
+// reference distance, NO clamp -- the exact same "pure, memoryless
+// function of the CURRENT reading" design Rotation's own 'absolute'
+// mode already uses to eliminate ITS equivalent drift (see
+// computePhoneAbsoluteOrientationQuat()'s own comment). Holding a tilt
+// now holds an exact, unchanging displacement, forever, by construction
+// -- there is no accumulated state left to drift.
+//
+// DISCLOSED LIMITATION, not silently cut: this only covers 2 of 3 axes.
+// X (left-right) and Y (forward-back/up-down) are real, absolute,
+// driftless ANGLES (gamma/beta). Z (depth -- toward/away from the
+// phone's own face) has NO angle equivalent -- tilting a phone doesn't
+// measure "pushing it closer to your face," only moving it does, which
+// is exactly the kind of translation that can't be read without
+// integration (and therefore without drift). Z outputs exactly 0 in
+// Tilt mode rather than silently keeping the old, inconsistent drifting
+// behavior on just that one axis -- flagged to the user before
+// building, not discovered after.
+let phoneDisplaceTiltBaselineX = 0, phoneDisplaceTiltBaselineY = 0
+// Re-baselines Tilt mode to the phone's CURRENT reading -- called on
+// Displace Reset (resetPhoneDisplaceBaseline()), on switching INTO Tilt
+// mode (so the switch itself doesn't cause a jump from a stale/zero
+// baseline), and once when Displace is first enabled while already in
+// Tilt mode.
+function resetPhoneDisplaceTiltBaseline() {
+  if (lastInputSource === 'device' && latestOrientation) {
+    phoneDisplaceTiltBaselineX = latestOrientation.gamma || 0
+    phoneDisplaceTiltBaselineY = latestOrientation.beta || 0
+  } else {
+    const { nx, ny } = computeDesktopRotationNxNy()
+    phoneDisplaceTiltBaselineX = nx * 45
+    phoneDisplaceTiltBaselineY = ny * 45
+  }
+}
+// Raw (unscaled, unbaselined-subtraction-applied-here) current tilt
+// reading -- degrees on mobile; desktop's dimensionless -1..1 cursor
+// offset (computeDesktopRotationNxNy(), the SAME memoryless signal
+// Rotation's own desktop branch uses) scaled by 45 so BOTH platforms
+// land in a comparable, degree-like range for the Scale slider to tune.
+function computePhoneDisplaceTiltRaw() {
+  if (lastInputSource === 'device' && latestOrientation) {
+    return { x: (latestOrientation.gamma || 0) - phoneDisplaceTiltBaselineX, y: (latestOrientation.beta || 0) - phoneDisplaceTiltBaselineY }
+  }
+  const { nx, ny } = computeDesktopRotationNxNy()
+  return { x: nx * 45 - phoneDisplaceTiltBaselineX, y: ny * 45 - phoneDisplaceTiltBaselineY }
+}
 const _phoneDisplaceResultVec = new THREE.Vector3()
 function computePhoneResponsiveDisplacement() {
+  if (cfg.phoneDisplaceMode === 'tilt') {
+    if (!cfg.responsiveDisplaceGlobalEnabled || !cfg.phoneResponsiveDisplaceEnabled) return _phoneDisplaceResultVec.set(0, 0, 0)
+    const raw = computePhoneDisplaceTiltRaw()
+    const x = cfg.phoneDisplaceAxisXEnabled ? raw.x * cfg.phoneDisplaceScaleX * (cfg.phoneDisplaceInvertX ? -1 : 1) : 0
+    const y = cfg.phoneDisplaceAxisYEnabled ? raw.y * cfg.phoneDisplaceScaleY * (cfg.phoneDisplaceInvertY ? -1 : 1) : 0
+    return _phoneDisplaceResultVec.set(x, y, 0) // Z always 0 in Tilt mode -- see this function's own leading comment
+  }
   return _phoneDisplaceResultVec.set(
     computePhoneDisplaceAxisUnits(phoneDisplacePosX, cfg.phoneDisplaceAxisXEnabled, cfg.phoneDisplaceScaleX, cfg.phoneDisplaceInvertX, 'X'),
     computePhoneDisplaceAxisUnits(phoneDisplacePosY, cfg.phoneDisplaceAxisYEnabled, cfg.phoneDisplaceScaleY, cfg.phoneDisplaceInvertY, 'Y'),
@@ -3344,6 +3416,13 @@ function integratePhoneDisplacement(e) {
     phoneDisplaceLastTimestamp = null // clean restart, no big jump, whenever this resumes -- same convention as integratePhoneGyroRotation's own phoneGyroLastTimestamp
     return
   }
+  // TILT mode reads orientation directly every frame (computePhoneResponsiveDisplacement())
+  // -- it never touches the old integrator state (phoneDisplaceVelX/Y/Z,
+  // phoneDisplacePosX/Y/Z) at all, so there's nothing for this function to
+  // do. Still update the timestamp so a later mode switch back to
+  // 'acceleration'/'worldPosition'/'freeze' doesn't see a stale
+  // phoneDisplaceLastTimestamp and compute one huge dt on its first tick.
+  if (cfg.phoneDisplaceMode === 'tilt') { phoneDisplaceLastTimestamp = performance.now(); return }
   const now = performance.now()
   if (phoneDisplaceLastTimestamp !== null) {
     // CORRECTED 2026-09-30 (1st round): this used to also bail out
@@ -3362,6 +3441,7 @@ function integratePhoneDisplacement(e) {
     // dt-capped math below, instead of stopping early.
     const dt = Math.min((now - phoneDisplaceLastTimestamp) / 1000, 0.05) // seconds; tightened 0.1 -> 0.05 (1st round) so a stalled/irregular tick's worst-case single-step size is halved
     let ax = 0, ay = 0, az = 0
+    let isStationary = false // set true below when the Stationary Gate fires -- read by 'freeze' mode further down
     // CORRECTED 2026-09-30 (2nd round, after a real controlled test):
     // switched from e.acceleration (the browser's own gravity-excluded
     // "linear acceleration") to computePhoneLinearAccelDeviceLocal()'s
@@ -3427,13 +3507,42 @@ function integratePhoneDisplacement(e) {
       // ax/ay/az fed to the position integrator is forced to zero.
       if (cfg.phoneDisplaceStationaryGateEnabled && e.rotationRate) {
         const gyroMag = Math.hypot(e.rotationRate.alpha || 0, e.rotationRate.beta || 0, e.rotationRate.gamma || 0)
-        if (gyroMag < cfg.phoneDisplaceStationaryGateDegPerSec) { ax = 0; ay = 0; az = 0 }
+        isStationary = gyroMag < cfg.phoneDisplaceStationaryGateDegPerSec
+        if (isStationary) { ax = 0; ay = 0; az = 0 }
       }
       if (cfg.phoneDisplaceMode === 'worldPosition' && latestOrientation) {
         const q = computeDeviceOrientationQuat(latestOrientation.alpha || 0, latestOrientation.beta || 0, latestOrientation.gamma || 0)
         _phoneDisplaceWorldVec.set(ax, ay, az).applyQuaternion(q)
         ax = _phoneDisplaceWorldVec.x; ay = _phoneDisplaceWorldVec.y; az = _phoneDisplaceWorldVec.z
       }
+    }
+    // FREEZE mode -- added 2026-10-01, direct request: "once I stop
+    // moving it, hold the position until I deliberately do something
+    // new." Unlike 'acceleration'/'worldPosition' (which zero ax/ay/az
+    // above but still call applyPhoneDisplaceSample() every tick -- and
+    // that function ALWAYS applies its own leaky decay, zero input or
+    // not, which is exactly what pulls position back toward 0 over
+    // time), this skips calling applyPhoneDisplaceSample() ENTIRELY
+    // once the stationary gate says "not moving" -- no decay runs at
+    // all, so velocity/position hold EXACTLY where they are, with zero
+    // drift, until real motion resumes.
+    //
+    // DISCLOSED LIMITATION, confirmed against a real logged test before
+    // shipping (not assumed): a push's own DECELERATION is itself real,
+    // gyro-correlated motion (stopping a phone you just pushed often
+    // involves a small wrist wobble) that can keep gyroMag ABOVE the
+    // stationary threshold for the first several ticks after the push
+    // ends -- meaning most of the velocity-cancellation from that
+    // deceleration can already happen BEFORE this gate ever triggers.
+    // This mode freezes whatever is left at that point; it does not
+    // retroactively undo cancellation that already occurred while the
+    // gate still read "moving." Requires cfg.phoneDisplaceStationaryGateEnabled
+    // to be on (the gate IS the freeze trigger) -- with it off,
+    // isStationary never becomes true and this mode behaves identically
+    // to 'acceleration'.
+    if (cfg.phoneDisplaceMode === 'freeze' && isStationary) {
+      phoneDisplaceLastTimestamp = now
+      return
     }
     applyPhoneDisplaceSample(ax, ay, az, dt)
   }
@@ -3481,10 +3590,22 @@ let phoneDisplaceDesktopLastFrameTime = null
 // a measurement -- retune first if the desktop feel is too weak/strong
 // relative to mobile.
 const PHONE_DISPLACE_DESKTOP_SENSITIVITY = 8
+const PHONE_DISPLACE_DESKTOP_STILL_NDC_DEADZONE = 0.0005 // below this frame-to-frame NDC delta, the cursor counts as "not moving" for 'freeze' mode's own stationary check
 function updatePhoneDisplaceDesktopFrame() {
   if (lastInputSource !== 'mouse' || !cfg.responsiveDisplaceGlobalEnabled || !cfg.phoneResponsiveDisplaceEnabled) {
     phoneDisplaceDesktopLastNdcX = null
     phoneDisplaceDesktopLastFrameTime = null
+    return
+  }
+  // TILT mode reads the cursor's CURRENT offset directly every frame
+  // (computeDesktopRotationNxNy(), via computePhoneResponsiveDisplacement())
+  // -- it never touches the old frame-to-frame-delta integrator state
+  // this function drives, so there's nothing for it to do. See
+  // integratePhoneDisplacement()'s own matching skip for the mobile side.
+  if (cfg.phoneDisplaceMode === 'tilt') {
+    phoneDisplaceDesktopLastNdcX = cursorNDC.x
+    phoneDisplaceDesktopLastNdcY = cursorNDC.y
+    phoneDisplaceDesktopLastFrameTime = performance.now()
     return
   }
   const now = performance.now()
@@ -3501,6 +3622,13 @@ function updatePhoneDisplaceDesktopFrame() {
   const dNdcY = cursorNDC.y - phoneDisplaceDesktopLastNdcY
   phoneDisplaceDesktopLastNdcX = cursorNDC.x
   phoneDisplaceDesktopLastNdcY = cursorNDC.y
+  // FREEZE mode, desktop equivalent of the mobile gyro-based stationary
+  // gate -- see integratePhoneDisplacement()'s own 'freeze' comment for
+  // the full reasoning (same mechanism: skip applyPhoneDisplaceSample()
+  // entirely rather than just feeding it a zero, so its own leaky decay
+  // never runs either). "Not moving" here means the cursor's own
+  // frame-to-frame delta is effectively zero.
+  if (cfg.phoneDisplaceMode === 'freeze' && Math.hypot(dNdcX, dNdcY) < PHONE_DISPLACE_DESKTOP_STILL_NDC_DEADZONE) return
   // Y/Z SWAPPED 2026-09-30, same report/reasoning as integratePhoneDisplacement()'s
   // own matching fix (mobile) -- applied here too for consistency across
   // both platforms. Vertical cursor movement now feeds the Z slot
@@ -3624,6 +3752,15 @@ function resetPhoneDisplaceBaseline() {
   // DISPLAYED offset toward 0 gradually; snap it there directly instead
   // of waiting for the next several damped frames to catch up.
   _phoneDisplaceCurrentVec.set(0, 0, 0)
+  // Always re-baseline Tilt mode too, unconditionally, regardless of
+  // which mode is actually active right now -- same "update every
+  // baseline every time, never branch on which pipeline is currently
+  // selected" discipline this file already applies to Rotation's own
+  // reset (see resetPhoneModelRotationBaseline()'s own established
+  // gotcha: branching on the active mode/input-source here has
+  // previously caused a reset to silently re-baseline the WRONG,
+  // inactive pipeline). Harmless no-op cost when Tilt isn't selected.
+  resetPhoneDisplaceTiltBaseline()
 }
 // CORRECTED 2026-09-27, direct report: "responsive phone rotation
 // should be anchored by the phone models OWN geoemtr origin... its
@@ -7025,14 +7162,48 @@ function renderPhoneModelGroup(content) {
   // (Tracking Enabled off) needs its own trigger or mobile's real
   // devicemotion listener never gets attached at all. See
   // initMotionInput()'s own matching fix for the page-load case.
-  wireCheckbox('checkboxPhoneResponsiveDisplaceEnabled', (v) => { cfg.phoneResponsiveDisplaceEnabled = v; if (v) requestMotionPermissionIfNeeded() })
+  wireCheckbox('checkboxPhoneResponsiveDisplaceEnabled', (v) => {
+    cfg.phoneResponsiveDisplaceEnabled = v
+    if (v) {
+      requestMotionPermissionIfNeeded()
+      // Avoids an initial jump if Displace happens to already be set to
+      // Tilt mode the moment it's turned on -- without this, the first
+      // reading would be compared against a stale/zero baseline from
+      // whenever the page loaded. Harmless to call for the other 2
+      // modes too (computePhoneResponsiveDisplacement() only ever reads
+      // the tilt baseline while Tilt mode is actually selected).
+      resetPhoneDisplaceTiltBaseline()
+    }
+  })
   // Displace Mode -- direct request: "i also want the 2 calclation
   // types, simialr to rotation, one with acceleration, and i guess the
   // other is the real world position." See integratePhoneDisplacement()'s
-  // own comment for exactly what each mode computes.
-  addRow(subResponsiveDisplace, { id: 'selectPhoneDisplaceMode', label: 'Displace Mode', type: 'select', options: [{ value: 'acceleration', text: 'Acceleration / Local Frame' }, { value: 'worldPosition', text: 'Real World Position' }], value: cfg.phoneDisplaceMode })
+  // own comment for exactly what each mode computes. Extended 2026-10-01
+  // with 2 more modes, direct follow-up after a real device log showed
+  // acceleration-integration's own fundamental "push-then-stop nets to
+  // ~zero displacement" limitation (see computePhoneResponsiveDisplacement()'s
+  // own Tilt-mode comment for the full physics account): 'freeze' (hold
+  // position once the Stationary Gate says motion has stopped, instead
+  // of letting the leaky decay keep pulling it back to 0) and 'tilt'
+  // (skip integration entirely -- map the CURRENT orientation angle
+  // straight to displacement, driftless by construction, X/Y only). All
+  // 4 options stay selectable side by side specifically so the 2 new
+  // ones can be A/B tested against the original 2 on a real device,
+  // per direct request: "gimne a drop down to test both as well as the
+  // current system."
+  addRow(subResponsiveDisplace, { id: 'selectPhoneDisplaceMode', label: 'Displace Mode', type: 'select', options: [{ value: 'acceleration', text: 'Acceleration / Local Frame' }, { value: 'worldPosition', text: 'Real World Position' }, { value: 'freeze', text: 'Freeze on Stop' }, { value: 'tilt', text: 'Tilt (Driftless, X/Y Only)' }], value: cfg.phoneDisplaceMode })
   document.getElementById('selectPhoneDisplaceMode').value = cfg.phoneDisplaceMode
-  wireSelect('selectPhoneDisplaceMode', (v) => { cfg.phoneDisplaceMode = v })
+  wireSelect('selectPhoneDisplaceMode', (v) => {
+    cfg.phoneDisplaceMode = v
+    // Re-baseline the moment Tilt is selected -- without this, switching
+    // INTO Tilt mode would compare the phone's current tilt against
+    // whatever stale baseline (0, or a leftover value from a previous
+    // Tilt session) happened to be sitting there, causing a jump on
+    // switch instead of starting cleanly at "wherever the phone already
+    // is right now = 0 displacement." Harmless to call when switching to
+    // a different mode too.
+    resetPhoneDisplaceTiltBaseline()
+  })
   // Displace Reset -- added 2026-09-30, direct request: "add a
   // displacement reset checkbox. Similar to the rotation, a double tap
   // will place the phone back in its starting location." Independently
