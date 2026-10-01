@@ -34,6 +34,9 @@
         <div class="dev-panel-scroll-content">
             <div class="dev-header" id="devPanelHeader">
                 <span class="dev-panel-title">DEV</span>
+                <button class="dev-header-icon-btn" id="devHeaderSyncBtn" onclick="saveDevPanelSettings()" title="Sync (Save)">💾</button>
+                <button class="dev-header-icon-btn" id="devHeaderCopyBtn" onclick="copyDevPanelSettings()" title="Copy Settings">📋</button>
+                <button class="dev-header-icon-btn" id="devHeaderResetBtn" onclick="resetDevPanelSettings()" title="Reset">↺</button>
                 <!-- Reorganized 2026-09-28 (re-synced from the canonical
                      template): Copy/Reset (previously the standalone
                      .dev-buttons row below, now REMOVED entirely) and a
@@ -57,9 +60,6 @@
                         <button class="dev-header-icon-btn" id="devRedoBtn" title="Redo (Ctrl+Shift+Z / Ctrl+Y) - redoes the last undone change">↷</button>
                     </div>
                     <div class="dev-header-buttons-primary">
-                        <button class="dev-header-icon-btn" id="devHeaderCopyBtn" onclick="copyDevPanelSettings()" title="Copy Settings">📋</button>
-                        <button class="dev-header-icon-btn" id="devHeaderResetBtn" onclick="resetDevPanelSettings()" title="Reset">↺</button>
-                        <button class="dev-header-icon-btn" id="devHeaderSyncBtn" onclick="saveDevPanelSettings()" title="Sync (Save)">💾</button>
                         <button class="dev-collapse-btn" id="devCollapseBtn" onclick="toggleDevPanelCollapsed()">▁</button>
                         <button class="dev-hide-btn" onclick="devPanel.classList.add('hidden')">X</button>
                     </div>
