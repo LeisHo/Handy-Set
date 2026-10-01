@@ -4759,8 +4759,9 @@ function syncValue(id, value, decimals = 2) {
   const el = document.getElementById(id)
   if (el) {
     if (document.activeElement === el) return
-    el.value = value
     const vEl = document.getElementById(id.replace(/^slider/, 'value'))
+    if (document.activeElement === vEl) return
+    el.value = value
     if (vEl) vEl.textContent = (typeof value === 'number' ? value.toFixed(decimals) : value)
   }
 }
