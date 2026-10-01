@@ -113,7 +113,7 @@
     "sliderPhoneRotationDamping": 1,
     "textPhoneResponsiveRotationRange": "{\"min\":-57,\"max\":45}",
     "textPhoneResponsiveRotationCurve": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"natural\"}",
-    "checkboxPhoneResponsiveDisplaceEnabled": true,
+    "checkboxPhoneResponsiveDisplaceEnabled": false,
     "selectPhoneDisplaceMode": "worldPosition",
     "checkboxPhoneDisplaceResetEnabled": true,
     "checkboxPhoneDisplaceAxisXEnabled": true,
@@ -126,10 +126,12 @@
     "sliderPhoneDisplaceScaleZ": 1,
     "checkboxPhoneDisplaceInvertZ": false,
     "sliderPhoneDisplaceDamping": 1,
+    "sliderPhoneDisplaceVelDecayRate": 3,
+    "sliderPhoneDisplacePosDecayRate": 0.08,
     "textPhoneResponsiveDisplaceRange": "{\"min\":0,\"max\":8}",
     "textPhoneResponsiveDisplaceCurve": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"monotone\"}",
     "checkboxScreenRenderEnabled": true,
-    "sliderScreenRecursionLevels": 10,
+    "sliderScreenRecursionLevels": 25,
     "sliderScreenRenderResolution": 200,
     "sliderScreenTextureScale": 1.20516163222046,
     "textScreenLevelScaleRange": "{\"min\":1,\"max\":1}",
@@ -2034,6 +2036,14 @@
                       {
                         "type": "row",
                         "key": "checkboxPhoneDisplaceInvertZ"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderPhoneDisplaceVelDecayRate"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderPhoneDisplacePosDecayRate"
                       }
                     ],
                     "rowKeys": [
@@ -2051,7 +2061,9 @@
                       "checkboxPhoneDisplaceResetEnabled",
                       "checkboxPhoneDisplaceInvertX",
                       "checkboxPhoneDisplaceInvertY",
-                      "checkboxPhoneDisplaceInvertZ"
+                      "checkboxPhoneDisplaceInvertZ",
+                      "sliderPhoneDisplaceVelDecayRate",
+                      "sliderPhoneDisplacePosDecayRate"
                     ],
                     "subgroups": []
                   }
@@ -2194,6 +2206,14 @@
                     {
                       "type": "row",
                       "key": "checkboxPhoneDisplaceInvertZ"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderPhoneDisplaceVelDecayRate"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderPhoneDisplacePosDecayRate"
                     }
                   ],
                   "rowKeys": [
@@ -2211,7 +2231,9 @@
                     "checkboxPhoneDisplaceResetEnabled",
                     "checkboxPhoneDisplaceInvertX",
                     "checkboxPhoneDisplaceInvertY",
-                    "checkboxPhoneDisplaceInvertZ"
+                    "checkboxPhoneDisplaceInvertZ",
+                    "sliderPhoneDisplaceVelDecayRate",
+                    "sliderPhoneDisplacePosDecayRate"
                   ],
                   "subgroups": []
                 }
@@ -2501,6 +2523,14 @@
                     {
                       "type": "row",
                       "key": "checkboxPhoneDisplaceInvertZ"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderPhoneDisplaceVelDecayRate"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderPhoneDisplacePosDecayRate"
                     }
                   ],
                   "rowKeys": [
@@ -2518,7 +2548,9 @@
                     "checkboxPhoneDisplaceResetEnabled",
                     "checkboxPhoneDisplaceInvertX",
                     "checkboxPhoneDisplaceInvertY",
-                    "checkboxPhoneDisplaceInvertZ"
+                    "checkboxPhoneDisplaceInvertZ",
+                    "sliderPhoneDisplaceVelDecayRate",
+                    "sliderPhoneDisplacePosDecayRate"
                   ],
                   "subgroups": []
                 }
@@ -2661,6 +2693,14 @@
                   {
                     "type": "row",
                     "key": "checkboxPhoneDisplaceInvertZ"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderPhoneDisplaceVelDecayRate"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderPhoneDisplacePosDecayRate"
                   }
                 ],
                 "rowKeys": [
@@ -2678,7 +2718,9 @@
                   "checkboxPhoneDisplaceResetEnabled",
                   "checkboxPhoneDisplaceInvertX",
                   "checkboxPhoneDisplaceInvertY",
-                  "checkboxPhoneDisplaceInvertZ"
+                  "checkboxPhoneDisplaceInvertZ",
+                  "sliderPhoneDisplaceVelDecayRate",
+                  "sliderPhoneDisplacePosDecayRate"
                 ],
                 "subgroups": []
               }
@@ -6071,51 +6113,89 @@
             "type": "group",
             "section": {
               "key": "mobile:RESPONSIVE BEHAVIOUR - PHONE",
-              "items": [],
+              "items": [
+                {
+                  "type": "group",
+                  "section": {
+                    "key": "mobile:Responsive Rotation",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "textPhoneResponsiveRotationRange"
+                      },
+                      {
+                        "type": "row",
+                        "key": "textPhoneResponsiveRotationCurve"
+                      }
+                    ],
+                    "rowKeys": [
+                      "textPhoneResponsiveRotationRange",
+                      "textPhoneResponsiveRotationCurve"
+                    ],
+                    "subgroups": []
+                  }
+                },
+                {
+                  "type": "group",
+                  "section": {
+                    "key": "mobile:RESPONSIVE DISPLACE",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "textPhoneResponsiveDisplaceRange"
+                      },
+                      {
+                        "type": "row",
+                        "key": "textPhoneResponsiveDisplaceCurve"
+                      }
+                    ],
+                    "rowKeys": [
+                      "textPhoneResponsiveDisplaceRange",
+                      "textPhoneResponsiveDisplaceCurve"
+                    ],
+                    "subgroups": []
+                  }
+                }
+              ],
               "rowKeys": [],
-              "subgroups": []
-            }
-          },
-          {
-            "type": "group",
-            "section": {
-              "key": "mobile:Responsive Rotation",
-              "items": [
+              "subgroups": [
                 {
-                  "type": "row",
-                  "key": "textPhoneResponsiveRotationRange"
+                  "key": "mobile:Responsive Rotation",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "textPhoneResponsiveRotationRange"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textPhoneResponsiveRotationCurve"
+                    }
+                  ],
+                  "rowKeys": [
+                    "textPhoneResponsiveRotationRange",
+                    "textPhoneResponsiveRotationCurve"
+                  ],
+                  "subgroups": []
                 },
                 {
-                  "type": "row",
-                  "key": "textPhoneResponsiveRotationCurve"
+                  "key": "mobile:RESPONSIVE DISPLACE",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "textPhoneResponsiveDisplaceRange"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textPhoneResponsiveDisplaceCurve"
+                    }
+                  ],
+                  "rowKeys": [
+                    "textPhoneResponsiveDisplaceRange",
+                    "textPhoneResponsiveDisplaceCurve"
+                  ],
+                  "subgroups": []
                 }
-              ],
-              "rowKeys": [
-                "textPhoneResponsiveRotationRange",
-                "textPhoneResponsiveRotationCurve"
-              ],
-              "subgroups": []
-            }
-          },
-          {
-            "type": "group",
-            "section": {
-              "key": "mobile:RESPONSIVE DISPLACE",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "textPhoneResponsiveDisplaceRange"
-                },
-                {
-                  "type": "row",
-                  "key": "textPhoneResponsiveDisplaceCurve"
-                }
-              ],
-              "rowKeys": [
-                "textPhoneResponsiveDisplaceRange",
-                "textPhoneResponsiveDisplaceCurve"
-              ],
-              "subgroups": []
+              ]
             }
           }
         ],
@@ -6163,45 +6243,89 @@
           },
           {
             "key": "mobile:RESPONSIVE BEHAVIOUR - PHONE",
-            "items": [],
+            "items": [
+              {
+                "type": "group",
+                "section": {
+                  "key": "mobile:Responsive Rotation",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "textPhoneResponsiveRotationRange"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textPhoneResponsiveRotationCurve"
+                    }
+                  ],
+                  "rowKeys": [
+                    "textPhoneResponsiveRotationRange",
+                    "textPhoneResponsiveRotationCurve"
+                  ],
+                  "subgroups": []
+                }
+              },
+              {
+                "type": "group",
+                "section": {
+                  "key": "mobile:RESPONSIVE DISPLACE",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "textPhoneResponsiveDisplaceRange"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textPhoneResponsiveDisplaceCurve"
+                    }
+                  ],
+                  "rowKeys": [
+                    "textPhoneResponsiveDisplaceRange",
+                    "textPhoneResponsiveDisplaceCurve"
+                  ],
+                  "subgroups": []
+                }
+              }
+            ],
             "rowKeys": [],
-            "subgroups": []
-          },
-          {
-            "key": "mobile:Responsive Rotation",
-            "items": [
+            "subgroups": [
               {
-                "type": "row",
-                "key": "textPhoneResponsiveRotationRange"
+                "key": "mobile:Responsive Rotation",
+                "items": [
+                  {
+                    "type": "row",
+                    "key": "textPhoneResponsiveRotationRange"
+                  },
+                  {
+                    "type": "row",
+                    "key": "textPhoneResponsiveRotationCurve"
+                  }
+                ],
+                "rowKeys": [
+                  "textPhoneResponsiveRotationRange",
+                  "textPhoneResponsiveRotationCurve"
+                ],
+                "subgroups": []
               },
               {
-                "type": "row",
-                "key": "textPhoneResponsiveRotationCurve"
+                "key": "mobile:RESPONSIVE DISPLACE",
+                "items": [
+                  {
+                    "type": "row",
+                    "key": "textPhoneResponsiveDisplaceRange"
+                  },
+                  {
+                    "type": "row",
+                    "key": "textPhoneResponsiveDisplaceCurve"
+                  }
+                ],
+                "rowKeys": [
+                  "textPhoneResponsiveDisplaceRange",
+                  "textPhoneResponsiveDisplaceCurve"
+                ],
+                "subgroups": []
               }
-            ],
-            "rowKeys": [
-              "textPhoneResponsiveRotationRange",
-              "textPhoneResponsiveRotationCurve"
-            ],
-            "subgroups": []
-          },
-          {
-            "key": "mobile:RESPONSIVE DISPLACE",
-            "items": [
-              {
-                "type": "row",
-                "key": "textPhoneResponsiveDisplaceRange"
-              },
-              {
-                "type": "row",
-                "key": "textPhoneResponsiveDisplaceCurve"
-              }
-            ],
-            "rowKeys": [
-              "textPhoneResponsiveDisplaceRange",
-              "textPhoneResponsiveDisplaceCurve"
-            ],
-            "subgroups": []
+            ]
           }
         ]
       },
@@ -7890,51 +8014,89 @@
             "type": "group",
             "section": {
               "key": "landscape:RESPONSIVE BEHAVIOUR - PHONE",
-              "items": [],
+              "items": [
+                {
+                  "type": "group",
+                  "section": {
+                    "key": "landscape:Responsive Rotation",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "textPhoneResponsiveRotationRange"
+                      },
+                      {
+                        "type": "row",
+                        "key": "textPhoneResponsiveRotationCurve"
+                      }
+                    ],
+                    "rowKeys": [
+                      "textPhoneResponsiveRotationRange",
+                      "textPhoneResponsiveRotationCurve"
+                    ],
+                    "subgroups": []
+                  }
+                },
+                {
+                  "type": "group",
+                  "section": {
+                    "key": "landscape:RESPONSIVE DISPLACE",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "textPhoneResponsiveDisplaceRange"
+                      },
+                      {
+                        "type": "row",
+                        "key": "textPhoneResponsiveDisplaceCurve"
+                      }
+                    ],
+                    "rowKeys": [
+                      "textPhoneResponsiveDisplaceRange",
+                      "textPhoneResponsiveDisplaceCurve"
+                    ],
+                    "subgroups": []
+                  }
+                }
+              ],
               "rowKeys": [],
-              "subgroups": []
-            }
-          },
-          {
-            "type": "group",
-            "section": {
-              "key": "landscape:Responsive Rotation",
-              "items": [
+              "subgroups": [
                 {
-                  "type": "row",
-                  "key": "textPhoneResponsiveRotationRange"
+                  "key": "landscape:Responsive Rotation",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "textPhoneResponsiveRotationRange"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textPhoneResponsiveRotationCurve"
+                    }
+                  ],
+                  "rowKeys": [
+                    "textPhoneResponsiveRotationRange",
+                    "textPhoneResponsiveRotationCurve"
+                  ],
+                  "subgroups": []
                 },
                 {
-                  "type": "row",
-                  "key": "textPhoneResponsiveRotationCurve"
+                  "key": "landscape:RESPONSIVE DISPLACE",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "textPhoneResponsiveDisplaceRange"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textPhoneResponsiveDisplaceCurve"
+                    }
+                  ],
+                  "rowKeys": [
+                    "textPhoneResponsiveDisplaceRange",
+                    "textPhoneResponsiveDisplaceCurve"
+                  ],
+                  "subgroups": []
                 }
-              ],
-              "rowKeys": [
-                "textPhoneResponsiveRotationRange",
-                "textPhoneResponsiveRotationCurve"
-              ],
-              "subgroups": []
-            }
-          },
-          {
-            "type": "group",
-            "section": {
-              "key": "landscape:RESPONSIVE DISPLACE",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "textPhoneResponsiveDisplaceRange"
-                },
-                {
-                  "type": "row",
-                  "key": "textPhoneResponsiveDisplaceCurve"
-                }
-              ],
-              "rowKeys": [
-                "textPhoneResponsiveDisplaceRange",
-                "textPhoneResponsiveDisplaceCurve"
-              ],
-              "subgroups": []
+              ]
             }
           }
         ],
@@ -7982,45 +8144,89 @@
           },
           {
             "key": "landscape:RESPONSIVE BEHAVIOUR - PHONE",
-            "items": [],
+            "items": [
+              {
+                "type": "group",
+                "section": {
+                  "key": "landscape:Responsive Rotation",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "textPhoneResponsiveRotationRange"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textPhoneResponsiveRotationCurve"
+                    }
+                  ],
+                  "rowKeys": [
+                    "textPhoneResponsiveRotationRange",
+                    "textPhoneResponsiveRotationCurve"
+                  ],
+                  "subgroups": []
+                }
+              },
+              {
+                "type": "group",
+                "section": {
+                  "key": "landscape:RESPONSIVE DISPLACE",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "textPhoneResponsiveDisplaceRange"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textPhoneResponsiveDisplaceCurve"
+                    }
+                  ],
+                  "rowKeys": [
+                    "textPhoneResponsiveDisplaceRange",
+                    "textPhoneResponsiveDisplaceCurve"
+                  ],
+                  "subgroups": []
+                }
+              }
+            ],
             "rowKeys": [],
-            "subgroups": []
-          },
-          {
-            "key": "landscape:Responsive Rotation",
-            "items": [
+            "subgroups": [
               {
-                "type": "row",
-                "key": "textPhoneResponsiveRotationRange"
+                "key": "landscape:Responsive Rotation",
+                "items": [
+                  {
+                    "type": "row",
+                    "key": "textPhoneResponsiveRotationRange"
+                  },
+                  {
+                    "type": "row",
+                    "key": "textPhoneResponsiveRotationCurve"
+                  }
+                ],
+                "rowKeys": [
+                  "textPhoneResponsiveRotationRange",
+                  "textPhoneResponsiveRotationCurve"
+                ],
+                "subgroups": []
               },
               {
-                "type": "row",
-                "key": "textPhoneResponsiveRotationCurve"
+                "key": "landscape:RESPONSIVE DISPLACE",
+                "items": [
+                  {
+                    "type": "row",
+                    "key": "textPhoneResponsiveDisplaceRange"
+                  },
+                  {
+                    "type": "row",
+                    "key": "textPhoneResponsiveDisplaceCurve"
+                  }
+                ],
+                "rowKeys": [
+                  "textPhoneResponsiveDisplaceRange",
+                  "textPhoneResponsiveDisplaceCurve"
+                ],
+                "subgroups": []
               }
-            ],
-            "rowKeys": [
-              "textPhoneResponsiveRotationRange",
-              "textPhoneResponsiveRotationCurve"
-            ],
-            "subgroups": []
-          },
-          {
-            "key": "landscape:RESPONSIVE DISPLACE",
-            "items": [
-              {
-                "type": "row",
-                "key": "textPhoneResponsiveDisplaceRange"
-              },
-              {
-                "type": "row",
-                "key": "textPhoneResponsiveDisplaceCurve"
-              }
-            ],
-            "rowKeys": [
-              "textPhoneResponsiveDisplaceRange",
-              "textPhoneResponsiveDisplaceCurve"
-            ],
-            "subgroups": []
+            ]
           }
         ]
       },
@@ -9041,17 +9247,17 @@
     "desktop:TABS": true,
     "desktop:BUTTONS": true,
     "desktop:Hotkeys": true,
-    "desktop:Debug": false,
+    "desktop:Debug": true,
     "desktop:Object Axes": true,
     "desktop:Settings": true,
     "desktop:Mouse Log": false,
     "desktop:Sensors": true,
     "desktop:Phone Model Log": true,
-    "desktop:PHONE MODEL": true,
+    "desktop:PHONE MODEL": false,
     "desktop:OFFSET": true,
     "desktop:PHONE ROTATION": true,
-    "desktop:RECURSIVE RENDER": true,
-    "desktop:RESPONSIVE BEHAVIOUR - PHONE": true,
+    "desktop:RECURSIVE RENDER": false,
+    "desktop:RESPONSIVE BEHAVIOUR - PHONE": false,
     "desktop:Responsive Rotation": true,
     "desktop:RESPONSIVE DISPLACE": true,
     "desktop:HAND MODEL": true,
