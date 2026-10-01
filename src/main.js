@@ -5822,8 +5822,38 @@ function applyCameraLockState() {
 }
 // Extract yaw and pitch from camera direction (ported from HANDO)
 // Yaw: rotation around Y axis, Pitch: rotation around X axis
+//
+// FIXED 2026-10-01, direct report: "my camera yaw and pitch sliders dont
+// work. when i click and drag one the other gets affected." Root cause:
+// `dir` here used `target - camera.position` (camera-to-target), but
+// setCameraYawPitch() (below) places the camera via `target +
+// dist*dir_set` -- which requires `dir_set` to mean target-to-camera, the
+// OPPOSITE convention. Checked HANDO's own real source before fixing (per
+// this project's standing rule) and found the IDENTICAL mismatch there
+// too -- this isn't a porting error, it's a genuine latent bug in the
+// shared original formula, apparently never caught because nothing in
+// HANDO resyncs an idle slider from a live read-back every frame the way
+// syncCameraPanelFromLive() does here.
+//
+// Verified algebraically: with the old `target - camera.position`
+// convention, setting (yaw, pitch) and immediately reading it back via
+// this function gives (yaw+180 mod 360, -pitch) -- a consistent, provable
+// round-trip corruption, not just float noise. Since
+// syncCameraPanelFromLive() calls this EVERY frame and resyncs whichever
+// slider does NOT currently have focus, dragging Yaw (which calls
+// setCameraYawPitch(newYaw, cfg.cameraPitch) -- cfg.cameraPitch itself
+// never changes) immediately shows the corrupted NEGATED pitch on the
+// Pitch slider every subsequent frame, even though the underlying
+// cfg.cameraPitch was never touched -- exactly the reported symptom,
+// and symmetrically for dragging Pitch affecting Yaw's display.
+//
+// Fixed by using `camera.position - target` (target-to-camera) instead,
+// matching setCameraYawPitch()'s own placement convention exactly. Reduces
+// the round-trip to a mathematical identity: re-verified algebraically
+// (dirGet = normalize(camera.position - target) = normalize(dist*dirSet)
+// = dirSet exactly, so pitchGet = pitch and yawGet = yaw with zero error).
 function getCameraYawPitch() {
-  const dir = controls.target.clone().sub(camera.position)
+  const dir = camera.position.clone().sub(controls.target)
   const dist = dir.length() || 1
   dir.normalize()
   const pitch = Math.asin(Math.max(-1, Math.min(1, dir.y))) * 180 / Math.PI
