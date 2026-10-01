@@ -124,6 +124,27 @@ try {
 const MODEL_URL = 'data/processed/HAND3D/Hand2.glb'
 const loadingEl = document.getElementById('loading')
 
+// Hand Model Selector -- direct request: "provide a hand model selector
+// liek the phone and load in this geometry
+// data/processed/HAND3D/HandiBonesB-IK.glb". Confirmed via direct GLB
+// parsing (no browser needed) before building anything that the new file
+// shares the EXACT SAME functional bone names as the default rig
+// (rHand, rIndex1/2/3, rMid1/2/3, rForearmBend, etc.) -- the existing
+// bone-name-based pose system (applyCurlToSkeleton/applyWristPoseToSkeleton/
+// boneRestQuat) works unchanged once swapped; the new file just adds
+// extra non-posable helper/IK-target nodes alongside the same skeleton.
+// Deliberately narrower than Phone Model's own Item Selector (visually
+// mirrors its clickable-list UI, per the request's own "like the phone" --
+// see renderHandModelItemSelector()) -- no per-model settings capture and
+// no Import GLB upload flow, since neither has a hand-model equivalent to
+// port: a hand has no per-model tunables the way a phone has (Recursive
+// Render/Screen settings), and nothing asked for uploading NEW hand
+// models from the UI, only selecting between known ones.
+const HAND_MODEL_OPTIONS = [
+  { value: 'data/processed/HAND3D/Hand2.glb', text: 'Hand2 (Default)' },
+  { value: 'data/processed/HAND3D/HandiBonesB-IK.glb', text: 'HandiBonesB-IK' }
+]
+
 // ---------------------------------------------------------------------
 // Live tunable state (dev-panel-backed). Plain object, read/written
 // directly by control event listeners further down.
@@ -168,6 +189,16 @@ const cfg = {
   // once any of these are on, and computeHandMirrorMatrix()'s/
   // applyModelRootTransform()'s comments for the visual side.
   handMirrorX: false, handMirrorY: false, handMirrorZ: false,
+  // Hand Model Selector -- see HAND_MODEL_OPTIONS'/loadHandModel()'s own
+  // comments. Defaults to MODEL_URL (the pre-existing hardcoded default)
+  // so the very first, synchronous handLoader.load() call below has a
+  // sensible value before any Sync/remote-settings restore has had a
+  // chance to run (those resolve async, after this file's top-level code
+  // has already executed) -- a user who previously selected a different
+  // model sees a brief flash of the default on a fresh page load, then
+  // the restore-triggered swap corrects it a moment later, same timing
+  // trade-off this file's other restore-dependent settings already have.
+  handModelFile: MODEL_URL,
   // Reactive Arm Length — ported from HANDY DANDIES (see docs/CHANGELOG.txt
   // for the porting account). HANDY DANDIES normalizes "distance" against
   // the live min/max distance across a whole FIELD of hands each frame —
@@ -4356,13 +4387,20 @@ function getHandCenterWorld() {
 // =======================================================================
 // Model load
 // =======================================================================
-const handLoader = new GLTFLoader()
-handLoader.setDRACOLoader(dracoLoader)
-handLoader.setMeshoptDecoder(MeshoptDecoder)
-handLoader.load(MODEL_URL, async (gltf) => {
-  const root = gltf.scene
-  const skinned = findSkinnedMesh(root)
-  if (!skinned) { loadingEl.textContent = 'No skinned mesh found in model.'; return }
+// measureAndSetHandModel -- extracted 2026-10-01 (Hand Model Selector
+// feature) from what used to be inline in handLoader.load()'s own
+// callback below, so a model SWAP (loadHandModel(), further down) can
+// re-run the exact same bind-pose measurement against a newly-loaded GLB
+// without duplicating this logic. Does everything measurement/state-
+// setting related (handLengthRaw, alignQuat, wristCropNormalAligned,
+// forearmPosRaw, wristPosRaw, modelRotationPivot, handCenterLocal,
+// handBoundsRadiusLocal, boneRestQuat, toonMaterial, modelRoot) but
+// deliberately stops short of rebuildField()/applyDefaultSelections() --
+// those differ between a first load (also needs saved defaults, motion
+// init, starting the render loop) and a later swap (should re-pose with
+// whatever the user currently has dialed in, not reset to defaults) --
+// see loadHandModel()'s own comment for the swap side of this split.
+function measureAndSetHandModel(root, skinned) {
   root.traverse((o) => { if (o.isMesh && o !== skinned) o.visible = false })
   root.updateMatrixWorld(true)
   computeFingerGizmoTipOffsets(skinned.skeleton) // bone rest lengths, shared across every hand clone
@@ -4434,6 +4472,15 @@ handLoader.load(MODEL_URL, async (gltf) => {
 
   toonMaterial = createToonMaterial(skinned.material.map || null)
   modelRoot = root
+}
+const handLoader = new GLTFLoader()
+handLoader.setDRACOLoader(dracoLoader)
+handLoader.setMeshoptDecoder(MeshoptDecoder)
+handLoader.load(cfg.handModelFile || MODEL_URL, async (gltf) => {
+  const root = gltf.scene
+  const skinned = findSkinnedMesh(root)
+  if (!skinned) { loadingEl.textContent = 'No skinned mesh found in model.'; return }
+  measureAndSetHandModel(root, skinned)
 
   rebuildField()
   applyDefaultSelections()
@@ -4459,6 +4506,56 @@ handLoader.load(MODEL_URL, async (gltf) => {
   console.error(ts() + ' Failed to load hand model', err)
   loadingEl.textContent = 'Failed to load hand model — see console.'
 })
+
+// disposeOldHandModelRoot -- same reasoning/pattern as disposePhoneModelRaw()
+// (that function's own comment): the OLD modelRoot is the TEMPLATE object
+// SkeletonUtils.clone() reads from in rebuildField(), never shared by
+// reference with any live hand already in `hands[]` (each gets its own
+// deep clone) -- safe to dispose its geometry/materials/textures outright
+// once a new model has taken its place, with no risk to anything already
+// on screen.
+function disposeOldHandModelRoot(oldRoot) {
+  if (!oldRoot) return
+  oldRoot.traverse((obj) => {
+    if (obj.geometry) obj.geometry.dispose()
+    if (obj.material) {
+      const mats = Array.isArray(obj.material) ? obj.material : [obj.material]
+      mats.forEach((m) => { Object.values(m).forEach((v) => { if (v && v.isTexture) v.dispose() }); m.dispose() })
+    }
+  })
+}
+// Hand Model swap -- loads a DIFFERENT hand GLB after the initial one is
+// already showing, re-measuring bind pose against the new skeleton
+// (measureAndSetHandModel(), shared with the first-load path above) and
+// rebuilding every hand instance from it, WITHOUT resetting the user's
+// current pose/camera/lighting/toon settings -- applyPoseValuesToHand(cfg)
+// at the end re-poses the newly-built hand(s) with whatever is currently
+// dialed in, deliberately NOT applyDefaultSelections() (that's a first-
+// load-only concern: loading the DEFAULT pose/camera/lighting, which would
+// discard the user's current tuning on every model swap for no reason).
+// Token-guarded the same way loadPhoneModel() is, in case 2 selections
+// happen in quick succession before the first finishes loading.
+let handModelLoadToken = 0
+function loadHandModel(relativePath) {
+  if (!relativePath) return
+  const token = ++handModelLoadToken
+  const swapLoader = new GLTFLoader()
+  swapLoader.setDRACOLoader(dracoLoader)
+  swapLoader.setMeshoptDecoder(MeshoptDecoder)
+  swapLoader.load(encodeURI(relativePath), (gltf) => {
+    if (token !== handModelLoadToken) return // superseded by a newer selection before this one finished
+    const root = gltf.scene
+    const skinned = findSkinnedMesh(root)
+    if (!skinned) { console.error(ts() + ' Hand Model Selector: no skinned mesh found in', relativePath); return }
+    const oldRoot = modelRoot
+    measureAndSetHandModel(root, skinned)
+    disposeOldHandModelRoot(oldRoot)
+    rebuildField()
+    applyPoseValuesToHand(cfg)
+  }, undefined, (err) => {
+    console.error(ts() + ' Hand Model Selector: failed to load', relativePath, err)
+  })
+}
 
 // Retargets an imported camera preset onto our single centered hand.
 // HANDY DANDIES' own saved cameras were captured against its much larger
@@ -6099,6 +6196,70 @@ function persistPhoneModelPerModelSettings() {
   if (el) el.value = JSON.stringify(phoneModelPerModelSettings)
 }
 
+// Hand Model Item Selector -- visually mirrors renderPhoneModelItemSelector()
+// below (same .dp-list-picker-row-container/.dp-list-picker-item CSS, same
+// clickable-row pattern), deliberately narrower: no per-model settings
+// capture/apply and no Import GLB flow (see HAND_MODEL_OPTIONS' own
+// declaration comment for why neither has a hand-model equivalent).
+//
+// The hidden, Sync-participating text control mirroring the current
+// selection is NOT optional polish -- it's the exact same fix 4 OTHER
+// hand-built dev-panel widgets in this file already needed (curve/range
+// fields, the 5 list-pickers, the Phone Model Item Selector itself, each
+// documented in this project's own CLAUDE.md as a recurring bug class):
+// a plain clickable <div> row is never registered with devPanel.js's
+// generic capture/restore pipeline the way addRow()'s own standard
+// controls automatically are, so without this the selected hand model
+// would never actually survive a Sync/Reset/Undo round-trip.
+let handModelItemSelectorContainer = null
+function renderHandModelItemSelector(parentContent) {
+  const parent = parentContent
+  if (!parent) return
+  if (handModelItemSelectorContainer) handModelItemSelectorContainer.remove()
+
+  const container = document.createElement('div')
+  container.className = 'dp-list-picker-row-container'
+  const label = document.createElement('span')
+  label.className = 'dev-label'
+  label.textContent = 'Model'
+  container.appendChild(label)
+
+  const listEl = document.createElement('div')
+  listEl.className = 'dp-list-picker'
+  container.appendChild(listEl)
+
+  if (!cfg.handModelFile && HAND_MODEL_OPTIONS.length) cfg.handModelFile = HAND_MODEL_OPTIONS[0].value
+  const hiddenRow = addRow(container, { id: 'hiddenHandModelFile', label: 'Model File (internal)', type: 'text', inputType: 'text', value: cfg.handModelFile, skipDeviceCheckbox: true })
+  hiddenRow.style.display = 'none'
+  const hiddenInput = hiddenRow.querySelector('#hiddenHandModelFile')
+  let lastSeenHandModelFile = hiddenInput.value
+  hiddenInput.addEventListener('input', () => {
+    if (hiddenInput.value === lastSeenHandModelFile) return
+    lastSeenHandModelFile = hiddenInput.value
+    cfg.handModelFile = hiddenInput.value
+    loadHandModel(cfg.handModelFile)
+    renderHandModelItemSelector(parent)
+  })
+
+  HAND_MODEL_OPTIONS.forEach((opt) => {
+    const row = document.createElement('div')
+    row.className = 'dp-list-picker-item' + (opt.value === cfg.handModelFile ? ' dp-list-picker-item-selected' : '')
+    row.textContent = opt.text
+    row.addEventListener('click', () => {
+      if (opt.value === cfg.handModelFile) return
+      cfg.handModelFile = opt.value
+      lastSeenHandModelFile = opt.value
+      hiddenInput.value = opt.value
+      loadHandModel(opt.value)
+      renderHandModelItemSelector(parent)
+    })
+    listEl.appendChild(row)
+  })
+
+  parent.appendChild(container)
+  handModelItemSelectorContainer = container
+}
+
 function renderPhoneModelItemSelector(parentContent) {
   const parent = parentContent || phoneModelItemSelectorParent
   if (!parent) return // manifest resolved before the dev panel was ever built -- the next real build reads PHONE_MODEL_OPTIONS fresh anyway
@@ -7109,6 +7270,11 @@ function renderHandysetDevGroups() {
   addRow(handModelContent, { id: 'checkboxHandModelEnabled', label: 'Hand Model On/Off', type: 'checkbox' })
   document.getElementById('checkboxHandModelEnabled').checked = !cfg.hideHands
   wireCheckbox('checkboxHandModelEnabled', (v) => { cfg.hideHands = !v; relayoutField(); syncHandModelEnabledCheckboxes() })
+
+  // Hand Model Selector -- direct request: "provide a hand model selector
+  // liek the phone and load in this geometry... HandiBonesB-IK.glb". See
+  // HAND_MODEL_OPTIONS'/renderHandModelItemSelector()'s own comments.
+  renderHandModelItemSelector(handModelContent)
 
   const fieldContent = addSubgroup(handModelContent, 'Field Layout')
   addRow(fieldContent, { id: 'sliderFieldRows', label: 'Rows (Count)', type: 'slider', min: 1, max: 40, step: 1, value: cfg.fieldRows })
