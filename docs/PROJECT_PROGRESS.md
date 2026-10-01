@@ -7,28 +7,53 @@ append-only history.
 
 ## Currently working on
 
-**Nothing in progress right now** — the last active item switched
-Responsive Displace's whole data source: a real controlled device test
-(reset/move-one-axis/reset per axis, flat then tilted) revealed Sensor
-Log was logging `accelerationIncludingGravity` while Displace actually
-consumed the DIFFERENT `e.acceleration` field, which had never been
-directly observed and whose gravity-exclusion quality is device-
-dependent. Cross-referencing the real logged data (raw accel + actual
-orientation at each sample) through a standalone gravity-subtraction
-script confirmed accelerationIncludingGravity's own big swings during
-the "Up" test were a pure rotation artifact (properly gravity-subtracted
-linear accel stayed small/bounded through the same window), and found
-compass (alpha) is highly unstable at steep tilt on this device —
-directly explaining Real World Position mode's own jumpiness. Switched
-to computing linear acceleration from accelerationIncludingGravity minus
-a manually-computed gravity vector (the standard AHRS technique),
-verified against 2 known orientations via script. Added a "Log Linear
-Accel" diagnostic field so the next test shows the actual signal driving
-Displacement. Could NOT re-derive the Y/Z axis mapping from this round's
-data (no clean dominant spike per axis, and the Phone Model Log output
-wasn't included in what was pasted) — the existing swap is left in place
-but flagged as unverified against this new source. See CHANGELOG's
-matching entry. Before that: added Clear All Logs / Copy All Logs /
+**Nothing in progress right now** — the last active item root-caused and
+fixed the actual erratic Responsive Displace output itself, using 2 full
+real controlled-test datasets the user collected (flat orientation, then
+a 90-degree-tilt start) via the Copy All Logs button. Both showed the
+Phone Model Log's position output jumping wildly between near-max
+extremes every ~500ms, completely uncorrelated with the small (1-2
+m/s^2) LinearAccel readings actually driving it — ruling out Y/Z axis
+mislabeling as the primary cause (that wouldn't produce output this
+unrelated to input) and pointing at the integration/curve-mapping stage
+instead. A standalone simulation confirmed the real cause: the leaky
+accel integrator's steady-state gain is ~4.17m of position per m/s^2 of
+SUSTAINED bias, so ordinary residual bias from gravity-subtraction/
+sensor error (as little as ~0.06 m/s^2) alone saturated the old 0.25m
+reference distance, leaving `Math.sign()` of near-zero noise as the only
+thing visibly changing. (The user confirmed Damping is at 1 — zero
+output smoothing — which is why this showed as instant snapping rather
+than a slower wobble.) Fixed with a per-axis high-pass filter
+(`PHONE_DISPLACE_BIAS_TRACK_RATE`, ~2.5s time constant) that tracks and
+removes slow-moving bias before integration, plus raising
+`PHONE_DISPLACE_REFERENCE_METERS` 0.25m → 0.35m now that bias no longer
+dominates it. Verified via 2 standalone simulations (no live device/
+browser access for this project): the filter alone cuts a sustained
+0.1 m/s^2 bias's steady-state position from 0.230m to 0.047m while a
+real push still peaks at 0.351m; an end-to-end replica of the full
+shipped pipeline held 15s of at-rest bias+jitter to 13% of output range
+with zero sign flips, while the same baseline plus one firm push spiked
+to 94%. The Y/Z axis-mapping question is still open and lower-priority —
+it needs this stability fix in place first before a fresh test's
+per-axis attribution means anything. See CHANGELOG's matching entry.
+Before that: switched Responsive Displace's whole data source — a real
+controlled device test (reset/move-one-axis/reset per axis, flat then
+tilted) revealed Sensor Log was logging `accelerationIncludingGravity`
+while Displace actually consumed the DIFFERENT `e.acceleration` field,
+which had never been directly observed and whose gravity-exclusion
+quality is device-dependent. Cross-referencing the real logged data (raw
+accel + actual orientation at each sample) through a standalone gravity-
+subtraction script confirmed accelerationIncludingGravity's own big
+swings during the "Up" test were a pure rotation artifact (properly
+gravity-subtracted linear accel stayed small/bounded through the same
+window), and found compass (alpha) is highly unstable at steep tilt on
+this device — directly explaining Real World Position mode's own
+jumpiness. Switched to computing linear acceleration from
+accelerationIncludingGravity minus a manually-computed gravity vector
+(the standard AHRS technique), verified against 2 known orientations via
+script. Added a "Log Linear Accel" diagnostic field so the next test
+shows the actual signal driving Displacement. See CHANGELOG's matching
+entry. Before that: added Clear All Logs / Copy All Logs /
 Pause-Resume Logs buttons spanning all 3
 Debug-group logs (Mouse Log, Sensors, Phone Model Log) — Mouse Log's own
 state is private to `devPanel.js`, so 3 small bare-global helper

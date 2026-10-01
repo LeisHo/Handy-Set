@@ -5815,6 +5815,75 @@ run with the new diagnostic log in place. `index.html` cache-buster:
 `main.js` `?v=178` -> `?v=179`.
 
 --------------------------------------------------------------------------------
+2026-09-30  -  Add bias high-pass filter to fix erratic Responsive
+Displace output; raise reference distance 0.25m -> 0.35m
+
+Root-caused the "x axis... keeps drifting and sometimes jumps" / "y and
+z displacement isnt smooth... works sometimes... other times its
+delayed, sometimes it goes too far" reports using 2 full real controlled
+test datasets the user collected and pasted directly (one flat, one
+starting from a 90-degree tilt), each a complete Mouse Log + Sensor Log
+(with the new LinearAccel diagnostic field) + Phone Model Log triplet
+via the Copy All Logs button. Both showed the SAME pattern regardless of
+orientation: the Phone Model Log's actual Pos x/y/z output jumped
+wildly between near-max-positive and near-max-negative every ~500ms
+sample, while the LinearAccel values actually driving it stayed small
+(mostly under 1-2 m/s^2) throughout -- i.e. the output was saturating
+and flipping sign from noise, completely uncorrelated with the real
+(small) sensor readings. This ruled out the Y/Z axis-mapping question as
+the primary bug (a mislabeled axis wouldn't produce output this
+unrelated to ANY input) and pointed at the curve-mapping/integration
+stage instead.
+
+A standalone script confirmed the real cause: applyPhoneDisplaceSample()'s
+leaky accel->velocity->position integrator has a steady-state gain of
+1/(VELOCITY_DECAY_RATE * POSITION_DECAY_RATE) = ~4.17 meters per m/s^2 of
+SUSTAINED acceleration bias. Any constant bias as small as ~0.06 m/s^2 --
+well within normal residual error from gravity subtraction (device
+orientation lag/noise) or plain accelerometer calibration drift, never
+exactly zero on real hardware -- alone saturates the old 0.25m reference
+distance at steady state, leaving Math.sign() of a near-zero, noisy
+quantity as the only thing visibly changing. (The user's own report that
+all 3 Displace Scales are at 1 and Damping is at 1 -- i.e. zero output
+smoothing -- is why this showed up as instant snapping between extremes
+rather than a slower wobble.)
+
+Fixed with a standard slow-tracking high-pass filter: a per-axis
+exponential moving average of the raw linear acceleration
+(PHONE_DISPLACE_BIAS_TRACK_RATE = 0.4, a ~2.5s time constant -- slow
+enough that a real deliberate push, ~0.3-0.5s, mostly passes through
+un-absorbed, fast enough to track slowly-varying sensor/orientation
+bias) is subtracted from the raw signal before it reaches the leaky
+integrator at all. Applied in integratePhoneDisplacement() (mobile's
+real accelerometer path) only, before the existing Y/Z swap and raw
+deadzone/clamp filter -- desktop's cursor-delta path has no analogous
+sensor-bias problem and is untouched. New phoneDisplaceBiasX/Y/Z state
+is reset alongside velocity/position in resetPhoneDisplaceBaseline() so
+a double-tap gives the filter a clean start too.
+
+Verified via 2 standalone simulations (no live device/browser testing
+for this project, per CLAUDE.md): (1) the filter alone suppresses a
+sustained 0.1 m/s^2 bias from a 0.230m steady-state position down to
+0.047m, while a real 2.5 m/s^2/0.5s push on top of that same bias still
+peaks at 0.351m, clearly distinguishable; (2) a full end-to-end replica
+of the shipped pipeline (bias filter + raw deadzone/clamp + leaky
+integrator + curve/range mapping) run against 15s of realistic at-rest
+bias+jitter with no real movement stayed bounded to 13% of the output
+range with ZERO sign flips across 900 samples, while the same baseline
+plus one firm deliberate push spiked to 94% of range -- clean separation
+between "at rest" and "real movement," the opposite of the observed bug.
+PHONE_DISPLACE_REFERENCE_METERS raised 0.25m -> 0.35m to give a real
+push room to read near-full-scale now that bias no longer dominates it
+(see that constant's own code comment for the exact numbers this was
+calibrated against).
+
+The Y/Z axis-mapping question from the prior entry remains open and
+lower-priority -- it needs the output to be stable/trustworthy first
+before a fresh test's per-axis attribution means anything, which this
+fix should now provide. `index.html` cache-buster: `main.js` `?v=179`
+-> `?v=180`.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
