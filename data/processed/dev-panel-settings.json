@@ -11817,7 +11817,7 @@
       "sliderScreenTextureOffsetX": -0.0127433989193597,
       "checkboxPhoneDisplaceAxisXEnabled": true,
       "checkboxPhoneDisplaceAxisZEnabled": true,
-      "sliderPhoneDisplaceDamping": 0.05,
+      "sliderPhoneDisplaceDamping": 0.16,
       "checkboxPhoneDisplaceAxisYEnabled": true,
       "sliderPhoneDisplacePosDecayRate": 5,
       "sliderPhoneDisplaceVelDecayRate": 10,
