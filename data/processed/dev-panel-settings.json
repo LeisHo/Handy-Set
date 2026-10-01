@@ -91,26 +91,26 @@
     "selectPoseTweenTargetPoseName": "Big Open Palm",
     "textPoseTweenCurve": "{\"points\": [{\"x\": 0, \"y\": 0}, {\"x\": 1, \"y\": 1}], \"method\": \"catmullrom\"}",
     "checkboxPhoneModelEnabled": true,
-    "hiddenPhoneModelFile": "data/processed/SMARTPHONE MODELS/iPhone 17 Max.glb",
-    "hiddenPhoneModelPerModelSettings": "{\"data/processed/SMARTPHONE MODELS/P5_Project_1.glb\":{\"sliderPhoneModelScale\":\"1\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"-1\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":true,\"selectPhoneRotationMode\":\"gyro\",\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"1\",\"textPhoneRotationRangeX\":\"{\\\"min\\\":0,\\\"max\\\":125}\",\"textPhoneRotationCurveX\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0.028749910990397143},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"catmullrom\\\"}\",\"textPhoneRotationRangeY\":\"{\\\"min\\\":0,\\\"max\\\":180}\",\"textPhoneRotationCurveY\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0.03041661580403643},{\\\"x\\\":1,\\\"y\\\":0.7770833333333333}],\\\"method\\\":\\\"catmullrom\\\"}\",\"textPhoneRotationRangeZ\":\"{\\\"min\\\":0,\\\"max\\\":180}\",\"textPhoneRotationCurveZ\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0.035416158040364576},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"catmullrom\\\"}\",\"checkboxPhoneResponsiveDisplaceEnabled\":false,\"selectPhoneDisplaceMode\":\"worldPosition\",\"checkboxPhoneDisplaceResetEnabled\":true,\"checkboxPhoneDisplaceAxisXEnabled\":true,\"sliderPhoneDisplaceScaleX\":\"1\",\"checkboxPhoneDisplaceInvertX\":true,\"checkboxPhoneDisplaceAxisYEnabled\":false,\"sliderPhoneDisplaceScaleY\":\"1\",\"checkboxPhoneDisplaceInvertY\":false,\"checkboxPhoneDisplaceAxisZEnabled\":false,\"sliderPhoneDisplaceScaleZ\":\"1\",\"checkboxPhoneDisplaceInvertZ\":false,\"sliderPhoneDisplaceDamping\":\"1\",\"sliderPhoneDisplaceVelDecayRate\":\"3\",\"sliderPhoneDisplacePosDecayRate\":\"0.08\",\"checkboxPhoneDisplaceStationaryGateEnabled\":true,\"sliderPhoneDisplaceStationaryGateDegPerSec\":\"2\",\"textPhoneDisplaceRangeX\":\"{\\\"min\\\":0,\\\"max\\\":20}\",\"textPhoneDisplaceCurveX\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"monotone\\\"}\",\"sliderPhoneDisplaceXReferenceM\":\"0.35\",\"textPhoneDisplaceRangeY\":\"{\\\"min\\\":0,\\\"max\\\":20}\",\"textPhoneDisplaceCurveY\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"monotone\\\"}\",\"sliderPhoneDisplaceYReferenceM\":\"0.35\",\"textPhoneDisplaceRangeZ\":\"{\\\"min\\\":0,\\\"max\\\":20}\",\"textPhoneDisplaceCurveZ\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"monotone\\\"}\",\"sliderPhoneDisplaceZReferenceM\":\"0.35\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"10\",\"sliderScreenRenderResolution\":\"200\",\"sliderScreenTextureScale\":\"1.20516163222046\",\"textScreenLevelScaleRange\":\"{\\\"min\\\":1,\\\"max\\\":1}\",\"textScreenLevelScaleCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"linear\\\"}\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"1.35\",\"sliderScreenTextureScaleY\":\"1.2\",\"checkboxScreenToScale\":true,\"sliderScreenTextureOffsetX\":\"-0.004\",\"sliderScreenTextureOffsetY\":\"0.015\",\"sliderScreenEmissionIntensity\":\"1.1\",\"checkboxScreenMirrorAlternatingX\":true,\"checkboxScreenMirrorAlternatingY\":false,\"checkboxScreenMirrorPhaseX\":false,\"checkboxScreenMirrorPhaseY\":false},\"data/processed/SMARTPHONE MODELS/Nothing2.glb\":{\"sliderPhoneModelScale\":\"1\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"0\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":true,\"selectPhoneRotationMode\":\"gyro\",\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"1\",\"textPhoneResponsiveRotationRange\":\"{\\\"min\\\":-69,\\\"max\\\":60}\",\"textPhoneResponsiveRotationCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"natural\\\"}\",\"checkboxPhoneResponsiveDisplaceEnabled\":true,\"selectPhoneDisplaceMode\":\"worldPosition\",\"checkboxPhoneDisplaceResetEnabled\":true,\"checkboxPhoneDisplaceAxisXEnabled\":false,\"sliderPhoneDisplaceScaleX\":\"1\",\"checkboxPhoneDisplaceInvertX\":false,\"checkboxPhoneDisplaceAxisYEnabled\":true,\"sliderPhoneDisplaceScaleY\":\"1\",\"checkboxPhoneDisplaceInvertY\":false,\"checkboxPhoneDisplaceAxisZEnabled\":false,\"sliderPhoneDisplaceScaleZ\":\"1\",\"checkboxPhoneDisplaceInvertZ\":false,\"sliderPhoneDisplaceDamping\":\"1\",\"sliderPhoneDisplaceVelDecayRate\":\"3\",\"sliderPhoneDisplacePosDecayRate\":\"0.08\",\"checkboxPhoneDisplaceStationaryGateEnabled\":true,\"sliderPhoneDisplaceStationaryGateDegPerSec\":\"2\",\"textPhoneResponsiveDisplaceRange\":\"{\\\"min\\\":-57,\\\"max\\\":52}\",\"textPhoneResponsiveDisplaceCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"monotone\\\"}\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"10\",\"sliderScreenRenderResolution\":\"200\",\"sliderScreenTextureScale\":\"1.2\",\"textScreenLevelScaleRange\":\"{\\\"min\\\":1,\\\"max\\\":1}\",\"textScreenLevelScaleCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":1,\\\"h1\\\":{\\\"x\\\":0.3925000190734863,\\\"y\\\":-0.1864583333333334}},{\\\"x\\\":1,\\\"y\\\":0,\\\"h2\\\":{\\\"x\\\":-0.21750001907348637,\\\"y\\\":0.36020838419596357}}],\\\"method\\\":\\\"linear\\\"}\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"1\",\"sliderScreenTextureScaleY\":\"0.9\",\"checkboxScreenToScale\":true,\"sliderScreenTextureOffsetX\":\"-0.0045\",\"sliderScreenTextureOffsetY\":\"0.0109847380188588\",\"sliderScreenEmissionIntensity\":\"1\",\"checkboxScreenMirrorAlternatingX\":true,\"checkboxScreenMirrorAlternatingY\":true,\"checkboxScreenMirrorPhaseX\":false,\"checkboxScreenMirrorPhaseY\":false},\"data/processed/SMARTPHONE MODELS/Pixel 9A.glb\":{\"sliderPhoneModelScale\":\"0.75\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"-4\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":true,\"selectPhoneRotationMode\":\"gyro\",\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"-0.404839764551995\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"0.63482750528045\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"0.640577267460234\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"1\",\"textPhoneRotationRangeX\":\"{\\\"min\\\":0,\\\"max\\\":125}\",\"textPhoneRotationCurveX\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0.028749910990397143},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"catmullrom\\\"}\",\"textPhoneRotationRangeY\":\"{\\\"min\\\":0,\\\"max\\\":180}\",\"textPhoneRotationCurveY\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0.03041661580403643},{\\\"x\\\":1,\\\"y\\\":0.7770833333333333}],\\\"method\\\":\\\"catmullrom\\\"}\",\"textPhoneRotationRangeZ\":\"{\\\"min\\\":0,\\\"max\\\":180}\",\"textPhoneRotationCurveZ\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0.035416158040364576},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"catmullrom\\\"}\",\"checkboxPhoneResponsiveDisplaceEnabled\":false,\"selectPhoneDisplaceMode\":\"worldPosition\",\"checkboxPhoneDisplaceResetEnabled\":true,\"checkboxPhoneDisplaceAxisXEnabled\":false,\"sliderPhoneDisplaceScaleX\":\"0.25\",\"checkboxPhoneDisplaceInvertX\":false,\"checkboxPhoneDisplaceAxisYEnabled\":false,\"sliderPhoneDisplaceScaleY\":\"0.25\",\"checkboxPhoneDisplaceInvertY\":false,\"checkboxPhoneDisplaceAxisZEnabled\":true,\"sliderPhoneDisplaceScaleZ\":\"0.25\",\"checkboxPhoneDisplaceInvertZ\":false,\"sliderPhoneDisplaceDamping\":\"1\",\"sliderPhoneDisplaceVelDecayRate\":\"3\",\"sliderPhoneDisplacePosDecayRate\":\"0.08\",\"checkboxPhoneDisplaceStationaryGateEnabled\":true,\"sliderPhoneDisplaceStationaryGateDegPerSec\":\"2\",\"textPhoneDisplaceRangeX\":\"{\\\"min\\\":0,\\\"max\\\":20}\",\"textPhoneDisplaceCurveX\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"monotone\\\"}\",\"sliderPhoneDisplaceXReferenceM\":\"0.35\",\"textPhoneDisplaceRangeY\":\"{\\\"min\\\":0,\\\"max\\\":20}\",\"textPhoneDisplaceCurveY\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"monotone\\\"}\",\"sliderPhoneDisplaceYReferenceM\":\"0.35\",\"textPhoneDisplaceRangeZ\":\"{\\\"min\\\":0,\\\"max\\\":20}\",\"textPhoneDisplaceCurveZ\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"monotone\\\"}\",\"sliderPhoneDisplaceZReferenceM\":\"0.35\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"7\",\"sliderScreenRenderResolution\":\"200\",\"sliderScreenTextureScale\":\"1.3\",\"textScreenLevelScaleRange\":\"{\\\"min\\\":1,\\\"max\\\":1}\",\"textScreenLevelScaleCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"linear\\\"}\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"1\",\"sliderScreenTextureScaleY\":\"1\",\"checkboxScreenToScale\":true,\"sliderScreenTextureOffsetX\":\"-0.146531236774425\",\"sliderScreenTextureOffsetY\":\"0.321579928801492\",\"sliderScreenEmissionIntensity\":\"1.05\",\"checkboxScreenMirrorAlternatingX\":true,\"checkboxScreenMirrorAlternatingY\":false,\"checkboxScreenMirrorPhaseX\":false,\"checkboxScreenMirrorPhaseY\":false},\"data/processed/SMARTPHONE MODELS/Iphone17MaxPro.glb\":{\"sliderPhoneModelScale\":\"0.91316267842775\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"1.4\",\"checkboxPhoneResponsiveRotationEnabled\":false,\"checkboxPhoneRotationResetEnabled\":true,\"selectPhoneRotationMode\":\"absolute\",\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"0.51\",\"checkboxPhoneResponsiveDisplaceEnabled\":false,\"selectPhoneDisplaceMode\":\"worldPosition\",\"checkboxPhoneDisplaceResetEnabled\":true,\"checkboxPhoneDisplaceAxisXEnabled\":true,\"sliderPhoneDisplaceScaleX\":\"1\",\"checkboxPhoneDisplaceInvertX\":true,\"checkboxPhoneDisplaceAxisYEnabled\":true,\"sliderPhoneDisplaceScaleY\":\"1\",\"checkboxPhoneDisplaceInvertY\":false,\"checkboxPhoneDisplaceAxisZEnabled\":true,\"sliderPhoneDisplaceScaleZ\":\"1\",\"checkboxPhoneDisplaceInvertZ\":false,\"sliderPhoneDisplaceDamping\":\"1\",\"sliderPhoneDisplaceVelDecayRate\":\"3\",\"sliderPhoneDisplacePosDecayRate\":\"0.08\",\"checkboxPhoneDisplaceStationaryGateEnabled\":true,\"sliderPhoneDisplaceStationaryGateDegPerSec\":\"2\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"10\",\"sliderScreenRenderResolution\":\"200\",\"sliderScreenTextureScale\":\"1.1\",\"textScreenLevelScaleRange\":\"{\\\"min\\\":1,\\\"max\\\":1}\",\"textScreenLevelScaleCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"linear\\\"}\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"1.1\",\"sliderScreenTextureScaleY\":\"0.95\",\"checkboxScreenToScale\":true,\"sliderScreenTextureOffsetX\":\"-0.0009\",\"sliderScreenTextureOffsetY\":\"0\",\"sliderScreenEmissionIntensity\":\"0.9\",\"checkboxScreenMirrorAlternatingX\":true,\"checkboxScreenMirrorAlternatingY\":false,\"checkboxScreenMirrorPhaseX\":false,\"checkboxScreenMirrorPhaseY\":false},\"data/processed/SMARTPHONE MODELS/Galaxy S2.glb\":{\"sliderPhoneModelScale\":\"1\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"0\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":true,\"selectPhoneRotationMode\":\"gyro\",\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"-1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"1\",\"textPhoneRotationRangeX\":\"{\\\"min\\\":0,\\\"max\\\":125}\",\"textPhoneRotationCurveX\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0.028749910990397143},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"catmullrom\\\"}\",\"textPhoneRotationRangeY\":\"{\\\"min\\\":0,\\\"max\\\":180}\",\"textPhoneRotationCurveY\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0.03041661580403643},{\\\"x\\\":1,\\\"y\\\":0.7770833333333333}],\\\"method\\\":\\\"catmullrom\\\"}\",\"textPhoneRotationRangeZ\":\"{\\\"min\\\":0,\\\"max\\\":180}\",\"textPhoneRotationCurveZ\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0.035416158040364576},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"catmullrom\\\"}\",\"checkboxPhoneResponsiveDisplaceEnabled\":true,\"selectPhoneDisplaceMode\":\"acceleration\",\"checkboxPhoneDisplaceResetEnabled\":true,\"checkboxPhoneDisplaceAxisXEnabled\":false,\"sliderPhoneDisplaceScaleX\":\"1\",\"checkboxPhoneDisplaceInvertX\":true,\"checkboxPhoneDisplaceAxisYEnabled\":true,\"sliderPhoneDisplaceScaleY\":\"1\",\"checkboxPhoneDisplaceInvertY\":false,\"checkboxPhoneDisplaceAxisZEnabled\":false,\"sliderPhoneDisplaceScaleZ\":\"1\",\"checkboxPhoneDisplaceInvertZ\":false,\"sliderPhoneDisplaceDamping\":\"1\",\"sliderPhoneDisplaceVelDecayRate\":\"3\",\"sliderPhoneDisplacePosDecayRate\":\"0.08\",\"checkboxPhoneDisplaceStationaryGateEnabled\":true,\"sliderPhoneDisplaceStationaryGateDegPerSec\":\"2\",\"textPhoneDisplaceRangeX\":\"{\\\"min\\\":0,\\\"max\\\":20}\",\"textPhoneDisplaceCurveX\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"monotone\\\"}\",\"sliderPhoneDisplaceXReferenceM\":\"0.35\",\"textPhoneDisplaceRangeY\":\"{\\\"min\\\":0,\\\"max\\\":20}\",\"textPhoneDisplaceCurveY\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"monotone\\\"}\",\"sliderPhoneDisplaceYReferenceM\":\"0.35\",\"textPhoneDisplaceRangeZ\":\"{\\\"min\\\":0,\\\"max\\\":20}\",\"textPhoneDisplaceCurveZ\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"monotone\\\"}\",\"sliderPhoneDisplaceZReferenceM\":\"0.35\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"10\",\"sliderScreenRenderResolution\":\"200\",\"sliderScreenTextureScale\":\"1.4\",\"textScreenLevelScaleRange\":\"{\\\"min\\\":1,\\\"max\\\":1}\",\"textScreenLevelScaleCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"linear\\\"}\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"1\",\"sliderScreenTextureScaleY\":\"1\",\"checkboxScreenToScale\":true,\"sliderScreenTextureOffsetX\":\"-0.006\",\"sliderScreenTextureOffsetY\":\"0\",\"sliderScreenEmissionIntensity\":\"1\",\"checkboxScreenMirrorAlternatingX\":true,\"checkboxScreenMirrorAlternatingY\":false,\"checkboxScreenMirrorPhaseX\":false,\"checkboxScreenMirrorPhaseY\":false},\"data/processed/SMARTPHONE MODELS/Motorola Razr.glb\":{\"sliderPhoneModelScale\":\"0.75\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"-4\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":true,\"selectPhoneRotationMode\":\"gyro\",\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"-1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"1\",\"textPhoneRotationRangeX\":\"{\\\"min\\\":0,\\\"max\\\":125}\",\"textPhoneRotationCurveX\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0.028749910990397143},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"catmullrom\\\"}\",\"textPhoneRotationRangeY\":\"{\\\"min\\\":0,\\\"max\\\":180}\",\"textPhoneRotationCurveY\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0.03041661580403643},{\\\"x\\\":1,\\\"y\\\":0.7770833333333333}],\\\"method\\\":\\\"catmullrom\\\"}\",\"textPhoneRotationRangeZ\":\"{\\\"min\\\":0,\\\"max\\\":180}\",\"textPhoneRotationCurveZ\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0.035416158040364576},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"catmullrom\\\"}\",\"checkboxPhoneResponsiveDisplaceEnabled\":false,\"selectPhoneDisplaceMode\":\"worldPosition\",\"checkboxPhoneDisplaceResetEnabled\":true,\"checkboxPhoneDisplaceAxisXEnabled\":false,\"sliderPhoneDisplaceScaleX\":\"0.25\",\"checkboxPhoneDisplaceInvertX\":false,\"checkboxPhoneDisplaceAxisYEnabled\":false,\"sliderPhoneDisplaceScaleY\":\"0.25\",\"checkboxPhoneDisplaceInvertY\":false,\"checkboxPhoneDisplaceAxisZEnabled\":true,\"sliderPhoneDisplaceScaleZ\":\"0.25\",\"checkboxPhoneDisplaceInvertZ\":false,\"sliderPhoneDisplaceDamping\":\"1\",\"sliderPhoneDisplaceVelDecayRate\":\"3\",\"sliderPhoneDisplacePosDecayRate\":\"0.08\",\"checkboxPhoneDisplaceStationaryGateEnabled\":true,\"sliderPhoneDisplaceStationaryGateDegPerSec\":\"2\",\"textPhoneDisplaceRangeX\":\"{\\\"min\\\":0,\\\"max\\\":20}\",\"textPhoneDisplaceCurveX\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"monotone\\\"}\",\"sliderPhoneDisplaceXReferenceM\":\"0.35\",\"textPhoneDisplaceRangeY\":\"{\\\"min\\\":0,\\\"max\\\":20}\",\"textPhoneDisplaceCurveY\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"monotone\\\"}\",\"sliderPhoneDisplaceYReferenceM\":\"0.35\",\"textPhoneDisplaceRangeZ\":\"{\\\"min\\\":0,\\\"max\\\":20}\",\"textPhoneDisplaceCurveZ\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"monotone\\\"}\",\"sliderPhoneDisplaceZReferenceM\":\"0.35\",\"checkboxScreenRenderEnabled\":false,\"sliderScreenRecursionLevels\":\"10\",\"sliderScreenRenderResolution\":\"200\",\"sliderScreenTextureScale\":\"2.7\",\"textScreenLevelScaleRange\":\"{\\\"min\\\":1,\\\"max\\\":1}\",\"textScreenLevelScaleCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"linear\\\"}\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"1\",\"sliderScreenTextureScaleY\":\"1\",\"checkboxScreenToScale\":true,\"sliderScreenTextureOffsetX\":\"-0.003\",\"sliderScreenTextureOffsetY\":\"0.197671194898808\",\"sliderScreenEmissionIntensity\":\"1.05\",\"checkboxScreenMirrorAlternatingX\":true,\"checkboxScreenMirrorAlternatingY\":false,\"checkboxScreenMirrorPhaseX\":false,\"checkboxScreenMirrorPhaseY\":false},\"data/processed/SMARTPHONE MODELS/Samsung Galaxy S26.glb\":{\"sliderPhoneModelScale\":\"1\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"0\",\"checkboxPhoneResponsiveRotationEnabled\":false,\"checkboxPhoneRotationResetEnabled\":true,\"selectPhoneRotationMode\":\"absolute\",\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"-1\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"0.21\",\"textPhoneRotationRangeX\":\"{\\\"min\\\":0,\\\"max\\\":125}\",\"textPhoneRotationCurveX\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0.028749910990397143},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"catmullrom\\\"}\",\"textPhoneRotationRangeY\":\"{\\\"min\\\":0,\\\"max\\\":180}\",\"textPhoneRotationCurveY\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0.03041661580403643},{\\\"x\\\":1,\\\"y\\\":0.7770833333333333}],\\\"method\\\":\\\"catmullrom\\\"}\",\"textPhoneRotationRangeZ\":\"{\\\"min\\\":0,\\\"max\\\":180}\",\"textPhoneRotationCurveZ\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0.035416158040364576},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"catmullrom\\\"}\",\"checkboxPhoneResponsiveDisplaceEnabled\":true,\"selectPhoneDisplaceMode\":\"worldPosition\",\"checkboxPhoneDisplaceResetEnabled\":true,\"checkboxPhoneDisplaceAxisXEnabled\":true,\"sliderPhoneDisplaceScaleX\":\"0.25\",\"checkboxPhoneDisplaceInvertX\":true,\"checkboxPhoneDisplaceAxisYEnabled\":true,\"sliderPhoneDisplaceScaleY\":\"0.25\",\"checkboxPhoneDisplaceInvertY\":false,\"checkboxPhoneDisplaceAxisZEnabled\":true,\"sliderPhoneDisplaceScaleZ\":\"0.25\",\"checkboxPhoneDisplaceInvertZ\":false,\"sliderPhoneDisplaceDamping\":\"1\",\"sliderPhoneDisplaceVelDecayRate\":\"3\",\"sliderPhoneDisplacePosDecayRate\":\"0.08\",\"checkboxPhoneDisplaceStationaryGateEnabled\":true,\"sliderPhoneDisplaceStationaryGateDegPerSec\":\"2\",\"textPhoneDisplaceRangeX\":\"{\\\"min\\\":0,\\\"max\\\":20}\",\"textPhoneDisplaceCurveX\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"monotone\\\"}\",\"sliderPhoneDisplaceXReferenceM\":\"0.35\",\"textPhoneDisplaceRangeY\":\"{\\\"min\\\":0,\\\"max\\\":20}\",\"textPhoneDisplaceCurveY\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"monotone\\\"}\",\"sliderPhoneDisplaceYReferenceM\":\"0.35\",\"textPhoneDisplaceRangeZ\":\"{\\\"min\\\":0,\\\"max\\\":20}\",\"textPhoneDisplaceCurveZ\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"monotone\\\"}\",\"sliderPhoneDisplaceZReferenceM\":\"0.35\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"10\",\"sliderScreenRenderResolution\":\"200\",\"sliderScreenTextureScale\":\"1.3\",\"textScreenLevelScaleRange\":\"{\\\"min\\\":1,\\\"max\\\":1}\",\"textScreenLevelScaleCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"linear\\\"}\",\"sliderScreenTextureRotation\":\"0\",\"sliderScreenTextureScaleX\":\"0.6\",\"sliderScreenTextureScaleY\":\"1.1\",\"checkboxScreenToScale\":true,\"sliderScreenTextureOffsetX\":\"1\",\"sliderScreenTextureOffsetY\":\"1\",\"sliderScreenEmissionIntensity\":\"0.95\",\"checkboxScreenMirrorAlternatingX\":true,\"checkboxScreenMirrorAlternatingY\":true,\"checkboxScreenMirrorPhaseX\":false,\"checkboxScreenMirrorPhaseY\":false},\"data/processed/SMARTPHONE MODELS/iPhone 17 Max.glb\":{\"sliderPhoneModelScale\":\"1\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"-1\",\"checkboxPhoneResponsiveRotationEnabled\":false,\"checkboxPhoneRotationResetEnabled\":true,\"selectPhoneRotationMode\":\"gyro\",\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"-1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"0.640577267460234\",\"sliderPhoneResponsiveRotationFineTune\":\"-18\",\"sliderPhoneRotationDamping\":\"1\",\"checkboxPhoneResponsiveDisplaceEnabled\":true,\"selectPhoneDisplaceMode\":\"worldPosition\",\"checkboxPhoneDisplaceResetEnabled\":true,\"checkboxPhoneDisplaceAxisXEnabled\":false,\"sliderPhoneDisplaceScaleX\":\"1\",\"checkboxPhoneDisplaceInvertX\":true,\"checkboxPhoneDisplaceAxisYEnabled\":true,\"sliderPhoneDisplaceScaleY\":\"1\",\"checkboxPhoneDisplaceInvertY\":false,\"checkboxPhoneDisplaceAxisZEnabled\":false,\"sliderPhoneDisplaceScaleZ\":\"1\",\"checkboxPhoneDisplaceInvertZ\":false,\"sliderPhoneDisplaceDamping\":\"1\",\"sliderPhoneDisplaceVelDecayRate\":\"3\",\"sliderPhoneDisplacePosDecayRate\":\"0.08\",\"checkboxPhoneDisplaceStationaryGateEnabled\":true,\"sliderPhoneDisplaceStationaryGateDegPerSec\":\"2\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"10\",\"sliderScreenRenderResolution\":\"200\",\"sliderScreenTextureScale\":\"1.20516163222046\",\"textScreenLevelScaleRange\":\"{\\\"min\\\":1,\\\"max\\\":1}\",\"textScreenLevelScaleCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"linear\\\"}\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"1.35\",\"sliderScreenTextureScaleY\":\"1.2\",\"checkboxScreenToScale\":true,\"sliderScreenTextureOffsetX\":\"-0.0035\",\"sliderScreenTextureOffsetY\":\"-0.730801830818783\",\"sliderScreenEmissionIntensity\":\"1\",\"checkboxScreenMirrorAlternatingX\":true,\"checkboxScreenMirrorAlternatingY\":false,\"checkboxScreenMirrorPhaseX\":false,\"checkboxScreenMirrorPhaseY\":false},\"blob:https://handy-set.vercel.app/828cd7f0-4b37-41ec-a2f0-10ca6716166d\":{\"sliderPhoneModelScale\":\"1\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"-1\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":true,\"selectPhoneRotationMode\":\"gyro\",\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"1\",\"textPhoneResponsiveRotationRange\":\"{\\\"min\\\":-57,\\\"max\\\":45}\",\"textPhoneResponsiveRotationCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"natural\\\"}\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"10\",\"sliderScreenRenderResolution\":\"175\",\"sliderScreenTextureScale\":\"0.9\",\"textScreenLevelScaleRange\":\"{\\\"min\\\":1,\\\"max\\\":1}\",\"textScreenLevelScaleCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"linear\\\"}\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"1.1\",\"sliderScreenTextureScaleY\":\"0.95\",\"checkboxScreenToScale\":true,\"sliderScreenTextureOffsetX\":\"0\",\"sliderScreenTextureOffsetY\":\"0.01\",\"sliderScreenEmissionIntensity\":\"0.9\",\"checkboxScreenMirrorAlternatingX\":true,\"checkboxScreenMirrorAlternatingY\":false,\"checkboxScreenMirrorPhaseX\":false,\"checkboxScreenMirrorPhaseY\":false}}",
-    "sliderPhoneModelScale": 1,
+    "hiddenPhoneModelFile": "data/processed/SMARTPHONE MODELS/Pixel 9A.glb",
+    "hiddenPhoneModelPerModelSettings": "{\"data/processed/SMARTPHONE MODELS/P5_Project_1.glb\":{\"sliderPhoneModelScale\":\"1\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"-1\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":true,\"selectPhoneRotationMode\":\"gyro\",\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"1\",\"textPhoneRotationRangeX\":\"{\\\"min\\\":0,\\\"max\\\":125}\",\"textPhoneRotationCurveX\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0.028749910990397143},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"catmullrom\\\"}\",\"textPhoneRotationRangeY\":\"{\\\"min\\\":0,\\\"max\\\":180}\",\"textPhoneRotationCurveY\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0.03041661580403643},{\\\"x\\\":1,\\\"y\\\":0.7770833333333333}],\\\"method\\\":\\\"catmullrom\\\"}\",\"textPhoneRotationRangeZ\":\"{\\\"min\\\":0,\\\"max\\\":180}\",\"textPhoneRotationCurveZ\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0.035416158040364576},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"catmullrom\\\"}\",\"checkboxPhoneResponsiveDisplaceEnabled\":false,\"selectPhoneDisplaceMode\":\"worldPosition\",\"checkboxPhoneDisplaceResetEnabled\":true,\"checkboxPhoneDisplaceAxisXEnabled\":true,\"sliderPhoneDisplaceScaleX\":\"1\",\"checkboxPhoneDisplaceInvertX\":true,\"checkboxPhoneDisplaceAxisYEnabled\":false,\"sliderPhoneDisplaceScaleY\":\"1\",\"checkboxPhoneDisplaceInvertY\":false,\"checkboxPhoneDisplaceAxisZEnabled\":false,\"sliderPhoneDisplaceScaleZ\":\"1\",\"checkboxPhoneDisplaceInvertZ\":false,\"sliderPhoneDisplaceDamping\":\"1\",\"sliderPhoneDisplaceVelDecayRate\":\"3\",\"sliderPhoneDisplacePosDecayRate\":\"0.08\",\"checkboxPhoneDisplaceStationaryGateEnabled\":true,\"sliderPhoneDisplaceStationaryGateDegPerSec\":\"2\",\"textPhoneDisplaceRangeX\":\"{\\\"min\\\":0,\\\"max\\\":20}\",\"textPhoneDisplaceCurveX\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"monotone\\\"}\",\"sliderPhoneDisplaceXReferenceM\":\"0.35\",\"textPhoneDisplaceRangeY\":\"{\\\"min\\\":0,\\\"max\\\":20}\",\"textPhoneDisplaceCurveY\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"monotone\\\"}\",\"sliderPhoneDisplaceYReferenceM\":\"0.35\",\"textPhoneDisplaceRangeZ\":\"{\\\"min\\\":0,\\\"max\\\":20}\",\"textPhoneDisplaceCurveZ\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"monotone\\\"}\",\"sliderPhoneDisplaceZReferenceM\":\"0.35\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"10\",\"sliderScreenRenderResolution\":\"200\",\"sliderScreenTextureScale\":\"1.20516163222046\",\"textScreenLevelScaleRange\":\"{\\\"min\\\":1,\\\"max\\\":1}\",\"textScreenLevelScaleCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"linear\\\"}\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"1.35\",\"sliderScreenTextureScaleY\":\"1.2\",\"checkboxScreenToScale\":true,\"sliderScreenTextureOffsetX\":\"-0.004\",\"sliderScreenTextureOffsetY\":\"0.015\",\"sliderScreenEmissionIntensity\":\"1.1\",\"checkboxScreenMirrorAlternatingX\":true,\"checkboxScreenMirrorAlternatingY\":false,\"checkboxScreenMirrorPhaseX\":false,\"checkboxScreenMirrorPhaseY\":false},\"data/processed/SMARTPHONE MODELS/Nothing2.glb\":{\"sliderPhoneModelScale\":\"1\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"0\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":true,\"selectPhoneRotationMode\":\"gyro\",\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"1\",\"textPhoneResponsiveRotationRange\":\"{\\\"min\\\":-69,\\\"max\\\":60}\",\"textPhoneResponsiveRotationCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"natural\\\"}\",\"checkboxPhoneResponsiveDisplaceEnabled\":true,\"selectPhoneDisplaceMode\":\"worldPosition\",\"checkboxPhoneDisplaceResetEnabled\":true,\"checkboxPhoneDisplaceAxisXEnabled\":false,\"sliderPhoneDisplaceScaleX\":\"1\",\"checkboxPhoneDisplaceInvertX\":false,\"checkboxPhoneDisplaceAxisYEnabled\":true,\"sliderPhoneDisplaceScaleY\":\"1\",\"checkboxPhoneDisplaceInvertY\":false,\"checkboxPhoneDisplaceAxisZEnabled\":false,\"sliderPhoneDisplaceScaleZ\":\"1\",\"checkboxPhoneDisplaceInvertZ\":false,\"sliderPhoneDisplaceDamping\":\"1\",\"sliderPhoneDisplaceVelDecayRate\":\"3\",\"sliderPhoneDisplacePosDecayRate\":\"0.08\",\"checkboxPhoneDisplaceStationaryGateEnabled\":true,\"sliderPhoneDisplaceStationaryGateDegPerSec\":\"2\",\"textPhoneResponsiveDisplaceRange\":\"{\\\"min\\\":-57,\\\"max\\\":52}\",\"textPhoneResponsiveDisplaceCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"monotone\\\"}\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"10\",\"sliderScreenRenderResolution\":\"200\",\"sliderScreenTextureScale\":\"1.2\",\"textScreenLevelScaleRange\":\"{\\\"min\\\":1,\\\"max\\\":1}\",\"textScreenLevelScaleCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":1,\\\"h1\\\":{\\\"x\\\":0.3925000190734863,\\\"y\\\":-0.1864583333333334}},{\\\"x\\\":1,\\\"y\\\":0,\\\"h2\\\":{\\\"x\\\":-0.21750001907348637,\\\"y\\\":0.36020838419596357}}],\\\"method\\\":\\\"linear\\\"}\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"1\",\"sliderScreenTextureScaleY\":\"0.9\",\"checkboxScreenToScale\":true,\"sliderScreenTextureOffsetX\":\"-0.0045\",\"sliderScreenTextureOffsetY\":\"0.0109847380188588\",\"sliderScreenEmissionIntensity\":\"1\",\"checkboxScreenMirrorAlternatingX\":true,\"checkboxScreenMirrorAlternatingY\":true,\"checkboxScreenMirrorPhaseX\":false,\"checkboxScreenMirrorPhaseY\":false},\"data/processed/SMARTPHONE MODELS/Pixel 9A.glb\":{\"sliderPhoneModelScale\":\"0.75\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"-4\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":true,\"selectPhoneRotationMode\":\"gyro\",\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"-0.404839764551995\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"0.63482750528045\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"0.640577267460234\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"1\",\"textPhoneRotationRangeX\":\"{\\\"min\\\":0,\\\"max\\\":125}\",\"textPhoneRotationCurveX\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0.028749910990397143},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"catmullrom\\\"}\",\"textPhoneRotationRangeY\":\"{\\\"min\\\":0,\\\"max\\\":180}\",\"textPhoneRotationCurveY\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0.03041661580403643},{\\\"x\\\":1,\\\"y\\\":0.7770833333333333}],\\\"method\\\":\\\"catmullrom\\\"}\",\"textPhoneRotationRangeZ\":\"{\\\"min\\\":0,\\\"max\\\":180}\",\"textPhoneRotationCurveZ\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0.035416158040364576},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"catmullrom\\\"}\",\"checkboxPhoneResponsiveDisplaceEnabled\":false,\"selectPhoneDisplaceMode\":\"worldPosition\",\"checkboxPhoneDisplaceResetEnabled\":true,\"checkboxPhoneDisplaceAxisXEnabled\":false,\"sliderPhoneDisplaceScaleX\":\"0.25\",\"checkboxPhoneDisplaceInvertX\":false,\"checkboxPhoneDisplaceAxisYEnabled\":false,\"sliderPhoneDisplaceScaleY\":\"0.25\",\"checkboxPhoneDisplaceInvertY\":false,\"checkboxPhoneDisplaceAxisZEnabled\":true,\"sliderPhoneDisplaceScaleZ\":\"0.25\",\"checkboxPhoneDisplaceInvertZ\":false,\"sliderPhoneDisplaceDamping\":\"1\",\"sliderPhoneDisplaceVelDecayRate\":\"3\",\"sliderPhoneDisplacePosDecayRate\":\"0.08\",\"checkboxPhoneDisplaceStationaryGateEnabled\":true,\"sliderPhoneDisplaceStationaryGateDegPerSec\":\"2\",\"textPhoneDisplaceRangeX\":\"{\\\"min\\\":0,\\\"max\\\":20}\",\"textPhoneDisplaceCurveX\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"monotone\\\"}\",\"sliderPhoneDisplaceXReferenceM\":\"0.35\",\"textPhoneDisplaceRangeY\":\"{\\\"min\\\":0,\\\"max\\\":20}\",\"textPhoneDisplaceCurveY\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"monotone\\\"}\",\"sliderPhoneDisplaceYReferenceM\":\"0.35\",\"textPhoneDisplaceRangeZ\":\"{\\\"min\\\":0,\\\"max\\\":20}\",\"textPhoneDisplaceCurveZ\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"monotone\\\"}\",\"sliderPhoneDisplaceZReferenceM\":\"0.35\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"7\",\"sliderScreenRenderResolution\":\"200\",\"sliderScreenTextureScale\":\"1.3\",\"textScreenLevelScaleRange\":\"{\\\"min\\\":1,\\\"max\\\":1}\",\"textScreenLevelScaleCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"linear\\\"}\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"1\",\"sliderScreenTextureScaleY\":\"1\",\"checkboxScreenToScale\":true,\"sliderScreenTextureOffsetX\":\"-0.146531236774425\",\"sliderScreenTextureOffsetY\":\"0.321579928801492\",\"sliderScreenEmissionIntensity\":\"1.05\",\"checkboxScreenMirrorAlternatingX\":true,\"checkboxScreenMirrorAlternatingY\":false,\"checkboxScreenMirrorPhaseX\":false,\"checkboxScreenMirrorPhaseY\":false},\"data/processed/SMARTPHONE MODELS/Iphone17MaxPro.glb\":{\"sliderPhoneModelScale\":\"0.91316267842775\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"1.4\",\"checkboxPhoneResponsiveRotationEnabled\":false,\"checkboxPhoneRotationResetEnabled\":true,\"selectPhoneRotationMode\":\"absolute\",\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"0.51\",\"checkboxPhoneResponsiveDisplaceEnabled\":false,\"selectPhoneDisplaceMode\":\"worldPosition\",\"checkboxPhoneDisplaceResetEnabled\":true,\"checkboxPhoneDisplaceAxisXEnabled\":true,\"sliderPhoneDisplaceScaleX\":\"1\",\"checkboxPhoneDisplaceInvertX\":true,\"checkboxPhoneDisplaceAxisYEnabled\":true,\"sliderPhoneDisplaceScaleY\":\"1\",\"checkboxPhoneDisplaceInvertY\":false,\"checkboxPhoneDisplaceAxisZEnabled\":true,\"sliderPhoneDisplaceScaleZ\":\"1\",\"checkboxPhoneDisplaceInvertZ\":false,\"sliderPhoneDisplaceDamping\":\"1\",\"sliderPhoneDisplaceVelDecayRate\":\"3\",\"sliderPhoneDisplacePosDecayRate\":\"0.08\",\"checkboxPhoneDisplaceStationaryGateEnabled\":true,\"sliderPhoneDisplaceStationaryGateDegPerSec\":\"2\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"10\",\"sliderScreenRenderResolution\":\"200\",\"sliderScreenTextureScale\":\"1.1\",\"textScreenLevelScaleRange\":\"{\\\"min\\\":1,\\\"max\\\":1}\",\"textScreenLevelScaleCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"linear\\\"}\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"1.1\",\"sliderScreenTextureScaleY\":\"0.95\",\"checkboxScreenToScale\":true,\"sliderScreenTextureOffsetX\":\"-0.0009\",\"sliderScreenTextureOffsetY\":\"0\",\"sliderScreenEmissionIntensity\":\"0.9\",\"checkboxScreenMirrorAlternatingX\":true,\"checkboxScreenMirrorAlternatingY\":false,\"checkboxScreenMirrorPhaseX\":false,\"checkboxScreenMirrorPhaseY\":false},\"data/processed/SMARTPHONE MODELS/Galaxy S2.glb\":{\"sliderPhoneModelScale\":\"1\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"0\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":true,\"selectPhoneRotationMode\":\"gyro\",\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"-1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"1\",\"textPhoneRotationRangeX\":\"{\\\"min\\\":0,\\\"max\\\":125}\",\"textPhoneRotationCurveX\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0.028749910990397143},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"catmullrom\\\"}\",\"textPhoneRotationRangeY\":\"{\\\"min\\\":0,\\\"max\\\":180}\",\"textPhoneRotationCurveY\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0.03041661580403643},{\\\"x\\\":1,\\\"y\\\":0.7770833333333333}],\\\"method\\\":\\\"catmullrom\\\"}\",\"textPhoneRotationRangeZ\":\"{\\\"min\\\":0,\\\"max\\\":180}\",\"textPhoneRotationCurveZ\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0.035416158040364576},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"catmullrom\\\"}\",\"checkboxPhoneResponsiveDisplaceEnabled\":true,\"selectPhoneDisplaceMode\":\"acceleration\",\"checkboxPhoneDisplaceResetEnabled\":true,\"checkboxPhoneDisplaceAxisXEnabled\":false,\"sliderPhoneDisplaceScaleX\":\"1\",\"checkboxPhoneDisplaceInvertX\":true,\"checkboxPhoneDisplaceAxisYEnabled\":true,\"sliderPhoneDisplaceScaleY\":\"1\",\"checkboxPhoneDisplaceInvertY\":false,\"checkboxPhoneDisplaceAxisZEnabled\":false,\"sliderPhoneDisplaceScaleZ\":\"1\",\"checkboxPhoneDisplaceInvertZ\":false,\"sliderPhoneDisplaceDamping\":\"1\",\"sliderPhoneDisplaceVelDecayRate\":\"3\",\"sliderPhoneDisplacePosDecayRate\":\"0.08\",\"checkboxPhoneDisplaceStationaryGateEnabled\":true,\"sliderPhoneDisplaceStationaryGateDegPerSec\":\"2\",\"textPhoneDisplaceRangeX\":\"{\\\"min\\\":0,\\\"max\\\":20}\",\"textPhoneDisplaceCurveX\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"monotone\\\"}\",\"sliderPhoneDisplaceXReferenceM\":\"0.35\",\"textPhoneDisplaceRangeY\":\"{\\\"min\\\":0,\\\"max\\\":20}\",\"textPhoneDisplaceCurveY\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"monotone\\\"}\",\"sliderPhoneDisplaceYReferenceM\":\"0.35\",\"textPhoneDisplaceRangeZ\":\"{\\\"min\\\":0,\\\"max\\\":20}\",\"textPhoneDisplaceCurveZ\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"monotone\\\"}\",\"sliderPhoneDisplaceZReferenceM\":\"0.35\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"10\",\"sliderScreenRenderResolution\":\"200\",\"sliderScreenTextureScale\":\"1.4\",\"textScreenLevelScaleRange\":\"{\\\"min\\\":1,\\\"max\\\":1}\",\"textScreenLevelScaleCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"linear\\\"}\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"1\",\"sliderScreenTextureScaleY\":\"1\",\"checkboxScreenToScale\":true,\"sliderScreenTextureOffsetX\":\"-0.006\",\"sliderScreenTextureOffsetY\":\"0\",\"sliderScreenEmissionIntensity\":\"1\",\"checkboxScreenMirrorAlternatingX\":true,\"checkboxScreenMirrorAlternatingY\":false,\"checkboxScreenMirrorPhaseX\":false,\"checkboxScreenMirrorPhaseY\":false},\"data/processed/SMARTPHONE MODELS/Motorola Razr.glb\":{\"sliderPhoneModelScale\":\"0.75\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"-4\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":true,\"selectPhoneRotationMode\":\"gyro\",\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"-1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"1\",\"textPhoneRotationRangeX\":\"{\\\"min\\\":0,\\\"max\\\":125}\",\"textPhoneRotationCurveX\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0.028749910990397143},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"catmullrom\\\"}\",\"textPhoneRotationRangeY\":\"{\\\"min\\\":0,\\\"max\\\":180}\",\"textPhoneRotationCurveY\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0.03041661580403643},{\\\"x\\\":1,\\\"y\\\":0.7770833333333333}],\\\"method\\\":\\\"catmullrom\\\"}\",\"textPhoneRotationRangeZ\":\"{\\\"min\\\":0,\\\"max\\\":180}\",\"textPhoneRotationCurveZ\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0.035416158040364576},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"catmullrom\\\"}\",\"checkboxPhoneResponsiveDisplaceEnabled\":false,\"selectPhoneDisplaceMode\":\"worldPosition\",\"checkboxPhoneDisplaceResetEnabled\":true,\"checkboxPhoneDisplaceAxisXEnabled\":false,\"sliderPhoneDisplaceScaleX\":\"0.25\",\"checkboxPhoneDisplaceInvertX\":false,\"checkboxPhoneDisplaceAxisYEnabled\":false,\"sliderPhoneDisplaceScaleY\":\"0.25\",\"checkboxPhoneDisplaceInvertY\":false,\"checkboxPhoneDisplaceAxisZEnabled\":true,\"sliderPhoneDisplaceScaleZ\":\"0.25\",\"checkboxPhoneDisplaceInvertZ\":false,\"sliderPhoneDisplaceDamping\":\"1\",\"sliderPhoneDisplaceVelDecayRate\":\"3\",\"sliderPhoneDisplacePosDecayRate\":\"0.08\",\"checkboxPhoneDisplaceStationaryGateEnabled\":true,\"sliderPhoneDisplaceStationaryGateDegPerSec\":\"2\",\"textPhoneDisplaceRangeX\":\"{\\\"min\\\":0,\\\"max\\\":20}\",\"textPhoneDisplaceCurveX\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"monotone\\\"}\",\"sliderPhoneDisplaceXReferenceM\":\"0.35\",\"textPhoneDisplaceRangeY\":\"{\\\"min\\\":0,\\\"max\\\":20}\",\"textPhoneDisplaceCurveY\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"monotone\\\"}\",\"sliderPhoneDisplaceYReferenceM\":\"0.35\",\"textPhoneDisplaceRangeZ\":\"{\\\"min\\\":0,\\\"max\\\":20}\",\"textPhoneDisplaceCurveZ\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"monotone\\\"}\",\"sliderPhoneDisplaceZReferenceM\":\"0.35\",\"checkboxScreenRenderEnabled\":false,\"sliderScreenRecursionLevels\":\"10\",\"sliderScreenRenderResolution\":\"200\",\"sliderScreenTextureScale\":\"2.7\",\"textScreenLevelScaleRange\":\"{\\\"min\\\":1,\\\"max\\\":1}\",\"textScreenLevelScaleCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"linear\\\"}\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"1\",\"sliderScreenTextureScaleY\":\"1\",\"checkboxScreenToScale\":true,\"sliderScreenTextureOffsetX\":\"-0.003\",\"sliderScreenTextureOffsetY\":\"0.197671194898808\",\"sliderScreenEmissionIntensity\":\"1.05\",\"checkboxScreenMirrorAlternatingX\":true,\"checkboxScreenMirrorAlternatingY\":false,\"checkboxScreenMirrorPhaseX\":false,\"checkboxScreenMirrorPhaseY\":false},\"data/processed/SMARTPHONE MODELS/Samsung Galaxy S26.glb\":{\"sliderPhoneModelScale\":\"1\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"0\",\"checkboxPhoneResponsiveRotationEnabled\":false,\"checkboxPhoneRotationResetEnabled\":true,\"selectPhoneRotationMode\":\"absolute\",\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"-1\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"0.21\",\"textPhoneRotationRangeX\":\"{\\\"min\\\":0,\\\"max\\\":125}\",\"textPhoneRotationCurveX\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0.028749910990397143},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"catmullrom\\\"}\",\"textPhoneRotationRangeY\":\"{\\\"min\\\":0,\\\"max\\\":180}\",\"textPhoneRotationCurveY\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0.03041661580403643},{\\\"x\\\":1,\\\"y\\\":0.7770833333333333}],\\\"method\\\":\\\"catmullrom\\\"}\",\"textPhoneRotationRangeZ\":\"{\\\"min\\\":0,\\\"max\\\":180}\",\"textPhoneRotationCurveZ\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0.035416158040364576},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"catmullrom\\\"}\",\"checkboxPhoneResponsiveDisplaceEnabled\":true,\"selectPhoneDisplaceMode\":\"worldPosition\",\"checkboxPhoneDisplaceResetEnabled\":true,\"checkboxPhoneDisplaceAxisXEnabled\":true,\"sliderPhoneDisplaceScaleX\":\"0.25\",\"checkboxPhoneDisplaceInvertX\":true,\"checkboxPhoneDisplaceAxisYEnabled\":true,\"sliderPhoneDisplaceScaleY\":\"0.25\",\"checkboxPhoneDisplaceInvertY\":false,\"checkboxPhoneDisplaceAxisZEnabled\":true,\"sliderPhoneDisplaceScaleZ\":\"0.25\",\"checkboxPhoneDisplaceInvertZ\":false,\"sliderPhoneDisplaceDamping\":\"1\",\"sliderPhoneDisplaceVelDecayRate\":\"3\",\"sliderPhoneDisplacePosDecayRate\":\"0.08\",\"checkboxPhoneDisplaceStationaryGateEnabled\":true,\"sliderPhoneDisplaceStationaryGateDegPerSec\":\"2\",\"textPhoneDisplaceRangeX\":\"{\\\"min\\\":0,\\\"max\\\":20}\",\"textPhoneDisplaceCurveX\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"monotone\\\"}\",\"sliderPhoneDisplaceXReferenceM\":\"0.35\",\"textPhoneDisplaceRangeY\":\"{\\\"min\\\":9,\\\"max\\\":20}\",\"textPhoneDisplaceCurveY\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"monotone\\\"}\",\"sliderPhoneDisplaceYReferenceM\":\"0.35\",\"textPhoneDisplaceRangeZ\":\"{\\\"min\\\":0,\\\"max\\\":20}\",\"textPhoneDisplaceCurveZ\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"monotone\\\"}\",\"sliderPhoneDisplaceZReferenceM\":\"1.02\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"10\",\"sliderScreenRenderResolution\":\"200\",\"sliderScreenTextureScale\":\"1.3\",\"textScreenLevelScaleRange\":\"{\\\"min\\\":1,\\\"max\\\":1}\",\"textScreenLevelScaleCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"linear\\\"}\",\"sliderScreenTextureRotation\":\"0\",\"sliderScreenTextureScaleX\":\"0.6\",\"sliderScreenTextureScaleY\":\"1.1\",\"checkboxScreenToScale\":true,\"sliderScreenTextureOffsetX\":\"1\",\"sliderScreenTextureOffsetY\":\"1\",\"sliderScreenEmissionIntensity\":\"0.95\",\"checkboxScreenMirrorAlternatingX\":true,\"checkboxScreenMirrorAlternatingY\":true,\"checkboxScreenMirrorPhaseX\":false,\"checkboxScreenMirrorPhaseY\":false},\"data/processed/SMARTPHONE MODELS/iPhone 17 Max.glb\":{\"sliderPhoneModelScale\":\"1\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"-1\",\"checkboxPhoneResponsiveRotationEnabled\":false,\"checkboxPhoneRotationResetEnabled\":true,\"selectPhoneRotationMode\":\"gyro\",\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"-1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"0.640577267460234\",\"sliderPhoneResponsiveRotationFineTune\":\"-18\",\"sliderPhoneRotationDamping\":\"1\",\"textPhoneRotationRangeX\":\"{\\\"min\\\":0,\\\"max\\\":125}\",\"textPhoneRotationCurveX\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0.028749910990397143},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"catmullrom\\\"}\",\"textPhoneRotationRangeY\":\"{\\\"min\\\":0,\\\"max\\\":180}\",\"textPhoneRotationCurveY\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0.03041661580403643},{\\\"x\\\":1,\\\"y\\\":0.7770833333333333}],\\\"method\\\":\\\"catmullrom\\\"}\",\"textPhoneRotationRangeZ\":\"{\\\"min\\\":0,\\\"max\\\":180}\",\"textPhoneRotationCurveZ\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0.035416158040364576},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"catmullrom\\\"}\",\"checkboxPhoneResponsiveDisplaceEnabled\":true,\"selectPhoneDisplaceMode\":\"worldPosition\",\"checkboxPhoneDisplaceResetEnabled\":true,\"checkboxPhoneDisplaceAxisXEnabled\":false,\"sliderPhoneDisplaceScaleX\":\"1\",\"checkboxPhoneDisplaceInvertX\":true,\"checkboxPhoneDisplaceAxisYEnabled\":false,\"sliderPhoneDisplaceScaleY\":\"1\",\"checkboxPhoneDisplaceInvertY\":false,\"checkboxPhoneDisplaceAxisZEnabled\":true,\"sliderPhoneDisplaceScaleZ\":\"1\",\"checkboxPhoneDisplaceInvertZ\":false,\"sliderPhoneDisplaceDamping\":\"0.05\",\"sliderPhoneDisplaceVelDecayRate\":\"3.1\",\"sliderPhoneDisplacePosDecayRate\":\"1.06\",\"checkboxPhoneDisplaceStationaryGateEnabled\":true,\"sliderPhoneDisplaceStationaryGateDegPerSec\":\"0.8\",\"textPhoneDisplaceRangeX\":\"{\\\"min\\\":0,\\\"max\\\":29}\",\"textPhoneDisplaceCurveX\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"monotone\\\"}\",\"sliderPhoneDisplaceXReferenceM\":\"0.35\",\"textPhoneDisplaceRangeY\":\"{\\\"min\\\":0,\\\"max\\\":46}\",\"textPhoneDisplaceCurveY\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0.1116378784179688},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"monotone\\\"}\",\"sliderPhoneDisplaceYReferenceM\":\"0.62\",\"textPhoneDisplaceRangeZ\":\"{\\\"min\\\":0,\\\"max\\\":20}\",\"textPhoneDisplaceCurveZ\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0.11511993408203125,\\\"h1\\\":{\\\"x\\\":0.31349204381306967,\\\"y\\\":0.41396942138671877}},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"monotone\\\"}\",\"sliderPhoneDisplaceZReferenceM\":\"0.36\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"10\",\"sliderScreenRenderResolution\":\"200\",\"sliderScreenTextureScale\":\"1.20516163222046\",\"textScreenLevelScaleRange\":\"{\\\"min\\\":1,\\\"max\\\":1}\",\"textScreenLevelScaleCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"linear\\\"}\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"1.35\",\"sliderScreenTextureScaleY\":\"1.2\",\"checkboxScreenToScale\":true,\"sliderScreenTextureOffsetX\":\"0.38119252447345\",\"sliderScreenTextureOffsetY\":\"0.412076526432461\",\"sliderScreenEmissionIntensity\":\"1\",\"checkboxScreenMirrorAlternatingX\":true,\"checkboxScreenMirrorAlternatingY\":false,\"checkboxScreenMirrorPhaseX\":false,\"checkboxScreenMirrorPhaseY\":false},\"blob:https://handy-set.vercel.app/828cd7f0-4b37-41ec-a2f0-10ca6716166d\":{\"sliderPhoneModelScale\":\"1\",\"sliderPhoneModelOffsetX\":\"0\",\"sliderPhoneModelOffsetY\":\"31\",\"sliderPhoneModelOffsetZ\":\"-1\",\"checkboxPhoneResponsiveRotationEnabled\":true,\"checkboxPhoneRotationResetEnabled\":true,\"selectPhoneRotationMode\":\"gyro\",\"checkboxPhoneAxisXEnabled\":true,\"sliderPhoneRotationScaleX\":\"1\",\"checkboxPhoneAxisYEnabled\":true,\"sliderPhoneRotationScaleY\":\"1\",\"checkboxPhoneAxisZEnabled\":true,\"sliderPhoneRotationScaleZ\":\"1\",\"sliderPhoneResponsiveRotationFineTune\":\"43\",\"sliderPhoneRotationDamping\":\"1\",\"textPhoneResponsiveRotationRange\":\"{\\\"min\\\":-57,\\\"max\\\":45}\",\"textPhoneResponsiveRotationCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"natural\\\"}\",\"checkboxScreenRenderEnabled\":true,\"sliderScreenRecursionLevels\":\"10\",\"sliderScreenRenderResolution\":\"175\",\"sliderScreenTextureScale\":\"0.9\",\"textScreenLevelScaleRange\":\"{\\\"min\\\":1,\\\"max\\\":1}\",\"textScreenLevelScaleCurve\":\"{\\\"points\\\":[{\\\"x\\\":0,\\\"y\\\":0},{\\\"x\\\":1,\\\"y\\\":1}],\\\"method\\\":\\\"linear\\\"}\",\"sliderScreenTextureRotation\":\"180\",\"sliderScreenTextureScaleX\":\"1.1\",\"sliderScreenTextureScaleY\":\"0.95\",\"checkboxScreenToScale\":true,\"sliderScreenTextureOffsetX\":\"0\",\"sliderScreenTextureOffsetY\":\"0.01\",\"sliderScreenEmissionIntensity\":\"0.9\",\"checkboxScreenMirrorAlternatingX\":true,\"checkboxScreenMirrorAlternatingY\":false,\"checkboxScreenMirrorPhaseX\":false,\"checkboxScreenMirrorPhaseY\":false}}",
+    "sliderPhoneModelScale": 0.75,
     "sliderPhoneModelOffsetX": 0,
     "sliderPhoneModelOffsetY": 31,
-    "sliderPhoneModelOffsetZ": -1,
+    "sliderPhoneModelOffsetZ": -4,
     "sliderPhoneModelRotX": 0,
     "sliderPhoneModelRotY": 0,
     "sliderPhoneModelRotZ": 0,
-    "checkboxPhoneResponsiveRotationEnabled": false,
+    "checkboxPhoneResponsiveRotationEnabled": true,
     "selectPhoneRotationMode": "gyro",
     "checkboxPhoneRotationResetEnabled": true,
     "checkboxPhoneAxisXEnabled": true,
-    "sliderPhoneRotationScaleX": -1,
+    "sliderPhoneRotationScaleX": 1,
     "checkboxPhoneAxisYEnabled": true,
     "sliderPhoneRotationScaleY": 1,
     "checkboxPhoneAxisZEnabled": true,
-    "sliderPhoneRotationScaleZ": 0.640577267460234,
-    "sliderPhoneResponsiveRotationFineTune": -18,
-    "sliderPhoneRotationDamping": 1,
+    "sliderPhoneRotationScaleZ": 1,
+    "sliderPhoneResponsiveRotationFineTune": 43,
+    "sliderPhoneRotationDamping": 0.81,
     "textPhoneRotationRangeX": "{\"min\":0,\"max\":125}",
     "textPhoneRotationCurveX": "{\"points\":[{\"x\":0,\"y\":0.028749910990397143},{\"x\":1,\"y\":1}],\"method\":\"catmullrom\"}",
     "textPhoneRotationRangeY": "{\"min\":0,\"max\":180}",
@@ -120,41 +120,41 @@
     "checkboxPhoneResponsiveDisplaceEnabled": false,
     "selectPhoneDisplaceMode": "worldPosition",
     "checkboxPhoneDisplaceResetEnabled": true,
-    "checkboxPhoneDisplaceAxisXEnabled": true,
-    "sliderPhoneDisplaceScaleX": 1,
-    "checkboxPhoneDisplaceInvertX": true,
-    "checkboxPhoneDisplaceAxisYEnabled": true,
-    "sliderPhoneDisplaceScaleY": 1,
+    "checkboxPhoneDisplaceAxisXEnabled": false,
+    "sliderPhoneDisplaceScaleX": 0.25,
+    "checkboxPhoneDisplaceInvertX": false,
+    "checkboxPhoneDisplaceAxisYEnabled": false,
+    "sliderPhoneDisplaceScaleY": 0.25,
     "checkboxPhoneDisplaceInvertY": false,
     "checkboxPhoneDisplaceAxisZEnabled": true,
-    "sliderPhoneDisplaceScaleZ": 1,
+    "sliderPhoneDisplaceScaleZ": 0.25,
     "checkboxPhoneDisplaceInvertZ": false,
-    "sliderPhoneDisplaceDamping": 0.16,
-    "sliderPhoneDisplaceVelDecayRate": 3.1,
-    "sliderPhoneDisplacePosDecayRate": 1.06,
+    "sliderPhoneDisplaceDamping": 1,
+    "sliderPhoneDisplaceVelDecayRate": 3,
+    "sliderPhoneDisplacePosDecayRate": 0.08,
     "checkboxPhoneDisplaceStationaryGateEnabled": true,
-    "sliderPhoneDisplaceStationaryGateDegPerSec": 0.8,
-    "textPhoneDisplaceRangeX": "{\"min\":0,\"max\":29}",
+    "sliderPhoneDisplaceStationaryGateDegPerSec": 2,
+    "textPhoneDisplaceRangeX": "{\"min\":0,\"max\":20}",
     "textPhoneDisplaceCurveX": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"monotone\"}",
     "sliderPhoneDisplaceXReferenceM": 0.35,
-    "textPhoneDisplaceRangeY": "{\"min\":0,\"max\":46}",
-    "textPhoneDisplaceCurveY": "{\"points\":[{\"x\":0,\"y\":0.1116378784179688},{\"x\":1,\"y\":1}],\"method\":\"monotone\"}",
-    "sliderPhoneDisplaceYReferenceM": 0.62,
+    "textPhoneDisplaceRangeY": "{\"min\":0,\"max\":20}",
+    "textPhoneDisplaceCurveY": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"monotone\"}",
+    "sliderPhoneDisplaceYReferenceM": 0.35,
     "textPhoneDisplaceRangeZ": "{\"min\":0,\"max\":20}",
-    "textPhoneDisplaceCurveZ": "{\"points\":[{\"x\":0,\"y\":0.11511993408203125,\"h1\":{\"x\":0.31349204381306967,\"y\":0.41396942138671877}},{\"x\":1,\"y\":1}],\"method\":\"monotone\"}",
-    "sliderPhoneDisplaceZReferenceM": 1.25,
-    "checkboxScreenRenderEnabled": true,
-    "sliderScreenRecursionLevels": 10,
-    "sliderScreenRenderResolution": 200,
-    "sliderScreenTextureScale": 1.20516163222046,
+    "textPhoneDisplaceCurveZ": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"monotone\"}",
+    "sliderPhoneDisplaceZReferenceM": 0.35,
+    "checkboxScreenRenderEnabled": false,
+    "sliderScreenRecursionLevels": 7,
+    "sliderScreenRenderResolution": 95,
+    "sliderScreenTextureScale": 1.3,
     "textScreenLevelScaleRange": "{\"min\":1,\"max\":1}",
     "textScreenLevelScaleCurve": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"linear\"}",
     "sliderScreenTextureRotation": 180,
-    "sliderScreenTextureOffsetX": 0.38119252447345,
-    "sliderScreenTextureOffsetY": 0.412076526432461,
-    "sliderScreenTextureScaleX": 1.35,
-    "sliderScreenTextureScaleY": 1.2,
-    "sliderScreenEmissionIntensity": 1,
+    "sliderScreenTextureOffsetX": -0.146531236774425,
+    "sliderScreenTextureOffsetY": 0.321579928801492,
+    "sliderScreenTextureScaleX": 1,
+    "sliderScreenTextureScaleY": 1,
+    "sliderScreenEmissionIntensity": 1.05,
     "checkboxScreenMirrorAlternatingX": true,
     "checkboxScreenMirrorAlternatingY": false,
     "checkboxScreenMirrorPhaseX": false,
@@ -226,10 +226,10 @@
     "checkboxDeviceInfoEnabled": true
   },
   "layout": {
-    "left": 31,
-    "top": 347,
+    "left": 35,
+    "top": 357,
     "width": 350,
-    "height": 432
+    "height": 364
   },
   "devPanelStyle": {
     "titleFontSize": 17,
@@ -6409,6 +6409,50 @@
                     "items": [
                       {
                         "type": "row",
+                        "key": "checkboxMobilePhoneResponsiveRotationEnabled"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderMobilePhoneResponsiveRotationFineTune"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderMobilePhoneRotationDamping"
+                      },
+                      {
+                        "type": "row",
+                        "key": "checkboxMobilePhoneRotationResetEnabled"
+                      },
+                      {
+                        "type": "row",
+                        "key": "checkboxMobilePhoneAxisXEnabled"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderMobilePhoneRotationScaleX"
+                      },
+                      {
+                        "type": "row",
+                        "key": "checkboxMobilePhoneAxisYEnabled"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderMobilePhoneRotationScaleY"
+                      },
+                      {
+                        "type": "row",
+                        "key": "checkboxMobilePhoneAxisZEnabled"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderMobilePhoneRotationScaleZ"
+                      },
+                      {
+                        "type": "row",
+                        "key": "selectMobilePhoneRotationMode"
+                      },
+                      {
+                        "type": "row",
                         "key": "textPhoneRotationRangeX"
                       },
                       {
@@ -6433,6 +6477,17 @@
                       }
                     ],
                     "rowKeys": [
+                      "checkboxMobilePhoneResponsiveRotationEnabled",
+                      "sliderMobilePhoneResponsiveRotationFineTune",
+                      "sliderMobilePhoneRotationDamping",
+                      "checkboxMobilePhoneRotationResetEnabled",
+                      "checkboxMobilePhoneAxisXEnabled",
+                      "sliderMobilePhoneRotationScaleX",
+                      "checkboxMobilePhoneAxisYEnabled",
+                      "sliderMobilePhoneRotationScaleY",
+                      "checkboxMobilePhoneAxisZEnabled",
+                      "sliderMobilePhoneRotationScaleZ",
+                      "selectMobilePhoneRotationMode",
                       "textPhoneRotationRangeX",
                       "textPhoneRotationCurveX",
                       "textPhoneRotationRangeY",
@@ -6592,6 +6647,50 @@
                   "items": [
                     {
                       "type": "row",
+                      "key": "checkboxMobilePhoneResponsiveRotationEnabled"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderMobilePhoneResponsiveRotationFineTune"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderMobilePhoneRotationDamping"
+                    },
+                    {
+                      "type": "row",
+                      "key": "checkboxMobilePhoneRotationResetEnabled"
+                    },
+                    {
+                      "type": "row",
+                      "key": "checkboxMobilePhoneAxisXEnabled"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderMobilePhoneRotationScaleX"
+                    },
+                    {
+                      "type": "row",
+                      "key": "checkboxMobilePhoneAxisYEnabled"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderMobilePhoneRotationScaleY"
+                    },
+                    {
+                      "type": "row",
+                      "key": "checkboxMobilePhoneAxisZEnabled"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderMobilePhoneRotationScaleZ"
+                    },
+                    {
+                      "type": "row",
+                      "key": "selectMobilePhoneRotationMode"
+                    },
+                    {
+                      "type": "row",
                       "key": "textPhoneRotationRangeX"
                     },
                     {
@@ -6616,6 +6715,17 @@
                     }
                   ],
                   "rowKeys": [
+                    "checkboxMobilePhoneResponsiveRotationEnabled",
+                    "sliderMobilePhoneResponsiveRotationFineTune",
+                    "sliderMobilePhoneRotationDamping",
+                    "checkboxMobilePhoneRotationResetEnabled",
+                    "checkboxMobilePhoneAxisXEnabled",
+                    "sliderMobilePhoneRotationScaleX",
+                    "checkboxMobilePhoneAxisYEnabled",
+                    "sliderMobilePhoneRotationScaleY",
+                    "checkboxMobilePhoneAxisZEnabled",
+                    "sliderMobilePhoneRotationScaleZ",
+                    "selectMobilePhoneRotationMode",
                     "textPhoneRotationRangeX",
                     "textPhoneRotationCurveX",
                     "textPhoneRotationRangeY",
@@ -6836,6 +6946,50 @@
                   "items": [
                     {
                       "type": "row",
+                      "key": "checkboxMobilePhoneResponsiveRotationEnabled"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderMobilePhoneResponsiveRotationFineTune"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderMobilePhoneRotationDamping"
+                    },
+                    {
+                      "type": "row",
+                      "key": "checkboxMobilePhoneRotationResetEnabled"
+                    },
+                    {
+                      "type": "row",
+                      "key": "checkboxMobilePhoneAxisXEnabled"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderMobilePhoneRotationScaleX"
+                    },
+                    {
+                      "type": "row",
+                      "key": "checkboxMobilePhoneAxisYEnabled"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderMobilePhoneRotationScaleY"
+                    },
+                    {
+                      "type": "row",
+                      "key": "checkboxMobilePhoneAxisZEnabled"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderMobilePhoneRotationScaleZ"
+                    },
+                    {
+                      "type": "row",
+                      "key": "selectMobilePhoneRotationMode"
+                    },
+                    {
+                      "type": "row",
                       "key": "textPhoneRotationRangeX"
                     },
                     {
@@ -6860,6 +7014,17 @@
                     }
                   ],
                   "rowKeys": [
+                    "checkboxMobilePhoneResponsiveRotationEnabled",
+                    "sliderMobilePhoneResponsiveRotationFineTune",
+                    "sliderMobilePhoneRotationDamping",
+                    "checkboxMobilePhoneRotationResetEnabled",
+                    "checkboxMobilePhoneAxisXEnabled",
+                    "sliderMobilePhoneRotationScaleX",
+                    "checkboxMobilePhoneAxisYEnabled",
+                    "sliderMobilePhoneRotationScaleY",
+                    "checkboxMobilePhoneAxisZEnabled",
+                    "sliderMobilePhoneRotationScaleZ",
+                    "selectMobilePhoneRotationMode",
                     "textPhoneRotationRangeX",
                     "textPhoneRotationCurveX",
                     "textPhoneRotationRangeY",
@@ -7019,6 +7184,50 @@
                 "items": [
                   {
                     "type": "row",
+                    "key": "checkboxMobilePhoneResponsiveRotationEnabled"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderMobilePhoneResponsiveRotationFineTune"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderMobilePhoneRotationDamping"
+                  },
+                  {
+                    "type": "row",
+                    "key": "checkboxMobilePhoneRotationResetEnabled"
+                  },
+                  {
+                    "type": "row",
+                    "key": "checkboxMobilePhoneAxisXEnabled"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderMobilePhoneRotationScaleX"
+                  },
+                  {
+                    "type": "row",
+                    "key": "checkboxMobilePhoneAxisYEnabled"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderMobilePhoneRotationScaleY"
+                  },
+                  {
+                    "type": "row",
+                    "key": "checkboxMobilePhoneAxisZEnabled"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderMobilePhoneRotationScaleZ"
+                  },
+                  {
+                    "type": "row",
+                    "key": "selectMobilePhoneRotationMode"
+                  },
+                  {
+                    "type": "row",
                     "key": "textPhoneRotationRangeX"
                   },
                   {
@@ -7043,6 +7252,17 @@
                   }
                 ],
                 "rowKeys": [
+                  "checkboxMobilePhoneResponsiveRotationEnabled",
+                  "sliderMobilePhoneResponsiveRotationFineTune",
+                  "sliderMobilePhoneRotationDamping",
+                  "checkboxMobilePhoneRotationResetEnabled",
+                  "checkboxMobilePhoneAxisXEnabled",
+                  "sliderMobilePhoneRotationScaleX",
+                  "checkboxMobilePhoneAxisYEnabled",
+                  "sliderMobilePhoneRotationScaleY",
+                  "checkboxMobilePhoneAxisZEnabled",
+                  "sliderMobilePhoneRotationScaleZ",
+                  "selectMobilePhoneRotationMode",
                   "textPhoneRotationRangeX",
                   "textPhoneRotationCurveX",
                   "textPhoneRotationRangeY",
@@ -8904,6 +9124,50 @@
                     "items": [
                       {
                         "type": "row",
+                        "key": "checkboxLandscapePhoneResponsiveRotationEnabled"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderLandscapePhoneResponsiveRotationFineTune"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderLandscapePhoneRotationDamping"
+                      },
+                      {
+                        "type": "row",
+                        "key": "checkboxLandscapePhoneRotationResetEnabled"
+                      },
+                      {
+                        "type": "row",
+                        "key": "checkboxLandscapePhoneAxisXEnabled"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderLandscapePhoneRotationScaleX"
+                      },
+                      {
+                        "type": "row",
+                        "key": "checkboxLandscapePhoneAxisYEnabled"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderLandscapePhoneRotationScaleY"
+                      },
+                      {
+                        "type": "row",
+                        "key": "checkboxLandscapePhoneAxisZEnabled"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderLandscapePhoneRotationScaleZ"
+                      },
+                      {
+                        "type": "row",
+                        "key": "selectLandscapePhoneRotationMode"
+                      },
+                      {
+                        "type": "row",
                         "key": "textPhoneRotationRangeX"
                       },
                       {
@@ -8928,6 +9192,17 @@
                       }
                     ],
                     "rowKeys": [
+                      "checkboxLandscapePhoneResponsiveRotationEnabled",
+                      "sliderLandscapePhoneResponsiveRotationFineTune",
+                      "sliderLandscapePhoneRotationDamping",
+                      "checkboxLandscapePhoneRotationResetEnabled",
+                      "checkboxLandscapePhoneAxisXEnabled",
+                      "sliderLandscapePhoneRotationScaleX",
+                      "checkboxLandscapePhoneAxisYEnabled",
+                      "sliderLandscapePhoneRotationScaleY",
+                      "checkboxLandscapePhoneAxisZEnabled",
+                      "sliderLandscapePhoneRotationScaleZ",
+                      "selectLandscapePhoneRotationMode",
                       "textPhoneRotationRangeX",
                       "textPhoneRotationCurveX",
                       "textPhoneRotationRangeY",
@@ -9087,6 +9362,50 @@
                   "items": [
                     {
                       "type": "row",
+                      "key": "checkboxLandscapePhoneResponsiveRotationEnabled"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapePhoneResponsiveRotationFineTune"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapePhoneRotationDamping"
+                    },
+                    {
+                      "type": "row",
+                      "key": "checkboxLandscapePhoneRotationResetEnabled"
+                    },
+                    {
+                      "type": "row",
+                      "key": "checkboxLandscapePhoneAxisXEnabled"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapePhoneRotationScaleX"
+                    },
+                    {
+                      "type": "row",
+                      "key": "checkboxLandscapePhoneAxisYEnabled"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapePhoneRotationScaleY"
+                    },
+                    {
+                      "type": "row",
+                      "key": "checkboxLandscapePhoneAxisZEnabled"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapePhoneRotationScaleZ"
+                    },
+                    {
+                      "type": "row",
+                      "key": "selectLandscapePhoneRotationMode"
+                    },
+                    {
+                      "type": "row",
                       "key": "textPhoneRotationRangeX"
                     },
                     {
@@ -9111,6 +9430,17 @@
                     }
                   ],
                   "rowKeys": [
+                    "checkboxLandscapePhoneResponsiveRotationEnabled",
+                    "sliderLandscapePhoneResponsiveRotationFineTune",
+                    "sliderLandscapePhoneRotationDamping",
+                    "checkboxLandscapePhoneRotationResetEnabled",
+                    "checkboxLandscapePhoneAxisXEnabled",
+                    "sliderLandscapePhoneRotationScaleX",
+                    "checkboxLandscapePhoneAxisYEnabled",
+                    "sliderLandscapePhoneRotationScaleY",
+                    "checkboxLandscapePhoneAxisZEnabled",
+                    "sliderLandscapePhoneRotationScaleZ",
+                    "selectLandscapePhoneRotationMode",
                     "textPhoneRotationRangeX",
                     "textPhoneRotationCurveX",
                     "textPhoneRotationRangeY",
@@ -9331,6 +9661,50 @@
                   "items": [
                     {
                       "type": "row",
+                      "key": "checkboxLandscapePhoneResponsiveRotationEnabled"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapePhoneResponsiveRotationFineTune"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapePhoneRotationDamping"
+                    },
+                    {
+                      "type": "row",
+                      "key": "checkboxLandscapePhoneRotationResetEnabled"
+                    },
+                    {
+                      "type": "row",
+                      "key": "checkboxLandscapePhoneAxisXEnabled"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapePhoneRotationScaleX"
+                    },
+                    {
+                      "type": "row",
+                      "key": "checkboxLandscapePhoneAxisYEnabled"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapePhoneRotationScaleY"
+                    },
+                    {
+                      "type": "row",
+                      "key": "checkboxLandscapePhoneAxisZEnabled"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapePhoneRotationScaleZ"
+                    },
+                    {
+                      "type": "row",
+                      "key": "selectLandscapePhoneRotationMode"
+                    },
+                    {
+                      "type": "row",
                       "key": "textPhoneRotationRangeX"
                     },
                     {
@@ -9355,6 +9729,17 @@
                     }
                   ],
                   "rowKeys": [
+                    "checkboxLandscapePhoneResponsiveRotationEnabled",
+                    "sliderLandscapePhoneResponsiveRotationFineTune",
+                    "sliderLandscapePhoneRotationDamping",
+                    "checkboxLandscapePhoneRotationResetEnabled",
+                    "checkboxLandscapePhoneAxisXEnabled",
+                    "sliderLandscapePhoneRotationScaleX",
+                    "checkboxLandscapePhoneAxisYEnabled",
+                    "sliderLandscapePhoneRotationScaleY",
+                    "checkboxLandscapePhoneAxisZEnabled",
+                    "sliderLandscapePhoneRotationScaleZ",
+                    "selectLandscapePhoneRotationMode",
                     "textPhoneRotationRangeX",
                     "textPhoneRotationCurveX",
                     "textPhoneRotationRangeY",
@@ -9514,6 +9899,50 @@
                 "items": [
                   {
                     "type": "row",
+                    "key": "checkboxLandscapePhoneResponsiveRotationEnabled"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderLandscapePhoneResponsiveRotationFineTune"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderLandscapePhoneRotationDamping"
+                  },
+                  {
+                    "type": "row",
+                    "key": "checkboxLandscapePhoneRotationResetEnabled"
+                  },
+                  {
+                    "type": "row",
+                    "key": "checkboxLandscapePhoneAxisXEnabled"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderLandscapePhoneRotationScaleX"
+                  },
+                  {
+                    "type": "row",
+                    "key": "checkboxLandscapePhoneAxisYEnabled"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderLandscapePhoneRotationScaleY"
+                  },
+                  {
+                    "type": "row",
+                    "key": "checkboxLandscapePhoneAxisZEnabled"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderLandscapePhoneRotationScaleZ"
+                  },
+                  {
+                    "type": "row",
+                    "key": "selectLandscapePhoneRotationMode"
+                  },
+                  {
+                    "type": "row",
                     "key": "textPhoneRotationRangeX"
                   },
                   {
@@ -9538,6 +9967,17 @@
                   }
                 ],
                 "rowKeys": [
+                  "checkboxLandscapePhoneResponsiveRotationEnabled",
+                  "sliderLandscapePhoneResponsiveRotationFineTune",
+                  "sliderLandscapePhoneRotationDamping",
+                  "checkboxLandscapePhoneRotationResetEnabled",
+                  "checkboxLandscapePhoneAxisXEnabled",
+                  "sliderLandscapePhoneRotationScaleX",
+                  "checkboxLandscapePhoneAxisYEnabled",
+                  "sliderLandscapePhoneRotationScaleY",
+                  "checkboxLandscapePhoneAxisZEnabled",
+                  "sliderLandscapePhoneRotationScaleZ",
+                  "selectLandscapePhoneRotationMode",
                   "textPhoneRotationRangeX",
                   "textPhoneRotationCurveX",
                   "textPhoneRotationRangeY",
@@ -10714,10 +11154,10 @@
     "desktop:Phone Model Log": true,
     "desktop:PHONE MODEL": false,
     "desktop:OFFSET": true,
-    "desktop:PHONE ROTATION": true,
+    "desktop:PHONE ROTATION": false,
     "desktop:RECURSIVE RENDER": false,
     "desktop:RESPONSIVE BEHAVIOUR - PHONE": false,
-    "desktop:Responsive Rotation": true,
+    "desktop:Responsive Rotation": false,
     "desktop:RESPONSIVE DISPLACE": false,
     "desktop:HAND MODEL": true,
     "desktop:Field Layout": true,
@@ -10771,8 +11211,8 @@
     "mobile:PHONE ROTATION": true,
     "mobile:RECURSIVE RENDER": true,
     "mobile:RESPONSIVE BEHAVIOUR - PHONE": false,
-    "mobile:Responsive Rotation": true,
-    "mobile:RESPONSIVE DISPLACE": false,
+    "mobile:Responsive Rotation": false,
+    "mobile:RESPONSIVE DISPLACE": true,
     "mobile:HAND MODEL": true,
     "mobile:Field Layout": false,
     "mobile:Pose": true,
@@ -11310,17 +11750,17 @@
     "textArmLengthCurve": false,
     "sliderScreenTextureOffsetX": true,
     "sliderPhoneModelOffsetY": false,
-    "checkboxPhoneResponsiveRotationEnabled": false,
-    "sliderPhoneResponsiveRotationFineTune": false,
-    "sliderPhoneRotationDamping": false,
-    "checkboxPhoneRotationResetEnabled": false,
-    "checkboxPhoneAxisXEnabled": false,
-    "sliderPhoneRotationScaleX": false,
-    "checkboxPhoneAxisYEnabled": false,
-    "sliderPhoneRotationScaleY": false,
-    "checkboxPhoneAxisZEnabled": false,
-    "sliderPhoneRotationScaleZ": false,
-    "selectPhoneRotationMode": false,
+    "checkboxPhoneResponsiveRotationEnabled": true,
+    "sliderPhoneResponsiveRotationFineTune": true,
+    "sliderPhoneRotationDamping": true,
+    "checkboxPhoneRotationResetEnabled": true,
+    "checkboxPhoneAxisXEnabled": true,
+    "sliderPhoneRotationScaleX": true,
+    "checkboxPhoneAxisYEnabled": true,
+    "sliderPhoneRotationScaleY": true,
+    "checkboxPhoneAxisZEnabled": true,
+    "sliderPhoneRotationScaleZ": true,
+    "selectPhoneRotationMode": true,
     "sliderScreenTextureOffsetY": true,
     "sliderPhoneModelRotX": true,
     "sliderPhoneModelRotY": true,
@@ -11362,7 +11802,9 @@
       "sliderScreenTextureOffsetY": 0.06,
       "sliderScreenTextureOffsetX": -0.0127433989193597,
       "checkboxPhoneDisplaceAxisXEnabled": true,
-      "checkboxPhoneDisplaceAxisZEnabled": true
+      "checkboxPhoneDisplaceAxisZEnabled": true,
+      "sliderPhoneDisplaceDamping": 0.19,
+      "checkboxPhoneDisplaceAxisYEnabled": true
     },
     "landscape": {}
   },
