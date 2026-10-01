@@ -257,6 +257,15 @@ const cfg = {
   // Per-sensor log toggles -- direct request 2026-09-28. Default all on,
   // matching the log line's pre-existing (always-all-3) behavior.
   sensorLogAccel: true, sensorLogGyro: true, sensorLogCompass: true,
+  // Diagnostic field -- added 2026-09-30, direct real-device test found
+  // Sensor Log's own "Accel" field (accelerationIncludingGravity) is a
+  // DIFFERENT signal than what Responsive Displace actually consumes
+  // (computePhoneLinearAccelDeviceLocal()'s own gravity-subtracted
+  // value) -- this logs THAT exact computed value instead, so a future
+  // test directly shows what's driving Displacement rather than the raw
+  // gravity-included reading. Default on (unlike most opt-in log
+  // toggles) since this is specifically for diagnosing Displace reports.
+  sensorLogLinearAccel: true,
   // deviceorientation's beta/gamma (absolute tilt ANGLE, degrees) --
   // added 2026-09-28, distinct from Gyro's rotationRate alpha/beta/gamma
   // (angular VELOCITY) already logged above under the same greek-letter
@@ -2823,6 +2832,73 @@ function filterPhoneDisplaceRawComponent(v) {
   if (Math.abs(v) < PHONE_DISPLACE_RAW_DEADZONE_MPS2) return 0
   return THREE.MathUtils.clamp(v, -PHONE_DISPLACE_RAW_CLAMP_MPS2, PHONE_DISPLACE_RAW_CLAMP_MPS2)
 }
+// Gravity subtraction -- added 2026-09-30 (2nd round, after a real
+// controlled single-axis test: reset, move one direction, reset, repeat
+// per axis). Cross-referencing that test's own Sensor Log against this
+// function's own data source found a real gap: Sensor Log logs
+// `accelerationIncludingGravity` (the raw accelerometer, gravity and
+// all), while this function was reading `e.acceleration` (the browser's
+// OWN pre-filtered, gravity-EXCLUDED "linear acceleration") -- two
+// genuinely different signals. The test data showed accelerationIncludingGravity
+// was rich, continuous, and clearly reliable throughout (e.g. a ~9-10
+// m/s^2 swing tracking a real reorientation), while e.acceleration had
+// never actually been directly observed/logged at all this whole time.
+// e.acceleration's own gravity-exclusion is device/browser-dependent and
+// can be null or low-quality on some hardware -- a strong, if
+// circumstantial, explanation for every reported symptom (drift from a
+// noisy/intermittent signal, jumps on the rare valid-but-noisy samples).
+// Switched to computing linear acceleration ourselves from
+// accelerationIncludingGravity (more universally available) minus a
+// gravity vector computed from the device's own current orientation --
+// the standard AHRS/IMU technique, robust by construction regardless of
+// a given browser's own sensor-fusion quality.
+//
+// computeDeviceOrientationQuat() transforms device-local coordinates
+// into this same world/reference frame (verified via its own matrix:
+// identity at alpha=beta=gamma=0, i.e. flat/screen-up, where device-
+// local Z maps directly to world Z -- so "up" = +world-Z there, and
+// world gravity is (0,0,-9.80665)). Gravity in the device's CURRENT
+// local frame = that world vector rotated by the INVERSE of the same
+// orientation quaternion. An accelerometer at rest reads the REACTION
+// force (+g opposing gravity's pull, not gravity itself), so true linear
+// acceleration is accelerationIncludingGravity PLUS this (negatively-
+// signed) gravity vector -- canceling to ~0 at rest. Verified via a
+// standalone script against 2 known real-world orientations (flat
+// screen-up, and held vertically upright facing the user) before
+// shipping: both reduce to ~0 linear acceleration at rest, as expected.
+const PHONE_GRAVITY_WORLD = new THREE.Vector3(0, 0, -9.80665)
+const _phoneGravityDeviceLocal = new THREE.Vector3()
+const _phoneOrientationQuatScratch = new THREE.Quaternion()
+// Shared by integratePhoneDisplacement() below and the Sensors log's own
+// "Log Linear Accel (No Gravity)" diagnostic field -- returns RAW,
+// un-swapped device-local linear acceleration in the standard W3C x/y/z
+// slots (same slots the existing "Accel" log field already uses for
+// accelerationIncludingGravity, so the 2 can be visually compared
+// directly), or null if neither data source is usable this tick.
+const _phoneLinearAccelResult = { x: 0, y: 0, z: 0 }
+function computePhoneLinearAccelDeviceLocal(e) {
+  if (e.accelerationIncludingGravity && latestOrientation) {
+    const q = computeDeviceOrientationQuat(latestOrientation.alpha || 0, latestOrientation.beta || 0, latestOrientation.gamma || 0)
+    // Copy q into a scratch quaternion before inverting -- q IS the
+    // shared _phoneAbsoluteQuat instance computeDeviceOrientationQuat()
+    // always returns, and callers that also need it UN-inverted (the
+    // 'worldPosition' rotation step) must not have it mutated here.
+    _phoneGravityDeviceLocal.copy(PHONE_GRAVITY_WORLD).applyQuaternion(_phoneOrientationQuatScratch.copy(q).invert())
+    _phoneLinearAccelResult.x = (e.accelerationIncludingGravity.x || 0) + _phoneGravityDeviceLocal.x
+    _phoneLinearAccelResult.y = (e.accelerationIncludingGravity.y || 0) + _phoneGravityDeviceLocal.y
+    _phoneLinearAccelResult.z = (e.accelerationIncludingGravity.z || 0) + _phoneGravityDeviceLocal.z
+    return _phoneLinearAccelResult
+  } else if (e.acceleration) {
+    // Fallback -- no orientation reading available yet (can't compute a
+    // gravity vector), but the browser's own gravity-excluded field
+    // happens to be available: use it directly.
+    _phoneLinearAccelResult.x = e.acceleration.x || 0
+    _phoneLinearAccelResult.y = e.acceleration.y || 0
+    _phoneLinearAccelResult.z = e.acceleration.z || 0
+    return _phoneLinearAccelResult
+  }
+  return null
+}
 function integratePhoneDisplacement(e) {
   if (!cfg.phoneResponsiveDisplaceEnabled) {
     phoneDisplaceLastTimestamp = null // clean restart, no big jump, whenever this resumes -- same convention as integratePhoneGyroRotation's own phoneGyroLastTimestamp
@@ -2830,37 +2906,49 @@ function integratePhoneDisplacement(e) {
   }
   const now = performance.now()
   if (phoneDisplaceLastTimestamp !== null) {
-    // CORRECTED 2026-09-30, direct reports above: this used to also
-    // bail out (resetting phoneDisplaceLastTimestamp, exactly like the
-    // disabled case) whenever e.acceleration was momentarily
+    // CORRECTED 2026-09-30 (1st round): this used to also bail out
+    // (resetting phoneDisplaceLastTimestamp, exactly like the disabled
+    // case) whenever a usable acceleration reading was momentarily
     // unavailable -- a real, known intermittent behavior on some
     // devices/browsers (occasional null readings, not just "off"). That
     // reset FROZE velocity/position completely (no decay applied at
     // all, since the function returned before reaching
     // applyPhoneDisplaceSample) for the gap's real duration, THEN
     // discarded that whole elapsed interval once a valid reading
-    // resumed (the next tick re-seeds the timestamp instead of
-    // computing a dt against the stale one) -- exactly the
-    // "sometimes delayed, sometimes overshoots" pattern reported: a
-    // stale, undecayed position frozen mid-gap, then abrupt resumption.
-    // Now a null-acceleration tick still advances time and still runs
-    // the leaky decay (ax/ay/az simply read 0 -- "no push this instant",
-    // not "nothing happened") via the SAME dt-capped math below,
-    // instead of stopping early.
-    const dt = Math.min((now - phoneDisplaceLastTimestamp) / 1000, 0.05) // seconds; tightened 0.1 -> 0.05 (see reports above) so a stalled/irregular tick's worst-case single-step size is halved
+    // resumed -- exactly the "sometimes delayed, sometimes overshoots"
+    // pattern reported. Now an unusable-reading tick still advances
+    // time and still runs the leaky decay (ax/ay/az simply read 0 --
+    // "no push this instant", not "nothing happened") via the SAME
+    // dt-capped math below, instead of stopping early.
+    const dt = Math.min((now - phoneDisplaceLastTimestamp) / 1000, 0.05) // seconds; tightened 0.1 -> 0.05 (1st round) so a stalled/irregular tick's worst-case single-step size is halved
     let ax = 0, ay = 0, az = 0
-    if (e.acceleration) {
-      // Y/Z SWAPPED 2026-09-30, direct report: "for displacement switch
-      // the input outputs for y and z axis" -- whatever previously fed
-      // the Y output (raw e.acceleration.y) now feeds Z, and vice versa.
-      // Swapped at the raw-reading stage, before the optional world-
-      // frame rotation below, matching every other real-device axis
-      // correction in this file. The Y/Z Axis Displace checkboxes/
-      // scale/invert controls and their labels are UNCHANGED -- only
-      // which raw reading reaches each one.
-      ax = filterPhoneDisplaceRawComponent(e.acceleration.x || 0)
-      ay = filterPhoneDisplaceRawComponent(e.acceleration.z || 0)
-      az = filterPhoneDisplaceRawComponent(e.acceleration.y || 0)
+    // CORRECTED 2026-09-30 (2nd round, after a real controlled test):
+    // switched from e.acceleration (the browser's own gravity-excluded
+    // "linear acceleration") to computePhoneLinearAccelDeviceLocal()'s
+    // manual gravity subtraction -- see that function's own comment for
+    // the full reasoning (Sensor Log's own accelerationIncludingGravity
+    // data was rich/continuous/reliable throughout a real test, while
+    // e.acceleration had never actually been directly observed/logged at
+    // all; its own gravity-exclusion quality is device/browser-dependent).
+    const linear = computePhoneLinearAccelDeviceLocal(e)
+    if (linear) {
+      // Y/Z SWAPPED 2026-09-30 (1st round), direct report: "for
+      // displacement switch the input outputs for y and z axis" --
+      // whatever previously fed the Y output (raw accel.y) now feeds Z,
+      // and vice versa. Swapped at the raw-reading stage, before the
+      // optional world-frame rotation below, matching every other real-
+      // device axis correction in this file. The Y/Z Axis Displace
+      // checkboxes/scale/invert controls and their labels are UNCHANGED
+      // -- only which raw reading reaches each one. UNVERIFIED whether
+      // this swap is still correct now that the underlying data SOURCE
+      // has changed (gravity-included + manual subtraction, vs. the
+      // browser's own pre-filtered field) -- the raw axis IDENTITY
+      // (x/y/z) is the same W3C convention either way, but if Y/Z still
+      // look wrong after this round's fix, re-test fresh rather than
+      // assuming this swap is still the right one.
+      ax = filterPhoneDisplaceRawComponent(linear.x)
+      ay = filterPhoneDisplaceRawComponent(linear.z)
+      az = filterPhoneDisplaceRawComponent(linear.y)
       if (cfg.phoneDisplaceMode === 'worldPosition' && latestOrientation) {
         const q = computeDeviceOrientationQuat(latestOrientation.alpha || 0, latestOrientation.beta || 0, latestOrientation.gamma || 0)
         _phoneDisplaceWorldVec.set(ax, ay, az).applyQuaternion(q)
@@ -4709,6 +4797,10 @@ function restartSensorTimer() {
     if (cfg.sensorLogAccel) {
       const accel = (latestMotion && latestMotion.accelerationIncludingGravity) || {}
       parts.push(`Accel x:${fmt(accel.x)} y:${fmt(accel.y)} z:${fmt(accel.z)}`)
+    }
+    if (cfg.sensorLogLinearAccel) {
+      const linear = latestMotion ? computePhoneLinearAccelDeviceLocal(latestMotion) : null
+      parts.push(linear ? `LinearAccel x:${fmt(linear.x)} y:${fmt(linear.y)} z:${fmt(linear.z)}` : 'LinearAccel (unavailable)')
     }
     if (cfg.sensorLogGyro) {
       const gyro = (latestMotion && latestMotion.rotationRate) || {}
@@ -6647,6 +6739,13 @@ function renderDebugExtras() {
   addRow(sensorSub, { id: 'checkboxSensorLogAccel', label: 'Log Accelerometer', type: 'checkbox' })
   document.getElementById('checkboxSensorLogAccel').checked = cfg.sensorLogAccel
   wireCheckbox('checkboxSensorLogAccel', (v) => { cfg.sensorLogAccel = v })
+  // Diagnostic -- added 2026-09-30, see cfg.sensorLogLinearAccel's own
+  // declaration comment. Shows the EXACT gravity-subtracted value
+  // Responsive Displace consumes, distinct from "Log Accelerometer"
+  // above (raw accelerationIncludingGravity).
+  addRow(sensorSub, { id: 'checkboxSensorLogLinearAccel', label: 'Log Linear Accel (No Gravity, Used By Displace)', type: 'checkbox' })
+  document.getElementById('checkboxSensorLogLinearAccel').checked = cfg.sensorLogLinearAccel
+  wireCheckbox('checkboxSensorLogLinearAccel', (v) => { cfg.sensorLogLinearAccel = v })
   addRow(sensorSub, { id: 'checkboxSensorLogGyro', label: 'Log Gyroscope', type: 'checkbox' })
   document.getElementById('checkboxSensorLogGyro').checked = cfg.sensorLogGyro
   wireCheckbox('checkboxSensorLogGyro', (v) => { cfg.sensorLogGyro = v })
