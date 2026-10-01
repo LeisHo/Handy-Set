@@ -550,19 +550,28 @@ const cfg = {
   // applyScreenTextureTransform()) instead of the slider values, and
   // those 2 sliders are locked (disabled) in the dev panel.
   screenToScaleEnabled: false,
-  phoneResponsiveRotationRange: '{"min":0,"max":30}',
-  // CORRECTED 2026-09-28, found via real device log data, not guessed:
-  // this default was DECREASING (t=0/no-tilt -> curveY=1/full magnitude,
-  // t=1/full-tilt -> curveY=0/zero magnitude) -- backwards for "more
-  // tilt = more rotation." Confirmed directly from a real Phone Model
-  // Log + Sensor Log capture: at rest (beta/gamma near 0) the model held
-  // near-MAX rotation on all 3 axes (and, since sign(rawComponent) near
-  // 0 is noise-sensitive, flickered unpredictably between + and -,
-  // explaining the reported jitter); at full tilt (beta/gamma pinned to
-  // +-45+) the model rotated only slightly. The axis MAPPING itself
-  // (which signal drives X/Y/Z, and each one's sign) was independently
-  // verified correct against all 4 test movements in that same capture.
-  phoneResponsiveRotationCurve: '{"points": [{"x": 0, "y": 0}, {"x": 1, "y": 1}], "method": "catmullrom"}',
+  // Per-axis Min/Max Range + Curve -- added 2026-10-01, direct request
+  // ("Make me a displacement min max slider and a curved editor for all
+  // 3 axes. Do the same for the rotation"). Replaces the old single
+  // SHARED phoneResponsiveRotationRange/Curve (one magnitude, evaluated
+  // from the COMBINED radial tilt distance, then split proportionally
+  // between X/Y by direction cosine) with 3 genuinely independent
+  // curves -- X (beta/up-down) evaluated from ny directly, Y (gamma/
+  // left-right) from nx, Z (spin) from nx too (its own separate
+  // mechanism, unchanged). No per-axis "Reference" slider the way
+  // Displace needed one -- unlike Displace's raw METERS (no natural
+  // 0-1 range), Rotation's raw nx/ny are already normalized tilt
+  // values (0-1, from cursor-distance/tiltMagnitude), so the curve's
+  // own X axis already reads directly as "how far tilted," matching
+  // the X="recorded... rotation" half of the clarification. Defaults
+  // match the old shared range/curve exactly (min 0/max 30,
+  // catmullrom identity-ish 0,0 -> 1,1), so nothing changes until
+  // these are retuned. See computePhoneResponsiveAxisDeg()'s own
+  // comment for the full formula and computePhoneCombinedQuat()'s
+  // desktop branch for how each axis's raw signed input is chosen.
+  phoneRotationRangeX: '{"min":0,"max":30}', phoneRotationCurveX: '{"points":[{"x":0,"y":0},{"x":1,"y":1}],"method":"catmullrom"}',
+  phoneRotationRangeY: '{"min":0,"max":30}', phoneRotationCurveY: '{"points":[{"x":0,"y":0},{"x":1,"y":1}],"method":"catmullrom"}',
+  phoneRotationRangeZ: '{"min":0,"max":30}', phoneRotationCurveZ: '{"points":[{"x":0,"y":0},{"x":1,"y":1}],"method":"catmullrom"}',
   // Debug > Object Axes -- ported from 3JS ENGINE's own feature (see that
   // project's src/main.js, "World Axes / Object Axes visualization").
   objectAxesEnabled: false, objectAxesRenderInFront: false,
@@ -2463,12 +2472,23 @@ let phoneScreenRenderMaterial = null // shared unlit MeshBasicMaterial driving t
 let phoneScreenWhiteMaterial = null // shared plain white MeshBasicMaterial, no .map -- shown ONLY on the deepest recursion pass (pass 0, the recursion floor), which has no captured image yet -- see renderVirtualScreen()'s own comment
 let screenRenderTargets = null // [RT_A, RT_B], created once and reused -- ping-ponged across up to 10 recursion passes per frame (see renderVirtualScreen())
 
-let phoneResponsiveRotationRangeParsed = { min: 0, max: 30 }
-let phoneResponsiveRotationCurveParsed = [{ x: 0, y: 1 }, { x: 1, y: 0 }]
-let phoneResponsiveRotationCurveMethod = 'catmullrom'
+// Per-axis parsed state -- same {range, curve, method}-per-axis shape as
+// phoneDisplaceAxisParsed (below), replacing the single shared
+// phoneResponsiveRotationRangeParsed/CurveParsed/CurveMethod. Called from
+// curveWidgetResyncs on a detected widget change AND once explicitly at
+// dev-panel build time (matching Displace's own parser, not Rotation's
+// prior behavior -- see that call site's own comment for why).
+const phoneRotationAxisParsed = {
+  X: { range: { min: 0, max: 30 }, curve: [{ x: 0, y: 0 }, { x: 1, y: 1 }], method: 'catmullrom' },
+  Y: { range: { min: 0, max: 30 }, curve: [{ x: 0, y: 0 }, { x: 1, y: 1 }], method: 'catmullrom' },
+  Z: { range: { min: 0, max: 30 }, curve: [{ x: 0, y: 0 }, { x: 1, y: 1 }], method: 'catmullrom' }
+}
 function parsePhoneResponsiveRotationConfig() {
-  try { phoneResponsiveRotationRangeParsed = JSON.parse(cfg.phoneResponsiveRotationRange) } catch (e) { /* keep last-good value */ }
-  try { const parsed = JSON.parse(cfg.phoneResponsiveRotationCurve); phoneResponsiveRotationCurveParsed = (parsed.points || parsed).slice().sort((a, b) => a.x - b.x); phoneResponsiveRotationCurveMethod = parsed.method || 'catmullrom' } catch (e) { /* keep last-good value */ }
+  ;['X', 'Y', 'Z'].forEach((axis) => {
+    const slot = phoneRotationAxisParsed[axis]
+    try { slot.range = JSON.parse(cfg['phoneRotationRange' + axis]) } catch (e) { /* keep last-good value */ }
+    try { const parsed = JSON.parse(cfg['phoneRotationCurve' + axis]); slot.curve = (parsed.points || parsed).slice().sort((a, b) => a.x - b.x); slot.method = parsed.method || 'catmullrom' } catch (e) { /* keep last-good value */ }
+  })
 }
 // Responsive Displace -- same parse-on-change pattern as Rotation's own
 // parser directly above. Called once explicitly at dev-panel build time
@@ -2526,9 +2546,14 @@ function computeScreenLevelScale(depth, levels) {
 // distance of the cursor... in a no cursor scenario i have no use for
 // it." Mobile does NOT call this at all any more (see
 // computePhoneCombinedQuat()'s own comment) -- it's a direct,
-// unthresholded passthrough instead. rawComponent here is always the
-// combined (always non-negative) cursor-distance magnitude for the X/Y
-// axis-angle path below.
+// unthresholded passthrough instead. rawComponent is now that axis's
+// OWN raw signed input (ny for X, -nx for Y, nx for Z -- see
+// computePhoneCombinedQuat()'s desktop branch), evaluated through that
+// axis's OWN curve/range (phoneRotationAxisParsed[axis]) -- CHANGED
+// 2026-10-01 from a single shared curve evaluated at the COMBINED
+// radial tilt distance then split proportionally by direction cosine.
+// Genuinely independent per-axis curves now, matching Displace's own
+// design (computePhoneDisplaceAxisUnits()).
 //
 // PROTECTED 2026-09-28 with a small deadzone, found necessary from a
 // REAL live bug (at the time still shared with mobile): the user's own
@@ -2540,14 +2565,15 @@ function computeScreenLevelScale(depth, levels) {
 // mobile no longer uses this path at all, since desktop's own cursor
 // position can still sit very close to dead-center.
 const PHONE_RESPONSIVE_DEADZONE = 0.02 // ~1deg-equivalent (0.02 * 45)
-function computePhoneResponsiveAxisDeg(rawComponent) {
+function computePhoneResponsiveAxisDeg(rawComponent, axis) {
   if (!cfg.trackingEnabled) return 0
   if (!cfg.responsiveRotationGlobalEnabled) return 0
   if (!cfg.phoneResponsiveRotationEnabled) return 0
   if (Math.abs(rawComponent) < PHONE_RESPONSIVE_DEADZONE) return 0
+  const slot = phoneRotationAxisParsed[axis]
   const t = THREE.MathUtils.clamp(Math.abs(rawComponent), 0, 1)
-  const curveY = THREE.MathUtils.clamp(window.evaluateCurveEditorPoints(phoneResponsiveRotationCurveParsed, t, phoneResponsiveRotationCurveMethod), 0, 1)
-  const { min, max } = phoneResponsiveRotationRangeParsed
+  const curveY = THREE.MathUtils.clamp(window.evaluateCurveEditorPoints(slot.curve, t, slot.method), 0, 1)
+  const { min, max } = slot.range
   // Clamped to >= 0, added 2026-10-01 -- same fix as
   // computePhoneDisplaceAxisUnits()'s own matching comment (a few lines
   // down), applied here defensively too since this function shares the
@@ -2858,18 +2884,24 @@ function computePhoneCombinedQuat() {
     _phoneResponsiveQuat.copy(phoneGyroQuat)
     }
   } else if (cfg.trackingEnabled && cfg.phoneResponsiveRotationEnabled) {
-    // DESKTOP: cursor-distance-driven, through the curve/range system.
+    // DESKTOP: cursor-distance-driven, through the per-axis curve/range
+    // system. CHANGED 2026-10-01: each axis now independently evaluates
+    // its OWN raw signed component through its OWN curve
+    // (computePhoneResponsiveAxisDeg(raw, axis)), replacing the old
+    // "combine nx/ny into one radial magnitude, evaluate ONE shared
+    // curve, split the result proportionally by direction cosine"
+    // approach -- that always made a diagonal tilt's combined magnitude
+    // track the SAME curve as a single-axis tilt of equal radial
+    // distance, which isn't "3 independent axes." Sign conventions
+    // preserved exactly from the old split (betaDeg's sign followed ny,
+    // gammaDeg's followed -nx) so this is a pure independence change,
+    // not a remapping -- computePhoneResponsiveAxisDeg() already
+    // returns magnitude*sign(rawComponent), so passing ny/-nx directly
+    // reproduces the old signs with no separate Math.sign() call needed.
     const rawNx = tiltMagnitude * Math.cos(tiltAngle) // gamma-analog (left-right)
     const rawNy = tiltMagnitude * Math.sin(tiltAngle) // beta-analog (front-back)
     const nx = THREE.MathUtils.clamp(rawNx - phoneNxBaseline, -1, 1)
     const ny = THREE.MathUtils.clamp(rawNy - phoneNyBaseline, -1, 1)
-    const combinedT = THREE.MathUtils.clamp(Math.hypot(ny, nx), 0, 1)
-    const combinedDeg = computePhoneResponsiveAxisDeg(combinedT) // always >= 0
-    let betaDeg = 0, gammaDeg = 0
-    if (combinedT > 1e-6) {
-      betaDeg = (ny / combinedT) * combinedDeg
-      gammaDeg = (-nx / combinedT) * combinedDeg
-    }
     // Per-axis on/off + scale -- direct request 2026-09-28. X gated here
     // directly. CORRECTED 2026-09-29, direct report from an isolated
     // one-checkbox-at-a-time desktop test ("the current what is labeled
@@ -2883,8 +2915,8 @@ function computePhoneCombinedQuat() {
     // integratePhoneGyroRotation() instead, already independently
     // verified via the same isolated-checkbox method (see that
     // function's own 10th-round comment).
-    betaDeg = cfg.phoneAxisXEnabled ? betaDeg * cfg.phoneRotationScaleX : 0
-    gammaDeg = cfg.phoneAxisYEnabled ? gammaDeg * cfg.phoneRotationScaleY : 0
+    let betaDeg = cfg.phoneAxisXEnabled ? computePhoneResponsiveAxisDeg(ny, 'X') * cfg.phoneRotationScaleX : 0
+    let gammaDeg = cfg.phoneAxisYEnabled ? computePhoneResponsiveAxisDeg(-nx, 'Y') * cfg.phoneRotationScaleY : 0
     const combinedTiltDeg = Math.hypot(betaDeg, gammaDeg)
     if (combinedTiltDeg > 1e-6) {
       _phoneTiltAxis.set(betaDeg, 0, gammaDeg).normalize()
@@ -2900,15 +2932,14 @@ function computePhoneCombinedQuat() {
     // does (beta/gamma/alpha are 3 separate physical readings; a 2D
     // cursor position is only 2 DOF), so this reuses the SAME
     // horizontal cursor offset (nx) that also, separately, drives the
-    // combined-tilt contribution above -- signed by nx's own sign,
-    // magnitude through the same shared curve/range system every other
-    // axis already uses -- applied as its OWN rotation around world Y
-    // and composed on top rather than folded into the combined
-    // axis-angle, the same separate-mechanism pattern mobile's own
-    // alpha/spin axis already uses.
+    // combined-tilt contribution above -- through its OWN 'Z' curve now
+    // (2026-10-01), not the shared one -- applied as its OWN rotation
+    // around world Y and composed on top rather than folded into the
+    // combined axis-angle, the same separate-mechanism pattern mobile's
+    // own alpha/spin axis already uses.
     let alphaDeg = 0
-    if (cfg.phoneAxisZEnabled && Math.abs(nx) > 1e-6) {
-      alphaDeg = computePhoneResponsiveAxisDeg(Math.abs(nx)) * Math.sign(nx) * cfg.phoneRotationScaleZ
+    if (cfg.phoneAxisZEnabled) {
+      alphaDeg = computePhoneResponsiveAxisDeg(nx, 'Z') * cfg.phoneRotationScaleZ
     }
     _phoneResponsiveQuat.copy(_phoneTiltQuat)
     if (Math.abs(alphaDeg) > 1e-6) {
@@ -6698,10 +6729,10 @@ function renderPhoneModelGroup(content) {
   wireSlider('sliderPhoneModelRotZ', (v) => { cfg.phoneModelRotZ = v; applyPhoneModelTransform() })
 
   // RESPONSIVE BEHAVIOUR - PHONE (level 2, per direct correction) >
-  // Responsive Rotation (level 3) -- 4 controls, same pattern as
-  // Responsive Arm Rotation at Base (On/Off, Fine-Tune, Min/Max Range,
-  // Curve). See computePhoneResponsiveAxisDeg()'s own comment for how one
-  // shared curve/range drives all 3 axes independently.
+  // Responsive Rotation (level 3). On/Off, Mode, Reset, per-axis On/Off
+  // + Scale, Fine-Tune, Damping, then (2026-10-01) 3 INDEPENDENT
+  // Min/Max Range + Curve pairs, one per axis -- see
+  // computePhoneResponsiveAxisDeg()'s own comment for the formula.
   const subResponsiveBehaviour = addSubgroup(content, 'RESPONSIVE BEHAVIOUR - PHONE')
   const subResponsiveRotation = addSubgroup(subResponsiveBehaviour, 'Responsive Rotation')
   addRow(subResponsiveRotation, { id: 'checkboxPhoneResponsiveRotationEnabled', label: 'Responsive Rotation (On/Off)', type: 'checkbox' })
@@ -6766,30 +6797,40 @@ function renderPhoneModelGroup(content) {
   // not smooth." Same 1=instant/lower=smoother semantic as cfg.trackingDamping.
   addRow(subResponsiveRotation, { id: 'sliderPhoneRotationDamping', label: 'Rotation Damping (1=Instant)', type: 'slider', min: 0.05, max: 1, step: 0.01, value: cfg.phoneRotationDamping })
   wireSlider('sliderPhoneRotationDamping', (v) => { cfg.phoneRotationDamping = v })
-  // MIGRATED 2026-09-28 -- see Reactive Arm Length's own matching comment.
-  {
+  // Per-axis Min/Max Range + Curve -- replaces the single shared pair
+  // above (MIGRATED 2026-09-28, now superseded 2026-10-01). Called once
+  // explicitly right here (matching Displace's own build-time call,
+  // parsePhoneResponsiveDisplaceConfig() a bit further down) so a
+  // Sync-restored non-default range/curve is in effect from the first
+  // frame, not just from the first time the user touches a widget --
+  // see phoneRotationAxisParsed's own declaration comment.
+  parsePhoneResponsiveRotationConfig()
+  ;['X', 'Y', 'Z'].forEach((axis) => {
+    const rangeKey = 'phoneRotationRange' + axis
+    const curveKey = 'phoneRotationCurve' + axis
     let rangeDefault = { min: 0, max: 30 }
-    try { rangeDefault = JSON.parse(cfg.phoneResponsiveRotationRange) } catch (e) { /* keep fallback */ }
-    addRow(subResponsiveRotation, { id: 'textPhoneResponsiveRotationRange', label: 'Min / Max Rotation (Deg)', type: 'range-bar', trackMin: -180, trackMax: 180, unit: '°', defaultValue: rangeDefault })
-    let lastSeenRange = document.getElementById('textPhoneResponsiveRotationRange').value
+    try { rangeDefault = JSON.parse(cfg[rangeKey]) } catch (e) { /* keep fallback */ }
+    addRow(subResponsiveRotation, { id: 'textPhoneRotationRange' + axis, label: axis + ' Axis Min / Max Rotation (Deg)', type: 'range-bar', trackMin: -180, trackMax: 180, unit: '°', defaultValue: rangeDefault })
+    let lastSeenRange = document.getElementById('textPhoneRotationRange' + axis).value
     curveWidgetResyncs.push(() => {
-      const el = document.getElementById('textPhoneResponsiveRotationRange')
+      const el = document.getElementById('textPhoneRotationRange' + axis)
       if (!el || el.value === lastSeenRange) return
       lastSeenRange = el.value
-      cfg.phoneResponsiveRotationRange = el.value
+      cfg[rangeKey] = el.value
       parsePhoneResponsiveRotationConfig()
     })
-    const curveParsed = JSON.parse(cfg.phoneResponsiveRotationCurve)
-    addRow(subResponsiveRotation, { id: 'textPhoneResponsiveRotationCurve', label: 'Rotation Curve (Tilt -> Rotation)', type: 'curve-editor', defaultPoints: curveParsed.points, defaultMethod: curveParsed.method, caption: 'X: Per-Axis Tilt Magnitude (0-1)  ·  Y: Rotation Fraction (0=Min, 1=Max)' })
-    let lastSeenCurve = document.getElementById('textPhoneResponsiveRotationCurve').value
+    let curveDefault = { points: [{ x: 0, y: 0 }, { x: 1, y: 1 }], method: 'catmullrom' }
+    try { curveDefault = JSON.parse(cfg[curveKey]) } catch (e) { /* keep fallback */ }
+    addRow(subResponsiveRotation, { id: 'textPhoneRotationCurve' + axis, label: axis + ' Axis Rotation Curve (Tilt -> Rotation)', type: 'curve-editor', defaultPoints: curveDefault.points, defaultMethod: curveDefault.method, caption: 'X: ' + axis + ' Axis Tilt Magnitude (0-1)  ·  Y: Rotation Fraction (0=Min, 1=Max)' })
+    let lastSeenCurve = document.getElementById('textPhoneRotationCurve' + axis).value
     curveWidgetResyncs.push(() => {
-      const el = document.getElementById('textPhoneResponsiveRotationCurve')
+      const el = document.getElementById('textPhoneRotationCurve' + axis)
       if (!el || el.value === lastSeenCurve) return
       lastSeenCurve = el.value
-      cfg.phoneResponsiveRotationCurve = el.value
+      cfg[curveKey] = el.value
       parsePhoneResponsiveRotationConfig()
     })
-  }
+  })
 
   // RESPONSIVE BEHAVIOUR - PHONE > RESPONSIVE DISPLACE -- added
   // 2026-09-30, direct request (per the *DC*RESPONSIVE DISPLACE* dev-
@@ -6876,29 +6917,45 @@ function renderPhoneModelGroup(content) {
   wireCheckbox('checkboxPhoneDisplaceStationaryGateEnabled', (v) => { cfg.phoneDisplaceStationaryGateEnabled = v })
   addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplaceStationaryGateDegPerSec', label: 'Stationary Gate Threshold (Deg/s)', type: 'slider', min: 0.1, max: 10, step: 0.1, value: cfg.phoneDisplaceStationaryGateDegPerSec })
   wireSlider('sliderPhoneDisplaceStationaryGateDegPerSec', (v) => { cfg.phoneDisplaceStationaryGateDegPerSec = v })
-  {
+  // Per-axis Min/Max Range + Curve + Reference -- added 2026-10-01,
+  // replacing the single shared Range/Curve pair above (one X/Y/Z
+  // magnitude run through one shared curve). Each axis now gets its own
+  // Range-bar (output magnitude bounds), Curve-editor (X: how far along
+  // that axis's own Reference the real movement is, 0-1 · Y: output
+  // fraction between Min and Max), and a Reference slider (the real
+  // displacement distance in meters that reads as curve-X=1.0) -- see
+  // computePhoneDisplaceAxisUnits()'s own comment for the exact formula
+  // and phoneDisplaceAxisParsed's own declaration for the parsed-state
+  // shape this writes into via parsePhoneResponsiveDisplaceConfig().
+  ;['X', 'Y', 'Z'].forEach((axis) => {
+    const rangeKey = 'phoneDisplaceRange' + axis
+    const curveKey = 'phoneDisplaceCurve' + axis
+    const refKey = 'phoneDisplace' + axis + 'ReferenceM'
     let rangeDefault = { min: 0, max: 20 }
-    try { rangeDefault = JSON.parse(cfg.phoneResponsiveDisplaceRange) } catch (e) { /* keep fallback */ }
-    addRow(subResponsiveDisplace, { id: 'textPhoneResponsiveDisplaceRange', label: 'Min / Max Displacement (World Units)', type: 'range-bar', trackMin: -100, trackMax: 100, unit: '', defaultValue: rangeDefault })
-    let lastSeenRange = document.getElementById('textPhoneResponsiveDisplaceRange').value
+    try { rangeDefault = JSON.parse(cfg[rangeKey]) } catch (e) { /* keep fallback */ }
+    addRow(subResponsiveDisplace, { id: 'textPhoneDisplaceRange' + axis, label: axis + ' Axis Min / Max Displacement (World Units)', type: 'range-bar', trackMin: -100, trackMax: 100, unit: '', defaultValue: rangeDefault })
+    let lastSeenRange = document.getElementById('textPhoneDisplaceRange' + axis).value
     curveWidgetResyncs.push(() => {
-      const el = document.getElementById('textPhoneResponsiveDisplaceRange')
+      const el = document.getElementById('textPhoneDisplaceRange' + axis)
       if (!el || el.value === lastSeenRange) return
       lastSeenRange = el.value
-      cfg.phoneResponsiveDisplaceRange = el.value
+      cfg[rangeKey] = el.value
       parsePhoneResponsiveDisplaceConfig()
     })
-    const curveParsed = JSON.parse(cfg.phoneResponsiveDisplaceCurve)
-    addRow(subResponsiveDisplace, { id: 'textPhoneResponsiveDisplaceCurve', label: 'Displacement Curve (Movement -> Displace)', type: 'curve-editor', defaultPoints: curveParsed.points, defaultMethod: curveParsed.method, caption: 'X: Leaky-Integrated Movement Magnitude (0-1)  ·  Y: Displacement Fraction (0=Min, 1=Max)' })
-    let lastSeenCurve = document.getElementById('textPhoneResponsiveDisplaceCurve').value
+    let curveDefault = { points: [{ x: 0, y: 0 }, { x: 1, y: 1 }], method: 'monotone' }
+    try { curveDefault = JSON.parse(cfg[curveKey]) } catch (e) { /* keep fallback */ }
+    addRow(subResponsiveDisplace, { id: 'textPhoneDisplaceCurve' + axis, label: axis + ' Axis Displacement Curve (Movement -> Displace)', type: 'curve-editor', defaultPoints: curveDefault.points, defaultMethod: curveDefault.method, caption: 'X: Movement / ' + axis + ' Reference (0-1)  ·  Y: Displacement Fraction (0=Min, 1=Max)' })
+    let lastSeenCurve = document.getElementById('textPhoneDisplaceCurve' + axis).value
     curveWidgetResyncs.push(() => {
-      const el = document.getElementById('textPhoneResponsiveDisplaceCurve')
+      const el = document.getElementById('textPhoneDisplaceCurve' + axis)
       if (!el || el.value === lastSeenCurve) return
       lastSeenCurve = el.value
-      cfg.phoneResponsiveDisplaceCurve = el.value
+      cfg[curveKey] = el.value
       parsePhoneResponsiveDisplaceConfig()
     })
-  }
+    addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplace' + axis + 'ReferenceM', label: axis + ' Axis Reference Distance (M, = Curve X:1.0)', type: 'slider', min: 0.02, max: 2, step: 0.01, value: cfg[refKey] })
+    wireSlider('sliderPhoneDisplace' + axis + 'ReferenceM', (v) => { cfg[refKey] = v })
+  })
 
   // CORRECTED 2026-09-29, direct request: "The recurrsive render group
   // should be int he phone model group under the repsonsive behaviour
