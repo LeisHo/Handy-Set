@@ -10769,7 +10769,7 @@
     "mobile:PHONE MODEL": false,
     "mobile:OFFSET": false,
     "mobile:PHONE ROTATION": true,
-    "mobile:RECURSIVE RENDER": false,
+    "mobile:RECURSIVE RENDER": true,
     "mobile:RESPONSIVE BEHAVIOUR - PHONE": false,
     "mobile:Responsive Rotation": true,
     "mobile:RESPONSIVE DISPLACE": false,
