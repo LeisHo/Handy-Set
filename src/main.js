@@ -2360,7 +2360,25 @@ function computePhoneResponsiveAxisDeg(rawComponent) {
 // differently-scaled cursor-delta signal too, via
 // PHONE_DISPLACE_DESKTOP_SENSITIVITY). If the response feels too
 // weak/strong, these are the 2 constants to retune first.
-const PHONE_DISPLACE_REFERENCE_METERS = 0.25
+//
+// RAISED 0.25 -> 0.35, 2026-09-30, root-caused from 2 real controlled-test
+// datasets (flat + tilted) showing output positions jumping erratically
+// between near-max-positive and near-max-negative every ~500ms sample,
+// while the logged LinearAccel driving them stayed consistently small
+// (mostly under 1-2 m/s^2) -- i.e. the OUTPUT was saturating and flipping
+// sign from noise, not responding proportionally to real motion. Traced
+// to applyPhoneDisplaceSample()'s own leaky-integrator steady-state gain
+// (1 / (VELOCITY_DECAY_RATE * POSITION_DECAY_RATE) = 4.17 meters per
+// m/s^2 of SUSTAINED bias): a standalone script confirmed any constant
+// bias as small as ~0.06 m/s^2 -- well within normal gravity-subtraction/
+// sensor error -- alone saturates a 0.25m reference at steady state. See
+// PHONE_DISPLACE_BIAS_TRACK_RATE below for the actual fix (a high-pass
+// filter that removes this sustained bias before integration); the
+// reference distance only needed to move up enough to comfortably fit a
+// real deliberate push once that bias is no longer dominating (a
+// standalone sim: a 2.5 m/s^2 push for 0.5s, on top of a lingering 0.1
+// m/s^2 bias, reads ~0.35m peak after high-pass filtering).
+const PHONE_DISPLACE_REFERENCE_METERS = 0.35
 const PHONE_DISPLACE_DEADZONE = 0.02 // same role as PHONE_RESPONSIVE_DEADZONE, own constant since it gates a METERS ratio, not a degrees-equivalent one
 function computePhoneDisplaceAxisUnits(rawMeters, axisEnabled, axisScale, axisInverted) {
   if (!cfg.phoneResponsiveDisplaceEnabled) return 0
@@ -2781,6 +2799,36 @@ function integratePhoneGyroRotation(e) {
 // differs.
 const PHONE_DISPLACE_VELOCITY_DECAY_RATE = 3.0 // 1/seconds -- velocity's own contribution roughly halves every ~0.23s, fast enough that jittery sensor noise doesn't keep accumulating
 const PHONE_DISPLACE_POSITION_DECAY_RATE = 0.08 // 1/seconds -- position roughly halves every ~8.7s, slow enough that a normal few-second hold/demo feels sustained
+// Bias high-pass filter -- added 2026-09-30, the real root cause behind
+// "x axis keeps drifting and sometimes jumps" / "y and z... works
+// sometimes, but other times... goes too far", confirmed against 2 real
+// controlled-test datasets (flat + tilted) and a standalone simulation
+// (see PHONE_DISPLACE_REFERENCE_METERS's own comment for the numbers).
+// This leaky integrator's steady-state gain from a CONSTANT acceleration
+// bias to position is 1/(VELOCITY_DECAY_RATE*POSITION_DECAY_RATE) =
+// ~4.17 m per m/s^2 -- large enough that ordinary residual bias from
+// imperfect gravity subtraction (device orientation lag/noise) or plain
+// sensor calibration error, never fully zero on real hardware, was
+// enough on its own to saturate the output and leave Math.sign() of a
+// near-zero, noisy quantity as the only thing visibly changing --
+// exactly the observed "random-looking jump between extremes" symptom,
+// independent of any real movement. Fixed with a standard slow-tracking
+// high-pass filter: an exponential moving average of the raw linear
+// acceleration (PHONE_DISPLACE_BIAS_TRACK_RATE, ~2.5s time constant --
+// slow enough that a real deliberate push, ~0.3-0.5s, mostly passes
+// through un-absorbed, fast enough to track slowly-varying sensor/
+// orientation bias) is subtracted from the raw signal before it ever
+// reaches applyPhoneDisplaceSample(). Verified via a standalone script:
+// suppresses a sustained 0.1 m/s^2 bias from a steady-state 0.230m down
+// to 0.047m, while a real 2.5 m/s^2/0.5s push on top of that same bias
+// still peaks at 0.351m -- clearly distinguishable from the suppressed
+// baseline. Applied in integratePhoneDisplacement() only (mobile's real
+// accelerometer path) -- desktop's cursor-delta "impulse" in
+// updatePhoneDisplaceDesktopFrame() has no equivalent sensor-bias
+// problem (a cursor position has no analogous calibration error) and is
+// left untouched.
+const PHONE_DISPLACE_BIAS_TRACK_RATE = 0.4 // 1/seconds, ~2.5s time constant
+let phoneDisplaceBiasX = 0, phoneDisplaceBiasY = 0, phoneDisplaceBiasZ = 0
 let phoneDisplaceVelX = 0, phoneDisplaceVelY = 0, phoneDisplaceVelZ = 0
 let phoneDisplacePosX = 0, phoneDisplacePosY = 0, phoneDisplacePosZ = 0
 let phoneDisplaceLastTimestamp = null
@@ -2946,9 +2994,20 @@ function integratePhoneDisplacement(e) {
       // (x/y/z) is the same W3C convention either way, but if Y/Z still
       // look wrong after this round's fix, re-test fresh rather than
       // assuming this swap is still the right one.
-      ax = filterPhoneDisplaceRawComponent(linear.x)
-      ay = filterPhoneDisplaceRawComponent(linear.z)
-      az = filterPhoneDisplaceRawComponent(linear.y)
+      //
+      // Bias high-pass -- added 2026-09-30, see PHONE_DISPLACE_BIAS_TRACK_RATE's
+      // own declaration comment for the full root-cause account. Tracks
+      // and removes each axis's own slow-moving bias BEFORE the Y/Z swap
+      // and the raw deadzone/clamp filter below -- the bias tracker needs
+      // the full, un-clipped raw signal to accurately follow slow drift,
+      // and bias is a property of each RAW sensor axis, not of the
+      // display-mapped slot it ends up feeding.
+      phoneDisplaceBiasX += (linear.x - phoneDisplaceBiasX) * PHONE_DISPLACE_BIAS_TRACK_RATE * dt
+      phoneDisplaceBiasY += (linear.y - phoneDisplaceBiasY) * PHONE_DISPLACE_BIAS_TRACK_RATE * dt
+      phoneDisplaceBiasZ += (linear.z - phoneDisplaceBiasZ) * PHONE_DISPLACE_BIAS_TRACK_RATE * dt
+      ax = filterPhoneDisplaceRawComponent(linear.x - phoneDisplaceBiasX)
+      ay = filterPhoneDisplaceRawComponent(linear.z - phoneDisplaceBiasZ)
+      az = filterPhoneDisplaceRawComponent(linear.y - phoneDisplaceBiasY)
       if (cfg.phoneDisplaceMode === 'worldPosition' && latestOrientation) {
         const q = computeDeviceOrientationQuat(latestOrientation.alpha || 0, latestOrientation.beta || 0, latestOrientation.gamma || 0)
         _phoneDisplaceWorldVec.set(ax, ay, az).applyQuaternion(q)
@@ -3109,6 +3168,14 @@ function resetPhoneRotationBaseline() {
 function resetPhoneDisplaceBaseline() {
   phoneDisplaceVelX = phoneDisplaceVelY = phoneDisplaceVelZ = 0
   phoneDisplacePosX = phoneDisplacePosY = phoneDisplacePosZ = 0
+  // Bias tracker reset too (2026-09-30, added alongside the bias
+  // high-pass fix) -- a stale bias estimate from before the reset isn't
+  // wrong exactly (it still reflects the same real sensor/orientation
+  // bias), but zeroing it gives the high-pass filter a clean start
+  // matching "back to starting location," consistent with velocity/
+  // position also resetting to exactly 0 here rather than their own
+  // pre-reset values.
+  phoneDisplaceBiasX = phoneDisplaceBiasY = phoneDisplaceBiasZ = 0
   // Direct request 2026-09-30: "make it instant instead of tweened and
   // affected by damping" -- same fix as resetPhoneRotationBaseline()'s
   // own matching change. applyPhoneModelTransform()'s own per-frame
