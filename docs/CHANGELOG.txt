@@ -6569,6 +6569,81 @@ confirmed that the schema-version bump actually resolves the reported
 symptom, since that can only be observed in a real browser session.
 
 --------------------------------------------------------------------------------
+2026-10-01  -  Rotation desktop curve input: normalize by half the
+browser width.
+
+Direct request: "for desktop, for the rotation curve editors, make the
+right side on x axis the width of the browser/2. so it covers all cursor
+tracking basicallly." The previous desktop normalization
+(`tiltMagnitude = min(hypot(dx,dy)/min(halfWidth,halfHeight), 1)`) used
+whichever screen dimension was SMALLER as its saturation ceiling -- on a
+typical landscape browser window that's the height, so cursor movement
+saturated the curve well before actually reaching the left/right screen
+edge; a diagonal/vertical move could reach magnitude=1 at under a third
+of the way across the window horizontally.
+
+Added `computeDesktopRotationNxNy()`, normalizing raw cursor pixel
+offset (both dx and dy) by `window.innerWidth/2` alone. `dx/halfWidth`
+naturally lands in exactly -1..+1 within the viewport with no clamp
+needed, reaching precisely +/-1 at the real screen edge -- the "covers
+all cursor tracking" the request asked for. `tiltMagnitude`/`tiltAngle`
+themselves are untouched -- several OTHER features (Reactive Arm Length,
+Responsive Wrist Splay, Palm Rotation) still depend on their existing
+saturation behavior, and changing that shared value would have silently
+affected all of them (the exact cross-feature-coupling mistake this
+file's own `armBaseDistanceT` gotcha already warns against). A new
+module-level `desktopCursorDxPx`/`desktopCursorDyPx` pair, set in
+`handleMouseMoveFallback()` from the SAME dx/dy already computed there,
+feeds the new helper independently.
+
+Both real call sites that used to reconstruct nx/ny from
+`tiltMagnitude*cos/sin` -- `computePhoneCombinedQuat()`'s desktop branch
+AND `resetPhoneRotationBaseline()`'s own baseline capture -- now go
+through this one shared helper, specifically so they can't drift out of
+sync with each other the way 2 independent reconstructions of the same
+quantity have repeatedly done elsewhere in this file (see the Phone
+Model mobile-rotation-axis saga). Missing this would have reproduced
+that exact bug class: the live formula changes but the Reset baseline
+stays in the old domain, making a "reset to neutral" snap to a wrong,
+inconsistent position.
+
+Verified via a standalone script before shipping: for an UNSATURATED
+cursor position (old circular clamp not yet engaged), the new formula's
+sign conventions match the old one exactly when forced through the same
+denominator; separately, at dx=700px on a 1920px-wide reference screen,
+the OLD formula was already fully saturated at 1 (just 73% of the way to
+the real edge at dx=960), while the NEW formula correctly reports 0.729
+-- confirming the fix actually widens coverage rather than just
+reshuffling the same saturation point. 10/10 checks passed.
+
+No settings-file patch needed this time -- `phoneNxBaseline`/
+`phoneNyBaseline` are plain runtime state (not registered dev-panel
+controls), reset fresh to 0 on every page load, never persisted through
+Sync.
+
+Verification: `node --check` passes; zero duplicate function/const/let
+declarations. Live browser-pane verification skipped per this project's
+own standing instruction. Not independently confirmed against a real
+cursor/screen -- standing limitation, same as every other Phone
+Tilt/Rotation feature in this project.
+
+Note: while committing this, found origin/main had moved 12 commits
+ahead (dev-panel-settings.json Sync saves + 2 real Item Selector GLB
+re-imports from the user's own live session) -- a pure fast-forward (0
+local commits diverged). The user's own uncommitted Blender/GLB asset
+work in the working tree would have conflicted with the incoming GLB
+changes, so it was stashed (scoped to just `data/processed/SMARTPHONE
+MODELS/`, not touching this session's own `src/main.js`/`index.html`
+edits), the fast-forward applied cleanly, this session's own 2 files
+committed on top, pushed, then the stash popped back with zero
+conflicts. Also checked the live-synced `textPhoneRotationRangeX/Y/Z`
+values after the merge before considering another settings-file patch --
+found the user had already set real values (0/125, 0/180, 0/180),
+confirming the earlier schema-version fix is working and that these are
+genuine live tuning, not stale leftovers -- left untouched rather than
+overwritten with the code's own bare default.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

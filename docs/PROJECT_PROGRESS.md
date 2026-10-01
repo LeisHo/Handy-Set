@@ -7,14 +7,22 @@ append-only history.
 
 ## Currently working on
 
-**Nothing in progress right now.** Most recent work: fixed a stale-
-localStorage dev-panel bug (the per-axis curve-editor refactor below
-renamed/removed row ids without bumping `HANDYSET_SETTINGS_SCHEMA_VERSION`
-— this project's own documented guard for exactly this change class,
-caught via a report that unrelated Mirror checkboxes had seemingly
-vanished) and reworked Responsive Rotation's Min/Max Range to a
-symmetric 0-upward input (default 90, was 30) per direct request — see
-CHANGELOG's matching 2026-10-01 entry.
+**Nothing in progress right now.** Most recent work: reworked Rotation's
+desktop cursor-tracking normalization to use half the browser WIDTH
+alone (`computeDesktopRotationNxNy()`, `window.innerWidth/2`) instead of
+whichever screen dimension was smaller — cursor movement now reaches the
+curve's own X=1 point exactly at the real screen edge, rather than
+saturating well before it on a typical landscape window. Kept deliberately
+separate from the shared `tiltMagnitude` several other features still
+depend on. See CHANGELOG's matching 2026-10-01 entry.
+
+Before that: fixed a stale-localStorage dev-panel bug (the per-axis
+curve-editor refactor below renamed/removed row ids without bumping
+`HANDYSET_SETTINGS_SCHEMA_VERSION` — this project's own documented guard
+for exactly this change class, caught via a report that unrelated Mirror
+checkboxes had seemingly vanished) and reworked Responsive Rotation's
+Min/Max Range to a symmetric 0-upward input (default 90, was 30) per
+direct request — see CHANGELOG's matching 2026-10-01 entry.
 
 Before that: the per-axis Min/Max Range + Curve Editor feature (direct
 request) — Displace got its 3x Range-bar + 3x Curve-editor + 3x
