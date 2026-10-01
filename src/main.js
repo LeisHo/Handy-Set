@@ -156,6 +156,18 @@ const cfg = {
   palmFaceRotationOffset: 0,
   // Whole-Hand Rotation at Base (anchored at rForearmBend, using its own axes)
   baseRotationX: 0, baseRotationY: 0, baseRotationZ: 0,
+  // Mirror -- reflects the hand model along each of its OWN local axes
+  // (applied as a per-axis sign on h.clone.scale, so "the model's own X/Y/Z"
+  // means exactly what it says -- the GLB's own bind-pose local axes, not
+  // a world-space or camera-relative direction). A standalone model toggle,
+  // not part of POSE_KEY_DEFAULTS/SAVED_POSES -- it's a structural display
+  // setting (like Field Layout or Toon Shading), not an animatable pose
+  // value, so it deliberately isn't captured/blended by Saved Poses or
+  // Responsive Pose Tween. See rotateOnTrueWorldAxis()'s own comment for
+  // why curl/splay/twist need a dedicated fix to stay anatomically correct
+  // once any of these are on, and computeHandMirrorMatrix()'s/
+  // applyModelRootTransform()'s comments for the visual side.
+  handMirrorX: false, handMirrorY: false, handMirrorZ: false,
   // Reactive Arm Length — ported from HANDY DANDIES (see docs/CHANGELOG.txt
   // for the porting account). HANDY DANDIES normalizes "distance" against
   // the live min/max distance across a whole FIELD of hands each frame —
@@ -724,8 +736,55 @@ Object.assign(cfg, POSE_KEY_DEFAULTS, FIST_POSE_INITIAL)
 const _worldToLocalQuat = new THREE.Quaternion()
 const _excludeQuatInv = new THREE.Quaternion()
 const _localAxis = new THREE.Vector3()
+// getBoneWorldQuaternionRobust -- added 2026-10-01 for the Mirror feature
+// (handMirrorX/Y/Z). `bone.getWorldQuaternion()` internally calls
+// `Matrix4.decompose()`, which -- whenever any ancestor's scale has a
+// negative determinant (exactly what a mirror's per-axis sign flip on
+// `h.clone.scale` produces) -- cannot represent the matrix's rotation as a
+// pure quaternion, so it silently injects a SPURIOUS extra rotation to
+// resolve the ambiguity (always negating the X-scale component
+// specifically; a well-documented three.js quirk, also hit and fixed the
+// same way by HANDO's own real 2nd-Hand mirror feature, read directly
+// before implementing this). Using that corrupted "world quaternion" to
+// convert FINGER_CURL_AXIS/SPLAY/SPLAY2 (fixed, canonical WORLD-space
+// constants) into a bone's local frame would produce an essentially
+// ARBITRARY local axis once mirrored -- not a sensible mirrored pose, a
+// genuinely wrong one.
+//
+// Fixed by never going through matrixWorld/decompose for this at all: a
+// LOCAL quaternion (an object's own rotation relative to its immediate
+// parent) is a property of that one object alone and is NEVER affected by
+// what scale sits anywhere in its ancestor chain. Composing every
+// ancestor's LOCAL quaternion by hand, from the outermost ancestor down to
+// `bone`, gives the mathematically correct world rotation unconditionally
+// -- mirrored or not -- and is PROVABLY IDENTICAL to the plain
+// `getWorldQuaternion()` result whenever no ancestor has non-uniform/
+// negative scale (every case before this feature existed), so this is a
+// zero-behavior-change replacement when no mirror is active. Verified via
+// a standalone script before shipping -- see this file's own CHANGELOG
+// entry for the exact test cases (curl/splay/twist drift with mirror off,
+// and anatomical-correctness checks with each mirror axis on).
+//
+// Wrist Bend/Splay/Rotation (applyWristPoseToSkeleton(), bone.rotateX/Z/Y)
+// and Tip Twist's segmentDirection() (getWorldPosition(), never
+// getWorldQuaternion()) do NOT need this fix: wrist pose never references
+// any fixed WORLD-space axis constant at all (it's pure local-axis
+// rotation, already mirror-safe by construction), and getWorldPosition()'s
+// own decompose() isn't subject to the same quirk (only rotation
+// extraction is). Scoped to this one function, which is the ONLY place in
+// the pose pipeline that converts a canonical world-space constant through
+// a bone's actual (possibly-mirrored) world orientation.
+const _worldQuatChain = []
+function getBoneWorldQuaternionRobust(bone, target) {
+  let n = 0
+  let obj = bone
+  while (obj) { _worldQuatChain[n++] = obj; obj = obj.parent }
+  target.identity()
+  for (let i = n - 1; i >= 0; i--) target.multiply(_worldQuatChain[i].quaternion)
+  return target
+}
 function rotateOnTrueWorldAxis(bone, worldAxis, angle, excludeQuat) {
-  bone.getWorldQuaternion(_worldToLocalQuat)
+  getBoneWorldQuaternionRobust(bone, _worldToLocalQuat)
   if (excludeQuat) _worldToLocalQuat.premultiply(_excludeQuatInv.copy(excludeQuat).invert())
   _worldToLocalQuat.invert()
   _localAxis.copy(worldAxis).applyQuaternion(_worldToLocalQuat).normalize()
@@ -1207,11 +1266,28 @@ function computeBaseQuatFromValues(values) {
 // Offset X/Y/Z is added AFTERWARD as a plain additive translation on top,
 // matching HANDO's own function structure exactly.
 const _rotatedScaledPivot = new THREE.Vector3()
+// Mirror -- the per-axis sign baked into h.clone.scale alongside the
+// existing uniform scale, added 2026-10-01. This is applied in h.clone's
+// own LOCAL frame (the Object3D TRS composition's S acts on local child
+// coordinates before R/T), so "mirror along the model's own X/Y/Z" means
+// exactly the GLB's own bind-pose local axes, with no anchor-translation
+// needed the way HANDO's hand2 mirror needed (that one reflects through a
+// WORLD-space point shared between 2 independently-positioned hands; this
+// one is a single hand's own local-origin reflection, structurally
+// simpler). `_mirrorScaleVec.multiply` generalizes the pre-existing
+// `pivot.multiplyScalar(scale)` pivot-preserving step to a per-axis
+// vector -- component-wise multiply is exactly what the real S matrix
+// does to a local point before R is applied, so this correctly keeps
+// modelRotationPivot visually fixed in h.wrapper's frame regardless of
+// which axes are mirrored, the same guarantee the uniform-scale-only
+// version already gave for scale/rotation alone.
+const _mirrorScaleVec = new THREE.Vector3()
 function applyModelRootTransform(h, poseValues) {
   h.clone.quaternion.copy(h.currentBaseQuat)
   const scale = computeBaseScale() * (poseValues.poseScale ?? 1)
-  h.clone.scale.setScalar(scale)
-  _rotatedScaledPivot.copy(modelRotationPivot).multiplyScalar(scale).applyQuaternion(h.clone.quaternion)
+  _mirrorScaleVec.set(cfg.handMirrorX ? -scale : scale, cfg.handMirrorY ? -scale : scale, cfg.handMirrorZ ? -scale : scale)
+  h.clone.scale.copy(_mirrorScaleVec)
+  _rotatedScaledPivot.copy(modelRotationPivot).multiply(_mirrorScaleVec).applyQuaternion(h.clone.quaternion)
   h.clone.position.copy(modelRotationPivot).sub(_rotatedScaledPivot)
   h.clone.position.x += poseValues.poseOffsetX || 0
   h.clone.position.y += poseValues.poseOffsetY || 0
@@ -4244,7 +4320,14 @@ function relayoutField() {
     h.basePosition.set(x, y, 0)
     h.wrapper.position.set(x, y, 0)
     h.wrapper.visible = !cfg.hideHands
-    h.clone.scale.setScalar(computeBaseScale() * (cfg.poseScale ?? 1))
+    // Routed through applyModelRootTransform() (2026-10-01, Mirror feature)
+    // instead of a direct scale.setScalar() -- that bare uniform-scalar
+    // version would silently clobber a mirrored hand's per-axis
+    // handMirrorX/Y/Z scale back to unmirrored every time Field Layout
+    // changes. Idempotent to re-call here: quaternion/position end up at
+    // the exact same values they already had, since poseValues (cfg) and
+    // h.currentBaseQuat haven't changed, only scale needed recomputing.
+    applyModelRootTransform(h, cfg)
   })
 }
 function findSkinnedMesh(root) {
@@ -4823,8 +4906,13 @@ function renderOneFrame() {
           const desired = new THREE.Quaternion().setFromAxisAngle(axis, totalRad)
           h.wrapper.quaternion.slerp(desired, cfg.trackingDamping)
 
-          const scale = computeBaseScale() * (cfg.poseScale ?? 1)
-          const pivotLocal = forearmPosRaw.clone().multiplyScalar(scale).applyQuaternion(h.clone.quaternion).add(h.clone.position)
+          // Reads h.clone.scale directly (2026-10-01, Mirror feature)
+          // instead of recomputing a bare uniform scalar -- h.clone.scale
+          // is a per-axis vector once handMirrorX/Y/Z is active
+          // (applyModelRootTransform()), and a plain multiplyScalar() here
+          // would silently ignore the mirror, drifting this anchor away
+          // from the forearm bone's own true (mirrored) position.
+          const pivotLocal = forearmPosRaw.clone().multiply(h.clone.scale).applyQuaternion(h.clone.quaternion).add(h.clone.position)
           const rotatedPivot = pivotLocal.clone().applyQuaternion(h.wrapper.quaternion)
           h.wrapper.position.copy(h.basePosition).add(pivotLocal).sub(rotatedPivot)
         })
@@ -5499,6 +5587,21 @@ function renderPoseGroup(content) {
   ;[['modelRotX', -180, 180, 'Whole-Hand Rotation X (Deg)'], ['modelRotY', -180, 180, 'Whole-Hand Rotation Y (Deg)'], ['modelRotZ', -180, 180, 'Whole-Hand Rotation Z (Deg)']].forEach(([k, mn, mx, label]) => {
     addRow(subRotation, { id: 'slider' + k, label, type: 'slider', min: mn, max: mx, step: 1, value: cfg[k] })
     wireSlider('slider' + k, (v) => { cfg[k] = v; applyPoseValuesToHand(cfg) })
+  })
+
+  // MIRROR -- direct request: 3 checkboxes mirroring the hand along each
+  // of the MODEL'S OWN 3 axes (applied as a per-axis sign on h.clone.scale
+  // -- see applyModelRootTransform()'s own comment). Each one re-applies
+  // the full pose (applyPoseValuesToHand) rather than just
+  // applyModelRootTransform alone, since curl/splay/twist's own axis math
+  // (rotateOnTrueWorldAxis -> getBoneWorldQuaternionRobust) depends on
+  // h.clone's CURRENT scale too -- a stale finger pose would otherwise sit
+  // one frame behind the new mirror state.
+  const subMirror = addSubgroup(content, 'MIRROR')
+  ;[['handMirrorX', 'Mirror X'], ['handMirrorY', 'Mirror Y'], ['handMirrorZ', 'Mirror Z']].forEach(([k, label]) => {
+    addRow(subMirror, { id: 'checkbox' + k, label, type: 'checkbox' })
+    document.getElementById('checkbox' + k).checked = cfg[k]
+    wireCheckbox('checkbox' + k, (v) => { cfg[k] = v; applyPoseValuesToHand(cfg) })
   })
 
   const subBaseRotation = addSubgroup(content, 'Whole-Hand Rotation at Base')
