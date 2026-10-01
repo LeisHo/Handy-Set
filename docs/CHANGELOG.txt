@@ -6069,6 +6069,79 @@ spanning the full slider ranges round-trip to within 5.7e-14 degrees
 -> `?v=183`.
 
 --------------------------------------------------------------------------------
+2026-10-01  -  Add Hand Model Selector, loading HandiBonesB-IK.glb as a
+new selectable option
+
+Direct request: "provide a hand model selectorl iek the phone and load
+in this geometry J:\CLAUDE\PROJECTS\HANDYSET\data\processed\HAND3D\
+HandiBonesB-IK.glb". Before writing any code, parsed both GLB files' raw
+JSON directly (no browser needed, same technique already established in
+this file for inspecting phone model geometry) to check rig compatibility
+-- found the new file shares the EXACT SAME functional bone names as the
+current default rig (rHand, rIndex1/2/3, rMid1/2/3, rCarpal1-4,
+rForearmTwist, rForearmBend, etc. -- 22 vs 23 skin joints, the new file
+adding one extra), with ~46 additional non-functional helper nodes
+("IK Target Points", per-segment "Crease"/"Pad" markers) that don't
+correspond to anything this project's pose system reads by name. This
+meant the entire existing bone-name-based pose pipeline
+(applyCurlToSkeleton/applyWristPoseToSkeleton/boneRestQuat) works
+unchanged against the new rig with no adaptation needed -- a much better
+outcome than the filename's "IK" suggested might be the case.
+
+Built a "Model" Item Selector in the HAND MODEL group, visually mirroring
+Phone Model's own clickable-list UI (same .dp-list-picker-row-container/
+.dp-list-picker-item CSS and click pattern) per the request's own "like
+the phone." Deliberately scoped narrower than Phone Model's full feature
+set: no per-model settings capture/apply (a hand has no per-model
+tunables the way a phone has Recursive Render/Screen settings) and no
+Import GLB upload flow (nothing asked for uploading NEW hand models from
+the UI, only selecting between known ones) -- these are PHONE-specific
+sub-features, not part of "a selector," so narrowing them out isn't a
+fidelity cut against what was actually requested.
+
+Refactored the bind-pose measurement block that used to run inline, once,
+inside the initial handLoader.load() callback (handLengthRaw, alignQuat,
+wristCropNormalAligned, forearmPosRaw, wristPosRaw, modelRotationPivot,
+handCenterLocal, handBoundsRadiusLocal, boneRestQuat, toonMaterial,
+modelRoot) into a shared measureAndSetHandModel(root, skinned) function,
+so a model SWAP can re-run the exact same measurement against a newly
+loaded GLB without duplicating it. New loadHandModel(relativePath)
+(token-guarded like loadPhoneModel(), disposes the old model's geometry/
+materials via a new disposeOldHandModelRoot() mirroring
+disposePhoneModelRaw()'s own pattern) handles the swap path: re-measure,
+dispose the old template root, rebuildField() to re-clone every hand
+instance from the new model, then applyPoseValuesToHand(cfg) to re-pose
+with whatever the user currently has dialed in -- deliberately NOT
+applyDefaultSelections() (first-load-only; a swap shouldn't discard the
+user's current pose/camera/lighting tuning).
+
+The selection's own hidden, Sync-participating mirror control
+(hiddenHandModelFile) is required, not optional -- this project's own
+CLAUDE.md already documents 4 prior recurrences of the exact same bug
+class (a hand-built dev-panel widget's plain clickable <div> rows are
+never auto-registered with devPanel.js's generic capture/restore
+pipeline the way addRow()'s own standard controls are), most recently for
+Phone Model's own identical Item Selector.
+
+Disclosed, not fixed: a fresh page load always starts with whatever
+cfg.handModelFile defaults to (MODEL_URL, the pre-existing hardcoded
+default) before any Sync/remote-settings restore has resolved -- that
+happens asynchronously, after this file's synchronous initial
+handLoader.load() call has already started. A user who previously
+selected HandiBonesB-IK and Synced it will see a brief flash of the
+default Hand2 model on a fresh load, corrected a moment later once the
+restore-triggered swap runs -- the same timing trade-off every other
+restore-dependent setting in this file already has, not something new to
+this feature. Also verified (direct user question mid-task, unrelated to
+this feature) that the just-shipped Camera Yaw/Pitch fix carries no new
+gimbal-lock exposure: smooth, continuous camera motion confirmed at the
+slider's own pre-existing +-89deg clamp (1deg short of the true 90deg
+singularity, unchanged by that fix), with OrbitControls' own
+minPolarAngle/maxPolarAngle left unset (no second, conflicting
+constraint system). `index.html` cache-buster: `main.js` `?v=183` ->
+`?v=184`.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

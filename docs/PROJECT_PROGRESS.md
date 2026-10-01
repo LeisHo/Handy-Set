@@ -7,19 +7,35 @@ append-only history.
 
 ## Currently working on
 
-**In progress:** a Hand Model Selector (Item Selector UI mirroring the
-existing Phone Model selector pattern, loading
-`data/processed/HAND3D/HandiBonesB-IK.glb` as a new selectable hand
-geometry alongside the current default `Hand2.glb`). Confirmed via direct
-GLB parsing that the new file shares the EXACT SAME bone names as the
-current rig (`rHand`, `rIndex1/2/3`, `rForearmBend`, etc. — just with
-extra non-functional helper/IK-target nodes), so the existing bone-name-
-based pose system should work unchanged once the model is swapped —
-investigating the current model-load flow (`handLoader.load()`,
-`rebuildField()`) to determine what needs to become re-runnable for a
-dynamic swap, following `loadPhoneModel()`'s own proven pattern.
+**Nothing in progress right now** — the last active item shipped a Hand
+Model Selector: a "Model" Item Selector in the HAND MODEL group (visually
+mirroring Phone Model's own clickable-list UI), with `Hand2.glb`
+(existing default) and the new `HandiBonesB-IK.glb` as the 2 options.
+Confirmed via direct GLB JSON parsing (no browser needed) before writing
+any code that the new file shares the EXACT SAME functional bone names as
+the current rig (`rHand`, `rIndex1/2/3`, `rForearmBend`, etc. — just with
+~46 extra non-functional helper/IK-target nodes), so the existing bone-
+name-based pose system works unchanged once swapped — a better outcome
+than the filename's "IK" suggested. Refactored the bind-pose measurement
+that used to run inline, once, at initial load into a shared
+`measureAndSetHandModel()` function, so a new `loadHandModel()` swap path
+(token-guarded, disposes the old model's geometry via
+`disposeOldHandModelRoot()`) can re-run it against a freshly-loaded GLB
+and re-pose with the user's CURRENT settings (not reset to defaults).
+Deliberately narrower than Phone Model's own selector — no per-model
+settings capture and no Import GLB upload flow, since neither has a hand-
+model equivalent. Disclosed, not fixed: a fresh page load briefly shows
+the default model before an async Sync/remote-settings restore corrects
+it to a previously-selected model — the same timing trade-off every other
+restore-dependent setting in this file already has. See CHANGELOG's
+matching 2026-10-01 entry.
 
-Most recently completed (interleaved with the above): fixed the Camera
+Also verified (a direct mid-task question, unrelated to this feature) that
+the Camera Yaw/Pitch fix (below) carries no new gimbal-lock exposure —
+smooth, continuous motion confirmed at the slider's own pre-existing
+±89° clamp, with no conflicting OrbitControls polar-angle limit.
+
+Before that: fixed the Camera
 Yaw/Pitch sliders cross-corrupting each other's displayed value — a
 direction-convention mismatch between `getCameraYawPitch()` and
 `setCameraYawPitch()` (confirmed as a genuine latent bug already present

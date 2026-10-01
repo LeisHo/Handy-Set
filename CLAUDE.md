@@ -43,7 +43,10 @@ generic engine capability it doesn't have yet; add project settings via
   point inside `ensureDevPanelBuilt()`.
 - `data/processed/HAND3D/Hand2.glb` — the rigged hand asset, already
   present from before this project's reset (same asset HANDY DANDIES
-  uses).
+  uses). `HandiBonesB-IK.glb` (same folder) is a 2nd selectable hand
+  model (`HAND_MODEL_OPTIONS`, `main.js`) sharing the exact same
+  functional bone names/rig as Hand2.glb, selected via the Hand Model
+  Selector (HAND MODEL group's own "Model" Item Selector).
 - `data/processed/SMARTPHONE MODELS/*.glb` — 8 loadable smartphone
   models for the Phone Model group (`PHONE_MODEL_OPTIONS`, `main.js`).
   Only the top-level `.glb` files are tracked/loaded — the folder's own
