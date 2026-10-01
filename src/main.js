@@ -2327,7 +2327,17 @@ function computePhoneResponsiveAxisDeg(rawComponent) {
   const t = THREE.MathUtils.clamp(Math.abs(rawComponent), 0, 1)
   const curveY = THREE.MathUtils.clamp(window.evaluateCurveEditorPoints(phoneResponsiveRotationCurveParsed, t, phoneResponsiveRotationCurveMethod), 0, 1)
   const { min, max } = phoneResponsiveRotationRangeParsed
-  const magnitude = min + (max - min) * curveY + (cfg.phoneResponsiveRotationFineTune || 0)
+  // Clamped to >= 0, added 2026-10-01 -- same fix as
+  // computePhoneDisplaceAxisUnits()'s own matching comment (a few lines
+  // down), applied here defensively too since this function shares the
+  // identical magnitude-then-sign formula and the same negative-min risk
+  // this file's own 2026-09-27 PHONE_RESPONSIVE_DEADZONE comment already
+  // flagged (a negative min giving ~-57 magnitude at near-zero input) --
+  // that round only added a value deadzone, which relocates the jump to
+  // the deadzone boundary rather than removing it. Not independently
+  // confirmed broken for Rotation (the user has it switched off), but
+  // the formula is identical and the fix is free.
+  const magnitude = Math.max(0, min + (max - min) * curveY + (cfg.phoneResponsiveRotationFineTune || 0))
   return magnitude * Math.sign(rawComponent)
 }
 // Responsive Displace -- maps a leaky-integrated per-axis position
@@ -2387,7 +2397,28 @@ function computePhoneDisplaceAxisUnits(rawMeters, axisEnabled, axisScale, axisIn
   if (t < PHONE_DISPLACE_DEADZONE) return 0
   const curveY = THREE.MathUtils.clamp(window.evaluateCurveEditorPoints(phoneResponsiveDisplaceCurveParsed, t, phoneResponsiveDisplaceCurveMethod), 0, 1)
   const { min, max } = phoneResponsiveDisplaceRangeParsed
-  const magnitude = min + (max - min) * curveY + (cfg.phoneResponsiveDisplaceFineTune || 0)
+  // Clamped to >= 0, added 2026-10-01 -- root cause of "I see the phone,
+  // but the moment I move it jumps out of frame", confirmed from the
+  // user's own actual synced Range: {min:-20, max:20}. `magnitude` here
+  // is a MAGNITUDE, meant to be combined with Math.sign(rawMeters) below
+  // to get a signed output -- but with a NEGATIVE min, magnitude is
+  // already ~-20 the instant curveY is near 0 (true for every real
+  // movement until the curve is nearly fully traversed), so the very
+  // first motion that clears the deadzone above produces an immediate
+  // ~20-unit, SIGN-INVERTED jump instead of a small, proportional one.
+  // A natural, reasonable misconfiguration -- a user setting Min/Max
+  // Range to {-20, 20} expecting a signed "-20 to +20" OUTPUT range has
+  // no way to know this control is actually a magnitude-then-sign system
+  // under the hood. Clamping the floor to 0 makes any negative min behave
+  // as a (harmless) partial dead-band instead of an inverted snap, no
+  // matter what the Range text field is ever set to. Rotation's own
+  // identical formula (computePhoneResponsiveAxisDeg(), a few lines up)
+  // has this exact same latent risk -- that function's own 2026-09-27
+  // PHONE_RESPONSIVE_DEADZONE comment already names the "-57 at near-zero
+  // input" case but only ever added a value deadzone, which moves WHERE
+  // the jump happens (from literal 0 to the deadzone boundary) without
+  // removing the jump itself -- fixed there too, same reasoning.
+  const magnitude = Math.max(0, min + (max - min) * curveY + (cfg.phoneResponsiveDisplaceFineTune || 0))
   return magnitude * Math.sign(rawMeters) * axisScale * (axisInverted ? -1 : 1)
 }
 const _phoneDisplaceResultVec = new THREE.Vector3()

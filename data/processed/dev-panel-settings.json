@@ -123,7 +123,7 @@
     "checkboxPhoneDisplaceInvertZ": false,
     "sliderPhoneResponsiveDisplaceFineTune": 0,
     "sliderPhoneDisplaceDamping": 1,
-    "textPhoneResponsiveDisplaceRange": "{\"min\":-20,\"max\":20}",
+    "textPhoneResponsiveDisplaceRange": "{\"min\":0,\"max\":20}",
     "textPhoneResponsiveDisplaceCurve": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"monotone\"}",
     "checkboxScreenRenderEnabled": true,
     "sliderScreenRecursionLevels": 9,
