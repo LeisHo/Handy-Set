@@ -5884,6 +5884,83 @@ fix should now provide. `index.html` cache-buster: `main.js` `?v=179`
 -> `?v=180`.
 
 --------------------------------------------------------------------------------
+2026-10-01  -  Fix Responsive Displace/Rotation magnitude snap on a
+negative Range min; the real root cause of "jumps out of frame"
+
+Direct report after the bias high-pass fix (prior entry) deployed: "the
+movement set is the same... displacement is still very buggy", followed
+by a second real controlled-test triplet (Copy All Logs: Mouse Log +
+Sensor Log with LinearAccel + Phone Model Log) and then the key
+clarifying report: "when i double tap, or startup, i see the phone, but
+the moment i move it jumps out of frame. i can find it by moving around
+but still."
+
+Replayed the real LinearAccel x-axis samples from this new dataset
+through the exact shipped bias-filter pipeline (code, not a
+reconstruction) and found the predicted output should have stayed under
+10% of range throughout -- but the actual logged Pos x values were still
+swinging to near-full-range extremes (e.g. -18.77, 18.74, 19.16) on
+nearly every sample. That mismatch was too large to be the bias filter
+merely being insufficient, so checked the live Vercel deployment
+directly (fetched the served main.js) to rule out a stale-cache
+explanation first -- confirmed the deploy WAS running the bias-filter
+fix (PHONE_DISPLACE_BIAS_TRACK_RATE present, REFERENCE_METERS = 0.35,
+index.html referencing ?v=180, Last-Modified ~82s before the test data
+started). With deployment ruled out, pulled the actual git-tracked
+dev-panel-settings.json and found the real cause: the saved Displace
+Range was `{"min":-20,"max":20}`, not the `{0,20}` assumed while
+verifying the bias fix.
+
+computePhoneDisplaceAxisUnits()'s formula is `magnitude = min + (max-
+min)*curveY`, meant to produce a MAGNITUDE that gets combined with
+Math.sign(rawMeters) separately. With a NEGATIVE min, magnitude is
+already ~-20 the instant curveY is near 0 -- true for nearly every real
+movement, since the curve rarely gets driven anywhere near full
+traversal. So the very first sample that cleared the existing deadzone
+produced an immediate ~20-unit, sign-INVERTED jump instead of a small,
+proportional one -- exactly "I see the phone, but the moment I move it
+jumps out of frame." Confirmed by replaying the real logged data through
+the literal formula: the old code snapped to ~19 on the very first
+post-deadzone sample, matching the actual logged values almost exactly.
+A reasonable, natural misconfiguration -- Min/Max Range reads like "the
+output should range from -20 to +20," with nothing indicating this
+control is actually a magnitude-then-sign system underneath.
+
+This is the SAME formula/bug class an earlier round (2026-09-27) already
+partially addressed for Rotation's own PHONE_RESPONSIVE_DEADZONE (that
+comment literally names "a negative min means... magnitude around -57")
+but that round only added a value deadzone on the INPUT -- which
+relocates the discontinuity to the deadzone boundary rather than
+removing it, since curveY still starts near 0 immediately after crossing
+that boundary. Fixed properly this time: clamped `magnitude` to `Math.max(0,
+...)` in both computePhoneDisplaceAxisUnits() AND computePhoneResponsiveAxisDeg()
+(Rotation shares the identical formula and risk, though not
+independently confirmed broken since the user has Rotation disabled) --
+a negative min now behaves as a harmless partial dead-band instead of an
+inverted snap, regardless of what the Range text field is ever set to.
+Also corrected the user's actual saved Range value for Displace from
+`{-20,20}` to `{0,20}` via a targeted settings-file edit (verified via a
+before/after diff touching exactly that one field) so the full curve
+maps smoothly across [0,20] instead of half the curve going dead below
+the new `Math.max(0,...)` floor.
+
+Verified via 2 standalone replays of the real logged data through the
+literal shipped formula (not an approximation): with the OLD formula and
+the real saved Range, output snapped to ~19 on the very first real
+sample past the deadzone, matching the live bug exactly; with the NEW
+clamped formula and the corrected `{0,20}` Range, the SAME real data
+produces smooth output under 1 unit throughout. `index.html`
+cache-buster: `main.js` `?v=180` -> `?v=181`.
+
+Found, but deliberately left untouched, a substantial (163-line)
+uncommitted change already sitting in `src/devpanel/devPanel.js` from a
+concurrent session sharing this same working directory (its own earlier
+"Reorder dev panel header buttons" commit landed in history mid-task,
+confirming a 2nd session was active) -- excluded it from this fix's
+commit per CLAUDE.md's standing rule against touching another session's
+in-progress work.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

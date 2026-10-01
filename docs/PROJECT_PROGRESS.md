@@ -7,36 +7,45 @@ append-only history.
 
 ## Currently working on
 
-**Nothing in progress right now** — the last active item root-caused and
-fixed the actual erratic Responsive Displace output itself, using 2 full
-real controlled-test datasets the user collected (flat orientation, then
-a 90-degree-tilt start) via the Copy All Logs button. Both showed the
-Phone Model Log's position output jumping wildly between near-max
+**Nothing in progress right now** — the last active item found and fixed
+the REAL root cause of Responsive Displace's erratic output, after the
+prior bias-filter fix (below) turned out insufficient on its own. A
+follow-up real-device test still showed the bug ("the moment i move it
+jumps out of frame"); replaying the real logged data through the exact
+shipped bias-filter code predicted stable output, but the live app still
+jumped — so the live Vercel deployment was checked directly (confirmed
+running the latest code, ruling out a stale cache) and the actual synced
+settings file was inspected, revealing the true cause: Displace's saved
+Range was `{min:-20, max:20}`, and `computePhoneDisplaceAxisUnits()`'s
+`magnitude = min + (max-min)*curveY` formula produces ~min the instant
+curveY is near 0 — true for nearly every real movement — so any motion
+clearing the deadzone snapped straight to ~20 units with an inverted
+sign instead of ramping smoothly. Fixed by clamping magnitude to >= 0 in
+both this function and Rotation's identical one (same formula, same
+risk, not independently confirmed broken since Rotation is off), and by
+correcting the saved Range to `{0,20}`. Verified by replaying the real
+logged data through the literal formula: old formula snapped to ~19 on
+the first real sample past the deadzone (matching the live bug exactly);
+new formula + corrected Range produces smooth output under 1 unit on
+the same data. The Y/Z axis-mapping question is still open and
+lower-priority — it needs output stability confirmed on a fresh test
+first. See CHANGELOG's matching 2026-10-01 entry. Before that: root-
+caused and fixed the leaky-integrator bias/saturation issue, using 2
+full real controlled-test datasets the user collected (flat orientation,
+then a 90-degree-tilt start) via the Copy All Logs button. Both showed
+the Phone Model Log's position output jumping wildly between near-max
 extremes every ~500ms, completely uncorrelated with the small (1-2
-m/s^2) LinearAccel readings actually driving it — ruling out Y/Z axis
-mislabeling as the primary cause (that wouldn't produce output this
-unrelated to input) and pointing at the integration/curve-mapping stage
-instead. A standalone simulation confirmed the real cause: the leaky
-accel integrator's steady-state gain is ~4.17m of position per m/s^2 of
-SUSTAINED bias, so ordinary residual bias from gravity-subtraction/
-sensor error (as little as ~0.06 m/s^2) alone saturated the old 0.25m
-reference distance, leaving `Math.sign()` of near-zero noise as the only
-thing visibly changing. (The user confirmed Damping is at 1 — zero
-output smoothing — which is why this showed as instant snapping rather
-than a slower wobble.) Fixed with a per-axis high-pass filter
-(`PHONE_DISPLACE_BIAS_TRACK_RATE`, ~2.5s time constant) that tracks and
-removes slow-moving bias before integration, plus raising
-`PHONE_DISPLACE_REFERENCE_METERS` 0.25m → 0.35m now that bias no longer
-dominates it. Verified via 2 standalone simulations (no live device/
-browser access for this project): the filter alone cuts a sustained
-0.1 m/s^2 bias's steady-state position from 0.230m to 0.047m while a
-real push still peaks at 0.351m; an end-to-end replica of the full
-shipped pipeline held 15s of at-rest bias+jitter to 13% of output range
-with zero sign flips, while the same baseline plus one firm push spiked
-to 94%. The Y/Z axis-mapping question is still open and lower-priority —
-it needs this stability fix in place first before a fresh test's
-per-axis attribution means anything. See CHANGELOG's matching entry.
-Before that: switched Responsive Displace's whole data source — a real
+m/s^2) LinearAccel readings actually driving it. A standalone simulation
+confirmed the leaky accel integrator's steady-state gain is ~4.17m of
+position per m/s^2 of SUSTAINED bias, so ordinary residual bias from
+gravity-subtraction/sensor error (as little as ~0.06 m/s^2) alone
+saturated the old 0.25m reference distance. Fixed with a per-axis
+high-pass filter (`PHONE_DISPLACE_BIAS_TRACK_RATE`, ~2.5s time constant)
+plus raising `PHONE_DISPLACE_REFERENCE_METERS` 0.25m → 0.35m — a real,
+necessary fix, just not the dominant effect once the Range
+misconfiguration above is also accounted for. See CHANGELOG's matching
+2026-09-30 entry. Before that: switched Responsive Displace's whole data
+source — a real
 controlled device test (reset/move-one-axis/reset per axis, flat then
 tilted) revealed Sensor Log was logging `accelerationIncludingGravity`
 while Displace actually consumed the DIFFERENT `e.acceleration` field,
