@@ -5628,7 +5628,8 @@ function wireSlider(id, onInput) {
     const vEl = document.getElementById(id.replace(/^slider/, 'value'))
     if (vEl) vEl.textContent = v
   })
-}function wireDeviceSlider(id, cfgKey) {
+}
+function wireDeviceSlider(id, cfgKey) {
   // For controls with device checkboxes, route to device-specific cfg values
   const el = document.getElementById(id)
   if (!el) return
@@ -5641,6 +5642,59 @@ function wireSlider(id, onInput) {
     requestRender()
     const vEl = document.getElementById(id.replace(/^slider/, 'value'))
     if (vEl) vEl.textContent = v
+  })
+}
+// Bridges a "Show in Mobile/Landscape" slider's live Mobile/Landscape
+// DOM value into cfg[cfgKey+'Mobile'/'Landscape'] -- added 2026-10-01,
+// direct report: "texture x and y offset still doesnt wok on either
+// tab. I have the cehckboxes checked" / "they work on desktop... just
+// not mobile." Root cause, found by reading devPanel.js directly:
+// wireDeviceSlider() above only ever attaches its 'input' listener to
+// the DESKTOP element (`id`, unsuffixed) -- the Mobile/Landscape row is
+// a SEPARATE element devPanel.js auto-creates on demand
+// (ensureDynamicTargetRow()), with its own id
+// (`sliderMobileScreenTextureOffsetX`, NOT
+// `sliderScreenTextureOffsetXMobile` -- devPanel.js inserts the device
+// name right after the type prefix, confirmed directly from its own
+// resolveDevControlId() regex: `^(slider|color|select|checkbox)
+// (Mobile|Landscape)(.+)$`). That cloned element only ever gets
+// devPanel.js's own generic text-readout listener (buildSliderRow()) --
+// when the row is "Independent from Desktop" (the whole point of a
+// device-specific texture offset), the edited value is written ONLY
+// into devPanel.js's own internal `devDeviceValues` store (see
+// `onDevTargetControlEdited()`'s own independent branch) and NEVER
+// reaches this project's `cfg` object at all -- confirmed by grepping
+// devPanel.js for every `devDeviceValues` reference: none of them call
+// back into any project-supplied callback. `cfg.screenTextureOffsetXMobile`
+// (etc.) therefore stays frozen at its declared default (0) forever,
+// regardless of what the Mobile slider is dragged to -- exactly the
+// reported symptom.
+//
+// Fixed by POLLING (curveWidgetResyncs, the already-established pattern
+// in this file for exactly "an element that doesn't exist until later
+// and devPanel.js's own generic engine won't wire for me") rather than
+// trying to attach a live event listener -- the cloned element doesn't
+// exist until "Show in Mobile/Landscape" is checked, and can be
+// removed/recreated later (unchecking the visibility checkbox deletes
+// the row entirely -- see `ensureDynamicTargetRow()`'s own `!visible`
+// branch). Reads the DOM value directly rather than devDeviceValues, so
+// this works correctly whether the row is independent OR mirroring
+// Desktop (devPanel.js's own `applyDesktopMirror()` already keeps a
+// non-independent clone's DOM value in sync with Desktop -- no separate
+// branch needed here).
+function wireDeviceSliderMirror(desktopId, cfgKey) {
+  ;['Mobile', 'Landscape'].forEach((device) => {
+    const id = desktopId.replace(/^(slider|color|select|checkbox)/, '$1' + device)
+    const fullCfgKey = cfgKey + device
+    let lastSeen = null
+    curveWidgetResyncs.push(() => {
+      const el = document.getElementById(id)
+      if (!el) return
+      const v = parseFloat(el.value)
+      if (Number.isNaN(v) || v === lastSeen) return
+      lastSeen = v
+      cfg[fullCfgKey] = v
+    })
   })
 }
 function wireCheckbox(id, onChange) { const el = document.getElementById(id); if (el) el.addEventListener('change', (e) => { onChange(e.target.checked); requestRender() }) }
@@ -6425,7 +6479,15 @@ const PHONE_MODEL_PER_MODEL_CONTROL_IDS = [
   'checkboxPhoneAxisYEnabled', 'sliderPhoneRotationScaleY',
   'checkboxPhoneAxisZEnabled', 'sliderPhoneRotationScaleZ',
   'sliderPhoneResponsiveRotationFineTune', 'sliderPhoneRotationDamping',
-  'textPhoneResponsiveRotationRange', 'textPhoneResponsiveRotationCurve',
+  // CORRECTED 2026-10-01: the old shared textPhoneResponsiveRotationRange/
+  // Curve ids were replaced by 9 per-axis ones (per-axis curve-editor
+  // refactor) -- this list was missed at the time, left referencing ids
+  // that no longer exist (a harmless no-op in capturePhoneModelPerModelSettings()'s
+  // own `if (!el) return` guard, but silently meant per-model switching
+  // never captured/restored Rotation's own range/curve tuning at all).
+  'textPhoneRotationRangeX', 'textPhoneRotationCurveX',
+  'textPhoneRotationRangeY', 'textPhoneRotationCurveY',
+  'textPhoneRotationRangeZ', 'textPhoneRotationCurveZ',
   // Responsive Displace -- added 2026-09-30, same per-model treatment as
   // Responsive Rotation directly above (a smaller/lighter phone model
   // might reasonably want different displace tuning than a larger one).
@@ -6436,7 +6498,11 @@ const PHONE_MODEL_PER_MODEL_CONTROL_IDS = [
   'checkboxPhoneDisplaceAxisZEnabled', 'sliderPhoneDisplaceScaleZ', 'checkboxPhoneDisplaceInvertZ',
   'sliderPhoneDisplaceDamping', 'sliderPhoneDisplaceVelDecayRate', 'sliderPhoneDisplacePosDecayRate',
   'checkboxPhoneDisplaceStationaryGateEnabled', 'sliderPhoneDisplaceStationaryGateDegPerSec',
-  'textPhoneResponsiveDisplaceRange', 'textPhoneResponsiveDisplaceCurve',
+  // Same correction as Rotation's own, directly above: per-axis ids,
+  // not the old shared pair.
+  'textPhoneDisplaceRangeX', 'textPhoneDisplaceCurveX', 'sliderPhoneDisplaceXReferenceM',
+  'textPhoneDisplaceRangeY', 'textPhoneDisplaceCurveY', 'sliderPhoneDisplaceYReferenceM',
+  'textPhoneDisplaceRangeZ', 'textPhoneDisplaceCurveZ', 'sliderPhoneDisplaceZReferenceM',
   'checkboxScreenRenderEnabled', 'sliderScreenRecursionLevels',
   'sliderScreenRenderResolution', 'sliderScreenTextureScale',
   'textScreenLevelScaleRange', 'textScreenLevelScaleCurve',
@@ -6483,11 +6549,12 @@ function applyPhoneModelPerModelSettings(modelFile) {
     // events covers wireSlider()/wireColor()/wireTextInput() (which
     // listen for 'input') and wireCheckbox() (which listens for
     // 'change') without needing to know which kind of control each id
-    // is. The 2 curve/range-bar controls
-    // (textPhoneResponsiveRotationRange/Curve) don't reliably react to
-    // either dispatched event (devPanel.js's own widgets there are
-    // POLLED -- see curveWidgetResyncs elsewhere in this file) but DO
-    // react to their own poll tick noticing el.value changed, which
+    // is. The curve/range-bar controls (now 6 per-axis ones, 3 each for
+    // Rotation and Displace, since the per-axis refactor -- was the
+    // shared textPhoneResponsiveRotationRange/Curve pair) don't reliably
+    // react to either dispatched event (devPanel.js's own widgets there
+    // are POLLED -- see curveWidgetResyncs elsewhere in this file) but
+    // DO react to their own poll tick noticing el.value changed, which
     // setting el.value above already satisfies regardless.
     el.dispatchEvent(new Event('input', { bubbles: true }))
     el.dispatchEvent(new Event('change', { bubbles: true }))
@@ -7112,12 +7179,16 @@ function renderRecursiveRenderGroup(content) {
   wireSlider('sliderScreenTextureRotation', (v) => { cfg.screenTextureRotation = v })
   addRow(content, { id: 'sliderScreenTextureOffsetX', label: 'Texture X Offset', type: 'slider', min: -1, max: 1, step: 'any', value: cfg.screenTextureOffsetX })
   wireDeviceSlider('sliderScreenTextureOffsetX', 'screenTextureOffsetX')
+  wireDeviceSliderMirror('sliderScreenTextureOffsetX', 'screenTextureOffsetX')
   addRow(content, { id: 'sliderScreenTextureOffsetY', label: 'Texture Y Offset', type: 'slider', min: -1, max: 1, step: 'any', value: cfg.screenTextureOffsetY })
   wireDeviceSlider('sliderScreenTextureOffsetY', 'screenTextureOffsetY')
+  wireDeviceSliderMirror('sliderScreenTextureOffsetY', 'screenTextureOffsetY')
   addRow(content, { id: 'sliderScreenTextureScaleX', label: 'Texture X Scale (x)', type: 'slider', min: 0.1, max: 5, step: 'any', value: cfg.screenTextureScaleX })
   wireDeviceSlider('sliderScreenTextureScaleX', 'screenTextureScaleX')
+  wireDeviceSliderMirror('sliderScreenTextureScaleX', 'screenTextureScaleX')
   addRow(content, { id: 'sliderScreenTextureScaleY', label: 'Texture Y Scale (x)', type: 'slider', min: 0.1, max: 5, step: 'any', value: cfg.screenTextureScaleY })
   wireDeviceSlider('sliderScreenTextureScaleY', 'screenTextureScaleY')
+  wireDeviceSliderMirror('sliderScreenTextureScaleY', 'screenTextureScaleY')
   // Emission Intensity -- direct report: "When i use the Pixel 9A
   // model, the screen is very dim." See cfg.screenEmissionIntensity's
   // own comment for why this multiplies .color rather than a real
