@@ -6369,6 +6369,67 @@ existing Show Grid Helper etc. controls. `index.html` cache-buster:
 `main.js` `?v=188` -> `?v=189`.
 
 --------------------------------------------------------------------------------
+2026-10-01  -  CRITICAL: Restore ~2200 lines truncated from main.js by
+commit 36e3e6c
+
+Discovered mid-task while adding per-axis Displace curve editors (a
+direct feature request): searches for well-established functions
+(`renderPhoneModelGroup`, `renderHandysetDevGroups`, etc.) kept coming
+up completely empty, which should have been impossible. Investigation
+traced it to commit `36e3e6c` ("Revert broken wireDeviceSlider approach
+for texture offset sliders", authored by a concurrent session) --
+confirmed via `git show 36e3e6c -- src/main.js` that it deleted ~16
+dev-panel render functions with no replacement, and further
+investigation (comparing the current file's own last lines against the
+pre-commit version) showed this wasn't a deliberate removal at all: the
+file was simply TRUNCATED, cleanly, right at the start of
+`wireDeviceSlider()` -- exactly the function the commit message says was
+being edited. Everything after that point in the file -- `renderPhoneModelGroup`,
+`renderPoseGroup`, `renderCameraGroup`, `renderLightingGroup`,
+`renderToonGroup`, `renderTweenGroup`, `renderHandModelItemSelector`,
+`renderDebugExtras`, and critically `renderHandysetDevGroups()` itself
+plus the `window.renderHandysetDevGroups = renderHandysetDevGroups` line
+that wires main.js into the dev panel engine at all -- was simply gone.
+Also gone: the entire git-tracked remote Save/Sync subsystem
+(`wireRemoteSaveButtons`, `loadRemoteSettingsOnStartup`,
+`DEV_PANEL_SAVE_SECRET`) and the file's own closing bootstrap calls.
+Net effect: the ENTIRE HANDYSET-specific dev panel (every group except
+devPanel.js's own built-in Dev Panel/Debug) had stopped rendering
+entirely as of that commit.
+
+Surfaced to the user directly before touching anything (per this
+project's own standing rule on material/structural issues) -- confirmed
+to restore first, then continue the original task.
+
+Restoration verified carefully before merging, not assumed safe:
+compared the deleted block's own function/variable names against the
+current file (zero overlap, confirming no risk of re-introducing a
+since-fixed bug by restoring something newer code had already replaced);
+specifically checked `getCameraYawPitch()`/`setCameraYawPitch()` (fixed
+earlier this same session) and confirmed the restoration source
+(commit `29eec29`, the truncation's own parent) already contains that
+exact fix, since it was committed well before the truncation; confirmed
+29eec29 also already contains every other feature from earlier in this
+session (Mirror group, Hand Model Selector, global override checkboxes,
+Stationary Gate UI) with nothing missing; confirmed the one real code
+commit between this session's last push and the truncation
+(`8141d09`, the camera FOV/Zoom click-to-edit fix) touched a different,
+unaffected function (`syncValue()`, positioned earlier in the file,
+never part of the truncated region) and needed no reconciliation.
+
+Restored by extracting the missing tail verbatim from `29eec29` (the
+last fully-intact state) and appending it back onto the current file.
+Verified after merging: `node --check` passes; zero duplicate
+function/const/let declarations anywhere in the combined result (grepped
+and diffed explicitly, not assumed).
+
+Also includes, same commit (an in-progress feature change that was
+mid-flight when the truncation was discovered): the backend half of a
+per-axis Displace curve-editor refactor -- see the next entry for the
+full feature account once the UI half lands. `index.html` cache-buster:
+`main.js` `?v=189` -> `?v=190`.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

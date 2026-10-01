@@ -7,7 +7,29 @@ append-only history.
 
 ## Currently working on
 
-**Nothing in progress right now** — the last 3 active items, in order:
+**In progress:** per-axis Min/Max Range + Curve Editor + X Reference
+sliders for Responsive Displace and Rotation (direct request), with the
+curve's X-axis now representing a real physical quantity (displacement
+distance in meters, or raw tilt input) rather than a pre-normalized 0-1
+value — the X Reference slider is what maps real units onto the curve's
+X=1.0 point, letting small real movements be explicitly shaped to read
+0% output. Backend half done for Displace (`computePhoneDisplaceAxisUnits`
+now per-axis); UI half + the Rotation side still to come.
+
+**Just fixed, found while starting the above:** a CRITICAL regression —
+commit `36e3e6c` (a concurrent session) had truncated main.js by ~2200
+lines, deleting the ENTIRE HANDYSET-specific dev panel UI construction
+layer (every render function, `window.renderHandysetDevGroups`, the
+whole git-tracked remote Save/Sync subsystem). The dev panel had
+effectively stopped rendering anything beyond devPanel.js's own built-in
+groups. Surfaced to the user directly before touching anything; restored
+by extracting the missing tail verbatim from the truncation's own parent
+commit (confirmed to already contain every fix/feature from earlier this
+session, including the camera yaw/pitch fix) and re-appending it, with
+zero duplicate declarations after merging. See CHANGELOG's matching
+2026-10-01 entry for the full verification account.
+
+Before that, the last 3 active items, in order:
 
 1. Fixed Texture X/Y Offset and Scale always applying the DESKTOP value
 regardless of which device was actually running the app — root cause was
