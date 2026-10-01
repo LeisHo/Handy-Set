@@ -7,7 +7,32 @@ append-only history.
 
 ## Currently working on
 
-**Nothing in progress right now** — the last active item removed the
+**Nothing in progress right now** — the last active item exposed the
+Displace integrator's 2 internal decay rates (velocity/position) as dev-
+panel sliders, after a direct report following a fresh 4-maneuver round of
+real-device testing: "theres also damping even though i didnt set
+any... sometimes I feel like the phone is tring to drift back into
+default starting position." Confirmed from the code that
+`cfg.phoneDisplaceDamping` only smooths the FINAL output — it never
+touches the leaky integrator's own position decay (previously hardcoded
+at ~8.7s half-life), which is slow enough that even ambient sensor noise
+with the phone sitting still keeps visibly influencing position for
+several seconds, independent of Damping. Attempted to verify a specific
+replacement value against the real logged data and found a genuine
+methodology gap instead — the Sensor Log samples at ~200ms while the
+real integrator runs on the much-faster actual devicemotion stream, so a
+replay at the logged rate doesn't reproduce real measured magnitudes
+(predicted peak 0.046m vs. the real log's ~0.09m swing). Rather than
+ship an unverifiable number, converted both rates to sliders
+(`phoneDisplaceVelDecayRate`/`phoneDisplacePosDecayRate`, defaults
+unchanged) so they can be tuned live against the real device. Also
+flagged (not acted on) that the user's own Test 2/3 data looked swapped —
+Test 2 ("left-right movement") shows completely flat Compass/Orientation
+for 8 straight seconds, while Test 3 ("left untouched") shows a real
+disturbance and a 2+ unit swing. See CHANGELOG's matching 2026-10-01
+entry.
+
+Before that: removed the
 Displace Fine-Tune slider entirely (direct request: "i dont need whatever
 it does") and fixed "On reset or startup, I see it immediately start to
 drift" — confirmed via real device data that `resetPhoneDisplaceBaseline()`

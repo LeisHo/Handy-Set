@@ -6224,6 +6224,57 @@ User provided 9 updated phone model GLB files. Updated:
 
 All models now available in Phone Model Selector on startup.
 
+--------------------------------------------------------------------------------
+2026-10-01  -  Expose Displace velocity/position decay rates as sliders
+
+Direct report following a fresh round of real-device testing (4
+maneuvers: forward-back, left-right, phone-left-untouched, up-down):
+"theres also damping even though i didnt set any... sometimes I feel
+like the phone is tring to drift back into default starting position."
+
+Confirmed directly from the code (not simulation) that this isn't a bug
+so much as a real gap: `cfg.phoneDisplaceDamping` only smooths the FINAL
+output vector once per frame -- it has no effect whatsoever on the
+leaky integrator's own 2 internal decay rates
+(`PHONE_DISPLACE_VELOCITY_DECAY_RATE`/`PHONE_DISPLACE_POSITION_DECAY_RATE`),
+which were hardcoded constants. Position's own decay in particular
+(0.08 1/s, ~8.7s half-life) is slow enough that any disturbance --
+including ordinary ambient sensor noise with the phone sitting
+completely still -- keeps visibly influencing the displayed position
+for several seconds, independent of the Damping slider. This plausibly
+explains both the reported "drifts back to center" feel and the
+previously-reported reversal overshoot (residual position from a first
+move hasn't cleared by the time an opposite move begins, since it's
+governed by this same slow decay, not by Damping).
+
+Attempted to verify a specific replacement value against the real
+logged data (the "phone left untouched" maneuver, the cleanest
+available "nothing should happen" case) and found a real methodology
+gap instead: the Sensor Log samples at ~200ms intervals, but the actual
+integrator runs on the much-faster real `devicemotion` event stream --
+replaying at the logged sample rate under-counts real integration
+steps and does not reproduce real measured output magnitudes (a replay
+at the current 0.08 position-decay rate predicted a peak of 0.046m;
+the real logged output swung from a peak of ~0.09m down through zero to
+~-0.05m over the same window). Rather than ship an unverifiable
+replacement number, converted both rates from hardcoded constants to
+cfg-backed sliders (`phoneDisplaceVelDecayRate`/`phoneDisplacePosDecayRate`,
+Responsive Displace subgroup) with defaults UNCHANGED from the prior
+hardcoded values -- nothing changes until these are retuned live against
+the real device, the same way Damping already is.
+
+Also noted during this analysis, flagged to the user rather than acted
+on unilaterally: the pasted Test 2 ("left then right, back and forth")
+and Test 3 ("phone flat, reset, left alone, no movement") datasets look
+swapped. Test 2's data shows Compass and Orient β/γ completely flat for
+the entire 8-second window (consistent with a stationary phone, not a
+left-right motion), while Test 3's data shows a real orientation
+disturbance (`Gyro β:-0.90 γ:-5.40` shortly after reset) and a 2+ unit
+position swing despite being labeled as untouched.
+
+--------------------------------------------------------------------------------
+<next entry follows the same divider + dated-header pattern>
+
 ================================================================================
 APPEND-ONLY. Never rewrite, reorder, or delete a prior entry, even to fix
 formatting (CLAUDE.md §4a / Never-Skip rule #3). If an entry needs a
