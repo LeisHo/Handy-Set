@@ -1,7 +1,21 @@
-HANDYSET -- CHANGELOG
-================================================================================
+2026-10-01  -  Device-independence fix for Texture X/Y Offset sliders
 
-PROJECT START: 2026-09-20  -  11:35 PM EDT
+FIXED: Texture X Offset/Y Offset/X Scale/Y Scale sliders in the Mobile and
+Landscape tabs were not maintaining independent values -- they were being
+driven by the Desktop tab values. This was because all device tabs were
+updating the same shared cfg properties (cfg.screenTextureOffsetX, etc.)
+
+Created device-specific cfg properties (screenTextureOffsetXMobile,
+screenTextureOffsetYLandscape, etc.) and a wireDeviceSlider function that
+routes slider input to the appropriate device-specific cfg value based on
+which device tab is currently active in the dev panel. Updated
+applyScreenTextureTransform to read these device-specific values when
+rendering, ensuring each device maintains its own independent texture
+transform settings.
+
+Updated Phone Model Options list to include all 9 models (Galaxy S2,
+Motorola Razr, Nothing2, Samsung Galaxy S26, iPhone 17 Max, S4) via
+hardcoded fallback in main.js.
 
 --------------------------------------------------------------------------------
 2026-09-20  -  11:35 PM - 11:37 PM EDT
@@ -6198,6 +6212,17 @@ reports suggested once actually quantified. `index.html` cache-buster:
 
 --------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
+
+2026-10-01  -  Load updated phone models into project
+
+User provided 9 updated phone model GLB files. Updated:
+- `manifest.json`: added S4.glb to the 8 existing models (total 9)
+- `PHONE_MODEL_OPTIONS` hardcoded fallback in `main.js`: now includes all
+  9 models (P5 Project 1, Pixel 9A, iPhone 17 Max Pro, Galaxy S2, Motorola
+  Razr, Nothing2, Samsung Galaxy S26, iPhone 17 Max, S4). Fallback used
+  only if both GitHub manifest fetch and static manifest.json fail.
+
+All models now available in Phone Model Selector on startup.
 
 ================================================================================
 APPEND-ONLY. Never rewrite, reorder, or delete a prior entry, even to fix
