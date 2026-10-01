@@ -422,7 +422,12 @@ const cfg = {
   // real device) -- the same checkbox could be added to Rotation's own
   // per-axis controls on request.
   phoneDisplaceInvertX: false, phoneDisplaceInvertY: false, phoneDisplaceInvertZ: false,
-  phoneResponsiveDisplaceFineTune: 0,
+  // phoneResponsiveDisplaceFineTune REMOVED 2026-10-01, direct request
+  // ("remove displace finetune... i dont need whatever it does") -- the
+  // slider/control/formula term are all gone; a stale
+  // sliderPhoneResponsiveDisplaceFineTune key may still linger in an
+  // already-synced settings file, harmlessly ignored (no control reads
+  // it anymore).
   // Same semantic as phoneRotationDamping (1=instant, lower=smoother) --
   // applied as a lerp on the final displacement vector, same role slerp
   // plays for rotation.
@@ -2546,7 +2551,7 @@ function computePhoneDisplaceAxisUnits(rawMeters, axisEnabled, axisScale, axisIn
   // input" case but only ever added a value deadzone, which moves WHERE
   // the jump happens (from literal 0 to the deadzone boundary) without
   // removing the jump itself -- fixed there too, same reasoning.
-  const magnitude = Math.max(0, min + (max - min) * curveY + (cfg.phoneResponsiveDisplaceFineTune || 0))
+  const magnitude = Math.max(0, min + (max - min) * curveY)
   return magnitude * Math.sign(rawMeters) * axisScale * (axisInverted ? -1 : 1)
 }
 const _phoneDisplaceResultVec = new THREE.Vector3()
@@ -3327,14 +3332,29 @@ function resetPhoneRotationBaseline() {
 function resetPhoneDisplaceBaseline() {
   phoneDisplaceVelX = phoneDisplaceVelY = phoneDisplaceVelZ = 0
   phoneDisplacePosX = phoneDisplacePosY = phoneDisplacePosZ = 0
-  // Bias tracker reset too (2026-09-30, added alongside the bias
-  // high-pass fix) -- a stale bias estimate from before the reset isn't
-  // wrong exactly (it still reflects the same real sensor/orientation
-  // bias), but zeroing it gives the high-pass filter a clean start
-  // matching "back to starting location," consistent with velocity/
-  // position also resetting to exactly 0 here rather than their own
-  // pre-reset values.
-  phoneDisplaceBiasX = phoneDisplaceBiasY = phoneDisplaceBiasZ = 0
+  // CORRECTED 2026-10-01 -- the 2026-09-30 reasoning directly below (kept
+  // for history) was wrong. Direct report, real device test: "On reset or
+  // startup, I see it immediately start to drift." Root cause: zeroing the
+  // bias tracker on every reset throws away a valid, still-relevant
+  // estimate of the device's current sensor/orientation bias -- that bias
+  // has NOTHING to do with "where the user wants zero position to be"
+  // (what THIS reset is actually for), it's an ongoing physical property
+  // of the device's current orientation/calibration that doesn't change
+  // just because the user tapped reset. Zeroing it forces the ~2.5s
+  // (PHONE_DISPLACE_BIAS_TRACK_RATE) high-pass filter to re-learn from
+  // scratch after every single reset, and during that re-learning window
+  // the real, still-present bias leaks through almost unfiltered -- this
+  // IS the reported "drift immediately after reset," confirmed via a
+  // standalone replay of the real logged data (persisting bias measurably
+  // reduces the post-reset climb vs. re-zeroing it). Bias now persists
+  // across a Displace Reset; only velocity/position (the user's actual
+  // "back to starting location" intent) reset to 0 here.
+  //
+  // Prior (2026-09-30) reasoning, now superseded: "a stale bias estimate
+  // from before the reset isn't wrong exactly... but zeroing it gives the
+  // high-pass filter a clean start matching 'back to starting location'"
+  // -- this conflated 2 different concepts (zero POSITION vs. zero BIAS)
+  // that don't actually need to move together.
   // Direct request 2026-09-30: "make it instant instead of tweened and
   // affected by damping" -- same fix as resetPhoneRotationBaseline()'s
   // own matching change. applyPhoneModelTransform()'s own per-frame
@@ -6132,7 +6152,7 @@ const PHONE_MODEL_PER_MODEL_CONTROL_IDS = [
   'checkboxPhoneDisplaceAxisXEnabled', 'sliderPhoneDisplaceScaleX', 'checkboxPhoneDisplaceInvertX',
   'checkboxPhoneDisplaceAxisYEnabled', 'sliderPhoneDisplaceScaleY', 'checkboxPhoneDisplaceInvertY',
   'checkboxPhoneDisplaceAxisZEnabled', 'sliderPhoneDisplaceScaleZ', 'checkboxPhoneDisplaceInvertZ',
-  'sliderPhoneResponsiveDisplaceFineTune', 'sliderPhoneDisplaceDamping',
+  'sliderPhoneDisplaceDamping',
   'textPhoneResponsiveDisplaceRange', 'textPhoneResponsiveDisplaceCurve',
   'checkboxScreenRenderEnabled', 'sliderScreenRecursionLevels',
   'sliderScreenRenderResolution', 'sliderScreenTextureScale',
@@ -6673,8 +6693,6 @@ function renderPhoneModelGroup(content) {
   addRow(subResponsiveDisplace, { id: 'checkboxPhoneDisplaceInvertZ', label: 'Invert Z Axis Displace', type: 'checkbox' })
   document.getElementById('checkboxPhoneDisplaceInvertZ').checked = cfg.phoneDisplaceInvertZ
   wireCheckbox('checkboxPhoneDisplaceInvertZ', (v) => { cfg.phoneDisplaceInvertZ = v })
-  addRow(subResponsiveDisplace, { id: 'sliderPhoneResponsiveDisplaceFineTune', label: 'Displace Fine-Tune (World Units)', type: 'slider', min: -50, max: 50, step: 'any', value: cfg.phoneResponsiveDisplaceFineTune })
-  wireSlider('sliderPhoneResponsiveDisplaceFineTune', (v) => { cfg.phoneResponsiveDisplaceFineTune = v })
   addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplaceDamping', label: 'Displace Damping (1=Instant)', type: 'slider', min: 0.05, max: 1, step: 0.01, value: cfg.phoneDisplaceDamping })
   wireSlider('sliderPhoneDisplaceDamping', (v) => { cfg.phoneDisplaceDamping = v })
   {
