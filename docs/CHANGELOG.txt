@@ -6273,6 +6273,102 @@ disturbance (`Gyro β:-0.90 γ:-5.40` shortly after reset) and a 2+ unit
 position swing despite being labeled as untouched.
 
 --------------------------------------------------------------------------------
+2026-10-01  -  Fix Texture X/Y Offset (and Scale) applying desktop value
+regardless of device
+
+Direct report: "When I set settings to view in mobile. Such as texture
+x offset, the slide appears in mobile tab, but it does nothing. Behavior
+is still dictated by desktop tab."
+
+Root cause: `applyScreenTextureTransform()` (the render-time code that
+actually applies `screenTextureOffsetX/Y`/`screenTextureScaleX/Y` to the
+live texture) picked its device suffix via `getActiveDevPanelTab()` --
+a devPanel.js helper reporting which TAB is currently scrolled into view
+in the dev panel EDITOR UI, not which device is actually running the
+app. That is the correct signal for `wireDeviceSlider()`'s own WRITE
+path (while editing, the slider should write into whichever tab you
+have open) but wrong for render-time value selection -- the live texture
+only ever picked up a Mobile/Landscape-suffixed value while the panel
+happened to be sitting on that tab; the rest of the time (panel closed,
+or sitting on Desktop) it silently fell back to the Desktop-suffixed
+value regardless of the real device.
+
+Added `getRuntimeDeviceSuffix()` (`isTouchDevice` + live `innerWidth`/
+`innerHeight` orientation check, matching every other real device/
+orientation check already in this file) and switched
+`applyScreenTextureTransform()`'s one `deviceSuffix` computation to use
+it instead of `getActiveDevPanelTab()` -- covers all 4 affected controls
+(Texture Offset X/Y, Texture Scale X/Y) in one fix since they share that
+variable. `index.html` cache-buster: `main.js` `?v=186` -> `?v=187`.
+
+--------------------------------------------------------------------------------
+2026-10-01  -  Add stationary gate to Responsive Displace, fixing drift
+on a still phone
+
+Direct report + real logged data: "And there is still drift when phone
+is static." The pasted log showed a MONOTONIC, non-random climb in
+LinearAccel (never changing sign) while raw accelerationIncludingGravity
+stayed exactly constant the whole time -- the only thing changing was
+Orient β/γ, drifting smoothly by 0.5-1.4deg over ~8s.
+
+Root cause: the device's own orientation estimate was still settling
+(compass/gyro sensor fusion), and since gravity subtraction
+(`computePhoneLinearAccelDeviceLocal`) depends on that orientation, a
+slowly-DRIFTING (not constant) orientation produces a slowly-drifting
+linear-acceleration residual that the bias high-pass filter -- tuned to
+cancel roughly-constant bias -- can never fully catch up to, since it is
+always chasing a moving target.
+
+Fixed with a stationary gate: when the device's own real gyroscope
+rotation rate magnitude is below a threshold (default 2 deg/s), force
+the integrator's input to exactly zero for that tick, regardless of what
+gravity subtraction computed. Applied AFTER the bias filter update (not
+before) so bias tracking keeps learning normally during stationary
+periods -- a still phone is actually the cleanest signal to learn true
+bias from; only the final value fed to the position integrator is
+gated.
+
+Verified via a standalone replay of the real logged data: gating at
+2 deg/s reduces the predicted drift from a peak of 0.063m to exactly
+0.000m. Cross-checked against this project's own real deliberate-motion
+test data from earlier in this session, which consistently showed Gyro
+values in the 5-90 deg/s range during actual movement -- comfortably
+clear of this threshold, so real motion passes through unaffected.
+
+New Responsive Displace controls: Stationary Gate (on/off, default on)
+and Stationary Gate Threshold (Deg/s, default 2.0). `index.html`
+cache-buster: `main.js` `?v=187` -> `?v=188`.
+
+--------------------------------------------------------------------------------
+2026-10-01  -  Add Debug group global on/off overrides for Responsive
+Rotation/Displace
+
+Direct request: "In debug group add two checkboxes... global on off
+switches for the responsive rotation and the responsive displacement...
+I understand that they do overlap with the individual checkboxes within
+the phone group, but this will override that. That way, when I'm
+switching between phone models, I don't have to keep turning them on
+and off individually."
+
+Added `cfg.responsiveRotationGlobalEnabled`/`responsiveDisplaceGlobalEnabled`
+(default true), AND-combined with each feature's own existing per-model
+checkbox at every real functional gate (rotation:
+`computePhoneResponsiveAxisDeg`, `integratePhoneGyroRotation`; displace:
+`computePhoneDisplaceAxisUnits`, `integratePhoneDisplacement`,
+`updatePhoneDisplaceDesktopFrame`) -- the per-feature checkbox's own
+stored value is never touched, this purely gates whether it can take
+effect, matching the exact semantic requested ("overlap... but this
+will override"). Left 2 minor secondary call sites (motion-permission
+request, continuous-render trigger) ungated -- requesting permission or
+rendering continuously while globally disabled is harmless, not a
+correctness concern.
+
+New checkboxes live in the Debug group (single-instance, Desktop-tab
+only, matching this group's own established convention), above the
+existing Show Grid Helper etc. controls. `index.html` cache-buster:
+`main.js` `?v=188` -> `?v=189`.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

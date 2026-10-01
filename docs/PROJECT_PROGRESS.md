@@ -7,7 +7,31 @@ append-only history.
 
 ## Currently working on
 
-**Nothing in progress right now** — the last active item exposed the
+**Nothing in progress right now** — the last 3 active items, in order:
+
+1. Fixed Texture X/Y Offset and Scale always applying the DESKTOP value
+regardless of which device was actually running the app — root cause was
+`applyScreenTextureTransform()` reading the dev panel's own currently-open
+TAB (`getActiveDevPanelTab()`, an editing-UI concept) instead of the real
+device (new `getRuntimeDeviceSuffix()`, using `isTouchDevice` + live
+orientation).
+2. Fixed "drift when phone is static" — real logged data showed a
+MONOTONIC (never sign-changing) climb correlated with a slowly-settling
+device orientation estimate (Orient β/γ drifting while raw accelerometer
+stayed frozen), which a constant-bias filter can't fully cancel since
+it's chasing a moving target. Fixed with a stationary gate: force
+integrator input to exactly zero whenever real gyroscope rotation rate
+is below a threshold (default 2°/s) — verified via replay to eliminate
+the real logged drift (peak 0.063m → 0.000m) while this project's own
+real deliberate-motion tests all showed gyro values far above that
+threshold (5-90°/s), so real motion passes through.
+3. Added 2 global on/off override checkboxes to the Debug group
+(Responsive Rotation / Responsive Displacement), AND-combined with each
+feature's existing per-model checkbox at every real gate, so switching
+between phone models doesn't require re-toggling the individual
+checkboxes each time.
+
+See CHANGELOG's 3 matching 2026-10-01 entries. Before that: exposed the
 Displace integrator's 2 internal decay rates (velocity/position) as dev-
 panel sliders, after a direct report following a fresh 4-maneuver round of
 real-device testing: "theres also damping even though i didnt set
