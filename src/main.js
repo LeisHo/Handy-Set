@@ -430,8 +430,16 @@ const cfg = {
   // it anymore).
   // Same semantic as phoneRotationDamping (1=instant, lower=smoother) --
   // applied as a lerp on the final displacement vector, same role slerp
-  // plays for rotation.
+  // plays for rotation. NOTE: this does NOT control the internal leaky-
+  // integrator's own 2 decay rates below -- those keep "smoothing"/
+  // "drifting back to center" even at Damping=1. See
+  // PHONE_DISPLACE_VELOCITY_DECAY_RATE_DEFAULT's own comment.
   phoneDisplaceDamping: 0.25,
+  // Exposed as sliders 2026-10-01 (previously hardcoded constants) -- see
+  // PHONE_DISPLACE_VELOCITY_DECAY_RATE_DEFAULT's own comment for the full
+  // reasoning. Defaults match the prior hardcoded values exactly, so
+  // nothing changes until these are retuned.
+  phoneDisplaceVelDecayRate: 3.0, phoneDisplacePosDecayRate: 0.08,
   // World Units, same convention as phoneModelOffsetX/Y/Z (which this is
   // added onto) -- see computePhoneDisplaceAxisUnits()'s own comment for
   // how a leaky-integrated acceleration signal (in meters, unbounded
@@ -2971,8 +2979,31 @@ function integratePhoneGyroRotation(e) {
 // Both share the exact same leaky double-integration math and decay
 // constants below -- only the frame the raw vector is expressed in
 // differs.
-const PHONE_DISPLACE_VELOCITY_DECAY_RATE = 3.0 // 1/seconds -- velocity's own contribution roughly halves every ~0.23s, fast enough that jittery sensor noise doesn't keep accumulating
-const PHONE_DISPLACE_POSITION_DECAY_RATE = 0.08 // 1/seconds -- position roughly halves every ~8.7s, slow enough that a normal few-second hold/demo feels sustained
+// CORRECTED 2026-10-01 -- these were hardcoded constants until a direct
+// report ("theres also damping even though i didnt set any... sometimes I
+// feel like the phone is tring to drift back into default starting
+// position"). Root cause: cfg.phoneDisplaceDamping only smooths the FINAL
+// output vector once per frame -- it has no effect on these 2 decay rates
+// at all, which govern the internal leaky-integrator's own built-in
+// "forgetting" behavior. Position's own decay in particular (0.08 1/s,
+// ~8.7s half-life) is slow enough that any disturbance -- including
+// ordinary ambient sensor noise with the phone just sitting still --
+// keeps visibly influencing the displayed position for several seconds
+// afterward, which is almost certainly what read as unwanted smoothing/
+// drift-to-center independent of the Damping slider, and also explains
+// the reported reversal overshoot (residual position from the first
+// move hasn't cleared by the time a second, opposite move begins).
+// Converted from fixed constants to cfg-backed values (defaults UNCHANGED
+// from the prior hardcoded numbers, so nothing changes until retuned) so
+// these can be exposed as dev-panel sliders -- a standalone replay against
+// real logged data couldn't be trusted to prescribe an exact replacement
+// number here (the Sensor Log samples at ~200ms while the real integrator
+// runs on the much-faster actual devicemotion event stream, so a replay
+// at the logged rate under-counts real integration steps and doesn't
+// reproduce real measured magnitudes) -- better to let these be tuned
+// live against the real device the same way Damping already is.
+const PHONE_DISPLACE_VELOCITY_DECAY_RATE_DEFAULT = 3.0 // 1/seconds -- velocity's own contribution roughly halves every ~0.23s, fast enough that jittery sensor noise doesn't keep accumulating
+const PHONE_DISPLACE_POSITION_DECAY_RATE_DEFAULT = 0.08 // 1/seconds -- position roughly halves every ~8.7s, slow enough that a normal few-second hold/demo feels sustained
 // Bias high-pass filter -- added 2026-09-30, the real root cause behind
 // "x axis keeps drifting and sometimes jumps" / "y and z... works
 // sometimes, but other times... goes too far", confirmed against 2 real
@@ -3014,8 +3045,8 @@ const _phoneDisplaceWorldVec = new THREE.Vector3()
 // phoneDisplacePosX/Y/Z state and get read back identically by
 // computePhoneResponsiveDisplacement().
 function applyPhoneDisplaceSample(ax, ay, az, dt) {
-  const velDecay = Math.exp(-PHONE_DISPLACE_VELOCITY_DECAY_RATE * dt)
-  const posDecay = Math.exp(-PHONE_DISPLACE_POSITION_DECAY_RATE * dt)
+  const velDecay = Math.exp(-(cfg.phoneDisplaceVelDecayRate ?? PHONE_DISPLACE_VELOCITY_DECAY_RATE_DEFAULT) * dt)
+  const posDecay = Math.exp(-(cfg.phoneDisplacePosDecayRate ?? PHONE_DISPLACE_POSITION_DECAY_RATE_DEFAULT) * dt)
   phoneDisplaceVelX = phoneDisplaceVelX * velDecay + ax * dt
   phoneDisplaceVelY = phoneDisplaceVelY * velDecay + ay * dt
   phoneDisplaceVelZ = phoneDisplaceVelZ * velDecay + az * dt
@@ -6181,7 +6212,7 @@ const PHONE_MODEL_PER_MODEL_CONTROL_IDS = [
   'checkboxPhoneDisplaceAxisXEnabled', 'sliderPhoneDisplaceScaleX', 'checkboxPhoneDisplaceInvertX',
   'checkboxPhoneDisplaceAxisYEnabled', 'sliderPhoneDisplaceScaleY', 'checkboxPhoneDisplaceInvertY',
   'checkboxPhoneDisplaceAxisZEnabled', 'sliderPhoneDisplaceScaleZ', 'checkboxPhoneDisplaceInvertZ',
-  'sliderPhoneDisplaceDamping',
+  'sliderPhoneDisplaceDamping', 'sliderPhoneDisplaceVelDecayRate', 'sliderPhoneDisplacePosDecayRate',
   'textPhoneResponsiveDisplaceRange', 'textPhoneResponsiveDisplaceCurve',
   'checkboxScreenRenderEnabled', 'sliderScreenRecursionLevels',
   'sliderScreenRenderResolution', 'sliderScreenTextureScale',
@@ -6724,6 +6755,10 @@ function renderPhoneModelGroup(content) {
   wireCheckbox('checkboxPhoneDisplaceInvertZ', (v) => { cfg.phoneDisplaceInvertZ = v })
   addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplaceDamping', label: 'Displace Damping (1=Instant)', type: 'slider', min: 0.05, max: 1, step: 0.01, value: cfg.phoneDisplaceDamping })
   wireSlider('sliderPhoneDisplaceDamping', (v) => { cfg.phoneDisplaceDamping = v })
+  addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplaceVelDecayRate', label: 'Displace Velocity Decay Rate (1/s)', type: 'slider', min: 0.5, max: 10, step: 0.1, value: cfg.phoneDisplaceVelDecayRate })
+  wireSlider('sliderPhoneDisplaceVelDecayRate', (v) => { cfg.phoneDisplaceVelDecayRate = v })
+  addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplacePosDecayRate', label: 'Displace Position Decay Rate (1/s)', type: 'slider', min: 0.02, max: 5, step: 0.01, value: cfg.phoneDisplacePosDecayRate })
+  wireSlider('sliderPhoneDisplacePosDecayRate', (v) => { cfg.phoneDisplacePosDecayRate = v })
   {
     let rangeDefault = { min: 0, max: 20 }
     try { rangeDefault = JSON.parse(cfg.phoneResponsiveDisplaceRange) } catch (e) { /* keep fallback */ }
