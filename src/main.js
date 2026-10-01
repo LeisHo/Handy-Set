@@ -2018,6 +2018,31 @@ function computeMaxArmBaseGroundDistance() {
 }
 let latestOrientation = null
 const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0
+// getRuntimeDeviceSuffix -- added 2026-10-01, direct report: "When I set
+// settings to view in mobile. Such as texture x offset, the slide appears
+// in mobile tab, but it does nothing. Behavior is still dictated by
+// desktop tab." Root cause: applyScreenTextureTransform() (the actual
+// RENDER-time code that applies screenTextureOffsetX/Y and
+// screenTextureScaleX/Y to the live texture) picked its device suffix via
+// getActiveDevPanelTab() -- a devPanel.js UI helper reporting which TAB
+// is currently scrolled into view in the DEV PANEL EDITOR, not which
+// device is actually running the app. wireDeviceSlider() (the control's
+// own WRITE path, used while editing) correctly uses that same function
+// -- that's the right signal for "which device's value am I currently
+// editing" -- but applying it at RENDER time meant the live texture only
+// ever picked up a Mobile/Landscape-suffixed value while someone happened
+// to have the dev panel's own Mobile/Landscape tab scrolled into view;
+// the rest of the time (panel closed, or sitting on the Desktop tab) it
+// silently fell back to the Desktop-suffixed value regardless of what
+// device was actually rendering. This function is the correct signal for
+// render-time device selection: real isTouchDevice + live orientation
+// (innerWidth > innerHeight = landscape), matching every other real
+// device/orientation check in this file (Phone Tilt, Responsive Rotation,
+// etc.) -- never the dev panel's own currently-open tab.
+function getRuntimeDeviceSuffix() {
+  if (!isTouchDevice) return ''
+  return window.innerWidth > window.innerHeight ? 'Landscape' : 'Mobile'
+}
 
 function handleDeviceOrientation(e) {
   latestOrientation = e
@@ -3930,10 +3955,11 @@ function setScreenRenderEnabled(enabled) {
 // every deeper depth alternating cleanly from there via compounding.
 function applyScreenTextureTransform(texture, isFinalDisplay, depth, levels) {
   if (!texture) return
-  const activeTab = getActiveDevPanelTab()
-  let deviceSuffix = ''
-  if (activeTab?.id === 'mobileTab') deviceSuffix = 'Mobile'
-  else if (activeTab?.id === 'landscapeTab') deviceSuffix = 'Landscape'
+  // getRuntimeDeviceSuffix(), NOT getActiveDevPanelTab() -- see that
+  // function's own comment. This is RENDER-time value selection (which
+  // device's tuned value should actually apply to the live texture),
+  // not an editing-UI concern.
+  const deviceSuffix = getRuntimeDeviceSuffix()
   let scaleX = cfg['screenTextureScaleX' + deviceSuffix] || 1
   let scaleY = cfg['screenTextureScaleY' + deviceSuffix] || 1
   if (cfg.screenToScaleEnabled) {
