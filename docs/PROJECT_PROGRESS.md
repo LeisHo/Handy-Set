@@ -7,11 +7,33 @@ append-only history.
 
 ## Currently working on
 
-**Nothing in progress right now** — the last active item found and fixed
-the REAL root cause of Responsive Displace's erratic output, after the
-prior bias-filter fix (below) turned out insufficient on its own. A
-follow-up real-device test still showed the bug ("the moment i move it
-jumps out of frame"); replaying the real logged data through the exact
+**Nothing in progress right now** — the last active item added a Mirror
+group to Pose (`handMirrorX/Y/Z`, 3 checkboxes mirroring the hand along
+each of the model's own local axes). Read HANDO's real "demirror"
+technique directly before implementing (per this project's own standing
+rule), but it doesn't transfer verbatim — HANDO mirrors via a dedicated
+ancestor node OUTSIDE the posed skeleton and cancels the reflection with
+a left-multiply at the top of that chain; HANDYSET's single-hand mirror
+naturally lives on `h.clone.scale`, which sits in the MIDDLE of the
+hierarchy, so that exact trick doesn't apply. Worked out the HANDYSET-
+specific fix instead: `bone.getWorldQuaternion()` gets corrupted by
+`Matrix4.decompose()` once a reflection is present (a well-known three.js
+quirk, confirmed in HANDO's own source comments), which would make curl/
+splay/twist compute an arbitrary local rotation once mirrored. Fixed by
+replacing the one call site (`rotateOnTrueWorldAxis()`) with a manual
+composition of ancestor LOCAL quaternions — mathematically identical to
+the old behavior with no mirror active, correct unconditionally once
+mirrored. Also fixed 2 other call sites that bypassed the mirror
+(`relayoutField()`, Palm Face Rotation's forearm anchor). Verified via 2
+standalone Node scripts: 88 cases confirm zero regression, mirror-
+invariant curl output, and that the un-fixed code really would have been
+wrong; a separate check confirms the palm stays anchored under every
+mirror combination to floating-point precision. See CHANGELOG's matching
+2026-10-01 entry. Before that: found and fixed the REAL root cause of
+Responsive Displace's erratic output, after the prior bias-filter fix
+(below) turned out insufficient on its own. A follow-up real-device test
+still showed the bug ("the moment i move it jumps out of frame");
+replaying the real logged data through the exact
 shipped bias-filter code predicted stable output, but the live app still
 jumped — so the live Vercel deployment was checked directly (confirmed
 running the latest code, ruling out a stale cache) and the actual synced

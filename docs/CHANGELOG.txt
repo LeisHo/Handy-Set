@@ -5961,6 +5961,77 @@ commit per CLAUDE.md's standing rule against touching another session's
 in-progress work.
 
 --------------------------------------------------------------------------------
+2026-10-01  -  Add Mirror group to Pose (handMirrorX/Y/Z), with a
+reflection-safe fix to the curl/splay axis pipeline
+
+Direct request: "for the hand model in Pose group add a group 'MIRROR'
+with 3 checkboxes that mirrors the hand along each of the model's own 3
+axes," with a pasted explanation of HANDO's own real "demirror" technique
+(hand2MirrorX/Y/Z, computeHand2DemirrorMatrix()) as a starting reference.
+Per this project's own standing rule (read the real source, don't
+reconstruct from a summary), grepped and read HANDO's actual source
+directly (its own getWorldQuaternionDemirrored()/getWorldPositionDemirrored()/
+computeHand2DemirrorMatrix()/updateHand2Transform(), plus the full history
+of HANDO's own 2026-09-19/20 and 2026-09-27 mirror-bug corrections) before
+writing any code.
+
+HANDO's technique doesn't transfer verbatim: it applies the mirror as a
+Matrix4-level reflection on hand2Root, a dedicated ancestor node OUTSIDE
+the posed skeleton, and cancels it by left-multiplying its self-inverse
+onto a bone's full matrixWorld -- valid specifically because the mirror
+sits at the OUTERMOST point of that chain. HANDYSET has no such node;
+mirroring "along the model's own axes" (as literally requested) naturally
+means a per-axis sign on h.clone.scale -- but h.clone sits in the MIDDLE
+of the hierarchy (between h.wrapper and the bones), so HANDO's left-
+multiply-at-the-top trick doesn't apply directly.
+
+Worked out the HANDYSET-specific equivalent: `bone.getWorldQuaternion()`
+internally calls `Matrix4.decompose()`, which can't represent a
+reflection as a pure quaternion and silently injects a spurious extra
+rotation to resolve it (negating X-scale specifically -- the exact quirk
+HANDO's own comments document). This corrupts the ONE place in the pose
+pipeline that converts a fixed WORLD-space axis constant (FINGER_CURL_AXIS
+etc.) through a bone's actual world orientation --
+rotateOnTrueWorldAxis()'s own `bone.getWorldQuaternion()` call. Fixed by
+replacing it with `getBoneWorldQuaternionRobust()`: a manual composition
+of every ancestor's LOCAL quaternion, walking from the outermost ancestor
+down to the bone -- this never touches matrixWorld/decompose at all, so
+it's mathematically identical to the old behavior whenever no ancestor
+has non-uniform scale (true for every case before this feature existed),
+and correct unconditionally once a reflection is introduced. Wrist Bend/
+Splay/Rotation (plain bone.rotateX/Z/Y, no world-axis reference at all)
+and Tip Twist's segmentDirection() (getWorldPosition(), not
+getWorldQuaternion() -- position extraction isn't subject to this quirk)
+need no equivalent fix.
+
+Also found and fixed 2 other call sites that set h.clone.scale directly,
+bypassing the new mirror-aware path: relayoutField() (would silently
+un-mirror a hand every time Field Layout changes) and Palm Face
+Rotation's own forearm-anchor computation (was recomputing a bare uniform
+scalar instead of reading h.clone.scale, which would drift the anchor
+off the true forearm position once mirrored).
+
+Verified via 2 standalone Node scripts (three.js installed locally,
+dev-only, not committed -- no live device/browser for this project):
+(1) 88 cases spanning whole-hand-rotation x wrist-bend/splay/rotation x
+every single- and multi-axis mirror combination confirm zero regression
+against the old code with no mirror active, confirm curl applies an
+IDENTICAL local bone rotation regardless of mirror state (same pose, only
+the geometry differs -- the actual goal), and confirm the OLD code really
+would have diverged once mirrored (proving the bug was real, not a
+vacuous pass); (2) a separate check confirms the pivot-preserving
+position formula (generalized from a uniform scalar to a per-axis mirror
+vector) keeps the palm anchored in h.wrapper's frame to floating-point
+precision under every mirror combination. `index.html` cache-buster:
+`main.js` `?v=181` -> `?v=182`.
+
+Deliberately scoped out: handMirrorX/Y/Z is a standalone model toggle,
+not part of POSE_KEY_DEFAULTS/SAVED_POSES -- it isn't captured or blended
+by Saved Poses or Responsive Pose Tween, matching how other structural/
+display-level settings (Field Layout, Toon Shading) already work in this
+file.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
