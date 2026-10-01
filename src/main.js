@@ -244,6 +244,7 @@ const cfg = {
   tweenPoses: [], tweenT: 0, tweenFrameCount: 10, exportFramePrefix: 'tween',
   // Debug
   showGridHelper: false, showAxesHelper: false, showWireframe: false,
+  worldAxesLength: 50, worldAxesThickness: 1,
   // Ground Plane
   groundPlaneEnabled: false, groundHeight: 0, groundColor: '#808080', groundScale: 200,
   // Finger Gizmos -- visual-only (no TransformControls/IK dragging, per
@@ -1598,9 +1599,29 @@ const gridHelper = new THREE.GridHelper(40, 40)
 gridHelper.visible = cfg.showGridHelper
 scene.add(gridHelper)
 
-const axesHelper = new THREE.AxesHelper(50)
-axesHelper.visible = cfg.showAxesHelper
-scene.add(axesHelper)
+// World Axes -- Fat Lines visualization (same engine as Object Axes, so thickness is actually visible)
+let worldAxesGroup = null
+function createWorldAxesVisualization(length, thicknessPx) {
+  const group = new THREE.Group()
+  group.name = 'WorldAxesVisualization'
+  AXES_DIRS.forEach((dir, i) => {
+    const geometry = new LineGeometry()
+    geometry.setPositions([0, 0, 0, dir[0] * length, dir[1] * length, dir[2] * length])
+    const material = new LineMaterial({ color: AXES_COLORS[i], linewidth: thicknessPx })
+    material.resolution.set(renderer.domElement.width || 1, renderer.domElement.height || 1)
+    fatAxesLineMaterials.push(material)
+    group.add(new Line2(geometry, material))
+  })
+  return group
+}
+function updateWorldAxes() {
+  if (worldAxesGroup && worldAxesGroup.parent) scene.remove(worldAxesGroup)
+  if (cfg.showAxesHelper) {
+    worldAxesGroup = createWorldAxesVisualization(cfg.worldAxesLength, cfg.worldAxesThickness)
+    scene.add(worldAxesGroup)
+  }
+}
+updateWorldAxes()
 
 // Target Marker -- shows where Palm Faces Cursor is actually tracking to
 // (tiltTarget, the cursor's own ground-plane hit -- see updateTiltTarget()'s
@@ -6785,7 +6806,11 @@ function renderDebugExtras() {
   wireCheckbox('checkboxShowGridHelper', (v) => { cfg.showGridHelper = v; gridHelper.visible = v })
   addRow(debugContent, { id: 'checkboxShowAxesHelper', label: 'Show World Axes Gizmo', type: 'checkbox' })
   document.getElementById('checkboxShowAxesHelper').checked = cfg.showAxesHelper
-  wireCheckbox('checkboxShowAxesHelper', (v) => { cfg.showAxesHelper = v; axesHelper.visible = v })
+  wireCheckbox('checkboxShowAxesHelper', (v) => { cfg.showAxesHelper = v; updateWorldAxes() })
+  addRow(debugContent, { id: 'sliderWorldAxesLength', label: 'World Axes Line Length', type: 'slider', min: 10, max: 200, step: 5, value: cfg.worldAxesLength })
+  wireSlider('sliderWorldAxesLength', (v) => { cfg.worldAxesLength = v; updateWorldAxes() })
+  addRow(debugContent, { id: 'sliderWorldAxesThickness', label: 'World Axes Line Thickness', type: 'slider', min: 1, max: 10, step: 0.5, value: cfg.worldAxesThickness })
+  wireSlider('sliderWorldAxesThickness', (v) => { cfg.worldAxesThickness = v; updateWorldAxes() })
   addRow(debugContent, { id: 'checkboxShowWireframe', label: 'Show Wireframe', type: 'checkbox' })
   wireCheckbox('checkboxShowWireframe', (v) => { cfg.showWireframe = v; hands.forEach((h) => { h.skinnedMesh.material.wireframe = v }) })
   // CORRECTED 2026-09-30, direct report: "The Pause button... should be
