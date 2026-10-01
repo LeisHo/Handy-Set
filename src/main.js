@@ -1968,6 +1968,22 @@ function createToonMaterial(map) {
 // normalized magnitude/angle -> circular-offset approach, which is the
 // correct abstraction for that fundamentally different kind of input.
 let tiltMagnitude = 0, tiltAngle = 0
+// Desktop-only raw cursor pixel offset from screen center -- added
+// 2026-10-01, direct request: "for desktop, for the rotation curve
+// editors, make the right side on x axis the width of the browser/2. so
+// it covers all cursor tracking basicallly." Deliberately SEPARATE from
+// `tiltMagnitude` (which normalizes by `min(halfWidth, halfHeight)` --
+// see handleMouseMoveFallback()'s own `maxDist`), not a replacement for
+// it -- `tiltMagnitude` is shared by several OTHER features (Reactive
+// Arm Length, Responsive Wrist Splay, Palm Rotation's own
+// `armBaseDistanceT`-adjacent uses) that must keep their existing
+// saturation behavior; changing that shared value would silently affect
+// all of them, the exact cross-feature-coupling mistake this file's own
+// `armBaseDistanceT` gotcha already warns against. Set in
+// handleMouseMoveFallback() from the SAME dx/dy it already computes for
+// tiltMagnitude -- see computeDesktopRotationNxNy()'s own comment for
+// how this is actually consumed.
+let desktopCursorDxPx = 0, desktopCursorDyPx = 0
 // Phone Model Responsive Rotation on MOBILE -- REPLACED 2026-09-28,
 // direct report: "when i tilt far... it jumps then rotates 180...
 // diffretn for each axis... i want the rotation to continue forever."
@@ -2161,6 +2177,11 @@ function handleMouseMoveFallback(e) {
   const maxDist = Math.min(cx, cy)
   tiltMagnitude = Math.min(Math.hypot(dx, dy) / maxDist, 1)
   tiltAngle = Math.atan2(-dy, dx)
+  // Raw pixel offset, reused (not recomputed) for Rotation's own
+  // width/2-normalized curve input -- see desktopCursorDxPx's own
+  // declaration comment.
+  desktopCursorDxPx = dx
+  desktopCursorDyPx = dy
 }
 function attachMotionListeners() {
   window.addEventListener('deviceorientation', handleDeviceOrientation)
@@ -2881,6 +2902,32 @@ const _phoneDesktopSpinQuat = new THREE.Quaternion() // desktop's own Y-axis (sp
 // out backwards, flip that axis's own sign at its own site (negate the
 // beta-delta for X, negate the gamma-delta for Z, negate the alpha-delta
 // for Y) rather than re-deriving the whole mapping.
+// Desktop-only nx/ny for Rotation specifically -- added 2026-10-01, see
+// desktopCursorDxPx's own declaration comment for why this is a
+// SEPARATE computation from tiltMagnitude/tiltAngle, not a replacement.
+// Normalizes by half the BROWSER WIDTH only (window.innerWidth/2), for
+// both the horizontal AND vertical offset -- direct request: "make the
+// right side on x axis the width of the browser/2. so it covers all
+// cursor tracking basicallly." Sign conventions preserved exactly from
+// the old tiltMagnitude*cos/sin reconstruction (verified algebraically:
+// tiltMagnitude*cos(tiltAngle) reduces to dx/maxDist, tiltMagnitude*
+// sin(tiltAngle) reduces to -dy/maxDist, when not saturated by
+// tiltMagnitude's own circular clamp) -- only the denominator changed,
+// from `min(halfWidth, halfHeight)` to `halfWidth` alone. A SINGLE
+// shared function so `computePhoneCombinedQuat()`'s desktop branch and
+// `resetPhoneRotationBaseline()`'s own baseline capture can never drift
+// out of sync with each other -- exactly the "two code paths compute
+// the same quantity differently" bug class this file has hit repeatedly
+// elsewhere (see the Phone Model mobile-rotation-axis saga). No clamp
+// here deliberately -- dx naturally ranges -halfWidth..+halfWidth within
+// the viewport, so dx/halfWidth already lands in -1..+1 at the screen's
+// own left/right edges with no clamp needed; the actual defensive clamp
+// still happens downstream, in computePhoneCombinedQuat() itself, after
+// the baseline is subtracted.
+function computeDesktopRotationNxNy() {
+  const halfWidth = (window.innerWidth || 1) / 2
+  return { nx: desktopCursorDxPx / halfWidth, ny: -desktopCursorDyPx / halfWidth }
+}
 function computePhoneCombinedQuat() {
   _phoneManualQuat.setFromEuler(new THREE.Euler(
     THREE.MathUtils.degToRad(cfg.phoneModelRotX), THREE.MathUtils.degToRad(cfg.phoneModelRotY), THREE.MathUtils.degToRad(cfg.phoneModelRotZ), 'XYZ'
@@ -2923,8 +2970,11 @@ function computePhoneCombinedQuat() {
     // not a remapping -- computePhoneResponsiveAxisDeg() already
     // returns magnitude*sign(rawComponent), so passing ny/-nx directly
     // reproduces the old signs with no separate Math.sign() call needed.
-    const rawNx = tiltMagnitude * Math.cos(tiltAngle) // gamma-analog (left-right)
-    const rawNy = tiltMagnitude * Math.sin(tiltAngle) // beta-analog (front-back)
+    // CHANGED 2026-10-01: rawNx/rawNy now come from computeDesktopRotationNxNy()
+    // (half-browser-WIDTH normalized), not tiltMagnitude*cos/sin
+    // (min(halfWidth,halfHeight) normalized) -- see that function's own
+    // comment.
+    const { nx: rawNx, ny: rawNy } = computeDesktopRotationNxNy()
     const nx = THREE.MathUtils.clamp(rawNx - phoneNxBaseline, -1, 1)
     const ny = THREE.MathUtils.clamp(rawNy - phoneNyBaseline, -1, 1)
     // Per-axis on/off + scale -- direct request 2026-09-28. X gated here
@@ -3508,9 +3558,14 @@ function resetPhoneRotationBaseline() {
   // Desktop: baseline captured in the RAW (pre-final-clamp) domain -- a
   // post-clamp baseline would saturate near the cursor-distance ceiling
   // the same way the old mobile path once did near a physical clamp
-  // boundary.
-  phoneNxBaseline = tiltMagnitude * Math.cos(tiltAngle)
-  phoneNyBaseline = tiltMagnitude * Math.sin(tiltAngle)
+  // boundary. CHANGED 2026-10-01: via computeDesktopRotationNxNy(), the
+  // SAME helper computePhoneCombinedQuat()'s own desktop branch now
+  // uses -- kept as one shared function specifically so this baseline
+  // capture can never drift out of sync with the live formula (see that
+  // function's own comment).
+  const rawNxNy = computeDesktopRotationNxNy()
+  phoneNxBaseline = rawNxNy.nx
+  phoneNyBaseline = rawNxNy.ny
   // Direct request 2026-09-30: "When I do double tap to reset. Make it
   // instant instead of tweened and affected by damping." Everything
   // above only resets the UNDERLYING state (phoneGyroQuat, the absolute
