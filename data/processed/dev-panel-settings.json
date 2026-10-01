@@ -117,7 +117,7 @@
     "textPhoneRotationCurveY": "{\"points\":[{\"x\":0,\"y\":0.03041661580403643},{\"x\":1,\"y\":0.7770833333333333}],\"method\":\"catmullrom\"}",
     "textPhoneRotationRangeZ": "{\"min\":0,\"max\":180}",
     "textPhoneRotationCurveZ": "{\"points\":[{\"x\":0,\"y\":0.035416158040364576},{\"x\":1,\"y\":1}],\"method\":\"catmullrom\"}",
-    "checkboxPhoneResponsiveDisplaceEnabled": true,
+    "checkboxPhoneResponsiveDisplaceEnabled": false,
     "selectPhoneDisplaceMode": "worldPosition",
     "checkboxPhoneDisplaceResetEnabled": true,
     "checkboxPhoneDisplaceAxisXEnabled": true,
@@ -129,7 +129,7 @@
     "checkboxPhoneDisplaceAxisZEnabled": true,
     "sliderPhoneDisplaceScaleZ": 1,
     "checkboxPhoneDisplaceInvertZ": false,
-    "sliderPhoneDisplaceDamping": 1,
+    "sliderPhoneDisplaceDamping": 0.16,
     "sliderPhoneDisplaceVelDecayRate": 3.1,
     "sliderPhoneDisplacePosDecayRate": 1.06,
     "checkboxPhoneDisplaceStationaryGateEnabled": true,
@@ -150,7 +150,7 @@
     "textScreenLevelScaleRange": "{\"min\":1,\"max\":1}",
     "textScreenLevelScaleCurve": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"linear\"}",
     "sliderScreenTextureRotation": 180,
-    "sliderScreenTextureOffsetX": -0.0035,
+    "sliderScreenTextureOffsetX": 0.38119252447345,
     "sliderScreenTextureOffsetY": 0.412076526432461,
     "sliderScreenTextureScaleX": 1.35,
     "sliderScreenTextureScaleY": 1.2,
@@ -226,10 +226,10 @@
     "checkboxDeviceInfoEnabled": true
   },
   "layout": {
-    "left": 26,
-    "top": 295,
+    "left": 31,
+    "top": 347,
     "width": 350,
-    "height": 483
+    "height": 432
   },
   "devPanelStyle": {
     "titleFontSize": 17,
@@ -10715,7 +10715,7 @@
     "desktop:PHONE MODEL": false,
     "desktop:OFFSET": true,
     "desktop:PHONE ROTATION": true,
-    "desktop:RECURSIVE RENDER": true,
+    "desktop:RECURSIVE RENDER": false,
     "desktop:RESPONSIVE BEHAVIOUR - PHONE": false,
     "desktop:Responsive Rotation": true,
     "desktop:RESPONSIVE DISPLACE": false,
@@ -10769,7 +10769,7 @@
     "mobile:PHONE MODEL": false,
     "mobile:OFFSET": false,
     "mobile:PHONE ROTATION": true,
-    "mobile:RECURSIVE RENDER": true,
+    "mobile:RECURSIVE RENDER": false,
     "mobile:RESPONSIVE BEHAVIOUR - PHONE": false,
     "mobile:Responsive Rotation": true,
     "mobile:RESPONSIVE DISPLACE": false,
@@ -11348,8 +11348,8 @@
   },
   "devIndependence": {
     "mobile": {
-      "sliderScreenTextureOffsetX": false,
-      "sliderScreenTextureOffsetY": false
+      "sliderScreenTextureOffsetX": true,
+      "sliderScreenTextureOffsetY": true
     },
     "landscape": {}
   },
@@ -11359,8 +11359,8 @@
       "checkboxTrackingEnabled": false,
       "sliderTrackingDamping": 0.27,
       "checkboxPalmFacesCursor": false,
-      "sliderScreenTextureOffsetY": 0.106713002203763,
-      "sliderScreenTextureOffsetX": -0.0191316081152716,
+      "sliderScreenTextureOffsetY": 0.06,
+      "sliderScreenTextureOffsetX": -0.0127433989193597,
       "checkboxPhoneDisplaceAxisXEnabled": true,
       "checkboxPhoneDisplaceAxisZEnabled": true
     },
