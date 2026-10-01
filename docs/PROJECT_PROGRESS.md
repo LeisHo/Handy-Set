@@ -7,7 +7,24 @@ append-only history.
 
 ## Currently working on
 
-**Nothing in progress right now** — the last active item shipped a Hand
+**Nothing in progress right now** — the last active item removed the
+Displace Fine-Tune slider entirely (direct request: "i dont need whatever
+it does") and fixed "On reset or startup, I see it immediately start to
+drift" — confirmed via real device data that `resetPhoneDisplaceBaseline()`
+was zeroing the bias high-pass filter's own tracked bias on every reset,
+forcing it to re-learn the device's real, ongoing sensor bias from
+scratch each time, which leaked through nearly unfiltered during that
+~2.5s re-learning window. Bias now persists across a Displace Reset (only
+velocity/position reset, matching the actual "back to starting location"
+intent). Verified via a standalone replay of the full real logged session
+(all 4 reset cycles): measurably improved in 3 of 4 segments. Disclosed,
+not fully solved — some residual drift remains from genuine handheld
+jitter, an inherent limit of accelerometer double-integration, though the
+real measured magnitudes (1-5 world units against a Max Range of 8) are
+more modest than they first appeared. See CHANGELOG's matching 2026-10-01
+entry.
+
+Before that: shipped a Hand
 Model Selector: a "Model" Item Selector in the HAND MODEL group (visually
 mirroring Phone Model's own clickable-list UI), with `Hand2.glb`
 (existing default) and the new `HandiBonesB-IK.glb` as the 2 options.

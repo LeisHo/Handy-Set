@@ -6142,6 +6142,61 @@ constraint system). `index.html` cache-buster: `main.js` `?v=183` ->
 `?v=184`.
 
 --------------------------------------------------------------------------------
+2026-10-01  -  Remove Displace Fine-Tune; persist bias tracker across
+Displace Reset (fixes "drift immediately after reset")
+
+Fine-Tune removed entirely per direct request: "and remove displace
+finetune. default it back to 0 or 1 or whatever, i dont need whatever it
+does." The slider (`sliderPhoneResponsiveDisplaceFineTune`), its
+`wireSlider` wiring, its term in `computePhoneDisplaceAxisUnits()`'s own
+magnitude formula, and its entry in `PHONE_MODEL_PER_MODEL_CONTROL_IDS`
+are all gone -- a stale key may still linger in an already-synced
+settings file, harmlessly ignored since nothing reads it anymore.
+
+Separately, a direct real-device test (another Copy All Logs triplet)
+surfaced a NEW symptom even after the prior magnitude-clamp fix: "Same
+movement set without the tilt set. On reset or startup, I see it
+immediately start to drift." Confirmed directly against the real logged
+Phone Model output: right after each of 4 double-tap resets in the
+session, Pos climbed measurably over the next 1-2 seconds despite small,
+unremarkable LinearAccel readings throughout (nothing resembling a real
+deliberate push).
+
+Root cause: `resetPhoneDisplaceBaseline()` was zeroing the bias high-pass
+filter's own tracked bias (`phoneDisplaceBiasX/Y/Z`) on every reset, same
+as velocity/position. But that bias represents an ONGOING property of the
+device's current sensor/orientation state -- it has nothing to do with
+"where zero position should be," which is what a Displace Reset actually
+means (the 2026-09-30 comment that added this reset conflated the two).
+Zeroing it meant the ~2.5s (`PHONE_DISPLACE_BIAS_TRACK_RATE`) filter had
+to re-learn the current bias from scratch after every single reset, and
+during that re-learning window the real, still-present bias leaked
+through nearly unfiltered -- exactly the reported "immediate drift."
+
+Fixed by no longer zeroing bias in `resetPhoneDisplaceBaseline()` --
+only velocity/position (the user's actual "back to starting location"
+intent) reset to 0 now; bias persists continuously across resets.
+Verified via a standalone replay of the ENTIRE real logged session
+(all 4 reset cycles, using the real z-axis LinearAccel values -- the Y
+output slot, since Y/Z are swapped) comparing the old (reset-on-tap) vs.
+new (persist) behavior: peak post-reset drift measurably improved in 3 of
+4 segments (one essentially unchanged, since bias hadn't had much time to
+diverge from 0 yet at that particular point in the session).
+
+Disclosed, not fully solved: this is a real, confirmed improvement, not
+a complete elimination of drift. Some residual position drift remains
+even with this fix, from genuine handheld jitter integrating into
+position over time -- an inherent limitation of accelerometer-based
+double-integration tracking (any sustained, non-exactly-zero-mean motion
+integrates into SOME position change, bias filter or not), not something
+a bias-tracking filter alone can fully remove. The measured magnitudes in
+this session's own data were modest in absolute terms (peak drift
+0.01-0.05m, translating to roughly 1-5 world units against the user's own
+current Max Range of 8) -- real, but smaller than the visually dramatic
+reports suggested once actually quantified. `index.html` cache-buster:
+`main.js` `?v=184` -> `?v=185`.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
