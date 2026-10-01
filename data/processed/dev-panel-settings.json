@@ -9041,7 +9041,7 @@
     "desktop:TABS": true,
     "desktop:BUTTONS": true,
     "desktop:Hotkeys": true,
-    "desktop:Debug": true,
+    "desktop:Debug": false,
     "desktop:Object Axes": true,
     "desktop:Settings": true,
     "desktop:Mouse Log": true,
