@@ -472,6 +472,31 @@ const cfg = {
   // show and comfortably below the 5-90 deg/s range its own real
   // deliberate-motion tests show.
   phoneDisplaceStationaryGateEnabled: true, phoneDisplaceStationaryGateDegPerSec: 2.0,
+  // ZUPT upgrade -- added 2026-10-01, direct report with real device
+  // data: persistent position drift while physically stationary, even
+  // with phoneDisplacePosDecayRate manually set to 0 (no position
+  // self-correction at all). Root cause, confirmed by tracing the real
+  // code (not assumed from comments): the gate above only ever
+  // SUPPRESSES new acceleration input when gyro is quiet -- it never
+  // forces existing residual VELOCITY to zero, so any leftover velocity
+  // from a brief gyro-threshold miss (real hand tremor, or any tick
+  // where e.rotationRate is momentarily unavailable) keeps adding to
+  // position every tick with nothing to correct it. These 2 new
+  // controls turn the existing gate into a real Zero-Velocity-Update
+  // (ZUPT, the standard INS/dead-reckoning technique): an acceleration-
+  // magnitude criterion ALONGSIDE the existing gyro one (both required,
+  // not either/or -- matching the direct spec: "gyro angular speed
+  // below a threshold" AND "linear acceleration magnitude sufficiently
+  // close to zero"), confirmed for this short dwell before actually
+  // forcing velocity to exactly 0 (so one noisy quiet-looking sample
+  // mid-motion can't trigger it). Default accel threshold (0.6 m/s^2)
+  // sits comfortably above the ~0.2-0.4 m/s^2 noise ceiling observed in
+  // this project's own real "stationary" test logs, comfortably below
+  // real deliberate-motion readings (1-6+ m/s^2 in this project's own
+  // logged tests). Dwell default (150ms) is a judgment call, not a
+  // measurement -- short enough to feel instant, long enough to reject
+  // one single noisy tick.
+  phoneDisplaceZuptAccelThresholdMps2: 0.6, phoneDisplaceZuptDwellMs: 150,
   // Per-axis Min/Max Range + Curve + X Reference -- added 2026-10-01,
   // direct request ("Make me a displacement min max slider and a curved
   // editor for all 3 axes") then refined ("x to be recorded... displacement
@@ -3296,6 +3321,17 @@ let phoneDisplaceBiasX = 0, phoneDisplaceBiasY = 0, phoneDisplaceBiasZ = 0
 let phoneDisplaceVelX = 0, phoneDisplaceVelY = 0, phoneDisplaceVelZ = 0
 let phoneDisplacePosX = 0, phoneDisplacePosY = 0, phoneDisplacePosZ = 0
 let phoneDisplaceLastTimestamp = null
+// ZUPT dwell state -- added 2026-10-01, see cfg.phoneDisplaceZuptAccelThresholdMps2's
+// own declaration comment. phoneDisplaceZuptDwellStart is the
+// performance.now() timestamp the gate first went quiet (both gyro AND
+// accel below threshold); null whenever not currently in a candidate
+// quiet window. phoneDisplaceZuptActive is true once that window has
+// held for the full dwell duration (velocity is being force-held at
+// exactly 0 this tick) -- exposed on window.__debug below as the
+// existing diagnostic surface for this value, rather than building a
+// separate inspection system.
+let phoneDisplaceZuptDwellStart = null
+let phoneDisplaceZuptActive = false
 const _phoneDisplaceWorldVec = new THREE.Vector3()
 // Shared leaky accel->velocity->position integrator -- one real
 // devicemotion sample (MOBILE) or one desktop cursor-delta "impulse"
@@ -3507,8 +3543,48 @@ function integratePhoneDisplacement(e) {
       // ax/ay/az fed to the position integrator is forced to zero.
       if (cfg.phoneDisplaceStationaryGateEnabled && e.rotationRate) {
         const gyroMag = Math.hypot(e.rotationRate.alpha || 0, e.rotationRate.beta || 0, e.rotationRate.gamma || 0)
-        isStationary = gyroMag < cfg.phoneDisplaceStationaryGateDegPerSec
-        if (isStationary) { ax = 0; ay = 0; az = 0 }
+        // ZUPT upgrade -- added 2026-10-01, see cfg.phoneDisplaceZuptAccelThresholdMps2's
+        // own declaration comment for the full root-cause account. The
+        // gyro check alone only ever suppressed NEW acceleration input;
+        // it never corrected EXISTING residual velocity, which is what
+        // actually caused the reported drift (any leftover velocity from
+        // a brief gyro-threshold miss kept adding to position every
+        // tick, with nothing to pull it back once phoneDisplacePosDecayRate
+        // is 0). Now requires BOTH gyro AND accel-magnitude to read quiet
+        // (matching the direct spec exactly -- not either/or), and a
+        // short dwell before treating that as CONFIDENT enough to force
+        // velocity to exactly 0 (a real Zero-Velocity-Update) rather
+        // than just continuing to let it decay asymptotically. accelMag
+        // is measured from the ALREADY bias-corrected, deadzone-filtered
+        // ax/ay/az (no new sensor read needed) -- the accel threshold
+        // (0.6 m/s^2 default) sits well above the small 0.05 per-axis
+        // deadzone, so using the filtered values here doesn't
+        // meaningfully change the comparison.
+        const accelMag = Math.hypot(ax, ay, az)
+        isStationary = gyroMag < cfg.phoneDisplaceStationaryGateDegPerSec && accelMag < cfg.phoneDisplaceZuptAccelThresholdMps2
+        if (isStationary) {
+          ax = 0; ay = 0; az = 0
+          if (phoneDisplaceZuptDwellStart === null) phoneDisplaceZuptDwellStart = now
+          // CONFIDENT stationary -- held below BOTH thresholds for the
+          // full dwell window. Force velocity to EXACTLY 0 here (not
+          // just via the normal exp() decay in applyPhoneDisplaceSample(),
+          // which only ever approaches 0 asymptotically) -- this is the
+          // actual ZUPT: with velocity hard-zeroed and ax/ay/az already
+          // 0 above, applyPhoneDisplaceSample() below computes
+          // `pos = pos*posDecay + 0*dt = pos*posDecay`, which with the
+          // EXISTING phoneDisplacePosDecayRate left untouched (0 for
+          // this test, or whatever the user has it set to otherwise)
+          // means position is held EXACTLY where it is -- a legitimate
+          // zero-velocity update, not a position reset.
+          phoneDisplaceZuptActive = (now - phoneDisplaceZuptDwellStart) >= cfg.phoneDisplaceZuptDwellMs
+          if (phoneDisplaceZuptActive) { phoneDisplaceVelX = 0; phoneDisplaceVelY = 0; phoneDisplaceVelZ = 0 }
+        } else {
+          phoneDisplaceZuptDwellStart = null // real motion resumed -- dwell must re-accumulate from scratch next time
+          phoneDisplaceZuptActive = false
+        }
+      } else {
+        phoneDisplaceZuptDwellStart = null
+        phoneDisplaceZuptActive = false
       }
       if (cfg.phoneDisplaceMode === 'worldPosition' && latestOrientation) {
         const q = computeDeviceOrientationQuat(latestOrientation.alpha || 0, latestOrientation.beta || 0, latestOrientation.gamma || 0)
@@ -5259,6 +5335,18 @@ window.__debug = {
   get tiltMagnitude() { return tiltMagnitude }, get tiltAngle() { return tiltAngle },
   get phoneGyroQuat() { return phoneGyroQuat }, get lastInputSource() { return lastInputSource },
   get sensorLog() { return sensorLog },
+  // ZUPT diagnostics -- added 2026-10-01, exposed here per direct
+  // request ("expose it in the existing diagnostics rather than
+  // creating a separate system") instead of a new logging mechanism.
+  // phoneDisplaceZuptActive: true while velocity is currently being
+  // force-held at exactly 0 (confidently stationary, past the dwell
+  // window). phoneDisplacePosX/Y/Z and Vel are the integrator's own raw
+  // state in METERS -- the same values computePhoneResponsiveDisplacement()
+  // maps into on-screen world units.
+  get phoneDisplaceZuptActive() { return phoneDisplaceZuptActive },
+  get phoneDisplaceVel() { return { x: phoneDisplaceVelX, y: phoneDisplaceVelY, z: phoneDisplaceVelZ } },
+  get phoneDisplacePos() { return { x: phoneDisplacePosX, y: phoneDisplacePosY, z: phoneDisplacePosZ } },
+  get phoneDisplaceBias() { return { x: phoneDisplaceBiasX, y: phoneDisplaceBiasY, z: phoneDisplaceBiasZ } },
   getHandCenterWorld, updateWristCrop, computeBaseScale, pushSensorLog, restartSensorTimer
 }
 
@@ -6650,6 +6738,7 @@ const PHONE_MODEL_PER_MODEL_CONTROL_IDS = [
   'checkboxPhoneDisplaceAxisZEnabled', 'sliderPhoneDisplaceScaleZ', 'checkboxPhoneDisplaceInvertZ',
   'sliderPhoneDisplaceDamping', 'sliderPhoneDisplaceVelDecayRate', 'sliderPhoneDisplacePosDecayRate',
   'checkboxPhoneDisplaceStationaryGateEnabled', 'sliderPhoneDisplaceStationaryGateDegPerSec',
+  'sliderPhoneDisplaceZuptAccelThresholdMps2', 'sliderPhoneDisplaceZuptDwellMs',
   // Same correction as Rotation's own, directly above: per-axis ids,
   // not the old shared pair.
   'textPhoneDisplaceRangeX', 'textPhoneDisplaceCurveX', 'sliderPhoneDisplaceXReferenceM',
@@ -7257,6 +7346,15 @@ function renderPhoneModelGroup(content) {
   wireCheckbox('checkboxPhoneDisplaceStationaryGateEnabled', (v) => { cfg.phoneDisplaceStationaryGateEnabled = v })
   addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplaceStationaryGateDegPerSec', label: 'Stationary Gate Threshold (Deg/s)', type: 'slider', min: 0.1, max: 10, step: 0.1, value: cfg.phoneDisplaceStationaryGateDegPerSec })
   wireSlider('sliderPhoneDisplaceStationaryGateDegPerSec', (v) => { cfg.phoneDisplaceStationaryGateDegPerSec = v })
+  // ZUPT upgrade -- 2 new controls alongside the existing Stationary
+  // Gate, direct request after real device data showed the gyro-only
+  // gate let residual velocity leak into position with nothing to
+  // correct it. See cfg.phoneDisplaceZuptAccelThresholdMps2's own
+  // declaration comment for the full reasoning.
+  addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplaceZuptAccelThresholdMps2', label: 'ZUPT Accel Threshold (m/s^2)', type: 'slider', min: 0.1, max: 3, step: 0.05, value: cfg.phoneDisplaceZuptAccelThresholdMps2 })
+  wireSlider('sliderPhoneDisplaceZuptAccelThresholdMps2', (v) => { cfg.phoneDisplaceZuptAccelThresholdMps2 = v })
+  addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplaceZuptDwellMs', label: 'ZUPT Dwell Time (Ms)', type: 'slider', min: 0, max: 500, step: 10, value: cfg.phoneDisplaceZuptDwellMs })
+  wireSlider('sliderPhoneDisplaceZuptDwellMs', (v) => { cfg.phoneDisplaceZuptDwellMs = v })
   // Per-axis Min/Max Range + Curve + Reference -- added 2026-10-01,
   // replacing the single shared Range/Curve pair above (one X/Y/Z
   // magnitude run through one shared curve). Each axis now gets its own
