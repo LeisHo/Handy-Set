@@ -240,9 +240,9 @@
   },
   "layout": {
     "left": 32,
-    "top": 619,
+    "top": 352,
     "width": 350,
-    "height": 159
+    "height": 76
   },
   "devPanelStyle": {
     "titleFontSize": 17,
@@ -11445,7 +11445,7 @@
     "mobile:PHONE ROTATION": true,
     "mobile:RECURSIVE RENDER": false,
     "mobile:RESPONSIVE BEHAVIOUR - PHONE": false,
-    "mobile:Responsive Rotation": false,
+    "mobile:Responsive Rotation": true,
     "mobile:RESPONSIVE DISPLACE": false,
     "mobile:HAND MODEL": true,
     "mobile:Field Layout": false,
