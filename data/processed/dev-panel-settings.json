@@ -122,7 +122,7 @@
     "checkboxPhoneResponsiveDisplaceEnabled": true,
     "selectPhoneDisplaceMode": "worldPosition",
     "checkboxPhoneDisplaceResetEnabled": true,
-    "checkboxPhoneDisplaceAxisXEnabled": false,
+    "checkboxPhoneDisplaceAxisXEnabled": true,
     "sliderPhoneDisplaceScaleX": 1,
     "checkboxPhoneDisplaceInvertX": false,
     "checkboxPhoneDisplaceAxisYEnabled": true,
@@ -132,15 +132,15 @@
     "sliderPhoneDisplaceScaleZ": 1,
     "checkboxPhoneDisplaceInvertZ": false,
     "sliderPhoneDisplaceDamping": 1,
-    "sliderPhoneDisplaceVelDecayRate": 0.5,
-    "sliderPhoneDisplacePosDecayRate": 0.02,
+    "sliderPhoneDisplaceVelDecayRate": 0,
+    "sliderPhoneDisplacePosDecayRate": 0,
     "checkboxPhoneDisplaceStationaryGateEnabled": true,
     "sliderPhoneDisplaceStationaryGateDegPerSec": 2,
     "sliderPhoneDisplaceZuptAccelThresholdMps2": 0.6,
     "sliderPhoneDisplaceZuptDwellMs": 150,
-    "textPhoneDisplaceRangeX": "{\"min\":0,\"max\":20}",
+    "textPhoneDisplaceRangeX": "{\"min\":0,\"max\":41}",
     "textPhoneDisplaceCurveX": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"monotone\"}",
-    "sliderPhoneDisplaceXReferenceM": 0.35,
+    "sliderPhoneDisplaceXReferenceM": 1.3,
     "textPhoneDisplaceRangeY": "{\"min\":0,\"max\":52}",
     "textPhoneDisplaceCurveY": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"monotone\"}",
     "sliderPhoneDisplaceYReferenceM": 1.15,
@@ -240,9 +240,9 @@
   },
   "layout": {
     "left": 35,
-    "top": 108,
+    "top": 289,
     "width": 350,
-    "height": 671
+    "height": 489
   },
   "devPanelStyle": {
     "titleFontSize": 17,
@@ -920,15 +920,8 @@
             "type": "group",
             "section": {
               "key": "desktop:Hotkeys",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "sliderDevHotkeySequenceWindow"
-                }
-              ],
-              "rowKeys": [
-                "sliderDevHotkeySequenceWindow"
-              ],
+              "items": [],
+              "rowKeys": [],
               "subgroups": []
             }
           }
@@ -1457,15 +1450,8 @@
           },
           {
             "key": "desktop:Hotkeys",
-            "items": [
-              {
-                "type": "row",
-                "key": "sliderDevHotkeySequenceWindow"
-              }
-            ],
-            "rowKeys": [
-              "sliderDevHotkeySequenceWindow"
-            ],
+            "items": [],
+            "rowKeys": [],
             "subgroups": []
           }
         ]
