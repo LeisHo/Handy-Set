@@ -1,3 +1,67 @@
+2026-10-02  -  Investigated "X/Z still stuck at boundary" -- config, not code
+
+Direct, detailed instruction: port the Y-axis boundary-clamp fix (from
+the previous 2026-10-01 change) to X and Z, treating Y as the reference
+implementation, since X/Z supposedly still exhibited the old "stuck at
+boundary" behavior.
+
+INVESTIGATED BEFORE IMPLEMENTING, per standing discipline (never
+execute a request built on an unverified premise): read
+computePhoneDisplaceAxisUnits() (the shared curve/range/reference/
+boundary-clamp function), computePhoneResponsiveDisplacement() (its 3
+call sites), parsePhoneResponsiveDisplaceConfig() (the curve/range
+parser), and applyPhoneDisplaceSample() (the integrator). Confirmed:
+ALL THREE axes already run through the exact SAME formula, called
+identically for X/Y/Z with zero per-axis branching anywhere in the
+pipeline. The 2026-10-01 boundary fix was never axis-specific -- it was
+baked directly into the one shared function, so it applied to X, Y, and
+Z simultaneously from the moment it shipped. There was no "Y-only fix"
+to port.
+
+REAL EXPLANATION, found by checking the live git-tracked
+dev-panel-settings.json (per CLAUDE.md S12s's own "check git state
+first" discipline): Y's Reference Distance (1.15m) and Range max (52)
+were far larger than X/Z's values, which were still sitting at the
+CODE's own shared default (0.35m / max 20 -- confirmed identical across
+X/Y/Z in src/main.js's own cfg declaration, ruling out even a
+default-level asymmetry). Since the boundary clamp's release threshold
+is mathematically always "internal position returns inside the
+Reference Distance" (proven in the prior fix -- inherent to any bounded
+clamp, not a remaining bug), a short 0.35m Reference Distance saturates
+far more readily during ordinary real-world phone movement than Y's
+generous 1.15m, making the IDENTICAL underlying mapping look broken on
+the more tightly-tuned axes. This is a tuning/UX difference, not an
+architecture difference.
+
+Presented the findings directly to the user via AskUserQuestion rather
+than silently either (a) implementing a fake "fix" to satisfy the
+request's literal wording, or (b) silently doing nothing -- per this
+project's own standing instruction to flag when a requested fix looks
+unnecessary and let the user decide. Chose: match Z to Y.
+
+FIX APPLIED (settings only, zero code changes): while investigating,
+found the user had ALREADY live-tuned X themselves (to 1.3m / max 41)
+during this same session, apparently in direct response to seeing this
+conversation's own explanation -- left X completely untouched, not this
+fix's business to override in-progress live tuning. Z was still at the
+original defaults on both the Desktop-level control (0.35m / max 20)
+AND its own independent Mobile-tab override (0.68m, found in
+devDeviceValues.mobile) -- bumped both to match Y (1.15m / max 52) via
+a small, targeted string-replacement script (not a full JSON.parse/
+stringify rewrite, to avoid reformatting the entire 470KB+ file for a
+3-value change). Verified via `git diff` that exactly 3 lines changed
+and nothing else; checked for newer remote Sync commits both
+immediately before and immediately after the edit (none landed either
+time).
+
+NO main.js CHANGES -- computePhoneDisplaceAxisUnits(), the integrator,
+and every other Displace mechanism were already correct and
+symmetric across all 3 axes; making a code change here would have
+meant inventing special-case per-axis logic where none was needed,
+directly contradicting the request's own "do not create separate
+special-case behavior per axis" instruction.
+
+--------------------------------------------------------------------------------
 2026-10-02  -  A/B diagnostic pipelines: Existing vs. Native Displace
 
 Direct request (a detailed, pre-drafted spec): compare the Existing

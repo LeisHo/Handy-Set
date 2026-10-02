@@ -3147,3 +3147,52 @@ wiring, and are still open:
   this one shared function, never be applied to only one pipeline's own
   call site, or the comparison becomes misleading rather than just
   incomplete.
+- **"X/Z still appear stuck at the boundary while Y works" is NOT a
+  code-architecture problem — investigated 2026-10-02, direct request
+  to port a supposed "Y-only" boundary fix to X/Z, and the premise was
+  false.** `computePhoneDisplaceAxisUnits()` (the 2026-10-01 boundary
+  fix) was NEVER axis-specific — it's one shared function, called
+  identically for X/Y/Z from `computePhoneResponsiveDisplacement()`,
+  with zero per-axis branching anywhere in the pipeline
+  (`parsePhoneResponsiveDisplaceConfig()`'s curve/range parser and
+  `applyPhoneDisplaceSample()`'s integrator are equally axis-generic).
+  **The real cause of an observed per-axis asymmetry is almost always
+  the LIVE, user-tuned `Reference Distance`/`Range` values in the
+  git-tracked `dev-panel-settings.json`, not the code** — since the
+  boundary clamp's release threshold is mathematically always "internal
+  position returns inside the Reference Distance" (proven in the prior
+  fix, inherent to any bounded clamp), an axis configured with a SHORT
+  Reference Distance saturates far more easily during ordinary real
+  motion than one configured with a generous one, making the IDENTICAL
+  underlying mapping look broken on the more tightly-tuned axis. Found
+  by checking `cfg.phoneDisplace{X,Y,Z}ReferenceM`/`phoneDisplaceRange{X,Y,Z}`
+  in the live settings file (Y: 1.15m/max 52 vs. X/Z still at the
+  shared code default 0.35m/max 20) — not by reading `main.js` a second
+  time. **If a future report describes this same "one axis feels fixed,
+  others don't" shape for ANY Displace mechanism (boundary clamp, ZUPT,
+  bias, curve shape), check the LIVE SYNCED per-axis config FIRST
+  (per CLAUDE.md's own S12s "check git state first" discipline) before
+  assuming a per-axis code bug exists** — this project's Displace
+  pipeline has been axis-generic by construction since the 2026-10-01
+  fix, and every call site treats X/Y/Z identically; a real per-axis
+  code divergence would be a NEW, surprising finding at this point, not
+  the default assumption.
+- **A live settings-file surgery mid-investigation found the user had
+  independently, concurrently live-tuned the SAME control (X's
+  Reference Distance/Range) WHILE this conversation was diagnosing it —
+  confirmed by re-reading the settings file fresh immediately before
+  editing, not trusting an earlier read from a few tool calls prior.**
+  The fix (matching Z to Y) deliberately left X completely untouched
+  once this was discovered, rather than overwriting the user's own
+  in-progress real-device tuning to force an exact match — same
+  "preserve another session's/the user's own active work" discipline
+  this file already applies to concurrent Claude sessions, extended
+  here to the user's own live phone interaction racing against this
+  conversation's own investigation. **Any settings-file edit in this
+  project should re-fetch/re-read the file's current state immediately
+  before writing, not rely on a read from several tool calls earlier in
+  the same turn** — live Sync commits from the user's own device can
+  and do land mid-conversation, confirmed directly this round (3 new
+  remote commits appeared between 2 git-fetch checks a few minutes
+  apart, and the live values had already changed again between an
+  earlier grep and the actual edit).

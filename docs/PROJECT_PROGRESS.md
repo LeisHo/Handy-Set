@@ -7,7 +7,25 @@ append-only history.
 
 ## Currently working on
 
-**Nothing in progress right now.** Most recent work: added 2 "shadow"
+**Nothing in progress right now.** Most recent work: investigated a
+report that "the Y-axis boundary fix worked but X/Z still stick" and
+found the premise was false — `computePhoneDisplaceAxisUnits()` was
+never axis-specific; it's one shared function already applied
+identically to X/Y/Z with zero per-axis branching anywhere in the
+pipeline. The real cause was the LIVE, user-tuned Reference Distance/
+Range values: Y was configured with a much larger Reference Distance
+(1.15m vs. the shared code default 0.35m), so the mathematically-
+inherent "clamp release threshold = internal position back inside
+Reference Distance" (from the prior boundary fix) was hit far less
+often on Y during ordinary motion than on the more tightly-configured
+X/Z. Presented this directly rather than inventing a fake per-axis code
+fix; the user chose to match Z's config to Y's (X had already been
+live-tuned by the user themselves mid-conversation, so was left
+untouched). Fixed via a targeted 3-value settings-file edit, zero
+main.js changes. See CLAUDE.md's 2 new Gotchas entries and CHANGELOG's
+matching 2026-10-02 entry for the full investigation.
+
+Before that: added 2 "shadow"
 A/B diagnostic pipelines (`displaceShadowExisting`/`displaceShadowNative`)
 that run in parallel with the real, mode-selected Displace pipeline,
 fed the exact same devicemotion sample every tick — lets one physical
