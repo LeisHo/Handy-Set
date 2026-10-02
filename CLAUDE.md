@@ -3196,3 +3196,62 @@ wiring, and are still open:
   remote commits appeared between 2 git-fetch checks a few minutes
   apart, and the live values had already changed again between an
   earlier grep and the actual edit).
+- **`devPanel.js`'s own `window.formatDevNumericValue(raw)` (added
+  2026-10-02) is the SINGLE shared formatter for every slider's numeric
+  readout project-wide — caps at 4 decimals, strips trailing zeros via
+  `String(Number(n.toFixed(4)))` rather than manual regex trimming.**
+  Direct request: "for all sliders, show and use only max 4 decimal
+  places... dont show all decimal places if theyre just 0s." **If a
+  future control needs different precision (more or fewer decimals),
+  this is the ONE function to parameterize/extend — never hand-roll a
+  second formatter for one control**, or the project's sliders will
+  silently disagree on precision again, the same inconsistency this fix
+  was written to eliminate.
+- **`main.js`'s `wireSlider()`/`wireDeviceSlider()`/`wireDeviceSliderMirror()`
+  MUST apply the SAME formatting/rounding `devPanel.js`'s own
+  `buildSliderRow()` listener already does — because they're attached
+  AFTER it and therefore run SECOND, silently overwriting the engine's
+  own correctly-formatted display with whatever raw value they compute.**
+  This is the SAME "2 listeners on the same event, last one wins" shape
+  CLAUDE.md already documents for the Camera group's own live-sync
+  guards — if a FUTURE project-level slider-wiring helper is ever added
+  to this file, it needs the identical treatment
+  (`window.formatDevNumericValue` for display,
+  `roundSliderValue()` — already defined in `main.js` — for the actual
+  value fed into `cfg`) or it will reproduce this exact "engine shows it
+  right, then my own code overwrites it wrong" bug class.
+- **`roundSliderValue()` (`main.js`) now rounds the ACTUAL value written
+  into `cfg` to 4 decimals, not just the on-screen text** — direct
+  instruction was "show AND USE," not just "show." **If a future control
+  genuinely needs more than 4 decimals of real precision (not just
+  display), it must bypass `roundSliderValue()`/`wireSlider()` entirely
+  and wire its own listener directly** — there is no per-control opt-out
+  built into the shared helper, by design, since the request was a
+  blanket project-wide policy, not a per-control toggle.
+- **A SECOND real-device Mobile-tab-independent-override contamination
+  was found and fixed the same round as the Z Reference Distance case
+  above: `sliderPhoneDisplacePosDecayRate` was already `0` at the
+  Desktop level but still `12` on the Mobile-tab override.** This is
+  now the 2nd confirmed instance of this exact bug class in one session
+  — **any time a user reports "I already set X to Y" but the live app
+  still behaves like the old value, check for an independent Mobile/
+  Landscape override in `devDeviceValues.<tab>` before assuming the
+  Desktop-level fix didn't take effect or some other mechanism is
+  broken.** A Desktop-level settings fix is NOT sufficient on its own
+  for any control that has ever had its own device-independent value
+  set — both locations need checking.
+- **Investigated, not fixed (deliberately): `sliderScreenTextureScale`
+  "snaps to whole numbers" despite having `step: 'any'` through its
+  ENTIRE chain** (`main.js`'s own control definition → `buildSliderRow()`'s
+  DOM attribute assignment → `wireSlider()`'s `parseFloat` read → the
+  click-to-edit popup's own step-inheritance, all read and confirmed
+  correct line by line). **No code-level cause was found** — the leading
+  theory is a native mobile touch-drag precision limitation (a well-
+  known, largely inherent constraint of `<input type=range>` on
+  touchscreens, not something `step` can fix once you're dragging rather
+  than typing an exact value via click-to-edit). **If this comes back
+  with a more specific repro (confirm: drag vs. click-to-type, which
+  exact slider, which device), re-investigate with that detail — don't
+  assume the earlier "probably touch-drag precision" theory is settled
+  fact, since it was never confirmed against a real device, only argued
+  from the absence of a found code bug.**

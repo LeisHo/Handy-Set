@@ -1,3 +1,82 @@
+2026-10-02  -  Decay rate mins to 0, scale-slider step:any, 4-decimal cap
+
+Several direct requests in one round:
+
+1. "set Position decay min to 0, and the velocity decay min to 0, set
+   Position Decay input to 0" -- sliderPhoneDisplacePosDecayRate's and
+   sliderPhoneDisplaceVelDecayRate's own min bound changed from 0.02/0.5
+   to 0 in main.js. The Position Decay Rate's actual VALUE was also set
+   to 0, both at the Desktop level (already 0, confirmed) and on an
+   independent Mobile-tab override that was still at 12 -- found by
+   checking the live settings file per CLAUDE.md S12s's own "check git
+   state first" discipline, same per-device-override pattern as the
+   earlier Z Reference Distance fix. Without catching this, the user's
+   actual real-device experience would have kept using the old,
+   non-zero Mobile value despite the Desktop default already being
+   correct.
+
+2. "for scale sliders such as texture scale or min max scale, dont ever
+   cap me at increments. allow me to type whatever number i want,
+   including small decimals" -- audited every "Scale"-labeled slider in
+   main.js. Found most already had step:'any' (Phone Model/Rotation
+   X/Y/Z/Displace X/Y/Z/Texture/Texture X/Y Scale); 3 did not (Pose
+   Scale, Hand Scale, Ground Scale) -- added step:'any' to those 3 for
+   consistency, after confirming via AskUserQuestion which specific
+   slider the user's own "no." was about (a momentary misread on this
+   round's part -- the "no" turned out to be about a DIFFERENT, deeper
+   issue, below, not about Ground Scale).
+
+3. Direct follow-up report: "for example texture scale curve then
+   slider snaps me to whole numbers" -- despite sliderScreenTextureScale
+   already having step:'any' throughout its FULL chain (main.js's own
+   control definition, devPanel.js's buildSliderRow() DOM attribute
+   assignment, wireSlider()'s parseFloat read, and the click-to-edit
+   popup's own step-inheritance, confirmed line by line). Traced every
+   step-propagation code path and found no code-level cause for THIS
+   specific, already-step:'any' slider -- flagged to the user as likely
+   a native mobile touch-drag precision limitation (a well-known,
+   largely inherent constraint of <input type=range> on touchscreens)
+   rather than a bug in this project's own code, pending a more specific
+   repro (drag vs. click-to-type, which exact control) to investigate
+   further if it turns out to be something else.
+
+4. "but for all sliders, show and use only max 4 decimal places... dont
+   show all decimal places if theyre just 0s" -- added a shared
+   formatDevNumericValue(raw) formatter to devPanel.js (the engine file,
+   genuinely generic capability -- not project-specific), exposed on
+   `window` so main.js can reuse it. Rounds to <= 4 decimals and relies
+   on Number's own string conversion to drop trailing zeros/unnecessary
+   decimal points (no manual regex trimming needed): (1.5000).toFixed(4)
+   -> Number -> String gives "1.5", not "1.5000"; (2).toFixed(4) ->
+   "2", not "2.0000".
+
+   Applied in buildSliderRow()'s own numeric readout (initial paint AND
+   the live drag-update listener) and makeDevSliderBoundsEditable()'s
+   min/max bound-label commit. ALSO applied in main.js's
+   wireSlider()/wireDeviceSlider()/wireDeviceSliderMirror() -- these
+   project-level listeners are attached AFTER devPanel.js's own, so they
+   run SECOND and have the final say on what's actually displayed;
+   leaving them unrounded would have silently overwritten the engine's
+   own formatted text with the raw value on every single slider in the
+   project. A new roundSliderValue() helper in main.js rounds the ACTUAL
+   value fed into cfg (not just the display text) through the same
+   formatter, satisfying the explicit "show AND USE" requirement -- the
+   stored cfg value itself is now capped at 4 decimals, not just its
+   on-screen text.
+
+Verified via 2 standalone scripts: the decimal formatter (11/11 checks:
+whole numbers unpadded, trailing zeros stripped, exactly-4-decimal
+values preserved, 5+ decimal values rounded to 4, negatives and small
+decimals like 0.001 handled correctly, non-numeric input passed through
+unchanged) and confirmed via git diff that the 2 settings-file edits
+touched exactly their 1 intended line each, with a remote-drift check
+immediately before and after both. NOT independently verified against a
+real device's actual touch-drag behavior -- per this project's own
+standing sandbox-verification limitation, and specifically relevant
+here since item 3's own open question is precisely about real-device
+touch precision.
+
+--------------------------------------------------------------------------------
 2026-10-02  -  Investigated "X/Z still stuck at boundary" -- config, not code
 
 Direct, detailed instruction: port the Y-axis boundary-clamp fix (from

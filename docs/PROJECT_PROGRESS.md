@@ -7,7 +7,27 @@ append-only history.
 
 ## Currently working on
 
-**Nothing in progress right now.** Most recent work: investigated a
+**Nothing in progress right now.** Most recent work: a round of
+dev-panel precision/formatting fixes. Set Displace Position/Velocity
+Decay Rate slider minimums to 0; found and fixed a 2nd instance of the
+"Desktop value fixed, Mobile-tab independent override still stale" bug
+class (Position Decay Rate was 0 on Desktop but still 12 on Mobile).
+Audited every "Scale"-labeled slider for `step:'any'` (3 were missing
+it: Pose/Hand/Ground Scale, now fixed) and investigated a report that
+Texture Scale still "snaps to whole numbers" despite already having
+`step:'any'` throughout its full chain — found no code-level cause,
+flagged as likely a native mobile touch-drag precision limitation
+pending a more specific repro. Added a new shared
+`devPanel.js` formatter (`formatDevNumericValue`) capping every
+slider's displayed AND actual value at 4 decimals with trailing zeros
+stripped, applied in the engine's own display code and in `main.js`'s
+`wireSlider`/`wireDeviceSlider`/`wireDeviceSliderMirror` (which run
+after the engine's own listener and would otherwise overwrite its
+formatting with the raw value). Verified via a standalone 11-check
+script. See CLAUDE.md's 5 new Gotchas entries and CHANGELOG's matching
+2026-10-02 entry.
+
+Before that: investigated a
 report that "the Y-axis boundary fix worked but X/Z still stick" and
 found the premise was false — `computePhoneDisplaceAxisUnits()` was
 never axis-specific; it's one shared function already applied
