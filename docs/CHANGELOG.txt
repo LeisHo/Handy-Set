@@ -1,3 +1,69 @@
+2026-10-01  -  Displace Log (Debug group) with 7 per-field on/off checkboxes
+
+Direct request: add on/off checkboxes to log processed accel into the
+displacement integrator, velocity XYZ, integrated position XYZ before
+the range/curve mapping, ZUPT active/inactive, Stationary Gate active/
+inactive, bias being subtracted, and displacement target vs. rendered
+phone position (if they are separate).
+
+New "Displace Log" subgroup in the Debug group, built on the exact same
+architecture as the existing Sensors Log and Phone Model Log (own
+array + DOM element, own timer, Copy/Save/Clear buttons, sharing the
+same Stream Sensor Data checkbox and Sample Interval slider) -- not a
+new logging mechanism. restartDisplaceLogTimer() is NOT gated to touch
+devices the way restartSensorTimer() is, same reasoning as Phone Model
+Log's own timer: Displace fully works on Desktop via the cursor-delta
+path, so gating it like real sensor hardware would silently disable it
+in this sandbox.
+
+2 of the 7 fields needed new module-level state, since neither value
+existed outside a single function call before this:
+- phoneDisplaceLastAx/Ay/Az ("processed accel into the integrator") --
+  captured at the top of applyPhoneDisplaceSample(), the ONE real
+  shared entry point both the mobile accelerometer path and the desktop
+  cursor-delta path funnel through, so a single capture site covers
+  both platforms. Explicitly zeroed in Freeze mode's own skip branch
+  (where the integrator isn't called at all that tick), rather than
+  showing a stale pre-stop value.
+- phoneDisplaceIsStationary ("Stationary Gate active/inactive") --
+  previously only a local `isStationary` variable inside
+  integratePhoneDisplacement(), now also mirrored into module state
+  right after the gate's own if/else block.
+
+Stationary Gate active/inactive and ZUPT active/inactive are logged as
+2 GENUINELY DIFFERENT fields, not a duplicate pair -- the gate's own
+verdict flips true the instant gyro+accel both read quiet, while ZUPT
+(phoneDisplaceZuptActive) only engages once that quiet state has held
+for the full phoneDisplaceZuptDwellMs window. The two can legitimately
+disagree for that whole window right after a stop, which is exactly
+the distinction this log is meant to make visible.
+
+"Displacement target vs. rendered phone position" confirmed these ARE
+separate state before logging them as a pair: _phoneDisplaceTargetVec
+(computePhoneResponsiveDisplacement()'s own undamped per-frame output)
+vs. _phoneDisplaceCurrentVec (the SAME value after cfg.phoneDisplaceDamping's
+lerp -- what the phone model actually renders this frame). Deliberately
+excludes cfg.phoneModelOffsetX/Y/Z (the manual offset sliders) from
+both sides of the comparison -- including it on only one side would
+measure offset magnitude instead of damping lag, which is the actual
+point of this field.
+
+Also added 2 new window.__debug getters (phoneDisplaceIsStationary,
+phoneDisplaceLastProcessedAccel), matching this project's own
+established debug-exposure convention, alongside the dev-panel log
+itself rather than instead of it.
+
+Verified via a standalone Node script (7/7 checks): all 7 fields
+present in the log line when their checkboxes are on, no empty log
+line produced when all are off, the ZUPT/Stationary-Gate-disagreement
+case renders correctly, and Target vs. Rendered show genuinely
+different numbers for the same tick. NOT verified against a real
+device's actual accelerometer/gyroscope stream -- per this project's
+own standing instruction, sandbox browser-pane verification is skipped
+for this project entirely; only `node --check` and direct code review
+back this change.
+
+--------------------------------------------------------------------------------
 2026-10-01  -  Native Sensor Displace mode + per-mode dev-panel visibility
 
 A pasted ChatGPT prompt asked to replace Displace's acceleration source

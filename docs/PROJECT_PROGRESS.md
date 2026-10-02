@@ -7,7 +7,23 @@ append-only history.
 
 ## Currently working on
 
-**Nothing in progress right now.** Most recent work: added a 5th
+**Nothing in progress right now.** Most recent work: added a new
+"Displace Log" Debug-group subgroup with 7 per-field on/off checkboxes
+(processed accel into the integrator, velocity XYZ, pre-curve integrated
+position XYZ, ZUPT active/inactive, Stationary Gate active/inactive,
+bias being subtracted, displacement target vs. rendered phone position)
+— same architecture as the existing Sensors/Phone Model Logs, sharing
+their Stream/Interval controls. Required 2 new pieces of module-level
+state (`phoneDisplaceLastAx/Ay/Az`, `phoneDisplaceIsStationary`) since
+neither value was tracked outside a single tick before. Stationary Gate
+and ZUPT are logged as genuinely distinct fields (they disagree for the
+whole ZUPT dwell window after every stop); Target vs. Rendered confirmed
+as real separate state before being logged as a pair. Verified via a
+standalone script (7/7 checks) — not against a real device, per this
+project's standing sandbox-verification limitation. See CLAUDE.md's 3
+new Gotchas entries and CHANGELOG's matching 2026-10-01 entry.
+
+Before that: added a 5th
 Displace Mode, `'nativeSensor'`, as an opt-in A/B-testable alternative
 acceleration source (`DeviceMotionEvent.acceleration` directly, reusing
 the entire existing integrator/ZUPT/bias/gate pipeline unchanged) — per

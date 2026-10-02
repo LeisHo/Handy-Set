@@ -2949,3 +2949,53 @@ wiring, and are still open:
   then is it safe to let it ride along in one commit** rather than
   risking a `git stash`/reset that could destroy someone else's
   in-progress work.
+- **The Debug group's "Displace Log" subgroup (added 2026-10-01) needed
+  2 NEW pieces of module-level state — `phoneDisplaceLastAx/Ay/Az` and
+  `phoneDisplaceIsStationary` — because neither value had ever been
+  tracked outside a single function/branch before, despite this file
+  already exposing plenty of other Displace internals on
+  `window.__debug`.** `phoneDisplaceLastAx/Ay/Az` is captured at the TOP
+  of `applyPhoneDisplaceSample(ax, ay, az, dt)` specifically because
+  that's the ONE real shared entry point both the mobile accelerometer
+  path (`integratePhoneDisplacement()`) and the desktop cursor-delta
+  path (`updatePhoneDisplaceDesktopFrame()`) funnel through — a single
+  capture site covers both platforms for free, no per-platform logging
+  code needed. **If a future diagnostic needs "the value that actually
+  reached the integrator" for any other per-tick quantity, check whether
+  it's cheaper to capture it at this one shared choke point first, before
+  adding separate capture code to each input path.** `phoneDisplaceIsStationary`
+  mirrors the Stationary Gate's own local `isStationary` variable into
+  module state right after its own if/else block — **deliberately kept
+  as a SEPARATE field from the existing `phoneDisplaceZuptActive`, not
+  folded into it or treated as redundant**: the gate's own verdict flips
+  true the instant gyro+accel both read quiet, while `phoneDisplaceZuptActive`
+  only engages once that quiet state has held for the full
+  `phoneDisplaceZuptDwellMs` dwell window — the two legitimately
+  disagree for that entire window right after every real stop, and
+  that disagreement is exactly what a future ZUPT-tuning session would
+  want to see in the log, not something to collapse into one flag.
+- **`applyPhoneDisplaceSample()` must explicitly zero `phoneDisplaceLastAx/Ay/Az`
+  inside Freeze mode's own early-return branch (where the function is
+  skipped entirely, not called with zeros) — otherwise the Displace
+  Log's "Processed Accel" field would keep showing the LAST real
+  pre-stop value forever once Freeze engages, since nothing ever
+  overwrites it.** This is a narrow, deliberate exception to "only
+  `applyPhoneDisplaceSample()` itself writes these 3 variables" — Freeze
+  mode's own early return in `integratePhoneDisplacement()` is the one
+  other call site that sets them directly, specifically because
+  "the integrator was not called this tick" and "the integrator was
+  called with zero input" are semantically different claims, and only
+  the explicit zero in the Freeze branch gets that distinction right.
+- **The Displace Log's "Target vs. Rendered" field deliberately excludes
+  `cfg.phoneModelOffsetX/Y/Z` (the manual position-offset sliders) from
+  BOTH sides of the comparison** — `_phoneDisplaceTargetVec` (the
+  undamped per-frame output of `computePhoneResponsiveDisplacement()`)
+  and `_phoneDisplaceCurrentVec` (the same value after
+  `cfg.phoneDisplaceDamping`'s lerp) are logged directly, not
+  `phoneModelWrapper.position` (which also adds the offset sliders on
+  top, per `applyPhoneModelTransform()`'s own comment). **If this field
+  is ever changed to include the offset, it has to go on BOTH sides
+  identically** — adding it to only one side would silently turn a
+  "how much lag is damping introducing" diagnostic into "how big is the
+  offset slider," which is a different question this log was never
+  meant to answer.
