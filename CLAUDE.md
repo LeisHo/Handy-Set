@@ -2809,3 +2809,56 @@ wiring, and are still open:
   bug class that pattern exists to prevent), on switching INTO Tilt mode
   via the dropdown, and on enabling Displace while Tilt is already
   selected.
+- **The EXISTING `'acceleration'`/`'worldPosition'` Displace modes' own
+  Stationary Gate now does a true ZUPT (Zero-Velocity-Update) — fixed
+  2026-10-01, per a detailed, explicitly-scoped user request (2 real
+  device logs, an explicit A/B/C/D report requirement, and a long list
+  of "do NOT" constraints: no position decay as a substitute, no
+  increasing velocity decay to hide it, no snapping to origin, no
+  fabricating translation from orientation, no large rewrite).** The old
+  gate checked gyro magnitude ONLY and, when quiet, zeroed that TICK'S
+  acceleration INPUT — it never touched velocity directly. Since
+  `vel = vel*exp(-velDecayRate*dt) + accel*dt` is a leaky integrator,
+  any RESIDUAL velocity already present when "stationary" begins (e.g.
+  from the deceleration right before a real push ends) only ever decays
+  asymptotically — it mathematically never reaches exactly 0 — and with
+  `phoneDisplacePosDecayRate=0` (a legitimate, common config, since
+  position decay pulls virtual position toward the origin independent of
+  real motion) nothing ever corrects what that never-finished decay
+  keeps feeding into position (`pos += vel*dt`) every tick. Over a long
+  hold this creeps toward the full theoretical `v0/velDecayRate` — small
+  per-tick, but real and sustained, which is exactly the "drifts back
+  toward default after I stop moving" symptom. Fixed by adding an
+  acceleration-magnitude check alongside the existing gyro check (new
+  `phoneDisplaceZuptAccelThresholdMps2`, default 0.6 m/s², read from the
+  ALREADY bias-corrected/filtered ax/ay/az — not raw) plus a short dwell
+  timer (new `phoneDisplaceZuptDwellMs`, default 150ms) so a single
+  quiet sample mid-motion doesn't instantly trigger anything. Once BOTH
+  conditions hold continuously through the dwell window, velocity is
+  force-set to EXACTLY 0 (the standard INS/IMU ZUPT technique) —
+  POSITION IS NEVER TOUCHED by this fix, so real accumulated
+  displacement holds exactly wherever it already was. **Verified via a
+  standalone Node simulation only, matched against closed-form
+  predictions** (not a real device — no accelerometer/gyroscope hardware
+  in this sandbox, same standing limitation as every other sensor
+  feature in this file): a 10-second hold starting from residual
+  velocity 0.5 showed the OLD gate's position creeping all the way to
+  the full theoretical limit (0.16172 vs 0.16667 predicted) while the
+  NEW gate stopped at the much smaller, dwell-window-bounded limit
+  (0.06165 vs 0.06040 predicted) and then held there PERMANENTLY no
+  matter how much longer the hold continued — the actual fix is this
+  hard, duration-independent cap, not a smaller number alone. A separate
+  push-then-hold test confirmed position keeps settling naturally DURING
+  the dwell window (expected, not a bug) but then holds bit-identical
+  from the instant ZUPT engages, never reset to 0. **If a future report
+  describes this same "settles, then creeps back toward center over
+  several seconds of holding still" shape on `'acceleration'`/
+  `'worldPosition'` mode specifically, check `ZUPT Accel Threshold`/
+  `ZUPT Dwell Time` (too high a threshold or too long a dwell lets more
+  residual velocity survive into the hard-zero point) before assuming a
+  new bug — the mechanism is bounded by construction, not driftless, so
+  some small fixed residual is expected and correct, not a sign the fix
+  failed.** 4 new diagnostics on `window.__debug`
+  (`phoneDisplaceZuptActive`, `phoneDisplaceVel`, `phoneDisplacePos`,
+  `phoneDisplaceBias`) — added to the project's EXISTING debug-exposure
+  object per direct instruction, not a separate diagnostic system.

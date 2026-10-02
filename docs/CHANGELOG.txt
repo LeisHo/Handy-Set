@@ -1,3 +1,109 @@
+2026-10-01  -  True ZUPT (zero-velocity-update) for the Displace stationary gate
+
+User-reported bug, with 2 real device logs attached: "I move the phone
+forward and backward in a single axis. I pause in between the different
+movements. When I move the phone, the phone in the app moves accordingly,
+but once I stop, it drifts back to it's default position without me
+telling it to." This affects the existing phoneDisplaceMode:'acceleration'/
+'worldPosition' modes specifically (the 2 new 'freeze'/'tilt' modes added
+earlier the same day, see the entry below, are a different, independent
+mitigation strategy for the same underlying dead-reckoning limitation).
+
+User then sent a detailed, structured investigation request (explicitly:
+"Do not redesign the entire system or replace the existing implementation
+blindly... Do NOT use position decay as a substitute for stationary
+detection. Do NOT simply increase velocity decay to hide the problem. Do
+NOT make the virtual phone snap back toward the origin... Do NOT
+immediately make a large architectural rewrite"), asking for a report
+first (A: what the current code does, B: why it still drifts, C: whether
+the existing gate/bias tracker are working as intended, D: the smallest
+fix for proper stationary velocity correction), then implementation.
+
+REPORT:
+A. integratePhoneDisplacement()'s existing stationary gate checked ONLY
+   gyro magnitude (Math.hypot(alpha,beta,gamma) < phoneDisplaceStationaryGateDegPerSec,
+   default 2.0 deg/s). When gyro was quiet, that single tick's
+   acceleration INPUT was zeroed before being fed into the integrator --
+   nothing else. The separate bias high-pass filter
+   (phoneDisplaceBiasX/Y/Z, PHONE_DISPLACE_BIAS_TRACK_RATE=0.4, ~2.5s time
+   constant) runs unconditionally every tick, independent of the gate.
+B. Velocity is a leaky integrator: vel = vel*exp(-velDecayRate*dt) +
+   accel*dt. Zeroing the ACCEL INPUT on a quiet tick stops NEW velocity
+   from accumulating, but any residual velocity already present (e.g.
+   from the deceleration phase right before the phone is judged
+   "stationary") is only ever multiplied by exp(-velDecayRate*dt) each
+   tick -- it asymptotically approaches 0 but mathematically never
+   reaches it. With phoneDisplacePosDecayRate=0 (the user's own test
+   config, since position decay pulls virtual position back toward the
+   origin independent of real motion -- undesirable in general), nothing
+   ever corrects what that slow, never-finished velocity decay keeps
+   feeding into position every tick (pos += vel*dt). Over a long
+   stationary hold this creeps toward the full theoretical v0/velDecayRate
+   limit -- small per-tick, but non-zero for a long time, which is
+   exactly the "drifts back toward default" symptom.
+C. The gyro gate was working as intended for its own narrow job (stop
+   feeding in new noisy accel samples while visibly still) -- it was
+   never designed to address EXISTING residual velocity. The bias
+   tracker was also working as intended (tracking a slow-moving DC
+   offset in the accel signal) -- it's a separate mechanism that doesn't
+   address this residual-velocity-after-motion-stops case either.
+D. Smallest fix: keep the existing gyro gate, add an acceleration-
+   magnitude check alongside it (so a vigorous motion with
+   coincidentally-low gyro, e.g. pure translation with no rotation,
+   doesn't falsely gate), and add a short dwell timer (a single quiet
+   sample doesn't instantly trigger anything -- avoids false triggers
+   mid-motion). Once BOTH conditions hold continuously for the dwell
+   window, force velocity to EXACTLY 0 (a true Zero-Velocity-Update, the
+   standard INS/IMU technique for this exact problem) rather than
+   leaving it to decay. Position is never touched directly by this fix --
+   it holds wherever it already was the instant velocity is zeroed,
+   preserving real accumulated displacement exactly as specified.
+
+IMPLEMENTATION: 2 new cfg fields (phoneDisplaceZuptAccelThresholdMps2,
+default 0.6 m/s^2; phoneDisplaceZuptDwellMs, default 150ms) and 2 new
+module-level state vars (phoneDisplaceZuptDwellStart,
+phoneDisplaceZuptActive). The stationary-gate block in
+integratePhoneDisplacement() now computes accelMag from the already
+bias-corrected/filtered ax/ay/az, requires it under the new threshold
+IN ADDITION to the existing gyro check, tracks how long both conditions
+have held continuously, and only force-zeroes velocity once the dwell
+window elapses -- the dwell timer (and the "stationary" flag itself)
+resets the instant either condition is no longer met. 2 new dev-panel
+sliders (ZUPT Accel Threshold (m/s^2), ZUPT Dwell Time (Ms)) sit right
+after the existing Stationary Gate Threshold slider. 4 new window.__debug
+getters (phoneDisplaceZuptActive, phoneDisplaceVel, phoneDisplacePos,
+phoneDisplaceBias) expose the new state via the project's existing
+diagnostic-exposure convention rather than a separate mechanism, per
+direct instruction.
+
+VERIFIED via a standalone Node simulation (not the real browser --
+accelerometer/gyroscope hardware isn't available in this sandbox, same
+standing limitation as every other device-sensor feature in this
+project), comparing the OLD (decay-only) and NEW (dwell-gated hard-zero)
+behavior against closed-form predictions:
+- Long stationary hold starting from residual velocity 0.5: OLD converges
+  to the full v0/velDecayRate limit (0.16172 measured vs 0.16667
+  theoretical, small numerical-integration error); NEW converges to the
+  much smaller, dwell-window-bounded limit (0.06165 measured vs 0.06040
+  theoretical) and then holds there PERMANENTLY regardless of how much
+  longer the hold continues -- this is the actual fix, a hard, duration-
+  independent cap instead of an ever-shrinking-but-never-zero tail.
+- Push-then-hold-still: position keeps settling naturally during the
+  dwell window (correct, not a bug -- the dwell exists so a single quiet
+  sample mid-motion doesn't instantly freeze things), then holds EXACTLY
+  fixed (bit-identical, not just close) from the instant ZUPT engages
+  onward, and was never reset to 0 -- real accumulated displacement from
+  the push is preserved.
+- A single noisy quiet-looking tick mid-motion does not falsely engage
+  the ZUPT (dwell not yet satisfied), and the dwell timer correctly
+  resets the moment real motion resumes.
+
+NOT independently verified against a real phone's actual sensor stream
+(standing limitation, see the project's own "skip sandbox verification"
+instruction) -- the fix's correctness rests on the closed-form-matched
+standalone simulation above, not a live device test.
+
+--------------------------------------------------------------------------------
 2026-10-01  -  Device-independence fix for Texture X/Y Offset sliders
 
 FIXED: Texture X Offset/Y Offset/X Scale/Y Scale sliders in the Mobile and

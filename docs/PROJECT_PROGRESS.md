@@ -7,7 +7,25 @@ append-only history.
 
 ## Currently working on
 
-**Nothing in progress right now.** Most recent work: added 2 new
+**Nothing in progress right now.** Most recent work: gave the EXISTING
+`'acceleration'`/`'worldPosition'` Displace modes' Stationary Gate a true
+ZUPT (Zero-Velocity-Update) — per a detailed, explicitly-scoped user
+request with 2 real device logs and an A/B/C/D root-cause report
+requirement. The old gate only zeroed that tick's acceleration INPUT on
+quiet gyro; it never touched already-accumulated RESIDUAL velocity,
+which only ever decayed asymptotically (never reaching exactly 0) and,
+with position decay off, kept feeding small-but-real creep into position
+for a long time after the phone actually stopped — the reported "drifts
+back toward default after I stop moving." Fix: an acceleration-magnitude
+check alongside the existing gyro check, plus a short dwell timer, then
+a hard force-zero of velocity (not position) once both hold continuously.
+Verified via a standalone simulation matched against closed-form
+predictions (3/3 scenarios passing) — not a real device (no
+accelerometer/gyroscope hardware in this sandbox). See CLAUDE.md's new
+Gotchas entry and CHANGELOG's matching 2026-10-01 entry for the full
+report and verification numbers.
+
+Before that: added 2 new
 Responsive Displace modes — `Freeze on Stop` and `Tilt (Driftless, X/Y
 Only)` — after a real device log revealed that the existing
 `'acceleration'`/`'worldPosition'` modes have a fundamental physics
