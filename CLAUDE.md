@@ -2999,3 +2999,78 @@ wiring, and are still open:
   "how much lag is damping introducing" diagnostic into "how big is the
   offset slider," which is a different question this log was never
   meant to answer.
+- **`computePhoneDisplaceAxisUnits()` had a genuine "clamp the input,
+  not the output" bug — fixed 2026-10-01 — that produced a COMPLETELY
+  FLAT, zero-derivative dead zone for the entire range
+  `|rawMeters| >= xReference`, not just a boundary hold.** `t =
+  clamp(|rawMeters|/xReference, 0, 1)` clamped the CURVE'S INPUT before
+  the curve ever ran — once `rawMeters` (the raw integrator state in
+  meters) crossed `xReference`, `t` was pinned at exactly `1` FOREVER,
+  so `curveY`/`magnitude` were a literal constant for any further growth
+  OR shrinkage of `rawMeters`, as long as it stayed above `xReference`.
+  Any real push or accumulated drift carrying displacement past the
+  Reference Distance froze the mapping completely — the user's own
+  report ("appears stuck at the movement boundary") and explicit
+  diagram (`internalPosition -> outputPosition = clamp/map(internalPosition)`,
+  clamp applies ONLY to the final output) both named this exact class of
+  bug directly. **Fixed by removing the pre-clamp on `t` entirely** —
+  the curve lookup itself still only ever receives a value clamped to
+  `[0,1]` (curves have no defined shape outside their own authored
+  domain), but a linear extension now continues `idealMagnitude` past
+  the curve's own ceiling at the curve's own average per-unit-`t` rate,
+  so the underlying value is STRICTLY INCREASING across its entire
+  domain. The ACTUAL boundary clamp (`clamp(idealMagnitude, 0, max)`,
+  floor still `0` not `min`, preserving the pre-existing negative-min
+  fix from earlier the same day) is applied exactly once, as the literal
+  last line, to this function's own local return value — never to
+  `phoneDisplacePosX/Y/Z`/`phoneDisplaceVelX/Y/Z`, which were never
+  touched by this function and were never the actual problem.
+- **PROVEN, not assumed, via a standalone script: the recovery
+  THRESHOLD (the exact `rawMeters` value at which the clamped output
+  starts moving again) is mathematically IDENTICAL for the old buggy
+  formula and the new fixed one — "`rawMeters` returns inside
+  `xReference`" — because ANY bounded clamp on a function satisfying
+  `f(xReference) = max` must have `f(rawMeters) >= max` for ALL
+  `rawMeters >= xReference`, by simple monotonicity.** This is an
+  INHERENT property of what "Reference Distance = the distance that
+  maps to full output" means, not a remaining bug, and no further
+  tweak to this function can change it without redefining what
+  Reference Distance means (which the user explicitly asked NOT to do
+  — "keep the existing range/reference system"). **What the fix
+  genuinely changes is DIFFERENT from "recovery happens sooner": it's
+  that the underlying state keeps measurably, continuously responding
+  to a reversal throughout the ENTIRE overshoot** (visible in the new
+  `phoneDisplaceBoundaryX/Y/Z` flag and the existing Target/Rendered
+  Displace Log fields), **instead of giving ZERO signal of any kind
+  until the exact instant of release** — which is what actually reads
+  as "dead/broken" vs. "expected boundary hold, and I can see it's
+  still live." **If a future report describes this same "stuck at
+  boundary" symptom persisting even after this fix, the next lever is
+  NOT another mapping tweak — it's tuning `xReference` itself larger
+  (a config/UX question: does the configured Reference Distance
+  realistically match how far the phone actually gets pushed?) or
+  addressing it at the INTEGRATOR level (the already-documented ZUPT/
+  Freeze/Tilt mitigations for accumulated drift, a completely separate
+  subsystem from this mapping function).** Any future "fix the clamp
+  so output can move the instant the real-world device reverses, even
+  while still deep in overshoot" request should be answered with this
+  proof, not a fresh attempt at a cleverer mapping formula — multiple
+  alternative formula shapes (asymptotic extension, steeper/shallower
+  linear extension) were considered and algebraically ruled out during
+  this fix's own development for exactly this reason, before settling
+  on the straightforward linear extension that at least makes the
+  underlying state genuinely responsive (even though the final clamp's
+  release point can't move).
+- **`phoneDisplaceBoundaryX/Y/Z` is set INSIDE `computePhoneDisplaceAxisUnits()`
+  itself, once per axis per call — NOT computed separately from the
+  function's own return value afterward.** Since the function is called
+  once per axis per frame from `computePhoneResponsiveDisplacement()`,
+  this is the one place that already has `idealMagnitude`/`max` in
+  scope without needing to re-derive or re-expose them. **If a future
+  diagnostic needs another per-axis internal quantity from this
+  function (not already on `window.__debug` or the Displace Log), set
+  it here too, at the point of computation, rather than trying to
+  reconstruct it from the function's single scalar return value
+  afterward** — the return value alone (a signed world-units magnitude)
+  has already thrown away the sign-independent `idealMagnitude`/
+  boundary-state information a diagnostic would need.

@@ -7,7 +7,29 @@ append-only history.
 
 ## Currently working on
 
-**Nothing in progress right now.** Most recent work: added a new
+**Nothing in progress right now.** Most recent work: fixed a genuine
+Responsive Displace boundary bug — `computePhoneDisplaceAxisUnits()`
+clamped the curve's own INPUT (`t`) before the curve ran, so once
+displacement crossed the Reference Distance, the output became a
+literal flat constant for any further growth or shrinkage past that
+point, requiring the full overshoot to be retraced before the mapping
+responded to anything again. Matched the direct report exactly ("the
+virtual phone appears stuck at the movement boundary") and its own
+explicit architecture ask (clamp the final output only, never the
+internal displacement state). Fixed by removing the pre-clamp and
+linearly extending the mapping past the curve's own domain, with the
+actual min/max clamp applied once, as the literal last step. Proved via
+a standalone script that the recovery THRESHOLD itself can't change
+(mathematically inherent to what "Reference Distance" means) — what
+genuinely changed is that the underlying state now responds
+continuously throughout an overshoot instead of giving zero signal
+until the exact release instant. Added a new per-axis boundary flag
+(`phoneDisplaceBoundaryX/Y/Z`) on `window.__debug` and a new Displace
+Log checkbox. Verified via a standalone script (13/13 checks) — not
+against a real device. See CLAUDE.md's 3 new Gotchas entries and
+CHANGELOG's matching 2026-10-01 entry for the full mathematical account.
+
+Before that: added a new
 "Displace Log" Debug-group subgroup with 7 per-field on/off checkboxes
 (processed accel into the integrator, velocity XYZ, pre-curve integrated
 position XYZ, ZUPT active/inactive, Stationary Gate active/inactive,

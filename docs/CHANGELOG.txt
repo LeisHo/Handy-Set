@@ -1,3 +1,100 @@
+2026-10-01  -  Fixed Responsive Displace boundary stuck/hysteresis bug
+
+Direct request (a detailed, pre-drafted spec): the virtual phone
+appeared stuck at the Displace movement boundary -- once displacement
+reached the clamp limit, reversing the real phone didn't make it move
+back until much later. Explicit architecture requested: clamp the
+FINAL rendered output only, never the internal displacement state
+(phoneDisplacePosX/Y/Z, phoneDisplaceVelX/Y/Z) -- keep the existing
+range/reference/curve system, keep the boundary (useful, prevents
+off-screen drift), fix only the mapping if it's the thing causing
+hysteresis.
+
+ROOT CAUSE, found by re-reading computePhoneDisplaceAxisUnits(): `t =
+clamp(|rawMeters|/reference, 0, 1)` clamped the curve's own INPUT
+before the curve ever ran -- not the final output. Once |rawMeters|
+(the raw internal displacement in meters) crossed the Reference
+Distance, t was pinned at EXACTLY 1 forever, making `magnitude` a flat,
+zero-derivative CONSTANT for the entire range |rawMeters| >= reference,
+however large. Any push or accumulated drift (a known, separately-
+documented limitation of this same integrator) that carried
+displacement past the Reference Distance froze the mapping completely
+-- the curve gave zero response to anything until rawMeters retraced
+the WHOLE overshoot back under the Reference Distance. This matches
+the reported symptom exactly, and is a genuinely different bug from
+the already-fixed ZUPT/drift issues (those are about the INTEGRATOR;
+this is purely about the MAPPING from integrator state to rendered
+output).
+
+FIX: t is no longer pre-clamped. The curve lookup itself still only
+ever receives a value in [0,1] (curves aren't defined outside their own
+authored domain), but a linear extension now continues magnitude past
+the curve's own ceiling at the curve's own average per-unit-t rate, so
+the underlying "ideal magnitude" is a STRICTLY INCREASING function of
+|rawMeters| across its ENTIRE domain -- never flat anywhere. The actual
+boundary clamp (to [0, max], preserving the pre-existing negative-min
+floor-at-0 fix) is applied exactly once, as the explicit LAST step, to
+this function's own local return value -- it was NEVER applied to
+phoneDisplacePosX/Y/Z or the velocity state, and still isn't; those
+were already correct (the integrator never clamped anything) and
+needed no change.
+
+MATHEMATICAL HONESTY, proven via a standalone script rather than
+assumed or glossed over: the recovery THRESHOLD -- the exact rawMeters
+value at which the clamped output starts visibly moving again -- is
+unavoidably "rawMeters returns inside the Reference Distance," for
+BOTH the old and new formula. This is an inherent, provable consequence
+of what "Reference Distance = the real-world distance that maps to the
+full output range" means, combined with wanting a useful clamp at all
+-- it is NOT something either version of this fix can or needs to
+change, and no further code change can make it otherwise without
+redefining what Reference Distance means (out of scope; the user
+explicitly asked to keep the existing range/reference system). What
+this fix actually changes, and the real reason it resolves the
+reported symptom: the mapping no longer has a SEPARATE, EARLIER,
+completely flat dead zone baked into its own arithmetic BEFORE that
+threshold is reached -- the underlying state keeps measurably
+responding to a reversal throughout the whole overshoot (visible now in
+the new Boundary/clamp-state diagnostic and the existing Target/
+Rendered log fields), instead of giving zero signal of any kind until
+the exact instant of release, which is what made it feel like a dead,
+broken freeze rather than an expected boundary hold.
+
+Added a new per-axis "at boundary" flag (phoneDisplaceBoundaryX/Y/Z),
+set inside computePhoneDisplaceAxisUnits() itself (true exactly when
+idealMagnitude has run past the ceiling and the clamp is actively
+pinning that axis's output), exposed on window.__debug
+(phoneDisplaceBoundary) and as a new Displace Log checkbox ("Log
+Boundary/Clamp State (XYZ)", default on) -- satisfies the requested
+"Boundary/clamp state" diagnostic. The existing "Internal Pos"
+("Log Integrated Position..."), "Internal Vel" ("Log Velocity..."),
+and "Output/Rendered Pos" + "Target/mapped position" (the existing
+Target-vs-Rendered field) diagnostics from the prior Displace Log
+turn already cover the rest of the requested list -- no change needed
+there, just confirmed the mapping.
+
+Preserved, confirmed unchanged by this fix: the acceleration ->
+velocity -> position integration, the native LinearAccel input added
+earlier the same day, bias correction, the Stationary Gate/ZUPT, all 5
+Displace modes, per-axis enable/disable, the range/reference/curve
+controls and their dev-panel UI, and every coordinate convention. Tilt
+mode is untouched -- it bypasses this entire curve/range/reference
+system by its own design (already documented) and was never affected
+by this bug.
+
+Verified via a standalone script (13/13 checks): confirms the OLD
+formula is bit-identical (flat) across a 50x range of overshoot past
+the Reference Distance while the NEW formula's underlying ideal
+magnitude strictly increases there; confirms both versions release at
+the identical threshold (proving that part is inherent, not a
+regression introduced by this fix); confirms the boundary flag
+transitions correctly; confirms the pre-existing negative-min
+floor-at-0 behavior survives unchanged. NOT verified against a real
+device's actual accelerometer stream -- per this project's own standing
+instruction, sandbox browser-pane verification is skipped for this
+project entirely.
+
+--------------------------------------------------------------------------------
 2026-10-01  -  Displace Log (Debug group) with 7 per-field on/off checkboxes
 
 Direct request: add on/off checkboxes to log processed accel into the
