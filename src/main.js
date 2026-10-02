@@ -349,6 +349,10 @@ const cfg = {
   // above -- these exist specifically to debug Displace reports.
   displaceLogProcessedAccel: true, displaceLogVelocity: true, displaceLogPosition: true,
   displaceLogZupt: true, displaceLogStationary: true, displaceLogBias: true, displaceLogTargetVsRendered: true,
+  // Added 2026-10-01 alongside the boundary-stuck fix in
+  // computePhoneDisplaceAxisUnits() -- per-axis "is this axis currently
+  // pinned at its displacement boundary" flag.
+  displaceLogBoundary: true,
   deviceInfoEnabled: false,
   // Phone Model -- direct request 2026-09-27: a loadable smartphone GLB,
   // positioned/scaled/rotated independently of the hand, with its own
@@ -2726,38 +2730,79 @@ const PHONE_DISPLACE_DEADZONE = 0.02 // same role as PHONE_RESPONSIVE_DEADZONE, 
 // own output, 0-1 = 0-100%) can be shaped to read ~0% there, directly
 // filtering out unintentional movement without a separate deadzone
 // mechanism.
+// Per-axis "pinned at the boundary clamp" flag -- added 2026-10-01 for
+// the boundary-stuck fix below (see computePhoneDisplaceAxisUnits()'s own
+// comment). Set once per axis per frame, read by the Displace Log's new
+// "Boundary/Clamp State" field and window.__debug.phoneDisplaceBoundary.
+let phoneDisplaceBoundaryX = false, phoneDisplaceBoundaryY = false, phoneDisplaceBoundaryZ = false
 function computePhoneDisplaceAxisUnits(rawMeters, axisEnabled, axisScale, axisInverted, axis) {
   if (!cfg.responsiveDisplaceGlobalEnabled) return 0
   if (!cfg.phoneResponsiveDisplaceEnabled) return 0
   if (!axisEnabled) return 0
   const xReference = cfg['phoneDisplace' + axis + 'ReferenceM'] || 0.35
-  const t = THREE.MathUtils.clamp(Math.abs(rawMeters) / xReference, 0, 1)
-  if (t < PHONE_DISPLACE_DEADZONE) return 0
+  // UNCLAMPED, added 2026-10-01 -- fixes "virtual phone appears stuck at
+  // the movement boundary" (direct report, with an explicit architecture
+  // request: clamp the FINAL output only, never bake a saturation into
+  // an earlier normalization step). The OLD version clamped this ratio
+  // to [0,1] BEFORE it ever reached the curve, so once |rawMeters|
+  // crossed `xReference`, this value was pinned at EXACTLY 1 no matter
+  // how much further rawMeters grew OR shrank afterward -- meaning
+  // curveY/magnitude below were a flat CONSTANT (zero derivative, not
+  // just "clamped") for the ENTIRE range |rawMeters| >= xReference. That
+  // full range had to be retraced before the curve could respond to
+  // anything at all, which is what produced the reported "stuck" feel on
+  // any real push/drift that carried rawMeters past the Reference
+  // Distance. tRaw itself is now allowed to exceed 1 -- the real
+  // boundary clamp moves to the FINAL magnitude, below.
+  const tRaw = Math.abs(rawMeters) / xReference
+  if (tRaw < PHONE_DISPLACE_DEADZONE) { if (axis === 'X') phoneDisplaceBoundaryX = false; else if (axis === 'Y') phoneDisplaceBoundaryY = false; else phoneDisplaceBoundaryZ = false; return 0 }
   const slot = phoneDisplaceAxisParsed[axis]
-  const curveY = THREE.MathUtils.clamp(window.evaluateCurveEditorPoints(slot.curve, t, slot.method), 0, 1)
+  // The curve-editor widget's own domain is [0,1] (Reference Distance IS
+  // "curve X:1.0", per this control's own label) -- clamp ONLY for this
+  // one lookup, since evaluating a curve outside its authored domain is
+  // undefined. This does NOT reintroduce the bug above: curveY stops
+  // changing past t=1, but the OVERFLOW term below keeps the overall
+  // magnitude moving regardless.
+  const curveY = THREE.MathUtils.clamp(window.evaluateCurveEditorPoints(slot.curve, Math.min(tRaw, 1), slot.method), 0, 1)
   const { min, max } = slot.range
-  // Clamped to >= 0, added 2026-10-01 -- root cause of "I see the phone,
-  // but the moment I move it jumps out of frame", confirmed from the
-  // user's own actual synced Range: {min:-20, max:20}. `magnitude` here
-  // is a MAGNITUDE, meant to be combined with Math.sign(rawMeters) below
-  // to get a signed output -- but with a NEGATIVE min, magnitude is
-  // already ~-20 the instant curveY is near 0 (true for every real
-  // movement until the curve is nearly fully traversed), so the very
-  // first motion that clears the deadzone above produces an immediate
-  // ~20-unit, SIGN-INVERTED jump instead of a small, proportional one.
-  // A natural, reasonable misconfiguration -- a user setting Min/Max
-  // Range to {-20, 20} expecting a signed "-20 to +20" OUTPUT range has
-  // no way to know this control is actually a magnitude-then-sign system
-  // under the hood. Clamping the floor to 0 makes any negative min behave
-  // as a (harmless) partial dead-band instead of an inverted snap, no
-  // matter what the Range text field is ever set to. Rotation's own
-  // identical formula (computePhoneResponsiveAxisDeg(), a few lines up)
-  // has this exact same latent risk -- that function's own 2026-09-27
-  // PHONE_RESPONSIVE_DEADZONE comment already names the "-57 at near-zero
-  // input" case but only ever added a value deadzone, which moves WHERE
-  // the jump happens (from literal 0 to the deadzone boundary) without
-  // removing the jump itself -- fixed there too, same reasoning.
-  const magnitude = Math.max(0, min + (max - min) * curveY)
+  // Linear extension past the curve's own ceiling -- added 2026-10-01,
+  // same fix. Once tRaw exceeds 1 (rawMeters past the Reference
+  // Distance), magnitude keeps growing at the curve's own average rate
+  // ((max-min) per 1.0 of t) instead of freezing. This is the "ideal,
+  // unrestricted target" half of the user's own
+  // internalPosition -> outputPosition = clamp/map(internalPosition)
+  // architecture: idealMagnitude is a STRICTLY increasing function of
+  // |rawMeters| for its entire domain, with no flat region anywhere
+  // before the explicit clamp 2 lines down.
+  const overflowT = Math.max(0, tRaw - 1)
+  const idealMagnitude = min + (max - min) * curveY + (max - min) * overflowT
+  // THE boundary clamp -- the ONLY clamp in this fix, applied here and
+  // ONLY here, to this function's own LOCAL return value. rawMeters
+  // (phoneDisplacePosX/Y/Z) and the integrator's velocity are never
+  // touched by this function at all -- they keep accumulating/decaying
+  // normally regardless of how far idealMagnitude has run past `max`.
+  // Floor stays 0 (not `min`), matching the ALREADY-FIXED 2026-10-01
+  // negative-min handling 2 paragraphs above in the original code --
+  // `magnitude` is a MAGNITUDE (combined with Math.sign(rawMeters)
+  // below), not a signed range, so a negative `min` must still floor at
+  // 0 here, same reasoning as before.
+  const magnitude = THREE.MathUtils.clamp(idealMagnitude, 0, max)
+  // "At boundary" -- added 2026-10-01, the one piece of genuinely NEW
+  // per-axis state this fix introduces (everything else above is a pure,
+  // stateless recomputation every call, same as before). True exactly
+  // when idealMagnitude has run past the ceiling and the clamp above is
+  // actively pinning the output -- i.e. exactly the condition under
+  // which `rawMeters` must still shrink back under `xReference` before
+  // ANY further real-world reversal becomes visible on screen (an
+  // inherent property of any bounded clamp, not a remaining bug -- see
+  // this fix's own CHANGELOG entry for why a literal zero-length
+  // recovery window is not mathematically possible for a clamped
+  // mapping). Logged by the Displace Log so this is directly observable
+  // rather than looking like a silent, unexplained freeze.
+  const atBoundary = max > 0 && idealMagnitude >= max
+  if (axis === 'X') phoneDisplaceBoundaryX = atBoundary
+  else if (axis === 'Y') phoneDisplaceBoundaryY = atBoundary
+  else phoneDisplaceBoundaryZ = atBoundary
   return magnitude * Math.sign(rawMeters) * axisScale * (axisInverted ? -1 : 1)
 }
 // TILT mode -- added 2026-10-01, direct report: "I move the phone
@@ -5418,6 +5463,7 @@ window.__debug = {
   get phoneDisplaceZuptActive() { return phoneDisplaceZuptActive },
   get phoneDisplaceIsStationary() { return phoneDisplaceIsStationary },
   get phoneDisplaceLastProcessedAccel() { return { x: phoneDisplaceLastAx, y: phoneDisplaceLastAy, z: phoneDisplaceLastAz } },
+  get phoneDisplaceBoundary() { return { x: phoneDisplaceBoundaryX, y: phoneDisplaceBoundaryY, z: phoneDisplaceBoundaryZ } },
   get phoneDisplaceVel() { return { x: phoneDisplaceVelX, y: phoneDisplaceVelY, z: phoneDisplaceVelZ } },
   get phoneDisplacePos() { return { x: phoneDisplacePosX, y: phoneDisplacePosY, z: phoneDisplacePosZ } },
   get phoneDisplaceBias() { return { x: phoneDisplaceBiasX, y: phoneDisplaceBiasY, z: phoneDisplaceBiasZ } },
@@ -5892,6 +5938,11 @@ function restartDisplaceLogTimer() {
     // including it in only one side would make this comparison measure
     // the wrong thing (offset magnitude, not damping lag).
     if (cfg.displaceLogTargetVsRendered) parts.push(`Target x:${fmt(_phoneDisplaceTargetVec.x)} y:${fmt(_phoneDisplaceTargetVec.y)} z:${fmt(_phoneDisplaceTargetVec.z)}  Rendered x:${fmt(_phoneDisplaceCurrentVec.x)} y:${fmt(_phoneDisplaceCurrentVec.y)} z:${fmt(_phoneDisplaceCurrentVec.z)}`)
+    // Boundary/clamp state -- added 2026-10-01, see
+    // computePhoneDisplaceAxisUnits()'s own comment for exactly what this
+    // means (true while that axis's idealMagnitude has run past its
+    // ceiling and the final clamp is actively pinning the output).
+    if (cfg.displaceLogBoundary) parts.push(`Boundary x:${phoneDisplaceBoundaryX ? 'CLAMPED' : 'free'} y:${phoneDisplaceBoundaryY ? 'CLAMPED' : 'free'} z:${phoneDisplaceBoundaryZ ? 'CLAMPED' : 'free'}`)
     if (parts.length) pushDisplaceLog(parts.join('  |  '))
   }, cfg.sensorIntervalMs)
 }
@@ -8183,6 +8234,9 @@ function renderDebugExtras() {
   addRow(displaceLogSub, { id: 'checkboxDisplaceLogTargetVsRendered', label: 'Log Displacement Target vs. Rendered Position', type: 'checkbox' })
   document.getElementById('checkboxDisplaceLogTargetVsRendered').checked = cfg.displaceLogTargetVsRendered
   wireCheckbox('checkboxDisplaceLogTargetVsRendered', (v) => { cfg.displaceLogTargetVsRendered = v })
+  addRow(displaceLogSub, { id: 'checkboxDisplaceLogBoundary', label: 'Log Boundary/Clamp State (XYZ)', type: 'checkbox' })
+  document.getElementById('checkboxDisplaceLogBoundary').checked = cfg.displaceLogBoundary
+  wireCheckbox('checkboxDisplaceLogBoundary', (v) => { cfg.displaceLogBoundary = v })
   const displaceLogBtnRow = document.createElement('div')
   displaceLogBtnRow.className = 'dev-buttons'
   const displaceLogCopyBtn = document.createElement('button')
