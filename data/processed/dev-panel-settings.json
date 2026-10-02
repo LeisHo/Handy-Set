@@ -143,7 +143,7 @@
     "sliderPhoneDisplaceXReferenceM": 0.35,
     "textPhoneDisplaceRangeY": "{\"min\":0,\"max\":52}",
     "textPhoneDisplaceCurveY": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"monotone\"}",
-    "sliderPhoneDisplaceYReferenceM": 2,
+    "sliderPhoneDisplaceYReferenceM": 1.15,
     "textPhoneDisplaceRangeZ": "{\"min\":0,\"max\":20}",
     "textPhoneDisplaceCurveZ": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"monotone\"}",
     "sliderPhoneDisplaceZReferenceM": 0.35,
