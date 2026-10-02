@@ -132,8 +132,8 @@
     "sliderPhoneDisplaceScaleZ": 1,
     "checkboxPhoneDisplaceInvertZ": false,
     "sliderPhoneDisplaceDamping": 1,
-    "sliderPhoneDisplaceVelDecayRate": 0,
-    "sliderPhoneDisplacePosDecayRate": 0,
+    "sliderPhoneDisplaceVelDecayRate": 0.5,
+    "sliderPhoneDisplacePosDecayRate": 0.02,
     "checkboxPhoneDisplaceStationaryGateEnabled": true,
     "sliderPhoneDisplaceStationaryGateDegPerSec": 2,
     "sliderPhoneDisplaceZuptAccelThresholdMps2": 0.6,
@@ -231,6 +231,7 @@
     "checkboxDisplaceLogBias": true,
     "checkboxDisplaceLogTargetVsRendered": true,
     "checkboxDisplaceLogBoundary": true,
+    "checkboxDisplaceLogAbCompare": true,
     "checkboxObjectAxesEnabled": true,
     "checkboxObjectAxesRenderInFront": true,
     "sliderObjectAxesThickness": 2,
@@ -919,8 +920,15 @@
             "type": "group",
             "section": {
               "key": "desktop:Hotkeys",
-              "items": [],
-              "rowKeys": [],
+              "items": [
+                {
+                  "type": "row",
+                  "key": "sliderDevHotkeySequenceWindow"
+                }
+              ],
+              "rowKeys": [
+                "sliderDevHotkeySequenceWindow"
+              ],
               "subgroups": []
             }
           }
@@ -1449,8 +1457,15 @@
           },
           {
             "key": "desktop:Hotkeys",
-            "items": [],
-            "rowKeys": [],
+            "items": [
+              {
+                "type": "row",
+                "key": "sliderDevHotkeySequenceWindow"
+              }
+            ],
+            "rowKeys": [
+              "sliderDevHotkeySequenceWindow"
+            ],
             "subgroups": []
           }
         ]
@@ -1660,6 +1675,10 @@
                 {
                   "type": "row",
                   "key": "checkboxDisplaceLogBoundary"
+                },
+                {
+                  "type": "row",
+                  "key": "checkboxDisplaceLogAbCompare"
                 }
               ],
               "rowKeys": [
@@ -1670,7 +1689,8 @@
                 "checkboxDisplaceLogStationary",
                 "checkboxDisplaceLogBias",
                 "checkboxDisplaceLogTargetVsRendered",
-                "checkboxDisplaceLogBoundary"
+                "checkboxDisplaceLogBoundary",
+                "checkboxDisplaceLogAbCompare"
               ],
               "subgroups": []
             }
@@ -1843,6 +1863,10 @@
               {
                 "type": "row",
                 "key": "checkboxDisplaceLogBoundary"
+              },
+              {
+                "type": "row",
+                "key": "checkboxDisplaceLogAbCompare"
               }
             ],
             "rowKeys": [
@@ -1853,7 +1877,8 @@
               "checkboxDisplaceLogStationary",
               "checkboxDisplaceLogBias",
               "checkboxDisplaceLogTargetVsRendered",
-              "checkboxDisplaceLogBoundary"
+              "checkboxDisplaceLogBoundary",
+              "checkboxDisplaceLogAbCompare"
             ],
             "subgroups": []
           }
@@ -11367,13 +11392,13 @@
     "desktop:TABS": true,
     "desktop:BUTTONS": true,
     "desktop:Hotkeys": true,
-    "desktop:Debug": true,
+    "desktop:Debug": false,
     "desktop:Object Axes": true,
     "desktop:Settings": true,
     "desktop:Mouse Log": true,
-    "desktop:Sensors": true,
+    "desktop:Sensors": false,
     "desktop:Phone Model Log": true,
-    "desktop:Displace Log": true,
+    "desktop:Displace Log": false,
     "desktop:PHONE MODEL": false,
     "desktop:OFFSET": true,
     "desktop:PHONE ROTATION": true,
