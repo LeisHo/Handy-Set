@@ -11912,7 +11912,8 @@
       "sliderPhoneDisplaceStationaryGateDegPerSec": 2.7,
       "sliderPhoneDisplaceZReferenceM": 0.68,
       "checkboxPhoneAxisXEnabled": true,
-      "sliderPhoneRotationScaleX": -1
+      "sliderPhoneRotationScaleX": -2,
+      "sliderPhoneRotationScaleY": 1
     },
     "landscape": {}
   },
