@@ -11388,7 +11388,7 @@
     "desktop:PHONE MODEL": false,
     "desktop:OFFSET": true,
     "desktop:PHONE ROTATION": true,
-    "desktop:RECURSIVE RENDER": false,
+    "desktop:RECURSIVE RENDER": true,
     "desktop:RESPONSIVE BEHAVIOUR - PHONE": false,
     "desktop:Responsive Rotation": true,
     "desktop:RESPONSIVE DISPLACE": false,
