@@ -171,7 +171,7 @@
     "textWristSplayCurve": "{\"points\":[{\"x\":0,\"y\":1},{\"x\":0.31833343505859374,\"y\":0.6961458841959636},{\"x\":1,\"y\":0.042812347412109375}],\"method\":\"catmullrom\"}",
     "sliderCameraX": 0,
     "sliderCameraY": 114,
-    "sliderCameraZ": 0,
+    "sliderCameraZ": 0.5,
     "sliderCameraFov": 15,
     "sliderCameraZoom": 26,
     "checkboxLockCameraPan": true,
@@ -239,10 +239,10 @@
     "checkboxDeviceInfoEnabled": true
   },
   "layout": {
-    "left": 26,
-    "top": 329.91070556640625,
+    "left": 32,
+    "top": 333,
     "width": 350,
-    "height": 449
+    "height": 446
   },
   "devPanelStyle": {
     "titleFontSize": 17,
@@ -12042,8 +12042,8 @@
       "checkboxTrackingEnabled": false,
       "sliderTrackingDamping": 0.27,
       "checkboxPalmFacesCursor": false,
-      "sliderScreenTextureOffsetY": 0.02,
-      "sliderScreenTextureOffsetX": -0.927433989193597,
+      "sliderScreenTextureOffsetY": -0.0510403544589723,
+      "sliderScreenTextureOffsetX": -0.01,
       "checkboxPhoneDisplaceAxisXEnabled": true,
       "checkboxPhoneDisplaceAxisZEnabled": true,
       "sliderPhoneDisplaceDamping": 0.16,
@@ -12054,7 +12054,8 @@
       "sliderPhoneDisplaceZReferenceM": 1.15,
       "checkboxPhoneAxisXEnabled": true,
       "sliderPhoneRotationScaleX": -2,
-      "sliderPhoneRotationScaleY": 1
+      "sliderPhoneRotationScaleY": 1,
+      "sliderScreenRecursionLevels": 20
     },
     "landscape": {}
   },
