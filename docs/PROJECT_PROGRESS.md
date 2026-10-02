@@ -7,7 +7,28 @@ append-only history.
 
 ## Currently working on
 
-**Nothing in progress right now.** Most recent work: gave the EXISTING
+**Nothing in progress right now.** Most recent work: added a 5th
+Displace Mode, `'nativeSensor'`, as an opt-in A/B-testable alternative
+acceleration source (`DeviceMotionEvent.acceleration` directly, reusing
+the entire existing integrator/ZUPT/bias/gate pipeline unchanged) — per
+a pasted ChatGPT suggestion that was deliberately NOT applied as a
+default swap, since the existing default was itself switched to manual
+gravity subtraction on 2026-09-30 after a real test found it more
+reliable on this project's own device; made additive instead, per direct
+mid-request correction ("make it a new displacement mode so we dont
+erase anything"). Also hid 18 Displace dev-panel rows that Tilt mode's
+own code path never reads (Z axis, Vel/Pos Decay, Stationary Gate, ZUPT,
+all per-axis Range/Curve/Reference), applied once at build and on every
+mode change. Verified via a standalone script (11/11 checks) — not
+against a real device, which is the whole point of exposing this as a
+testable mode rather than claiming the comparison already settled.
+Also folded in a concurrent session's complete, unrelated Rotation
+Fine-Tune per-axis split (found sharing this same working directory,
+confirmed self-contained before including it in the same commit). See
+CLAUDE.md's 2 new Gotchas entries and CHANGELOG's matching 2026-10-01
+entry for the full account.
+
+Before that: gave the EXISTING
 `'acceleration'`/`'worldPosition'` Displace modes' Stationary Gate a true
 ZUPT (Zero-Velocity-Update) — per a detailed, explicitly-scoped user
 request with 2 real device logs and an A/B/C/D root-cause report

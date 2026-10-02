@@ -2862,3 +2862,90 @@ wiring, and are still open:
   (`phoneDisplaceZuptActive`, `phoneDisplaceVel`, `phoneDisplacePos`,
   `phoneDisplaceBias`) — added to the project's EXISTING debug-exposure
   object per direct instruction, not a separate diagnostic system.
+- **A 5th Displace mode, `'nativeSensor'`, exists specifically so a
+  pasted-in AI suggestion to change the acceleration SOURCE could be
+  tried without risking the already-working default — added 2026-10-01,
+  direct mid-request correction: "well actually... make it a new
+  displacement mode so we dont erase anything."** The prompt (from
+  ChatGPT) asked to replace `computePhoneLinearAccelDeviceLocal()`'s
+  manual gravity subtraction with `DeviceMotionEvent.acceleration`
+  directly, reasoning the browser's own field should be better native
+  sensor data. **That's backwards for THIS project specifically** — the
+  manual-gravity-subtraction default was switched TO on 2026-09-30
+  after a real controlled test found `accelerationIncludingGravity`
+  rich/continuous/reliable while `e.acceleration` had never actually
+  been observed performing well on this project's own real test device
+  (see that function's own 2026-09-30 comment). Blindly applying an AI
+  suggestion that contradicts a project's own prior evidence-based fix
+  is exactly the failure mode this workspace's §0b ("don't execute an
+  expensive/risky suggestion just because an agent made it") exists to
+  catch — reusing it as an opt-in mode instead of a default swap sidesteps
+  the risk entirely: `computePhoneLinearAccelNative(e)` (returns
+  `e.acceleration` directly, null-safe) is selected instead of the
+  existing function ONLY when `cfg.phoneDisplaceMode === 'nativeSensor'`,
+  every other mode is byte-for-byte unchanged, and "reverting" this
+  change is just not selecting the dropdown option — no code change
+  needed. **If a future pasted AI suggestion proposes changing a
+  SOURCE/DEFAULT this file has already evidence-tuned once, check
+  whether making it an opt-in alternative (not a replacement) gets the
+  same "try it for real" value without the regression risk — this is
+  now the established pattern for exactly that situation.** The
+  orientation-fusion half of that same prompt (replace manual gravity's
+  orientation input with a fused, non-magnetometer rotation) was
+  deliberately NOT pursued — this mode bypasses gravity subtraction
+  entirely, so it has no orientation-quality dependency left to fix, and
+  the user's own revised ask didn't call for a parallel orientation
+  system. The Generic Sensor API's `RelativeOrientationSensor` was
+  identified as the real closest browser equivalent to Android's Game
+  Rotation Vector, in case that scope ever comes back.
+- **Every Displace dev-panel row that Tilt mode's own code path never
+  reads is now hidden whenever Tilt is selected (18 rows) —
+  `updateDisplaceModeRowVisibility()`, added 2026-10-01, direct request:
+  "dont show irrelevant sliders and inputs if the mode doesnt need
+  it."** Confirmed by tracing the actual code, not guessed:
+  `computePhoneResponsiveDisplacement()`'s tilt branch reads only X/Y
+  axis On/Off+Scale+Invert (Z is hardcoded to 0) with NO curve/range/
+  reference involved at all, and `integratePhoneDisplacement()` early-
+  returns for tilt mode before the Stationary Gate/ZUPT/Vel-Pos-Decay
+  code ever runs. Hidden rows: Z axis On/Off+Scale+Invert (3), Velocity/
+  Position Decay Rate (2), Stationary Gate checkbox+threshold (2), ZUPT
+  Accel Threshold+Dwell (2), and all 9 per-axis Range-bar/Curve-editor/
+  Reference-distance rows. **Every other mode (`'acceleration'`,
+  `'worldPosition'`, `'freeze'`, `'nativeSensor'`) shares the IDENTICAL
+  full control set** — confirmed by reading each mode's own code path
+  (Freeze and Native Sensor both reuse the exact same integrator/gate/
+  ZUPT/curve pipeline as `'acceleration'`, just swapping one internal
+  step), so the only real split needed is "Tilt vs. everything else," not
+  a per-mode-pair matrix. Implemented as a plain array of row elements
+  (`displaceNonTiltRows`, populated by wrapping the relevant `addRow()`
+  calls: `displaceNonTiltRows.push(addRow(...))`) toggled via
+  `row.style.display`, called once at dev-panel build time (so a Sync-
+  restored Tilt mode shows the right set from first paint) and again
+  from the Mode dropdown's own `wireSelect` callback. **If a future
+  Displace mode is added, check which of these 18 rows its own code
+  path actually reads before assuming it needs the full set or the Tilt-
+  only subset — don't default to showing everything.**
+- **This same turn is also this project's 2nd documented case of 2
+  Claude Code sessions sharing one physical working directory (not
+  separate worktrees), confirmed and handled the same way as the first
+  (2026-09-28, the `phoneTiltAxisYRaw` rename).** A concurrent session's
+  complete, self-contained Rotation Fine-Tune per-axis split (3 sliders
+  replacing 1, `phoneResponsiveRotationFineTune` → `X/Y/Z`) had already
+  landed in the live `src/main.js` and `docs/CHANGELOG.txt` on disk
+  before this session's own commit ran. **Before letting it ride along
+  in the same commit, its diff was read in full** (`git diff --stat` +
+  every hunk) to confirm it was genuinely complete (not a mid-save
+  half-edit — both the `cfg` default and its one consumer,
+  `computePhoneResponsiveAxisDeg()`, were updated together consistently,
+  and the dev-panel UI change correctly called an already-existing
+  helper, `wireDeviceSliderMirror()`, not a function the concurrent
+  session was still in the middle of adding) and non-overlapping with
+  this session's own Displace changes (different cfg fields, different
+  dev-panel subgroup, zero shared lines). **The general check before
+  trusting a surprise uncommitted change found sitting in a shared
+  working tree: read its full diff, confirm internal consistency (every
+  piece of a multi-part change present together, not just some of them),
+  and confirm it doesn't touch any line your own change touches — only
+  then is it safe to let it ride along in one commit** rather than
+  risking a `git stash`/reset that could destroy someone else's
+  in-progress work.

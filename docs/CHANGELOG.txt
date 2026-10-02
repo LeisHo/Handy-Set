@@ -1,3 +1,91 @@
+2026-10-01  -  Native Sensor Displace mode + per-mode dev-panel visibility
+
+A pasted ChatGPT prompt asked to replace Displace's acceleration source
+with DeviceMotionEvent.acceleration directly (the browser's own
+gravity-excluded "linear acceleration") and the orientation source with
+the closest available fused, non-magnetometer rotation, reasoning this
+would be better-quality native sensor data than this project's own
+manual gravity-subtraction pipeline. Mid-implementation, direct
+correction: "well actually... make it a new displacement mode so we
+dont erase anything" -- the request became additive, not a replacement.
+
+Added a 5th Displace Mode option, 'nativeSensor' ("Native Sensor
+(Browser e.acceleration)"), which reuses the ENTIRE existing
+acceleration -> velocity -> position pipeline (bias tracking, raw
+deadzone/clamp filter, the Stationary Gate, the ZUPT dwell/hard-zero
+logic, per-axis Range/Curve/Reference) completely unchanged -- the only
+difference is which raw acceleration reading feeds in. A new
+computePhoneLinearAccelNative(e) function returns e.acceleration
+directly (null-safe); integratePhoneDisplacement() picks it instead of
+the existing computePhoneLinearAccelDeviceLocal() only when this mode is
+selected.
+
+Deliberately NOT implemented: replacing the orientation source used for
+gravity removal. This mode bypasses gravity-subtraction entirely (reads
+e.acceleration raw), so there's no orientation-quality dependency left
+to fix for it, and the user's own revised, narrower request didn't call
+for a separate fused-orientation system on top. The Generic Sensor
+API's RelativeOrientationSensor (the actual closest browser equivalent
+to Android's Game Rotation Vector) was identified as the right answer
+IF that had still been in scope, but wasn't pursued given the scope
+pulled back to "just a new mode."
+
+Important context for why this is additive rather than a default swap:
+the existing default (computePhoneLinearAccelDeviceLocal(), manual
+gravity subtraction from accelerationIncludingGravity) was switched TO
+specifically because a real controlled test on 2026-09-30 found
+accelerationIncludingGravity rich/continuous/reliable while
+e.acceleration had never actually been observed to perform well on this
+project's own test device (see that function's own 2026-09-30 comment).
+Reverting to e.acceleration as the default would have undone a real,
+evidence-based fix. As an opt-in mode instead, it can be A/B tested for
+real on a device without risking the already-improved default, and
+reverting away from it (if it performs worse) is as simple as not
+selecting it in the dropdown -- no code change needed.
+
+Added a new window.__debug.phoneDisplaceAccelSource getter, per the
+original prompt's own "add minimal diagnostic output showing which
+source is being used" ask, scoped down to the one axis (acceleration
+source) that's actually configurable now.
+
+Separately, direct follow-up request: "and for displacement modes dont
+show irrelevant sliders and inputs if the mode doesnt need it." Added
+updateDisplaceModeRowVisibility(), hiding 18 Displace rows that Tilt
+mode's own code path never reads at all (confirmed by tracing
+computePhoneResponsiveDisplacement()'s tilt branch and
+integratePhoneDisplacement()'s own early return for tilt mode): Z axis
+On/Off+Scale+Invert, Velocity/Position Decay Rate, the Stationary Gate
+checkbox+threshold, both ZUPT controls, and all 9 per-axis Range-bar/
+Curve-editor/Reference-distance rows. Every other mode ('acceleration',
+'worldPosition', 'freeze', 'nativeSensor') shares the exact same full
+control set -- confirmed by reading each mode's own code path, not
+assumed -- so the split is simply "Tilt vs. everything else," applied
+once at dev-panel build time and again on every mode change.
+
+Verified via a standalone Node script (not the real browser -- per this
+project's own standing "skip sandbox verification" instruction):
+confirmed the null-safety of the new acceleration-source function,
+confirmed the mode-branch picks the right source function for all 5
+modes, and confirmed the row-visibility split hides exactly the
+expected 18 rows in Tilt mode while showing all of them for every other
+mode (11/11 checks passed). Not verified against a real device's actual
+e.acceleration data quality -- that comparison is the whole point of
+exposing this as a testable mode, not something this change claims to
+have already answered.
+
+A concurrent Claude Code session, sharing this exact same working
+directory (not a separate worktree), landed a complete, unrelated
+change in the same working-tree files before this one was committed --
+the Responsive Rotation Fine-Tune slider split into 3 independent
+per-axis sliders (see this file's own entry directly below, which that
+session had already written). Confirmed self-contained and non-
+overlapping (different cfg fields, different dev-panel subgroup, no
+touched line in common) before letting it ride along in the same
+commit -- same "shared-working-directory" situation and resolution this
+file has documented once before (2026-09-28, the phoneTiltAxisYRaw
+rename).
+
+--------------------------------------------------------------------------------
 2026-10-01  -  Split Rotation Fine-Tune into per-axis sliders
 
 Direct request: "Split it up into 3 sliders" for the Responsive Rotation
