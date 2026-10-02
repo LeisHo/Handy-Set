@@ -100,7 +100,7 @@
     "sliderPhoneModelRotX": 0,
     "sliderPhoneModelRotY": 0,
     "sliderPhoneModelRotZ": 0,
-    "checkboxPhoneResponsiveRotationEnabled": true,
+    "checkboxPhoneResponsiveRotationEnabled": false,
     "selectPhoneRotationMode": "gyro",
     "checkboxPhoneRotationResetEnabled": true,
     "checkboxPhoneAxisXEnabled": true,
@@ -117,7 +117,7 @@
     "textPhoneRotationCurveY": "{\"points\":[{\"x\":0,\"y\":0.03041661580403643},{\"x\":1,\"y\":0.7770833333333333}],\"method\":\"catmullrom\"}",
     "textPhoneRotationRangeZ": "{\"min\":0,\"max\":180}",
     "textPhoneRotationCurveZ": "{\"points\":[{\"x\":0,\"y\":0.035416158040364576},{\"x\":1,\"y\":1}],\"method\":\"catmullrom\"}",
-    "checkboxPhoneResponsiveDisplaceEnabled": false,
+    "checkboxPhoneResponsiveDisplaceEnabled": true,
     "selectPhoneDisplaceMode": "worldPosition",
     "checkboxPhoneDisplaceResetEnabled": true,
     "checkboxPhoneDisplaceAxisXEnabled": true,
@@ -129,13 +129,13 @@
     "checkboxPhoneDisplaceAxisZEnabled": true,
     "sliderPhoneDisplaceScaleZ": 1,
     "checkboxPhoneDisplaceInvertZ": false,
-    "sliderPhoneDisplaceDamping": 0.15,
-    "sliderPhoneDisplaceVelDecayRate": 10,
-    "sliderPhoneDisplacePosDecayRate": 5,
+    "sliderPhoneDisplaceDamping": 1,
+    "sliderPhoneDisplaceVelDecayRate": 3,
+    "sliderPhoneDisplacePosDecayRate": 0.02,
     "checkboxPhoneDisplaceStationaryGateEnabled": true,
     "sliderPhoneDisplaceStationaryGateDegPerSec": 2,
-    "sliderPhoneDisplaceZuptAccelThresholdMps2": 0.6,
-    "sliderPhoneDisplaceZuptDwellMs": 150,
+    "sliderPhoneDisplaceZuptAccelThresholdMps2": 0.5,
+    "sliderPhoneDisplaceZuptDwellMs": 200,
     "textPhoneDisplaceRangeX": "{\"min\":0,\"max\":20}",
     "textPhoneDisplaceCurveX": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"monotone\"}",
     "sliderPhoneDisplaceXReferenceM": 0.35,
@@ -146,7 +146,7 @@
     "textPhoneDisplaceCurveZ": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"monotone\"}",
     "sliderPhoneDisplaceZReferenceM": 0.35,
     "checkboxScreenRenderEnabled": true,
-    "sliderScreenRecursionLevels": 20,
+    "sliderScreenRecursionLevels": 15,
     "sliderScreenRenderResolution": 200,
     "sliderScreenTextureScale": 1.15,
     "textScreenLevelScaleRange": "{\"min\":0,\"max\":2}",
@@ -229,7 +229,7 @@
   },
   "layout": {
     "left": 35,
-    "top": 109,
+    "top": 108,
     "width": 350,
     "height": 671
   },
@@ -909,15 +909,8 @@
             "type": "group",
             "section": {
               "key": "desktop:Hotkeys",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "sliderDevHotkeySequenceWindow"
-                }
-              ],
-              "rowKeys": [
-                "sliderDevHotkeySequenceWindow"
-              ],
+              "items": [],
+              "rowKeys": [],
               "subgroups": []
             }
           }
@@ -1446,15 +1439,8 @@
           },
           {
             "key": "desktop:Hotkeys",
-            "items": [
-              {
-                "type": "row",
-                "key": "sliderDevHotkeySequenceWindow"
-              }
-            ],
-            "rowKeys": [
-              "sliderDevHotkeySequenceWindow"
-            ],
+            "items": [],
+            "rowKeys": [],
             "subgroups": []
           }
         ]
@@ -11253,8 +11239,8 @@
     "desktop:PHONE ROTATION": true,
     "desktop:RECURSIVE RENDER": false,
     "desktop:RESPONSIVE BEHAVIOUR - PHONE": false,
-    "desktop:Responsive Rotation": false,
-    "desktop:RESPONSIVE DISPLACE": true,
+    "desktop:Responsive Rotation": true,
+    "desktop:RESPONSIVE DISPLACE": false,
     "desktop:HAND MODEL": true,
     "desktop:Field Layout": true,
     "desktop:Pose": true,
@@ -11911,9 +11897,11 @@
       "sliderPhoneDisplaceVelDecayRate": 10,
       "sliderPhoneDisplaceStationaryGateDegPerSec": 2.7,
       "sliderPhoneDisplaceZReferenceM": 0.68,
-      "checkboxPhoneAxisXEnabled": true,
-      "sliderPhoneRotationScaleX": -2,
-      "sliderPhoneRotationScaleY": 1
+      "checkboxPhoneAxisXEnabled": false,
+      "sliderPhoneRotationScaleX": -1,
+      "sliderPhoneRotationScaleY": 1,
+      "checkboxPhoneAxisYEnabled": false,
+      "checkboxPhoneAxisZEnabled": false
     },
     "landscape": {}
   },
