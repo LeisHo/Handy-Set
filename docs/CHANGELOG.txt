@@ -1,3 +1,15 @@
+2026-10-01  -  Split Rotation Fine-Tune into per-axis sliders
+
+Direct request: "Split it up into 3 sliders" for the Responsive Rotation
+fine-tune control. Previously a single slider added the same offset to
+all 3 axes (X, Y, Z); now each axis has its own independent fine-tune
+slider (phoneResponsiveRotationFineTuneX/Y/Z, -90 to 90 degrees each).
+
+Wired with full device-specific support (Mobile/Landscape mirroring),
+matching the pattern of other per-axis controls in this group.
+
+---
+
 2026-10-01  -  True ZUPT (zero-velocity-update) for the Displace stationary gate
 
 User-reported bug, with 2 real device logs attached: "I move the phone

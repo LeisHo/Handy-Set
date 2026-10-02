@@ -372,7 +372,7 @@ const cfg = {
   // pattern as Responsive Arm Rotation at Base (On/Off, Fine-Tune,
   // Min/Max Range, Curve), see computePhoneResponsiveAxisDeg()'s own
   // comment for how these drive multiple axes from one shared mapping.
-  phoneResponsiveRotationEnabled: false, phoneResponsiveRotationFineTune: 0,
+  phoneResponsiveRotationEnabled: false, phoneResponsiveRotationFineTuneX: 0, phoneResponsiveRotationFineTuneY: 0, phoneResponsiveRotationFineTuneZ: 0,
   // Rotation Reset (double-tap/double-click anywhere) -- added
   // 2026-09-28, default off (opt-in, matches Responsive Rotation's own
   // default-off convention).
@@ -2655,7 +2655,8 @@ function computePhoneResponsiveAxisDeg(rawComponent, axis) {
   // the deadzone boundary rather than removing it. Not independently
   // confirmed broken for Rotation (the user has it switched off), but
   // the formula is identical and the fix is free.
-  const magnitude = Math.max(0, min + (max - min) * curveY + (cfg.phoneResponsiveRotationFineTune || 0))
+  const fineTune = cfg['phoneResponsiveRotationFineTune' + axis] || 0
+  const magnitude = Math.max(0, min + (max - min) * curveY + fineTune)
   return magnitude * Math.sign(rawComponent)
 }
 // Responsive Displace -- maps a leaky-integrated per-axis position
@@ -3447,6 +3448,41 @@ function computePhoneLinearAccelDeviceLocal(e) {
   }
   return null
 }
+// NATIVE SENSOR mode -- added 2026-10-01, per a pasted ChatGPT suggestion
+// to feed Displace from DeviceMotionEvent's own `acceleration` field
+// (the browser's built-in gravity-excluded linear acceleration) instead
+// of this file's manual accelerationIncludingGravity-minus-gravity
+// computation above. ADDED AS A NEW, SEPARATE MODE, NOT a replacement --
+// direct correction mid-request ("well actually... make it a new
+// displacement mode so we dont erase anything"). This is deliberate: the
+// manual-gravity-subtraction approach above was switched TO specifically
+// because a real controlled test (see computePhoneLinearAccelDeviceLocal()'s
+// own 2026-09-30 comment) found accelerationIncludingGravity rich/
+// continuous/reliable while e.acceleration had never actually been
+// observed to be good on this project's real test device -- reverting
+// the default back to e.acceleration blind would un-fix that. Exposing
+// it as an opt-in mode instead lets it be A/B tested for real without
+// risking the already-improved default, and reverting is trivial (don't
+// select it) if it performs worse.
+//
+// SCOPE NOTE vs. the original ChatGPT prompt: that prompt also asked to
+// replace the orientation source feeding gravity removal with a fused,
+// non-magnetometer rotation (Android's Game Rotation Vector or the
+// closest web equivalent). This mode sidesteps that entirely -- it reads
+// e.acceleration directly and never computes a gravity vector at all, so
+// there is no orientation-quality dependency left for this mode to fix.
+// Not pursued as a separate change since nothing in the user's own
+// revised, narrower ask ("make it a new displacement mode") called for
+// it, and the Generic Sensor API's RelativeOrientationSensor (the actual
+// closest browser equivalent) would be new, unverified surface area this
+// minimal, reversible addition deliberately avoids.
+function computePhoneLinearAccelNative(e) {
+  if (!e.acceleration) return null
+  _phoneLinearAccelResult.x = e.acceleration.x || 0
+  _phoneLinearAccelResult.y = e.acceleration.y || 0
+  _phoneLinearAccelResult.z = e.acceleration.z || 0
+  return _phoneLinearAccelResult
+}
 function integratePhoneDisplacement(e) {
   if (!cfg.responsiveDisplaceGlobalEnabled || !cfg.phoneResponsiveDisplaceEnabled) {
     phoneDisplaceLastTimestamp = null // clean restart, no big jump, whenever this resumes -- same convention as integratePhoneGyroRotation's own phoneGyroLastTimestamp
@@ -3486,7 +3522,10 @@ function integratePhoneDisplacement(e) {
     // data was rich/continuous/reliable throughout a real test, while
     // e.acceleration had never actually been directly observed/logged at
     // all; its own gravity-exclusion quality is device/browser-dependent).
-    const linear = computePhoneLinearAccelDeviceLocal(e)
+    // 'nativeSensor' mode (added 2026-10-01) opts back into e.acceleration
+    // directly, as an explicit, reversible A/B alternative -- see
+    // computePhoneLinearAccelNative()'s own comment.
+    const linear = cfg.phoneDisplaceMode === 'nativeSensor' ? computePhoneLinearAccelNative(e) : computePhoneLinearAccelDeviceLocal(e)
     if (linear) {
       // Y/Z SWAPPED 2026-09-30 (1st round), direct report: "for
       // displacement switch the input outputs for y and z axis" --
@@ -5347,6 +5386,15 @@ window.__debug = {
   get phoneDisplaceVel() { return { x: phoneDisplaceVelX, y: phoneDisplaceVelY, z: phoneDisplaceVelZ } },
   get phoneDisplacePos() { return { x: phoneDisplacePosX, y: phoneDisplacePosY, z: phoneDisplacePosZ } },
   get phoneDisplaceBias() { return { x: phoneDisplaceBiasX, y: phoneDisplaceBiasY, z: phoneDisplaceBiasZ } },
+  // Added 2026-10-01 alongside the 'nativeSensor' Displace mode, per the
+  // pasted ChatGPT prompt's own ask for "minimal diagnostic output
+  // showing which acceleration source is actually being used." Mobile
+  // only -- desktop's Displace input is always the cursor-delta path
+  // regardless of mode, so this reads as 'n/a (desktop cursor input)' there.
+  get phoneDisplaceAccelSource() {
+    if (lastInputSource !== 'device') return 'n/a (desktop cursor input)'
+    return cfg.phoneDisplaceMode === 'nativeSensor' ? 'native (DeviceMotionEvent.acceleration)' : 'manual (accelerationIncludingGravity - computed gravity)'
+  },
   getHandCenterWorld, updateWristCrop, computeBaseScale, pushSensorLog, restartSensorTimer
 }
 
@@ -7179,8 +7227,15 @@ function renderPhoneModelGroup(content) {
   wireCheckbox('checkboxPhoneAxisZEnabled', (v) => { cfg.phoneAxisZEnabled = v })
   addRow(subResponsiveRotation, { id: 'sliderPhoneRotationScaleZ', label: 'Z Axis Rotation Scale (x)', type: 'slider', min: -3, max: 3, step: 'any', value: cfg.phoneRotationScaleZ })
   wireSlider('sliderPhoneRotationScaleZ', (v) => { cfg.phoneRotationScaleZ = v })
-  addRow(subResponsiveRotation, { id: 'sliderPhoneResponsiveRotationFineTune', label: 'Rotation Fine-Tune (Deg)', type: 'slider', min: -90, max: 90, step: 1, value: cfg.phoneResponsiveRotationFineTune })
-  wireSlider('sliderPhoneResponsiveRotationFineTune', (v) => { cfg.phoneResponsiveRotationFineTune = v })
+  addRow(subResponsiveRotation, { id: 'sliderPhoneResponsiveRotationFineTuneX', label: 'X Axis Rotation Fine-Tune (Deg)', type: 'slider', min: -90, max: 90, step: 1, value: cfg.phoneResponsiveRotationFineTuneX })
+  wireSlider('sliderPhoneResponsiveRotationFineTuneX', (v) => { cfg.phoneResponsiveRotationFineTuneX = v })
+  wireDeviceSliderMirror('sliderPhoneResponsiveRotationFineTuneX', 'phoneResponsiveRotationFineTuneX')
+  addRow(subResponsiveRotation, { id: 'sliderPhoneResponsiveRotationFineTuneY', label: 'Y Axis Rotation Fine-Tune (Deg)', type: 'slider', min: -90, max: 90, step: 1, value: cfg.phoneResponsiveRotationFineTuneY })
+  wireSlider('sliderPhoneResponsiveRotationFineTuneY', (v) => { cfg.phoneResponsiveRotationFineTuneY = v })
+  wireDeviceSliderMirror('sliderPhoneResponsiveRotationFineTuneY', 'phoneResponsiveRotationFineTuneY')
+  addRow(subResponsiveRotation, { id: 'sliderPhoneResponsiveRotationFineTuneZ', label: 'Z Axis Rotation Fine-Tune (Deg)', type: 'slider', min: -90, max: 90, step: 1, value: cfg.phoneResponsiveRotationFineTuneZ })
+  wireSlider('sliderPhoneResponsiveRotationFineTuneZ', (v) => { cfg.phoneResponsiveRotationFineTuneZ = v })
+  wireDeviceSliderMirror('sliderPhoneResponsiveRotationFineTuneZ', 'phoneResponsiveRotationFineTuneZ')
   // Added 2026-09-28, direct report: "the rotation motion is jittery and
   // not smooth." Same 1=instant/lower=smoother semantic as cfg.trackingDamping.
   addRow(subResponsiveRotation, { id: 'sliderPhoneRotationDamping', label: 'Rotation Damping (1=Instant)', type: 'slider', min: 0.05, max: 1, step: 0.01, value: cfg.phoneRotationDamping })
@@ -7243,6 +7298,26 @@ function renderPhoneModelGroup(content) {
   // the user touches the widget.
   parsePhoneResponsiveDisplaceConfig()
   const subResponsiveDisplace = addSubgroup(subResponsiveBehaviour, 'RESPONSIVE DISPLACE')
+  // Per-mode slider visibility -- added 2026-10-01, direct request:
+  // "dont show irrelevant sliders and inputs if the mode doesnt need
+  // it." Tilt mode (computePhoneResponsiveDisplacement()'s own tilt
+  // branch) bypasses the entire integrator/curve system -- it never
+  // reads Z axis, Vel/Pos Decay, the Stationary Gate, ZUPT, or any of
+  // the per-axis Range/Curve/Reference controls, so those rows are
+  // pushed here and hidden whenever Tilt is the active mode. Every
+  // other mode ('acceleration', 'worldPosition', 'freeze', 'nativeSensor')
+  // uses the full set identically (confirmed by reading each mode's own
+  // code path -- 'freeze' and 'nativeSensor' both reuse the SAME
+  // integrator/gate/ZUPT/curve pipeline as 'acceleration', just with one
+  // internal step changed), so there is no finer-grained split needed
+  // than "Tilt vs. everything else." Rows NOT pushed here (master
+  // On/Off, Mode select, Displace Reset, X/Y axis controls, Damping)
+  // are used by every mode including Tilt, so they always stay visible.
+  const displaceNonTiltRows = []
+  function updateDisplaceModeRowVisibility() {
+    const hide = cfg.phoneDisplaceMode === 'tilt'
+    displaceNonTiltRows.forEach((row) => { if (row) row.style.display = hide ? 'none' : '' })
+  }
   addRow(subResponsiveDisplace, { id: 'checkboxPhoneResponsiveDisplaceEnabled', label: 'Responsive Displace (On/Off)', type: 'checkbox' })
   document.getElementById('checkboxPhoneResponsiveDisplaceEnabled').checked = cfg.phoneResponsiveDisplaceEnabled
   // Requests motion permission on enable -- ADDED 2026-09-30, now that
@@ -7275,12 +7350,15 @@ function renderPhoneModelGroup(content) {
   // position once the Stationary Gate says motion has stopped, instead
   // of letting the leaky decay keep pulling it back to 0) and 'tilt'
   // (skip integration entirely -- map the CURRENT orientation angle
-  // straight to displacement, driftless by construction, X/Y only). All
-  // 4 options stay selectable side by side specifically so the 2 new
-  // ones can be A/B tested against the original 2 on a real device,
-  // per direct request: "gimne a drop down to test both as well as the
+  // straight to displacement, driftless by construction, X/Y only).
+  // Extended again same day with a 5th mode, 'nativeSensor' -- see
+  // computePhoneLinearAccelNative()'s own comment for why this is a new,
+  // additive option rather than a change to the existing 'acceleration'
+  // mode. All 5 options stay selectable side by side specifically so
+  // each can be A/B tested against the others on a real device, per
+  // direct request: "gimne a drop down to test both as well as the
   // current system."
-  addRow(subResponsiveDisplace, { id: 'selectPhoneDisplaceMode', label: 'Displace Mode', type: 'select', options: [{ value: 'acceleration', text: 'Acceleration / Local Frame' }, { value: 'worldPosition', text: 'Real World Position' }, { value: 'freeze', text: 'Freeze on Stop' }, { value: 'tilt', text: 'Tilt (Driftless, X/Y Only)' }], value: cfg.phoneDisplaceMode })
+  addRow(subResponsiveDisplace, { id: 'selectPhoneDisplaceMode', label: 'Displace Mode', type: 'select', options: [{ value: 'acceleration', text: 'Acceleration / Local Frame' }, { value: 'worldPosition', text: 'Real World Position' }, { value: 'freeze', text: 'Freeze on Stop' }, { value: 'tilt', text: 'Tilt (Driftless, X/Y Only)' }, { value: 'nativeSensor', text: 'Native Sensor (Browser e.acceleration)' }], value: cfg.phoneDisplaceMode })
   document.getElementById('selectPhoneDisplaceMode').value = cfg.phoneDisplaceMode
   wireSelect('selectPhoneDisplaceMode', (v) => {
     cfg.phoneDisplaceMode = v
@@ -7292,6 +7370,11 @@ function renderPhoneModelGroup(content) {
     // is right now = 0 displacement." Harmless to call when switching to
     // a different mode too.
     resetPhoneDisplaceTiltBaseline()
+    // Per-mode slider visibility -- added 2026-10-01, direct request:
+    // "dont show irrelevant sliders and inputs if the mode doesnt need
+    // it." See updateDisplaceModeRowVisibility()'s own comment for which
+    // rows this hides and why.
+    updateDisplaceModeRowVisibility()
   })
   // Displace Reset -- added 2026-09-30, direct request: "add a
   // displacement reset checkbox. Similar to the rotation, a double tap
@@ -7327,33 +7410,33 @@ function renderPhoneModelGroup(content) {
   addRow(subResponsiveDisplace, { id: 'checkboxPhoneDisplaceInvertY', label: 'Invert Y Axis Displace', type: 'checkbox' })
   document.getElementById('checkboxPhoneDisplaceInvertY').checked = cfg.phoneDisplaceInvertY
   wireCheckbox('checkboxPhoneDisplaceInvertY', (v) => { cfg.phoneDisplaceInvertY = v })
-  addRow(subResponsiveDisplace, { id: 'checkboxPhoneDisplaceAxisZEnabled', label: 'Z Axis Displace On/Off (Perpendicular To Face)', type: 'checkbox' })
+  displaceNonTiltRows.push(addRow(subResponsiveDisplace, { id: 'checkboxPhoneDisplaceAxisZEnabled', label: 'Z Axis Displace On/Off (Perpendicular To Face)', type: 'checkbox' }))
   document.getElementById('checkboxPhoneDisplaceAxisZEnabled').checked = cfg.phoneDisplaceAxisZEnabled
   wireCheckbox('checkboxPhoneDisplaceAxisZEnabled', (v) => { cfg.phoneDisplaceAxisZEnabled = v })
-  addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplaceScaleZ', label: 'Z Axis Displace Scale (x)', type: 'slider', min: -3, max: 3, step: 'any', value: cfg.phoneDisplaceScaleZ })
+  displaceNonTiltRows.push(addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplaceScaleZ', label: 'Z Axis Displace Scale (x)', type: 'slider', min: -3, max: 3, step: 'any', value: cfg.phoneDisplaceScaleZ }))
   wireSlider('sliderPhoneDisplaceScaleZ', (v) => { cfg.phoneDisplaceScaleZ = v })
-  addRow(subResponsiveDisplace, { id: 'checkboxPhoneDisplaceInvertZ', label: 'Invert Z Axis Displace', type: 'checkbox' })
+  displaceNonTiltRows.push(addRow(subResponsiveDisplace, { id: 'checkboxPhoneDisplaceInvertZ', label: 'Invert Z Axis Displace', type: 'checkbox' }))
   document.getElementById('checkboxPhoneDisplaceInvertZ').checked = cfg.phoneDisplaceInvertZ
   wireCheckbox('checkboxPhoneDisplaceInvertZ', (v) => { cfg.phoneDisplaceInvertZ = v })
   addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplaceDamping', label: 'Displace Damping (1=Instant)', type: 'slider', min: 0.05, max: 1, step: 0.01, value: cfg.phoneDisplaceDamping })
   wireSlider('sliderPhoneDisplaceDamping', (v) => { cfg.phoneDisplaceDamping = v })
-  addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplaceVelDecayRate', label: 'Displace Velocity Decay Rate (1/s)', type: 'slider', min: 0.5, max: 10, step: 0.1, value: cfg.phoneDisplaceVelDecayRate })
+  displaceNonTiltRows.push(addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplaceVelDecayRate', label: 'Displace Velocity Decay Rate (1/s)', type: 'slider', min: 0.5, max: 10, step: 0.1, value: cfg.phoneDisplaceVelDecayRate }))
   wireSlider('sliderPhoneDisplaceVelDecayRate', (v) => { cfg.phoneDisplaceVelDecayRate = v })
-  addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplacePosDecayRate', label: 'Displace Position Decay Rate (1/s)', type: 'slider', min: 0.02, max: 5, step: 0.01, value: cfg.phoneDisplacePosDecayRate })
+  displaceNonTiltRows.push(addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplacePosDecayRate', label: 'Displace Position Decay Rate (1/s)', type: 'slider', min: 0.02, max: 5, step: 0.01, value: cfg.phoneDisplacePosDecayRate }))
   wireSlider('sliderPhoneDisplacePosDecayRate', (v) => { cfg.phoneDisplacePosDecayRate = v })
-  addRow(subResponsiveDisplace, { id: 'checkboxPhoneDisplaceStationaryGateEnabled', label: 'Stationary Gate (Suppress Drift When Still)', type: 'checkbox' })
+  displaceNonTiltRows.push(addRow(subResponsiveDisplace, { id: 'checkboxPhoneDisplaceStationaryGateEnabled', label: 'Stationary Gate (Suppress Drift When Still)', type: 'checkbox' }))
   document.getElementById('checkboxPhoneDisplaceStationaryGateEnabled').checked = cfg.phoneDisplaceStationaryGateEnabled
   wireCheckbox('checkboxPhoneDisplaceStationaryGateEnabled', (v) => { cfg.phoneDisplaceStationaryGateEnabled = v })
-  addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplaceStationaryGateDegPerSec', label: 'Stationary Gate Threshold (Deg/s)', type: 'slider', min: 0.1, max: 10, step: 0.1, value: cfg.phoneDisplaceStationaryGateDegPerSec })
+  displaceNonTiltRows.push(addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplaceStationaryGateDegPerSec', label: 'Stationary Gate Threshold (Deg/s)', type: 'slider', min: 0.1, max: 10, step: 0.1, value: cfg.phoneDisplaceStationaryGateDegPerSec }))
   wireSlider('sliderPhoneDisplaceStationaryGateDegPerSec', (v) => { cfg.phoneDisplaceStationaryGateDegPerSec = v })
   // ZUPT upgrade -- 2 new controls alongside the existing Stationary
   // Gate, direct request after real device data showed the gyro-only
   // gate let residual velocity leak into position with nothing to
   // correct it. See cfg.phoneDisplaceZuptAccelThresholdMps2's own
   // declaration comment for the full reasoning.
-  addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplaceZuptAccelThresholdMps2', label: 'ZUPT Accel Threshold (m/s^2)', type: 'slider', min: 0.1, max: 3, step: 0.05, value: cfg.phoneDisplaceZuptAccelThresholdMps2 })
+  displaceNonTiltRows.push(addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplaceZuptAccelThresholdMps2', label: 'ZUPT Accel Threshold (m/s^2)', type: 'slider', min: 0.1, max: 3, step: 0.05, value: cfg.phoneDisplaceZuptAccelThresholdMps2 }))
   wireSlider('sliderPhoneDisplaceZuptAccelThresholdMps2', (v) => { cfg.phoneDisplaceZuptAccelThresholdMps2 = v })
-  addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplaceZuptDwellMs', label: 'ZUPT Dwell Time (Ms)', type: 'slider', min: 0, max: 500, step: 10, value: cfg.phoneDisplaceZuptDwellMs })
+  displaceNonTiltRows.push(addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplaceZuptDwellMs', label: 'ZUPT Dwell Time (Ms)', type: 'slider', min: 0, max: 500, step: 10, value: cfg.phoneDisplaceZuptDwellMs }))
   wireSlider('sliderPhoneDisplaceZuptDwellMs', (v) => { cfg.phoneDisplaceZuptDwellMs = v })
   // Per-axis Min/Max Range + Curve + Reference -- added 2026-10-01,
   // replacing the single shared Range/Curve pair above (one X/Y/Z
@@ -7371,7 +7454,7 @@ function renderPhoneModelGroup(content) {
     const refKey = 'phoneDisplace' + axis + 'ReferenceM'
     let rangeDefault = { min: 0, max: 20 }
     try { rangeDefault = JSON.parse(cfg[rangeKey]) } catch (e) { /* keep fallback */ }
-    addRow(subResponsiveDisplace, { id: 'textPhoneDisplaceRange' + axis, label: axis + ' Axis Min / Max Displacement (World Units)', type: 'range-bar', trackMin: -100, trackMax: 100, unit: '', defaultValue: rangeDefault })
+    displaceNonTiltRows.push(addRow(subResponsiveDisplace, { id: 'textPhoneDisplaceRange' + axis, label: axis + ' Axis Min / Max Displacement (World Units)', type: 'range-bar', trackMin: -100, trackMax: 100, unit: '', defaultValue: rangeDefault }))
     let lastSeenRange = document.getElementById('textPhoneDisplaceRange' + axis).value
     curveWidgetResyncs.push(() => {
       const el = document.getElementById('textPhoneDisplaceRange' + axis)
@@ -7382,7 +7465,7 @@ function renderPhoneModelGroup(content) {
     })
     let curveDefault = { points: [{ x: 0, y: 0 }, { x: 1, y: 1 }], method: 'monotone' }
     try { curveDefault = JSON.parse(cfg[curveKey]) } catch (e) { /* keep fallback */ }
-    addRow(subResponsiveDisplace, { id: 'textPhoneDisplaceCurve' + axis, label: axis + ' Axis Displacement Curve (Movement -> Displace)', type: 'curve-editor', defaultPoints: curveDefault.points, defaultMethod: curveDefault.method, caption: 'X: Movement / ' + axis + ' Reference (0-1)  ·  Y: Displacement Fraction (0=Min, 1=Max)' })
+    displaceNonTiltRows.push(addRow(subResponsiveDisplace, { id: 'textPhoneDisplaceCurve' + axis, label: axis + ' Axis Displacement Curve (Movement -> Displace)', type: 'curve-editor', defaultPoints: curveDefault.points, defaultMethod: curveDefault.method, caption: 'X: Movement / ' + axis + ' Reference (0-1)  ·  Y: Displacement Fraction (0=Min, 1=Max)' }))
     let lastSeenCurve = document.getElementById('textPhoneDisplaceCurve' + axis).value
     curveWidgetResyncs.push(() => {
       const el = document.getElementById('textPhoneDisplaceCurve' + axis)
@@ -7391,9 +7474,13 @@ function renderPhoneModelGroup(content) {
       cfg[curveKey] = el.value
       parsePhoneResponsiveDisplaceConfig()
     })
-    addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplace' + axis + 'ReferenceM', label: axis + ' Axis Reference Distance (M, = Curve X:1.0)', type: 'slider', min: 0.02, max: 2, step: 0.01, value: cfg[refKey] })
+    displaceNonTiltRows.push(addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplace' + axis + 'ReferenceM', label: axis + ' Axis Reference Distance (M, = Curve X:1.0)', type: 'slider', min: 0.02, max: 2, step: 0.01, value: cfg[refKey] }))
     wireSlider('sliderPhoneDisplace' + axis + 'ReferenceM', (v) => { cfg[refKey] = v })
   })
+  // Apply once at build time so a Sync-restored Tilt mode (or the
+  // default 'acceleration') shows the right row set from the very first
+  // paint, not just after the user next touches the Mode dropdown.
+  updateDisplaceModeRowVisibility()
 
   // CORRECTED 2026-09-29, direct request: "The recurrsive render group
   // should be int he phone model group under the repsonsive behaviour
