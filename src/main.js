@@ -340,6 +340,15 @@ const cfg = {
   // names. Labeled "Orient" in the log line specifically so the two
   // never look like duplicates of each other.
   sensorLogOrientBeta: true, sensorLogOrientGamma: true,
+  // Displace Log per-field toggles -- added 2026-10-01, direct request:
+  // log processed accel into the integrator, velocity XYZ, pre-curve
+  // integrated position XYZ, ZUPT active/inactive, Stationary Gate
+  // active/inactive, bias being subtracted, and the displacement target
+  // vs. the actually-rendered (damped) phone position. Default on, same
+  // "diagnostic field defaults to visible" convention as sensorLogLinearAccel
+  // above -- these exist specifically to debug Displace reports.
+  displaceLogProcessedAccel: true, displaceLogVelocity: true, displaceLogPosition: true,
+  displaceLogZupt: true, displaceLogStationary: true, displaceLogBias: true, displaceLogTargetVsRendered: true,
   deviceInfoEnabled: false,
   // Phone Model -- direct request 2026-09-27: a loadable smartphone GLB,
   // positioned/scaled/rotated independently of the hand, with its own
@@ -3333,6 +3342,27 @@ let phoneDisplaceLastTimestamp = null
 // separate inspection system.
 let phoneDisplaceZuptDwellStart = null
 let phoneDisplaceZuptActive = false
+// Added 2026-10-01 for the new Debug-group Displace Log -- the
+// Stationary Gate's own "quiet this tick" verdict (gyroMag/accelMag
+// both below threshold) used to live only as a local `isStationary`
+// variable inside integratePhoneDisplacement(), with nothing storing it
+// for inspection. This is DELIBERATELY separate from phoneDisplaceZuptActive
+// above -- isStationary flips true/false on EVERY qualifying tick,
+// while zuptActive only goes true once the dwell window has fully
+// elapsed, so the 2 can legitimately disagree for the first
+// phoneDisplaceZuptDwellMs of a stop (Stationary: active, ZUPT: not
+// yet) -- logging both separately is the point, not redundant.
+let phoneDisplaceIsStationary = false
+// Added 2026-10-01, same Debug-log request -- the ACTUAL ax/ay/az that
+// reached the integrator this tick, captured at the one real shared
+// entry point (applyPhoneDisplaceSample(), see its own comment) so both
+// the mobile accelerometer path and the desktop cursor-delta path are
+// covered by a single capture site. This is the value AFTER bias
+// subtraction, the Y/Z swap, the raw deadzone/clamp filter, Stationary-
+// Gate zeroing, and (for 'worldPosition' mode) the world-frame
+// rotation -- i.e. exactly what "processed accel into the displacement
+// integrator" means.
+let phoneDisplaceLastAx = 0, phoneDisplaceLastAy = 0, phoneDisplaceLastAz = 0
 const _phoneDisplaceWorldVec = new THREE.Vector3()
 // Shared leaky accel->velocity->position integrator -- one real
 // devicemotion sample (MOBILE) or one desktop cursor-delta "impulse"
@@ -3341,6 +3371,7 @@ const _phoneDisplaceWorldVec = new THREE.Vector3()
 // phoneDisplacePosX/Y/Z state and get read back identically by
 // computePhoneResponsiveDisplacement().
 function applyPhoneDisplaceSample(ax, ay, az, dt) {
+  phoneDisplaceLastAx = ax; phoneDisplaceLastAy = ay; phoneDisplaceLastAz = az
   const velDecay = Math.exp(-(cfg.phoneDisplaceVelDecayRate ?? PHONE_DISPLACE_VELOCITY_DECAY_RATE_DEFAULT) * dt)
   const posDecay = Math.exp(-(cfg.phoneDisplacePosDecayRate ?? PHONE_DISPLACE_POSITION_DECAY_RATE_DEFAULT) * dt)
   phoneDisplaceVelX = phoneDisplaceVelX * velDecay + ax * dt
@@ -3625,6 +3656,7 @@ function integratePhoneDisplacement(e) {
         phoneDisplaceZuptDwellStart = null
         phoneDisplaceZuptActive = false
       }
+      phoneDisplaceIsStationary = isStationary
       if (cfg.phoneDisplaceMode === 'worldPosition' && latestOrientation) {
         const q = computeDeviceOrientationQuat(latestOrientation.alpha || 0, latestOrientation.beta || 0, latestOrientation.gamma || 0)
         _phoneDisplaceWorldVec.set(ax, ay, az).applyQuaternion(q)
@@ -3656,6 +3688,7 @@ function integratePhoneDisplacement(e) {
     // isStationary never becomes true and this mode behaves identically
     // to 'acceleration'.
     if (cfg.phoneDisplaceMode === 'freeze' && isStationary) {
+      phoneDisplaceLastAx = 0; phoneDisplaceLastAy = 0; phoneDisplaceLastAz = 0 // the integrator isn't called at all this tick -- nothing is "processed" into it
       phoneDisplaceLastTimestamp = now
       return
     }
@@ -5383,6 +5416,8 @@ window.__debug = {
   // state in METERS -- the same values computePhoneResponsiveDisplacement()
   // maps into on-screen world units.
   get phoneDisplaceZuptActive() { return phoneDisplaceZuptActive },
+  get phoneDisplaceIsStationary() { return phoneDisplaceIsStationary },
+  get phoneDisplaceLastProcessedAccel() { return { x: phoneDisplaceLastAx, y: phoneDisplaceLastAy, z: phoneDisplaceLastAz } },
   get phoneDisplaceVel() { return { x: phoneDisplaceVelX, y: phoneDisplaceVelY, z: phoneDisplaceVelZ } },
   get phoneDisplacePos() { return { x: phoneDisplacePosX, y: phoneDisplacePosY, z: phoneDisplacePosZ } },
   get phoneDisplaceBias() { return { x: phoneDisplaceBiasX, y: phoneDisplaceBiasY, z: phoneDisplaceBiasZ } },
@@ -5792,20 +5827,117 @@ function clearPhoneModelLog() {
   if (phoneModelLogEl) phoneModelLogEl.innerHTML = ''
 }
 
+// =======================================================================
+// Displace Log (Debug group) -- added 2026-10-01, direct request: log
+// processed accel into the integrator, velocity XYZ, pre-curve integrated
+// position XYZ, ZUPT active/inactive, Stationary Gate active/inactive,
+// bias being subtracted, and the displacement target vs. the actually-
+// rendered (damped) phone position. Same architecture as the Sensors/
+// Phone Model Logs above (own array + DOM element, own timer, same
+// Copy/Save/Clear shape) -- not a new logging mechanism. Own timer
+// (restartDisplaceLogTimer(), started/stopped alongside the same Stream
+// Sensor Data checkbox and Sample Interval slider as the other 2 logs)
+// rather than piggybacking on restartSensorTimer()'s own timer, which
+// bails entirely on non-touch devices -- Displace fully works on
+// Desktop (cursor-delta input), so gating this log the same way would
+// silently disable it in this sandbox with no real device available,
+// the exact same reasoning restartPhoneModelLogTimer()'s own comment
+// already documents for that log.
+// =======================================================================
+let displaceLogEl = null
+let displaceLogTimer = null
+let displaceLog = []
+function pushDisplaceLog(text) {
+  if (allLogsPaused) return
+  const line = ts() + ' ' + text
+  displaceLog.push(line)
+  if (displaceLog.length > 200) displaceLog.shift()
+  if (!displaceLogEl) return
+  const div = document.createElement('div')
+  div.textContent = line
+  displaceLogEl.appendChild(div)
+  while (displaceLogEl.children.length > 200) displaceLogEl.removeChild(displaceLogEl.firstChild)
+  displaceLogEl.scrollTop = displaceLogEl.scrollHeight
+}
+function restartDisplaceLogTimer() {
+  clearInterval(displaceLogTimer)
+  displaceLogTimer = null
+  if (!cfg.sensorStreamEnabled) return
+  displaceLogTimer = setInterval(() => {
+    const parts = []
+    if (cfg.displaceLogProcessedAccel) parts.push(`ProcAccel x:${fmt(phoneDisplaceLastAx)} y:${fmt(phoneDisplaceLastAy)} z:${fmt(phoneDisplaceLastAz)}`)
+    if (cfg.displaceLogVelocity) parts.push(`Vel x:${fmt(phoneDisplaceVelX)} y:${fmt(phoneDisplaceVelY)} z:${fmt(phoneDisplaceVelZ)}`)
+    // Pre-curve/range integrated position -- the raw integrator state in
+    // METERS, i.e. exactly what computePhoneDisplaceAxisUnits() takes as
+    // its own `rawMeters` input BEFORE the curve/range mapping runs (Tilt
+    // mode never reaches this state at all -- see that mode's own comment).
+    if (cfg.displaceLogPosition) parts.push(`PosPreCurve x:${fmt(phoneDisplacePosX)} y:${fmt(phoneDisplacePosY)} z:${fmt(phoneDisplacePosZ)}`)
+    if (cfg.displaceLogZupt) parts.push(`ZUPT:${phoneDisplaceZuptActive ? 'ACTIVE' : 'inactive'}`)
+    // DELIBERATELY a separate field from ZUPT above, not a duplicate --
+    // phoneDisplaceIsStationary flips true the instant the gate reads
+    // quiet (gyro+accel both below threshold); phoneDisplaceZuptActive
+    // only goes true once that quiet state has held for the full dwell
+    // window. The 2 can legitimately disagree for the first
+    // phoneDisplaceZuptDwellMs of a stop.
+    if (cfg.displaceLogStationary) parts.push(`StationaryGate:${phoneDisplaceIsStationary ? 'ACTIVE' : 'inactive'}`)
+    if (cfg.displaceLogBias) parts.push(`Bias x:${fmt(phoneDisplaceBiasX)} y:${fmt(phoneDisplaceBiasY)} z:${fmt(phoneDisplaceBiasZ)}`)
+    // Target (computePhoneResponsiveDisplacement()'s own undamped output)
+    // vs. Rendered (the SAME value after cfg.phoneDisplaceDamping's lerp
+    // -- what the phone model actually shows this frame) -- these ARE
+    // genuinely separate state (_phoneDisplaceTargetVec/_phoneDisplaceCurrentVec,
+    // see applyPhoneModelTransform()'s own comment), not aliases of the
+    // same vector. Deliberately excludes cfg.phoneModelOffsetX/Y/Z (the
+    // manual offset sliders) from both sides -- that's a separate,
+    // deliberate additive on top of displacement, not part of it, and
+    // including it in only one side would make this comparison measure
+    // the wrong thing (offset magnitude, not damping lag).
+    if (cfg.displaceLogTargetVsRendered) parts.push(`Target x:${fmt(_phoneDisplaceTargetVec.x)} y:${fmt(_phoneDisplaceTargetVec.y)} z:${fmt(_phoneDisplaceTargetVec.z)}  Rendered x:${fmt(_phoneDisplaceCurrentVec.x)} y:${fmt(_phoneDisplaceCurrentVec.y)} z:${fmt(_phoneDisplaceCurrentVec.z)}`)
+    if (parts.length) pushDisplaceLog(parts.join('  |  '))
+  }, cfg.sensorIntervalMs)
+}
+function copyDisplaceLog(btn) {
+  const text = displaceLog.join('\n')
+  const flash = (msg) => { const orig = btn.textContent; btn.textContent = msg; setTimeout(() => { btn.textContent = orig }, 900) }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => flash('Copied!')).catch(() => flash('Copy failed'))
+  } else {
+    flash('Copy failed')
+  }
+}
+function saveDisplaceLog() {
+  const md = '# Displace Log\n\n' + displaceLog.map((line) => '- ' + line).join('\n') + '\n'
+  const blob = new Blob([md], { type: 'text/markdown' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-')
+  a.href = url
+  a.download = 'displace-log-' + stamp + '.md'
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}
+function clearDisplaceLog() {
+  displaceLog = []
+  if (displaceLogEl) displaceLogEl.innerHTML = ''
+}
+
 // All-logs controls (Debug group) -- direct requests: "provide a clear
 // all logs button and copy all logs button" / "and a pause and resume
-// logs button." Span all 3 Debug-group logs -- Mouse Log (devPanel.js's
+// logs button." Span all 4 Debug-group logs -- Mouse Log (devPanel.js's
 // own built-in log, reached as a bare global -- see addGroup()'s own
-// comment on this reachability), Sensors, and Phone Model Log.
+// comment on this reachability), Sensors, Phone Model Log, and Displace Log.
 function clearAllLogs() {
   clearMouseLog()
   clearSensorLog()
   clearPhoneModelLog()
+  clearDisplaceLog()
 }
 function copyAllLogsText(btn) {
   const text = '=== Mouse Log ===\n' + getMouseLogText() +
     '\n\n=== Sensor Log ===\n' + sensorLog.join('\n') +
-    '\n\n=== Phone Model Log ===\n' + phoneModelLog.join('\n')
+    '\n\n=== Phone Model Log ===\n' + phoneModelLog.join('\n') +
+    '\n\n=== Displace Log ===\n' + displaceLog.join('\n')
   const flash = (msg) => { const orig = btn.textContent; btn.textContent = msg; setTimeout(() => { btn.textContent = orig }, 900) }
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(text).then(() => flash('Copied!')).catch(() => flash('Copy failed'))
@@ -7947,9 +8079,9 @@ function renderDebugExtras() {
     sensorSub.appendChild(note)
   }
   addRow(sensorSub, { id: 'checkboxSensorStream', label: 'Stream Sensor Data', type: 'checkbox' })
-  wireCheckbox('checkboxSensorStream', (v) => { cfg.sensorStreamEnabled = v; restartSensorTimer(); restartPhoneModelLogTimer() })
+  wireCheckbox('checkboxSensorStream', (v) => { cfg.sensorStreamEnabled = v; restartSensorTimer(); restartPhoneModelLogTimer(); restartDisplaceLogTimer() })
   addRow(sensorSub, { id: 'sliderSensorInterval', label: 'Sample Interval (Ms)', type: 'slider', min: 50, max: 2000, step: 50, value: cfg.sensorIntervalMs })
-  wireSlider('sliderSensorInterval', (v) => { cfg.sensorIntervalMs = v; restartSensorTimer(); restartPhoneModelLogTimer() })
+  wireSlider('sliderSensorInterval', (v) => { cfg.sensorIntervalMs = v; restartSensorTimer(); restartPhoneModelLogTimer(); restartDisplaceLogTimer() })
   // Per-sensor log toggles -- direct request 2026-09-28.
   addRow(sensorSub, { id: 'checkboxSensorLogAccel', label: 'Log Accelerometer', type: 'checkbox' })
   document.getElementById('checkboxSensorLogAccel').checked = cfg.sensorLogAccel
@@ -8021,6 +8153,56 @@ function renderDebugExtras() {
   phoneModelLogEl = document.createElement('div')
   phoneModelLogEl.className = 'dev-mouse-log'
   phoneModelLogSub.appendChild(phoneModelLogEl)
+
+  // Displace Log -- direct request 2026-10-01: log processed accel into
+  // the integrator, velocity XYZ, pre-curve integrated position XYZ,
+  // ZUPT active/inactive, Stationary Gate active/inactive, bias being
+  // subtracted, and displacement target vs. rendered phone position.
+  // Shares the same Stream Sensor Data checkbox/Sample Interval slider
+  // as Sensors/Phone Model Log above (see restartDisplaceLogTimer()'s
+  // own comment for why it's not touch-device-gated the way Sensors is).
+  const displaceLogSub = addSubgroup(debugContent, 'Displace Log')
+  addRow(displaceLogSub, { id: 'checkboxDisplaceLogProcessedAccel', label: 'Log Processed Accel (Into Integrator)', type: 'checkbox' })
+  document.getElementById('checkboxDisplaceLogProcessedAccel').checked = cfg.displaceLogProcessedAccel
+  wireCheckbox('checkboxDisplaceLogProcessedAccel', (v) => { cfg.displaceLogProcessedAccel = v })
+  addRow(displaceLogSub, { id: 'checkboxDisplaceLogVelocity', label: 'Log Velocity (XYZ)', type: 'checkbox' })
+  document.getElementById('checkboxDisplaceLogVelocity').checked = cfg.displaceLogVelocity
+  wireCheckbox('checkboxDisplaceLogVelocity', (v) => { cfg.displaceLogVelocity = v })
+  addRow(displaceLogSub, { id: 'checkboxDisplaceLogPosition', label: 'Log Integrated Position (XYZ, Pre-Curve)', type: 'checkbox' })
+  document.getElementById('checkboxDisplaceLogPosition').checked = cfg.displaceLogPosition
+  wireCheckbox('checkboxDisplaceLogPosition', (v) => { cfg.displaceLogPosition = v })
+  addRow(displaceLogSub, { id: 'checkboxDisplaceLogZupt', label: 'Log ZUPT Active/Inactive', type: 'checkbox' })
+  document.getElementById('checkboxDisplaceLogZupt').checked = cfg.displaceLogZupt
+  wireCheckbox('checkboxDisplaceLogZupt', (v) => { cfg.displaceLogZupt = v })
+  addRow(displaceLogSub, { id: 'checkboxDisplaceLogStationary', label: 'Log Stationary Gate Active/Inactive', type: 'checkbox' })
+  document.getElementById('checkboxDisplaceLogStationary').checked = cfg.displaceLogStationary
+  wireCheckbox('checkboxDisplaceLogStationary', (v) => { cfg.displaceLogStationary = v })
+  addRow(displaceLogSub, { id: 'checkboxDisplaceLogBias', label: 'Log Bias Being Subtracted (XYZ)', type: 'checkbox' })
+  document.getElementById('checkboxDisplaceLogBias').checked = cfg.displaceLogBias
+  wireCheckbox('checkboxDisplaceLogBias', (v) => { cfg.displaceLogBias = v })
+  addRow(displaceLogSub, { id: 'checkboxDisplaceLogTargetVsRendered', label: 'Log Displacement Target vs. Rendered Position', type: 'checkbox' })
+  document.getElementById('checkboxDisplaceLogTargetVsRendered').checked = cfg.displaceLogTargetVsRendered
+  wireCheckbox('checkboxDisplaceLogTargetVsRendered', (v) => { cfg.displaceLogTargetVsRendered = v })
+  const displaceLogBtnRow = document.createElement('div')
+  displaceLogBtnRow.className = 'dev-buttons'
+  const displaceLogCopyBtn = document.createElement('button')
+  displaceLogCopyBtn.type = 'button'
+  displaceLogCopyBtn.textContent = 'COPY'
+  const displaceLogSaveBtn = document.createElement('button')
+  displaceLogSaveBtn.type = 'button'
+  displaceLogSaveBtn.textContent = 'SAVE'
+  const displaceLogClearBtn = document.createElement('button')
+  displaceLogClearBtn.type = 'button'
+  displaceLogClearBtn.textContent = 'CLEAR'
+  displaceLogBtnRow.append(displaceLogCopyBtn, displaceLogSaveBtn, displaceLogClearBtn)
+  displaceLogSub.appendChild(displaceLogBtnRow)
+  displaceLogCopyBtn.addEventListener('click', () => copyDisplaceLog(displaceLogCopyBtn))
+  displaceLogSaveBtn.addEventListener('click', saveDisplaceLog)
+  displaceLogClearBtn.addEventListener('click', clearDisplaceLog)
+  displaceLogEl = document.createElement('div')
+  displaceLogEl.className = 'dev-mouse-log'
+  displaceLogSub.appendChild(displaceLogEl)
+  restartDisplaceLogTimer()
 
   // Object Axes -- ported from 3JS ENGINE's own Debug/Diagnostics
   // subgroup (its src/main.js), per direct request. World Axes wasn't
