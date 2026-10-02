@@ -148,7 +148,7 @@
     "textPhoneDisplaceCurveZ": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"monotone\"}",
     "sliderPhoneDisplaceZReferenceM": 1.15,
     "checkboxScreenRenderEnabled": true,
-    "sliderScreenRecursionLevels": 10,
+    "sliderScreenRecursionLevels": 20,
     "sliderScreenRenderResolution": 200,
     "sliderScreenTextureScale": 1.15,
     "textScreenLevelScaleRange": "{\"min\":0,\"max\":2}",
@@ -240,9 +240,9 @@
   },
   "layout": {
     "left": 32,
-    "top": 373.7440490722656,
+    "top": 366.8511962890625,
     "width": 350,
-    "height": 405
+    "height": 412
   },
   "devPanelStyle": {
     "titleFontSize": 17,
@@ -12055,7 +12055,7 @@
       "checkboxPhoneAxisXEnabled": true,
       "sliderPhoneRotationScaleX": -2,
       "sliderPhoneRotationScaleY": 1,
-      "sliderScreenRecursionLevels": 30
+      "sliderScreenRecursionLevels": 36
     },
     "landscape": {}
   },
