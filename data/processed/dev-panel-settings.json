@@ -125,7 +125,7 @@
     "checkboxPhoneDisplaceAxisXEnabled": true,
     "sliderPhoneDisplaceScaleX": 1,
     "checkboxPhoneDisplaceInvertX": false,
-    "checkboxPhoneDisplaceAxisYEnabled": true,
+    "checkboxPhoneDisplaceAxisYEnabled": false,
     "sliderPhoneDisplaceScaleY": -1,
     "checkboxPhoneDisplaceInvertY": false,
     "checkboxPhoneDisplaceAxisZEnabled": false,
@@ -240,9 +240,9 @@
   },
   "layout": {
     "left": 35,
-    "top": 289,
+    "top": 108,
     "width": 350,
-    "height": 489
+    "height": 671
   },
   "devPanelStyle": {
     "titleFontSize": 17,
@@ -11382,7 +11382,7 @@
     "desktop:Object Axes": true,
     "desktop:Settings": true,
     "desktop:Mouse Log": true,
-    "desktop:Sensors": false,
+    "desktop:Sensors": true,
     "desktop:Phone Model Log": true,
     "desktop:Displace Log": false,
     "desktop:PHONE MODEL": false,
