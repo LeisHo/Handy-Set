@@ -126,7 +126,7 @@
     "sliderPhoneDisplaceScaleX": -1,
     "checkboxPhoneDisplaceInvertX": false,
     "checkboxPhoneDisplaceAxisYEnabled": true,
-    "sliderPhoneDisplaceScaleY": 1,
+    "sliderPhoneDisplaceScaleY": 0.6,
     "checkboxPhoneDisplaceInvertY": false,
     "checkboxPhoneDisplaceAxisZEnabled": false,
     "sliderPhoneDisplaceScaleZ": 1,
