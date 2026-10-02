@@ -12048,7 +12048,7 @@
       "checkboxPhoneDisplaceAxisZEnabled": true,
       "sliderPhoneDisplaceDamping": 0.16,
       "checkboxPhoneDisplaceAxisYEnabled": true,
-      "sliderPhoneDisplacePosDecayRate": 12,
+      "sliderPhoneDisplacePosDecayRate": 0,
       "sliderPhoneDisplaceVelDecayRate": 10,
       "sliderPhoneDisplaceStationaryGateDegPerSec": 2.7,
       "sliderPhoneDisplaceZReferenceM": 1.15,
