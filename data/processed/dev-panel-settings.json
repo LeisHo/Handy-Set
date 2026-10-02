@@ -11305,9 +11305,9 @@
     "mobile:PHONE MODEL": false,
     "mobile:OFFSET": false,
     "mobile:PHONE ROTATION": true,
-    "mobile:RECURSIVE RENDER": false,
+    "mobile:RECURSIVE RENDER": true,
     "mobile:RESPONSIVE BEHAVIOUR - PHONE": false,
-    "mobile:Responsive Rotation": true,
+    "mobile:Responsive Rotation": false,
     "mobile:RESPONSIVE DISPLACE": false,
     "mobile:HAND MODEL": true,
     "mobile:Field Layout": false,
@@ -11910,7 +11910,9 @@
       "sliderPhoneDisplacePosDecayRate": 12,
       "sliderPhoneDisplaceVelDecayRate": 10,
       "sliderPhoneDisplaceStationaryGateDegPerSec": 2.7,
-      "sliderPhoneDisplaceZReferenceM": 0.68
+      "sliderPhoneDisplaceZReferenceM": 0.68,
+      "checkboxPhoneAxisXEnabled": true,
+      "sliderPhoneRotationScaleX": -1
     },
     "landscape": {}
   },
