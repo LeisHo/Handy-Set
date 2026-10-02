@@ -240,9 +240,9 @@
   },
   "layout": {
     "left": 32,
-    "top": 318,
+    "top": 619,
     "width": 350,
-    "height": 461
+    "height": 159
   },
   "devPanelStyle": {
     "titleFontSize": 17,
@@ -12042,7 +12042,7 @@
       "checkboxTrackingEnabled": false,
       "sliderTrackingDamping": 0.27,
       "checkboxPalmFacesCursor": false,
-      "sliderScreenTextureOffsetY": -0.0510403544589723,
+      "sliderScreenTextureOffsetY": -0.035,
       "sliderScreenTextureOffsetX": -0.01,
       "checkboxPhoneDisplaceAxisXEnabled": true,
       "checkboxPhoneDisplaceAxisZEnabled": true,
