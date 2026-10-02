@@ -126,7 +126,7 @@
     "sliderPhoneDisplaceScaleX": 1,
     "checkboxPhoneDisplaceInvertX": false,
     "checkboxPhoneDisplaceAxisYEnabled": true,
-    "sliderPhoneDisplaceScaleY": 1,
+    "sliderPhoneDisplaceScaleY": -1,
     "checkboxPhoneDisplaceInvertY": false,
     "checkboxPhoneDisplaceAxisZEnabled": false,
     "sliderPhoneDisplaceScaleZ": 1,
@@ -171,7 +171,7 @@
     "textWristSplayCurve": "{\"points\":[{\"x\":0,\"y\":1},{\"x\":0.31833343505859374,\"y\":0.6961458841959636},{\"x\":1,\"y\":0.042812347412109375}],\"method\":\"catmullrom\"}",
     "sliderCameraX": 0,
     "sliderCameraY": 114,
-    "sliderCameraZ": 0.5,
+    "sliderCameraZ": 0,
     "sliderCameraFov": 15,
     "sliderCameraZoom": 26,
     "checkboxLockCameraPan": true,
@@ -230,6 +230,7 @@
     "checkboxDisplaceLogStationary": true,
     "checkboxDisplaceLogBias": true,
     "checkboxDisplaceLogTargetVsRendered": true,
+    "checkboxDisplaceLogBoundary": true,
     "checkboxObjectAxesEnabled": true,
     "checkboxObjectAxesRenderInFront": true,
     "sliderObjectAxesThickness": 2,
@@ -1655,6 +1656,10 @@
                 {
                   "type": "row",
                   "key": "checkboxDisplaceLogTargetVsRendered"
+                },
+                {
+                  "type": "row",
+                  "key": "checkboxDisplaceLogBoundary"
                 }
               ],
               "rowKeys": [
@@ -1664,7 +1669,8 @@
                 "checkboxDisplaceLogZupt",
                 "checkboxDisplaceLogStationary",
                 "checkboxDisplaceLogBias",
-                "checkboxDisplaceLogTargetVsRendered"
+                "checkboxDisplaceLogTargetVsRendered",
+                "checkboxDisplaceLogBoundary"
               ],
               "subgroups": []
             }
@@ -1833,6 +1839,10 @@
               {
                 "type": "row",
                 "key": "checkboxDisplaceLogTargetVsRendered"
+              },
+              {
+                "type": "row",
+                "key": "checkboxDisplaceLogBoundary"
               }
             ],
             "rowKeys": [
@@ -1842,7 +1852,8 @@
               "checkboxDisplaceLogZupt",
               "checkboxDisplaceLogStationary",
               "checkboxDisplaceLogBias",
-              "checkboxDisplaceLogTargetVsRendered"
+              "checkboxDisplaceLogTargetVsRendered",
+              "checkboxDisplaceLogBoundary"
             ],
             "subgroups": []
           }
