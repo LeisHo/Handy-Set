@@ -3066,6 +3066,24 @@
         return matches[0].nextElementSibling;
     }
 
+    // Shared numeric-readout formatter -- added 2026-10-02, direct
+    // request: "for all sliders, show and use only max 4 decimal
+    // places... dont show all decimal places if theyre just 0s." Caps
+    // precision at 4 decimals and relies on Number's own string
+    // conversion to drop trailing zeros/unnecessary decimal points
+    // (e.g. (1.5000).toString() === '1.5', (2.0000).toString() === '2')
+    // -- no manual regex trimming needed. Exposed on `window` so a
+    // project's own main.js can apply the IDENTICAL rounding/formatting
+    // wherever it re-paints a slider's value readout after this engine's
+    // own 'input' listener already ran (see main.js's wireSlider() for
+    // why that 2nd write is necessary: it determines the FINAL displayed
+    // text, since it's attached after this file's own listener).
+    function formatDevNumericValue(raw) {
+        const n = parseFloat(raw);
+        if (Number.isNaN(n)) return raw;
+        return String(Number(n.toFixed(4)));
+    }
+    window.formatDevNumericValue = formatDevNumericValue;
     // {id, label, min, max, step, value}
     function buildSliderRow(ctrl) {
         const row = document.createElement('div');
@@ -3118,9 +3136,9 @@
         // it is jittery ... allow me to click and type."
         value.className = 'dev-value dev-value-editable';
         value.id = ctrl.id.replace(/^slider/, 'value');
-        value.textContent = ctrl.value;
+        value.textContent = formatDevNumericValue(ctrl.value);
         row.appendChild(value);
-        input.addEventListener('input', () => { value.textContent = input.value; });
+        input.addEventListener('input', () => { value.textContent = formatDevNumericValue(input.value); });
         return row;
     }
     // {id, label, value, note?} — note is an optional small descriptive
@@ -4953,7 +4971,7 @@
                 if (curVal < newMin) slider.value = slider.min;
                 if (curVal > newMax) slider.value = slider.max;
                 input.remove();
-                boundEl.textContent = val;
+                boundEl.textContent = formatDevNumericValue(val);
                 slider.dispatchEvent(new Event('input', { bubbles: true }));
             }
             function cancel() {

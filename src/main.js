@@ -6269,15 +6269,27 @@ function addRow(content, ctrl) {
   HANDYSET_CONTROLS.push(ctrl)
   return row
 }
+// Rounds to at most 4 decimal places, stripping trailing zeros (reuses
+// devPanel.js's own window.formatDevNumericValue -- same formatter the
+// engine's own slider readout uses, so the displayed text and the
+// actual value fed into cfg always agree). Added 2026-10-02, direct
+// request: "for all sliders, show and use only max 4 decimal places...
+// dont show all decimal places if theyre just 0s." Falls back to a
+// plain parseFloat if the engine global isn't loaded yet for any
+// reason, so a slider never silently stops working.
+function roundSliderValue(raw) {
+  if (window.formatDevNumericValue) return Number(window.formatDevNumericValue(raw))
+  return parseFloat(raw)
+}
 function wireSlider(id, onInput) {
   const el = document.getElementById(id)
   if (!el) return
   el.addEventListener('input', (e) => {
-    const v = parseFloat(e.target.value)
+    const v = roundSliderValue(e.target.value)
     onInput(v)
     requestRender()
     const vEl = document.getElementById(id.replace(/^slider/, 'value'))
-    if (vEl) vEl.textContent = v
+    if (vEl) vEl.textContent = window.formatDevNumericValue ? window.formatDevNumericValue(v) : v
   })
 }
 function wireDeviceSlider(id, cfgKey) {
@@ -6285,14 +6297,14 @@ function wireDeviceSlider(id, cfgKey) {
   const el = document.getElementById(id)
   if (!el) return
   el.addEventListener('input', (e) => {
-    const v = parseFloat(e.target.value)
+    const v = roundSliderValue(e.target.value)
     const activeTab = getActiveDevPanelTab()
     if (activeTab?.id === 'mobileTab') cfg[cfgKey + 'Mobile'] = v
     else if (activeTab?.id === 'landscapeTab') cfg[cfgKey + 'Landscape'] = v
     else cfg[cfgKey] = v
     requestRender()
     const vEl = document.getElementById(id.replace(/^slider/, 'value'))
-    if (vEl) vEl.textContent = v
+    if (vEl) vEl.textContent = window.formatDevNumericValue ? window.formatDevNumericValue(v) : v
   })
 }
 // Bridges a "Show in Mobile/Landscape" slider's live Mobile/Landscape
@@ -6356,7 +6368,7 @@ function wireDeviceSliderMirror(desktopId, cfgKey) {
     const fullCfgKey = cfgKey + device
     document.addEventListener('input', (e) => {
       if (!e.target || e.target.id !== id) return
-      const v = parseFloat(e.target.value)
+      const v = roundSliderValue(e.target.value)
       if (Number.isNaN(v)) return
       cfg[fullCfgKey] = v
       requestRender()
@@ -6825,7 +6837,7 @@ function renderPoseGroup(content) {
     addRow(subOffset, { id: 'slider' + k, label, type: 'slider', min: mn, max: mx, step: 0.1, value: cfg[k] })
     wireSlider('slider' + k, (v) => { cfg[k] = v; applyPoseValuesToHand(cfg) })
   })
-  addRow(subOffset, { id: 'sliderPoseScale', label: 'Pose Scale (x)', type: 'slider', min: 0.1, max: 3, step: 0.05, value: cfg.poseScale })
+  addRow(subOffset, { id: 'sliderPoseScale', label: 'Pose Scale (x)', type: 'slider', min: 0.1, max: 3, step: 'any', value: cfg.poseScale })
   wireSlider('sliderPoseScale', (v) => { cfg.poseScale = v; applyPoseValuesToHand(cfg) })
 
   renderPresetPicker(content, 'Saved Poses', SAVED_POSES, DEFAULT_POSE_NAME, applyPosePreset, capturePoseFromCfg, { exportable: true, importable: true, defaultFieldKey: 'defaultPose', storageKey: 'poses' })
@@ -7798,9 +7810,9 @@ function renderPhoneModelGroup(content) {
   wireCheckbox('checkboxPhoneDisplaceInvertZ', (v) => { cfg.phoneDisplaceInvertZ = v })
   addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplaceDamping', label: 'Displace Damping (1=Instant)', type: 'slider', min: 0.05, max: 1, step: 0.01, value: cfg.phoneDisplaceDamping })
   wireSlider('sliderPhoneDisplaceDamping', (v) => { cfg.phoneDisplaceDamping = v })
-  displaceNonTiltRows.push(addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplaceVelDecayRate', label: 'Displace Velocity Decay Rate (1/s)', type: 'slider', min: 0.5, max: 10, step: 0.1, value: cfg.phoneDisplaceVelDecayRate }))
+  displaceNonTiltRows.push(addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplaceVelDecayRate', label: 'Displace Velocity Decay Rate (1/s)', type: 'slider', min: 0, max: 10, step: 0.1, value: cfg.phoneDisplaceVelDecayRate }))
   wireSlider('sliderPhoneDisplaceVelDecayRate', (v) => { cfg.phoneDisplaceVelDecayRate = v })
-  displaceNonTiltRows.push(addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplacePosDecayRate', label: 'Displace Position Decay Rate (1/s)', type: 'slider', min: 0.02, max: 5, step: 0.01, value: cfg.phoneDisplacePosDecayRate }))
+  displaceNonTiltRows.push(addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplacePosDecayRate', label: 'Displace Position Decay Rate (1/s)', type: 'slider', min: 0, max: 5, step: 0.01, value: cfg.phoneDisplacePosDecayRate }))
   wireSlider('sliderPhoneDisplacePosDecayRate', (v) => { cfg.phoneDisplacePosDecayRate = v })
   displaceNonTiltRows.push(addRow(subResponsiveDisplace, { id: 'checkboxPhoneDisplaceStationaryGateEnabled', label: 'Stationary Gate (Suppress Drift When Still)', type: 'checkbox' }))
   document.getElementById('checkboxPhoneDisplaceStationaryGateEnabled').checked = cfg.phoneDisplaceStationaryGateEnabled
@@ -8523,7 +8535,7 @@ function renderHandysetDevGroups() {
   wireSlider('sliderRowSpacing', (v) => { cfg.rowSpacing = v; relayoutField() })
   addRow(fieldContent, { id: 'sliderColumnSpacing', label: 'Column Spacing (World Units)', type: 'slider', min: 2, max: 40, step: 0.5, value: cfg.columnSpacing })
   wireSlider('sliderColumnSpacing', (v) => { cfg.columnSpacing = v; relayoutField() })
-  addRow(fieldContent, { id: 'sliderHandScale', label: 'Hand Scale (x)', type: 'slider', min: 0.5, max: 5, step: 0.05, value: cfg.handScale })
+  addRow(fieldContent, { id: 'sliderHandScale', label: 'Hand Scale (x)', type: 'slider', min: 0.5, max: 5, step: 'any', value: cfg.handScale })
   wireSlider('sliderHandScale', (v) => { cfg.handScale = v; relayoutField(); applyPoseValuesToHand(cfg) })
   addRow(fieldContent, { id: 'sliderAlternateRowOffset', label: 'Alternate Row Offset (World Units)', type: 'slider', min: -20, max: 20, step: 0.5, value: cfg.alternateRowOffset })
   wireSlider('sliderAlternateRowOffset', (v) => { cfg.alternateRowOffset = v; relayoutField() })
@@ -8559,7 +8571,7 @@ function renderHandysetDevGroups() {
   wireSlider('sliderGroundHeight', (v) => { cfg.groundHeight = v; updateGroundPlane() })
   addRow(groundContent, { id: 'colorGroundColor', label: 'Ground Color', type: 'color', value: cfg.groundColor })
   wireColor('colorGroundColor', (v) => { cfg.groundColor = v; updateGroundPlane() })
-  addRow(groundContent, { id: 'sliderGroundScale', label: 'Ground Scale (Horizontal, World Units)', type: 'slider', min: 10, max: 2000, step: 10, value: cfg.groundScale })
+  addRow(groundContent, { id: 'sliderGroundScale', label: 'Ground Scale (Horizontal, World Units)', type: 'slider', min: 10, max: 2000, step: 'any', value: cfg.groundScale })
   wireSlider('sliderGroundScale', (v) => { cfg.groundScale = v; updateGroundPlane() })
 
   const gizmoContent = addGroup('Finger Gizmos')
