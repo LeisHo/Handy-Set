@@ -353,6 +353,10 @@ const cfg = {
   // computePhoneDisplaceAxisUnits() -- per-axis "is this axis currently
   // pinned at its displacement boundary" flag.
   displaceLogBoundary: true,
+  // Added 2026-10-02 -- gates the A/B diagnostic comparison block (see
+  // updateDisplaceAbComparison()'s own comment). Default ON, matching
+  // this diagnostic family's convention of defaulting visible.
+  displaceLogAbCompare: true,
   deviceInfoEnabled: false,
   // Phone Model -- direct request 2026-09-27: a loadable smartphone GLB,
   // positioned/scaled/rotated independently of the hand, with its own
@@ -2735,7 +2739,16 @@ const PHONE_DISPLACE_DEADZONE = 0.02 // same role as PHONE_RESPONSIVE_DEADZONE, 
 // comment). Set once per axis per frame, read by the Displace Log's new
 // "Boundary/Clamp State" field and window.__debug.phoneDisplaceBoundary.
 let phoneDisplaceBoundaryX = false, phoneDisplaceBoundaryY = false, phoneDisplaceBoundaryZ = false
-function computePhoneDisplaceAxisUnits(rawMeters, axisEnabled, axisScale, axisInverted, axis) {
+// setBoundary -- added 2026-10-02, optional 6th parameter, for the A/B
+// diagnostic shadow pipelines (updateDisplaceShadowTarget()) to redirect
+// the "at boundary" side effect into their OWN per-axis state instead of
+// the real pipeline's phoneDisplaceBoundaryX/Y/Z. Defaults to EXACTLY
+// the original inline assignment below when omitted -- every PRE-
+// EXISTING call site (computePhoneResponsiveDisplacement(), unchanged)
+// passes nothing here and behaves byte-identically to before this
+// parameter was added.
+function computePhoneDisplaceAxisUnits(rawMeters, axisEnabled, axisScale, axisInverted, axis, setBoundary) {
+  if (!setBoundary) setBoundary = (v) => { if (axis === 'X') phoneDisplaceBoundaryX = v; else if (axis === 'Y') phoneDisplaceBoundaryY = v; else phoneDisplaceBoundaryZ = v }
   if (!cfg.responsiveDisplaceGlobalEnabled) return 0
   if (!cfg.phoneResponsiveDisplaceEnabled) return 0
   if (!axisEnabled) return 0
@@ -2755,7 +2768,7 @@ function computePhoneDisplaceAxisUnits(rawMeters, axisEnabled, axisScale, axisIn
   // Distance. tRaw itself is now allowed to exceed 1 -- the real
   // boundary clamp moves to the FINAL magnitude, below.
   const tRaw = Math.abs(rawMeters) / xReference
-  if (tRaw < PHONE_DISPLACE_DEADZONE) { if (axis === 'X') phoneDisplaceBoundaryX = false; else if (axis === 'Y') phoneDisplaceBoundaryY = false; else phoneDisplaceBoundaryZ = false; return 0 }
+  if (tRaw < PHONE_DISPLACE_DEADZONE) { setBoundary(false); return 0 }
   const slot = phoneDisplaceAxisParsed[axis]
   // The curve-editor widget's own domain is [0,1] (Reference Distance IS
   // "curve X:1.0", per this control's own label) -- clamp ONLY for this
@@ -2800,9 +2813,7 @@ function computePhoneDisplaceAxisUnits(rawMeters, axisEnabled, axisScale, axisIn
   // mapping). Logged by the Displace Log so this is directly observable
   // rather than looking like a silent, unexplained freeze.
   const atBoundary = max > 0 && idealMagnitude >= max
-  if (axis === 'X') phoneDisplaceBoundaryX = atBoundary
-  else if (axis === 'Y') phoneDisplaceBoundaryY = atBoundary
-  else phoneDisplaceBoundaryZ = atBoundary
+  setBoundary(atBoundary)
   return magnitude * Math.sign(rawMeters) * axisScale * (axisInverted ? -1 : 1)
 }
 // TILT mode -- added 2026-10-01, direct report: "I move the phone
@@ -3426,6 +3437,161 @@ function applyPhoneDisplaceSample(ax, ay, az, dt) {
   phoneDisplacePosY = phoneDisplacePosY * posDecay + phoneDisplaceVelY * dt
   phoneDisplacePosZ = phoneDisplacePosZ * posDecay + phoneDisplaceVelZ * dt
 }
+
+// =======================================================================
+// A/B diagnostic pipelines -- added 2026-10-02, direct request: compare
+// the EXISTING (manual gravity-subtraction) and Native (raw
+// e.acceleration) acceleration sources against the SAME physical
+// movement, since the 2 can't be tested sequentially with a reproducible
+// real-world motion. These are PURE DIAGNOSTICS -- neither one ever
+// drives phoneModelWrapper.position. The REAL, mode-selected pipeline
+// above (phoneDisplaceVelX/Y/Z, phoneDisplacePosX/Y/Z,
+// applyPhoneDisplaceSample(), integratePhoneDisplacement()) is completely
+// UNCHANGED and remains the only thing that actually renders -- these 2
+// shadow states are a SEPARATE, parallel bookkeeping exercise fed from
+// the exact same devicemotion sample (see updateDisplaceAbComparison(),
+// called from handleDeviceMotion() alongside the real pipeline, never
+// instead of it, and never chained from one shadow into the other).
+//
+// Each state bundle owns its OWN bias/velocity/position/timestamp/ZUPT
+// state -- direct instruction: "split those states so each pipeline has
+// its own." Deliberately duplicates (rather than reuses) the bias high-
+// pass + raw deadzone/clamp filter + Y/Z swap + Stationary Gate/ZUPT +
+// leaky integrator math that applyPhoneDisplaceSample()/
+// integratePhoneDisplacement() already implement for the REAL pipeline
+// -- NOT via a shared, parameterized stepping function -- specifically
+// so the real, already-shipped, already-verified pipeline's own code
+// path is not touched or restructured at all by adding this feature (the
+// user's own "do not redesign the displacement system" / "do not change
+// the behavior of either algorithm" instructions). Every constant,
+// threshold, and cfg field read here is the EXACT SAME one the real
+// pipeline reads (PHONE_DISPLACE_BIAS_TRACK_RATE, filterPhoneDisplaceRawComponent(),
+// cfg.phoneDisplaceStationaryGateDegPerSec, cfg.phoneDisplaceZuptAccelThresholdMps2,
+// cfg.phoneDisplaceZuptDwellMs, cfg.phoneDisplaceVelDecayRate/PosDecayRate,
+// cfg.phoneDisplaceDamping, and the same per-axis Enabled/Scale/Invert/
+// Range/Curve/Reference controls via computePhoneDisplaceAxisUnits()) --
+// so the comparison reflects a genuine difference in acceleration SOURCE
+// only, not a drifted-apart copy of the math. Device-local frame only
+// (no 'worldPosition' rotation, no 'freeze'/'tilt' branching) -- the
+// comparison is specifically about the 2 acceleration SOURCES under
+// otherwise-identical processing, matching 'acceleration' mode's own
+// plain pipeline shape, not every mode variant.
+function makeDisplaceShadowState() {
+  return {
+    biasX: 0, biasY: 0, biasZ: 0,
+    velX: 0, velY: 0, velZ: 0,
+    posX: 0, posY: 0, posZ: 0,
+    lastTimestamp: null,
+    zuptDwellStart: null, zuptActive: false, isStationary: false,
+    boundaryX: false, boundaryY: false, boundaryZ: false,
+    targetX: 0, targetY: 0, targetZ: 0,
+    // "Rendered" here is diagnostic only (the SAME damping lerp the real
+    // pipeline applies to its own target before ever touching
+    // phoneModelWrapper.position) -- this state vector is never read by
+    // anything that actually renders.
+    currentX: 0, currentY: 0, currentZ: 0
+  }
+}
+let displaceShadowExisting = makeDisplaceShadowState()
+let displaceShadowNative = makeDisplaceShadowState()
+function stepDisplaceShadowPipeline(state, e, linear) {
+  const now = performance.now()
+  if (state.lastTimestamp === null) { state.lastTimestamp = now; return }
+  const dt = Math.min((now - state.lastTimestamp) / 1000, 0.05)
+  state.lastTimestamp = now
+  let ax = 0, ay = 0, az = 0
+  if (linear) {
+    // Bias high-pass -- identical formula/constant to the real pipeline.
+    state.biasX += (linear.x - state.biasX) * PHONE_DISPLACE_BIAS_TRACK_RATE * dt
+    state.biasY += (linear.y - state.biasY) * PHONE_DISPLACE_BIAS_TRACK_RATE * dt
+    state.biasZ += (linear.z - state.biasZ) * PHONE_DISPLACE_BIAS_TRACK_RATE * dt
+    // Y/Z swap -- same raw-axis convention as the real pipeline.
+    ax = filterPhoneDisplaceRawComponent(linear.x - state.biasX)
+    ay = filterPhoneDisplaceRawComponent(linear.z - state.biasZ)
+    az = filterPhoneDisplaceRawComponent(linear.y - state.biasY)
+    // Stationary Gate / ZUPT -- identical thresholds/dwell logic to the
+    // real pipeline's own, operating on this shadow's OWN velocity only.
+    if (cfg.phoneDisplaceStationaryGateEnabled && e.rotationRate) {
+      const gyroMag = Math.hypot(e.rotationRate.alpha || 0, e.rotationRate.beta || 0, e.rotationRate.gamma || 0)
+      const accelMag = Math.hypot(ax, ay, az)
+      state.isStationary = gyroMag < cfg.phoneDisplaceStationaryGateDegPerSec && accelMag < cfg.phoneDisplaceZuptAccelThresholdMps2
+      if (state.isStationary) {
+        ax = 0; ay = 0; az = 0
+        if (state.zuptDwellStart === null) state.zuptDwellStart = now
+        state.zuptActive = (now - state.zuptDwellStart) >= cfg.phoneDisplaceZuptDwellMs
+        if (state.zuptActive) { state.velX = 0; state.velY = 0; state.velZ = 0 }
+      } else {
+        state.zuptDwellStart = null
+        state.zuptActive = false
+      }
+    } else {
+      state.zuptDwellStart = null
+      state.zuptActive = false
+      state.isStationary = false
+    }
+  }
+  // Leaky integrator -- identical formula/decay-rate controls to
+  // applyPhoneDisplaceSample(), operating on this shadow's OWN vel/pos.
+  const velDecay = Math.exp(-(cfg.phoneDisplaceVelDecayRate ?? PHONE_DISPLACE_VELOCITY_DECAY_RATE_DEFAULT) * dt)
+  const posDecay = Math.exp(-(cfg.phoneDisplacePosDecayRate ?? PHONE_DISPLACE_POSITION_DECAY_RATE_DEFAULT) * dt)
+  state.velX = state.velX * velDecay + ax * dt
+  state.velY = state.velY * velDecay + ay * dt
+  state.velZ = state.velZ * velDecay + az * dt
+  state.posX = state.posX * posDecay + state.velX * dt
+  state.posY = state.posY * posDecay + state.velY * dt
+  state.posZ = state.posZ * posDecay + state.velZ * dt
+}
+// Maps a shadow state's own position through the SAME curve/range/
+// reference/boundary-clamp system the real pipeline uses
+// (computePhoneDisplaceAxisUnits() itself, unmodified math -- only its
+// boundary-flag SIDE EFFECT is redirected here, via the optional
+// setBoundary callback, so this never overwrites the real pipeline's own
+// phoneDisplaceBoundaryX/Y/Z), then applies the same damping lerp the
+// real pipeline uses for its own rendered output.
+function updateDisplaceShadowTarget(state) {
+  state.targetX = computePhoneDisplaceAxisUnits(state.posX, cfg.phoneDisplaceAxisXEnabled, cfg.phoneDisplaceScaleX, cfg.phoneDisplaceInvertX, 'X', (v) => { state.boundaryX = v })
+  state.targetY = computePhoneDisplaceAxisUnits(state.posY, cfg.phoneDisplaceAxisYEnabled, cfg.phoneDisplaceScaleY, cfg.phoneDisplaceInvertY, 'Y', (v) => { state.boundaryY = v })
+  state.targetZ = computePhoneDisplaceAxisUnits(state.posZ, cfg.phoneDisplaceAxisZEnabled, cfg.phoneDisplaceScaleZ, cfg.phoneDisplaceInvertZ, 'Z', (v) => { state.boundaryZ = v })
+  state.currentX += (state.targetX - state.currentX) * cfg.phoneDisplaceDamping
+  state.currentY += (state.targetY - state.currentY) * cfg.phoneDisplaceDamping
+  state.currentZ += (state.targetZ - state.currentZ) * cfg.phoneDisplaceDamping
+}
+// Entry point -- called once per real devicemotion tick from
+// handleDeviceMotion(), alongside (never instead of, never chained into)
+// the real pipeline's own integratePhoneDisplacement(e) call on the same
+// line. Both shadow pipelines read the SAME `e` (and therefore the same
+// accelerationIncludingGravity/acceleration/rotationRate W3C fields,
+// the same physical sample) that the real pipeline sees this tick --
+// confirmed by construction, since this is the same `e` parameter, not a
+// re-fetched or re-derived one.
+function updateDisplaceAbComparison(e) {
+  if (!cfg.responsiveDisplaceGlobalEnabled || !cfg.phoneResponsiveDisplaceEnabled) {
+    displaceShadowExisting.lastTimestamp = null
+    displaceShadowNative.lastTimestamp = null
+    return
+  }
+  stepDisplaceShadowPipeline(displaceShadowExisting, e, computePhoneLinearAccelDeviceLocal(e))
+  stepDisplaceShadowPipeline(displaceShadowNative, e, computePhoneLinearAccelNative(e))
+  updateDisplaceShadowTarget(displaceShadowExisting)
+  updateDisplaceShadowTarget(displaceShadowNative)
+}
+// Reset -- called from resetPhoneDisplaceBaseline() so both shadow
+// pipelines return to equivalent starting state alongside the real one,
+// per direct instruction. Matches the real pipeline's own established
+// reset convention exactly (see resetPhoneDisplaceBaseline()'s own
+// 2026-10-01 fix comment): velocity/position zero on reset; BIAS is
+// deliberately NOT reset (zeroing a still-valid bias estimate was
+// confirmed, via a real device test, to CAUSE post-reset drift rather
+// than prevent it) -- same reasoning applies identically to each
+// shadow's own independent bias state.
+function resetDisplaceShadowPipelines() {
+  displaceShadowExisting.velX = displaceShadowExisting.velY = displaceShadowExisting.velZ = 0
+  displaceShadowExisting.posX = displaceShadowExisting.posY = displaceShadowExisting.posZ = 0
+  displaceShadowExisting.currentX = displaceShadowExisting.currentY = displaceShadowExisting.currentZ = 0
+  displaceShadowNative.velX = displaceShadowNative.velY = displaceShadowNative.velZ = 0
+  displaceShadowNative.posX = displaceShadowNative.posY = displaceShadowNative.posZ = 0
+  displaceShadowNative.currentX = displaceShadowNative.currentY = displaceShadowNative.currentZ = 0
+}
 // MOBILE -- real accelerometer, event-driven (per devicemotion tick, its
 // own accurate dt from real sample timestamps). CORRECTED 2026-09-30:
 // cfg.trackingEnabled removed from the gate -- direct answer to "should
@@ -3915,6 +4081,9 @@ function resetPhoneRotationBaseline() {
 function resetPhoneDisplaceBaseline() {
   phoneDisplaceVelX = phoneDisplaceVelY = phoneDisplaceVelZ = 0
   phoneDisplacePosX = phoneDisplacePosY = phoneDisplacePosZ = 0
+  // Added 2026-10-02, direct instruction: "both pipeline states can be
+  // reset together from the existing displacement reset mechanism."
+  resetDisplaceShadowPipelines()
   // CORRECTED 2026-10-01 -- the 2026-09-30 reasoning directly below (kept
   // for history) was wrong. Direct report, real device test: "On reset or
   // startup, I see it immediately start to drift." Root cause: zeroing the
@@ -5464,6 +5633,11 @@ window.__debug = {
   get phoneDisplaceIsStationary() { return phoneDisplaceIsStationary },
   get phoneDisplaceLastProcessedAccel() { return { x: phoneDisplaceLastAx, y: phoneDisplaceLastAy, z: phoneDisplaceLastAz } },
   get phoneDisplaceBoundary() { return { x: phoneDisplaceBoundaryX, y: phoneDisplaceBoundaryY, z: phoneDisplaceBoundaryZ } },
+  // A/B diagnostic pipelines -- added 2026-10-02, see
+  // updateDisplaceAbComparison()'s own comment. Plain copies of the
+  // shadow state bundles, never the REAL pipeline's state.
+  get displaceShadowExisting() { return { ...displaceShadowExisting } },
+  get displaceShadowNative() { return { ...displaceShadowNative } },
   get phoneDisplaceVel() { return { x: phoneDisplaceVelX, y: phoneDisplaceVelY, z: phoneDisplaceVelZ } },
   get phoneDisplacePos() { return { x: phoneDisplacePosX, y: phoneDisplacePosY, z: phoneDisplacePosZ } },
   get phoneDisplaceBias() { return { x: phoneDisplaceBiasX, y: phoneDisplaceBiasY, z: phoneDisplaceBiasZ } },
@@ -5695,7 +5869,7 @@ function renderOneFrame() {
 // readout, opt-in streaming, silent on Desktop (no real sensors to show).
 // =======================================================================
 let latestMotion = null
-function handleDeviceMotion(e) { latestMotion = e; integratePhoneGyroRotation(e); integratePhoneDisplacement(e) }
+function handleDeviceMotion(e) { latestMotion = e; integratePhoneGyroRotation(e); integratePhoneDisplacement(e); updateDisplaceAbComparison(e) }
 let sensorLogEl = null
 let sensorTimer = null
 // Plain array alongside the DOM (same convention as devPanel.js's own
@@ -5905,6 +6079,15 @@ function pushDisplaceLog(text) {
   while (displaceLogEl.children.length > 200) displaceLogEl.removeChild(displaceLogEl.firstChild)
   displaceLogEl.scrollTop = displaceLogEl.scrollHeight
 }
+// Concise, single-pipeline formatter for the A/B comparison log block --
+// added 2026-10-02. Factored out since the exact same 5-field shape
+// (Pos/Vel/Target/Rendered/Clamp) is logged twice per tick, once per
+// shadow pipeline, and must stay IDENTICAL between the two for the
+// comparison to be meaningful.
+function fmtDisplaceShadowLog(label, state) {
+  const clamp = (state.boundaryX ? 'C' : 'f') + (state.boundaryY ? 'C' : 'f') + (state.boundaryZ ? 'C' : 'f')
+  return `${label} P x:${fmt(state.posX)} y:${fmt(state.posY)} z:${fmt(state.posZ)}  V x:${fmt(state.velX)} y:${fmt(state.velY)} z:${fmt(state.velZ)}  Tgt x:${fmt(state.targetX)} y:${fmt(state.targetY)} z:${fmt(state.targetZ)}  Rnd x:${fmt(state.currentX)} y:${fmt(state.currentY)} z:${fmt(state.currentZ)}  Clmp(xyz):${clamp}`
+}
 function restartDisplaceLogTimer() {
   clearInterval(displaceLogTimer)
   displaceLogTimer = null
@@ -5943,6 +6126,18 @@ function restartDisplaceLogTimer() {
     // means (true while that axis's idealMagnitude has run past its
     // ceiling and the final clamp is actively pinning the output).
     if (cfg.displaceLogBoundary) parts.push(`Boundary x:${phoneDisplaceBoundaryX ? 'CLAMPED' : 'free'} y:${phoneDisplaceBoundaryY ? 'CLAMPED' : 'free'} z:${phoneDisplaceBoundaryZ ? 'CLAMPED' : 'free'}`)
+    // A/B diagnostic pipelines -- added 2026-10-02, see
+    // updateDisplaceAbComparison()'s own comment for what these 2 shadow
+    // states are and are not (never drives the rendered phone). "Native
+    // input" is the ONE shared raw sample both shadow pipelines this tick
+    // actually received -- logged once since it's the same reading either
+    // way, not duplicated per pipeline.
+    if (cfg.displaceLogAbCompare) {
+      const nat = (latestMotion && latestMotion.acceleration) || {}
+      parts.push(`AB NatIn x:${fmt(nat.x)} y:${fmt(nat.y)} z:${fmt(nat.z)}`)
+      parts.push(fmtDisplaceShadowLog('AB-Existing', displaceShadowExisting))
+      parts.push(fmtDisplaceShadowLog('AB-Native', displaceShadowNative))
+    }
     if (parts.length) pushDisplaceLog(parts.join('  |  '))
   }, cfg.sensorIntervalMs)
 }
@@ -8237,6 +8432,15 @@ function renderDebugExtras() {
   addRow(displaceLogSub, { id: 'checkboxDisplaceLogBoundary', label: 'Log Boundary/Clamp State (XYZ)', type: 'checkbox' })
   document.getElementById('checkboxDisplaceLogBoundary').checked = cfg.displaceLogBoundary
   wireCheckbox('checkboxDisplaceLogBoundary', (v) => { cfg.displaceLogBoundary = v })
+  // A/B diagnostic pipelines -- added 2026-10-02, see
+  // updateDisplaceAbComparison()'s own comment. One checkbox gates the
+  // WHOLE comparison block (both shadow pipelines' Pos/Vel/Target/
+  // Rendered/Clamp), rather than 1 checkbox per sub-field, per direct
+  // instruction: "do not add a new UI system unless necessary... use
+  // concise field names so the log remains readable."
+  addRow(displaceLogSub, { id: 'checkboxDisplaceLogAbCompare', label: 'Log A/B Compare: Existing vs. Native (Diagnostic Only)', type: 'checkbox' })
+  document.getElementById('checkboxDisplaceLogAbCompare').checked = cfg.displaceLogAbCompare
+  wireCheckbox('checkboxDisplaceLogAbCompare', (v) => { cfg.displaceLogAbCompare = v })
   const displaceLogBtnRow = document.createElement('div')
   displaceLogBtnRow.className = 'dev-buttons'
   const displaceLogCopyBtn = document.createElement('button')
