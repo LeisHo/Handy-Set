@@ -1,3 +1,107 @@
+2026-10-02  -  A/B diagnostic pipelines: Existing vs. Native Displace
+
+Direct request (a detailed, pre-drafted spec): compare the Existing
+(manual gravity-subtraction) and Native (raw e.acceleration) Displace
+acceleration sources against the SAME physical phone movement, since
+the 2 cannot be tested sequentially with a reproducible real-world
+motion. Explicit requirement: both pipelines must process the identical
+incoming sensor sample simultaneously, with completely separate
+internal state, and neither may feed its processed output into the
+other. Explicit non-goal: this is a diagnostic comparison only -- the
+currently selected Displace Mode continues to drive the actual rendered
+phone; nothing here competes with or replaces that.
+
+IMPLEMENTATION: 2 new shadow pipeline state bundles
+(displaceShadowExisting, displaceShadowNative), each a plain object
+owning its own bias/velocity/position/timestamp/ZUPT-dwell state.
+updateDisplaceAbComparison(e), called from handleDeviceMotion() right
+alongside (never instead of, never chained after) the real pipeline's
+own integratePhoneDisplacement(e) call, feeds the SAME `e` (and
+therefore the same accelerationIncludingGravity/acceleration/
+rotationRate W3C fields -- the same physical sample) to both:
+stepDisplaceShadowPipeline() runs once per shadow state, with
+computePhoneLinearAccelDeviceLocal(e) feeding the Existing state and
+computePhoneLinearAccelNative(e) feeding the Native state.
+
+Deliberately DUPLICATES (does not refactor into a shared function call
+from) the real pipeline's own bias high-pass, raw deadzone/clamp
+filter, Y/Z axis swap, Stationary Gate/ZUPT dwell logic, and leaky
+accel->velocity->position integrator -- same PHONE_DISPLACE_BIAS_TRACK_RATE
+constant, same filterPhoneDisplaceRawComponent() filter, same
+cfg.phoneDisplaceStationaryGateDegPerSec/cfg.phoneDisplaceZuptAccelThresholdMps2/
+cfg.phoneDisplaceZuptDwellMs thresholds, same cfg.phoneDisplaceVelDecayRate/
+cfg.phoneDisplacePosDecayRate decay rates throughout, so the comparison
+reflects a genuine difference in acceleration SOURCE only, never a
+drifted-apart copy of the math. This was a deliberate choice over a
+single parameterized stepping function used by all 3 call sites (real +
+2 shadow): duplication keeps the real, already-shipped, already-
+verified pipeline's own code path completely untouched, matching the
+explicit "do not redesign the displacement system" instruction.
+
+computePhoneDisplaceAxisUnits() (the curve/range/reference/boundary-
+clamp mapping added in the previous fix) gained ONE new, OPTIONAL 6th
+parameter: a boundary-flag write callback, defaulting to exactly the
+original inline phoneDisplaceBoundaryX/Y/Z assignment when omitted. All
+3 pre-existing call sites (computePhoneResponsiveDisplacement(), the
+real pipeline) pass nothing new and are byte-identical to before this
+change. The 2 shadow pipelines pass their own callback
+((v) => { state.boundaryX = v }, etc.) so their own boundary state can
+never contaminate the real pipeline's flags -- this is the ONE
+genuinely shared piece of logic reused (not duplicated) between the
+real and shadow pipelines, since it is already a pure function taking
+its subject as an explicit parameter.
+
+"Rendered" for each shadow pipeline is a diagnostic-only damped-lerp
+value (state.currentX/Y/Z, same cfg.phoneDisplaceDamping formula the
+real pipeline applies to _phoneDisplaceCurrentVec) -- computed every
+tick but never written to phoneModelWrapper.position or any other
+Object3D.
+
+RESET: resetPhoneDisplaceBaseline() (the existing Displace Reset
+double-tap gesture) now also calls resetDisplaceShadowPipelines(),
+zeroing both shadow pipelines' velocity/position/rendered state --
+matching the real pipeline's own already-established, hard-won
+convention of deliberately PRESERVING bias across a reset (a 2026-10-01
+fix found that zeroing a still-valid bias estimate CAUSES post-reset
+drift rather than preventing it; the identical reasoning applies
+independently to each shadow pipeline's own bias state).
+
+DIAGNOSTICS: one new Displace Log checkbox, "Log A/B Compare: Existing
+vs. Native (Diagnostic Only)" -- gates the WHOLE comparison block as a
+single unit (not one checkbox per sub-field), per direct instruction to
+avoid a new UI system and keep field names concise. Logs the one shared
+raw native accel sample once (since both pipelines received the
+identical reading), then each shadow pipeline's Pos/Vel/Target/Rendered/
+Clamp state side by side via a new fmtDisplaceShadowLog() helper (kept
+as one shared formatter specifically so the 2 pipelines' log lines stay
+structurally identical -- any formatting drift between them would
+undermine the whole point of a side-by-side comparison). Also added
+window.__debug.displaceShadowExisting/displaceShadowNative (plain
+snapshot copies).
+
+PRESERVED, confirmed unchanged by this feature: native acceleration
+input, the acceleration -> velocity -> position integration, bias
+correction, the Stationary Gate/ZUPT, damping/decay, the range/
+reference/curve mapping, the boundary fix from the previous change, all
+5 Displace modes, and every existing control. The real pipeline's own
+code path (integratePhoneDisplacement(), applyPhoneDisplaceSample(),
+computePhoneResponsiveDisplacement()) has zero behavioral changes --
+only the new, additive 6th parameter on computePhoneDisplaceAxisUnits(),
+which defaults to the prior behavior exactly.
+
+Verified via a standalone script (9/9 checks): confirms
+computePhoneDisplaceAxisUnits()'s new 6th parameter preserves the
+real pipeline's exact prior behavior when omitted; confirms the 2
+shadow pipelines produce genuinely different Pos given different
+(simulated) acceleration sources under identical timing; confirms
+shadow boundary writes never touch the real pipeline's own flags;
+confirms reset zeroes velocity/position/rendered while preserving bias,
+matching the real pipeline's own convention. NOT verified against a
+real device's actual dual-source sensor stream -- per this project's
+own standing instruction, sandbox browser-pane verification is skipped
+for this project entirely.
+
+--------------------------------------------------------------------------------
 2026-10-01  -  Fixed Responsive Displace boundary stuck/hysteresis bug
 
 Direct request (a detailed, pre-drafted spec): the virtual phone

@@ -7,7 +7,32 @@ append-only history.
 
 ## Currently working on
 
-**Nothing in progress right now.** Most recent work: fixed a genuine
+**Nothing in progress right now.** Most recent work: added 2 "shadow"
+A/B diagnostic pipelines (`displaceShadowExisting`/`displaceShadowNative`)
+that run in parallel with the real, mode-selected Displace pipeline,
+fed the exact same devicemotion sample every tick — lets one physical
+phone movement be compared across the Existing (manual gravity-
+subtraction) and Native (`e.acceleration`) acceleration sources at
+once, since the 2 cannot be reproduced identically across 2 separate
+test passes. Deliberately DUPLICATES the real pipeline's own bias/
+filter/Stationary-Gate/ZUPT/integrator math into a new
+`stepDisplaceShadowPipeline()` (rather than refactoring the real,
+already-shipped pipeline to share a stepping function) so the real code
+path is completely untouched. `computePhoneDisplaceAxisUnits()` gained
+one new, optional, backward-compatible parameter (a boundary-flag write
+callback) so the shadow pipelines can reuse its exact curve/range/
+boundary-clamp math without contaminating the real pipeline's own
+boundary flags. Neither shadow pipeline ever drives the rendered phone
+— both are pure diagnostics, logged via one new Displace Log checkbox
+("Log A/B Compare: Existing vs. Native"). Reset wired through the
+existing Displace Reset gesture, preserving each shadow's own bias
+estimate (matching the real pipeline's own already-established
+convention). Verified via a standalone script (9/9 checks) — not
+against a real device's actual dual-source sensor stream. See
+CLAUDE.md's 4 new Gotchas entries and CHANGELOG's matching 2026-10-02
+entry for the full account.
+
+Before that: fixed a genuine
 Responsive Displace boundary bug — `computePhoneDisplaceAxisUnits()`
 clamped the curve's own INPUT (`t`) before the curve ran, so once
 displacement crossed the Reference Distance, the output became a

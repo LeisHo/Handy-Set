@@ -3074,3 +3074,76 @@ wiring, and are still open:
   afterward** — the return value alone (a signed world-units magnitude)
   has already thrown away the sign-independent `idealMagnitude`/
   boundary-state information a diagnostic would need.
+- **2 new "shadow" A/B diagnostic pipelines (`displaceShadowExisting`/
+  `displaceShadowNative`, added 2026-10-02) run in parallel with the
+  real, mode-selected Displace pipeline, fed the EXACT SAME devicemotion
+  sample every tick — direct request to compare the Existing (manual
+  gravity-subtraction) vs. Native (`e.acceleration`) acceleration
+  sources against ONE physical movement, since the 2 cannot be
+  reproduced identically across 2 separate test passes.** Implemented by
+  DUPLICATING (not sharing or refactoring into) the real pipeline's own
+  bias high-pass + raw deadzone/clamp filter + Y/Z swap + Stationary
+  Gate/ZUPT + leaky integrator math inside a new
+  `stepDisplaceShadowPipeline(state, e, linear)` function, called twice
+  per tick from `updateDisplaceAbComparison(e)` — once per shadow state,
+  each with `linear` computed from a DIFFERENT source
+  (`computePhoneLinearAccelDeviceLocal(e)` for Existing,
+  `computePhoneLinearAccelNative(e)` for Native) but the SAME `e` and
+  therefore the same real sensor sample and the same `e.rotationRate`
+  gyro reading. **This is a deliberate duplication, not a DRY violation
+  to "clean up" later** — the real pipeline's own code
+  (`integratePhoneDisplacement()`, `applyPhoneDisplaceSample()`) is
+  completely untouched by this feature, per the explicit "do not
+  redesign the displacement system" instruction; collapsing all 3 call
+  sites (real + 2 shadow) onto one shared stepping function would have
+  required restructuring the real pipeline's own already-shipped,
+  already-verified code path, which was explicitly out of scope.
+  **Neither shadow pipeline EVER writes to `phoneModelWrapper.position`**
+  — both are pure bookkeeping; the currently selected `cfg.phoneDisplaceMode`
+  remains the only thing that drives the rendered phone, unchanged.
+- **`computePhoneDisplaceAxisUnits()` gained ONE new, OPTIONAL 6th
+  parameter (`setBoundary`, a write-callback) specifically so the 2
+  shadow pipelines above could reuse its exact curve/range/reference/
+  boundary-clamp math WITHOUT contaminating the real pipeline's own
+  `phoneDisplaceBoundaryX/Y/Z` module flags.** Defaults to exactly the
+  original inline module-variable assignment when omitted — all 3
+  PRE-EXISTING call sites (inside `computePhoneResponsiveDisplacement()`)
+  pass nothing new and are byte-identical to their pre-2026-10-02
+  behavior. The 2 shadow pipelines each pass their own closure
+  (`(v) => { state.boundaryX = v }`) so their boundary state lives
+  entirely inside their own state object. **This IS the one piece of
+  logic genuinely SHARED (not duplicated) between the real and shadow
+  pipelines** — safe to share here specifically because this function
+  was ALREADY a pure function taking its subject (`rawMeters`) as an
+  explicit parameter rather than reading module state internally, unlike
+  `applyPhoneDisplaceSample()`/`integratePhoneDisplacement()` which read
+  and write bare module-level variables directly and therefore could NOT
+  be safely reused for a 2nd/3rd independent caller without first being
+  refactored (exactly why those were duplicated instead). **If a future
+  diagnostic or shadow system needs to reuse another EXISTING Displace
+  function, check whether it already takes its state as an explicit
+  parameter (safe to reuse directly, extend with an optional callback
+  like this one if it has a side effect) or reads bare module variables
+  (duplicate it instead, following this same pattern, rather than
+  refactoring the real pipeline's own call sites).**
+- **Shadow-pipeline reset (`resetDisplaceShadowPipelines()`, called from
+  `resetPhoneDisplaceBaseline()`) zeroes velocity/position/rendered-state
+  but DELIBERATELY PRESERVES each shadow's own bias estimate — matching
+  the real pipeline's own already-hard-won 2026-10-01 fix (zeroing a
+  still-valid bias estimate on reset was confirmed, via a real device
+  test, to CAUSE post-reset drift rather than prevent it).** If a future
+  change to EITHER shadow pipeline's reset behavior is considered, check
+  this precedent first — don't reintroduce bias-zeroing-on-reset
+  independently for the shadow states just because it "looks more like
+  a clean reset" than leaving bias alone; that reasoning was already
+  tried and reverted once for the real pipeline.
+- **`fmtDisplaceShadowLog(label, state)` is a single shared formatter
+  used for BOTH shadow pipelines' own Displace Log line, on purpose —
+  not 2 separate, independently-maintained format strings.** The whole
+  point of the A/B comparison is that the 2 pipelines' log output is
+  structurally IDENTICAL (same field order, same units, same precision)
+  so a human can visually diff them line-by-line; if a future change
+  needs to add/remove/rename a field in this format, it MUST go through
+  this one shared function, never be applied to only one pipeline's own
+  call site, or the comparison becomes misleading rather than just
+  incomplete.
