@@ -6429,6 +6429,14 @@
               "items": [
                 {
                   "type": "row",
+                  "key": "sliderMobileScreenRecursionLevels"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderMobileScreenRenderResolution"
+                },
+                {
+                  "type": "row",
                   "key": "sliderMobileScreenTextureOffsetX"
                 },
                 {
@@ -6445,6 +6453,8 @@
                 }
               ],
               "rowKeys": [
+                "sliderMobileScreenRecursionLevels",
+                "sliderMobileScreenRenderResolution",
                 "sliderMobileScreenTextureOffsetX",
                 "sliderMobileScreenTextureOffsetY",
                 "textScreenLevelScaleRange",
@@ -6969,6 +6979,14 @@
             "items": [
               {
                 "type": "row",
+                "key": "sliderMobileScreenRecursionLevels"
+              },
+              {
+                "type": "row",
+                "key": "sliderMobileScreenRenderResolution"
+              },
+              {
+                "type": "row",
                 "key": "sliderMobileScreenTextureOffsetX"
               },
               {
@@ -6985,6 +7003,8 @@
               }
             ],
             "rowKeys": [
+              "sliderMobileScreenRecursionLevels",
+              "sliderMobileScreenRenderResolution",
               "sliderMobileScreenTextureOffsetX",
               "sliderMobileScreenTextureOffsetY",
               "textScreenLevelScaleRange",
@@ -9144,6 +9164,14 @@
               "items": [
                 {
                   "type": "row",
+                  "key": "sliderLandscapeScreenRecursionLevels"
+                },
+                {
+                  "type": "row",
+                  "key": "sliderLandscapeScreenRenderResolution"
+                },
+                {
+                  "type": "row",
                   "key": "sliderLandscapeScreenTextureOffsetX"
                 },
                 {
@@ -9160,6 +9188,8 @@
                 }
               ],
               "rowKeys": [
+                "sliderLandscapeScreenRecursionLevels",
+                "sliderLandscapeScreenRenderResolution",
                 "sliderLandscapeScreenTextureOffsetX",
                 "sliderLandscapeScreenTextureOffsetY",
                 "textScreenLevelScaleRange",
@@ -9684,6 +9714,14 @@
             "items": [
               {
                 "type": "row",
+                "key": "sliderLandscapeScreenRecursionLevels"
+              },
+              {
+                "type": "row",
+                "key": "sliderLandscapeScreenRenderResolution"
+              },
+              {
+                "type": "row",
                 "key": "sliderLandscapeScreenTextureOffsetX"
               },
               {
@@ -9700,6 +9738,8 @@
               }
             ],
             "rowKeys": [
+              "sliderLandscapeScreenRecursionLevels",
+              "sliderLandscapeScreenRenderResolution",
               "sliderLandscapeScreenTextureOffsetX",
               "sliderLandscapeScreenTextureOffsetY",
               "textScreenLevelScaleRange",
@@ -11211,7 +11251,7 @@
     "desktop:PHONE MODEL": false,
     "desktop:OFFSET": true,
     "desktop:PHONE ROTATION": true,
-    "desktop:RECURSIVE RENDER": true,
+    "desktop:RECURSIVE RENDER": false,
     "desktop:RESPONSIVE BEHAVIOUR - PHONE": false,
     "desktop:Responsive Rotation": false,
     "desktop:RESPONSIVE DISPLACE": true,
@@ -11265,7 +11305,7 @@
     "mobile:PHONE MODEL": false,
     "mobile:OFFSET": false,
     "mobile:PHONE ROTATION": true,
-    "mobile:RECURSIVE RENDER": true,
+    "mobile:RECURSIVE RENDER": false,
     "mobile:RESPONSIVE BEHAVIOUR - PHONE": false,
     "mobile:Responsive Rotation": true,
     "mobile:RESPONSIVE DISPLACE": false,
@@ -11726,7 +11766,11 @@
     "sliderMobilePhoneDisplaceYReferenceM": null,
     "sliderLandscapePhoneDisplaceYReferenceM": null,
     "sliderMobilePhoneDisplaceZReferenceM": null,
-    "sliderLandscapePhoneDisplaceZReferenceM": null
+    "sliderLandscapePhoneDisplaceZReferenceM": null,
+    "sliderMobileScreenRecursionLevels": null,
+    "sliderLandscapeScreenRecursionLevels": null,
+    "sliderMobileScreenRenderResolution": null,
+    "sliderLandscapeScreenRenderResolution": null
   },
   "devTextOverridesManual": [
     "desktop:New Group",
@@ -11840,7 +11884,9 @@
     "sliderPhoneDisplaceStationaryGateDegPerSec": true,
     "sliderPhoneDisplaceXReferenceM": true,
     "sliderPhoneDisplaceYReferenceM": true,
-    "sliderPhoneDisplaceZReferenceM": true
+    "sliderPhoneDisplaceZReferenceM": true,
+    "sliderScreenRecursionLevels": true,
+    "sliderScreenRenderResolution": true
   },
   "devIndependence": {
     "mobile": {
