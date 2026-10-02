@@ -154,7 +154,7 @@
     "textScreenLevelScaleRange": "{\"min\":0,\"max\":2}",
     "textScreenLevelScaleCurve": "{\"points\":[{\"x\":0,\"y\":0.5018750508626302,\"h1\":{\"x\":0.43500000635782876,\"y\":0.04666646321614587}},{\"x\":1,\"y\":0.3085411071777344,\"h2\":{\"x\":-0.23499994277954106,\"y\":0.1266672770182291}}],\"method\":\"linear\"}",
     "sliderScreenTextureRotation": 180,
-    "sliderScreenTextureOffsetX": -0.065,
+    "sliderScreenTextureOffsetX": -0.011,
     "sliderScreenTextureOffsetY": 0.0109847380188588,
     "sliderScreenTextureScaleX": 1,
     "sliderScreenTextureScaleY": 0.9,
@@ -12031,7 +12031,7 @@
   },
   "devIndependence": {
     "mobile": {
-      "sliderScreenTextureOffsetX": true,
+      "sliderScreenTextureOffsetX": false,
       "sliderScreenTextureOffsetY": true
     },
     "landscape": {}
