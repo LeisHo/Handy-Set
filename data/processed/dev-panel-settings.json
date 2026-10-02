@@ -148,7 +148,7 @@
     "textPhoneDisplaceCurveZ": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"monotone\"}",
     "sliderPhoneDisplaceZReferenceM": 1.15,
     "checkboxScreenRenderEnabled": true,
-    "sliderScreenRecursionLevels": 25,
+    "sliderScreenRecursionLevels": 20,
     "sliderScreenRenderResolution": 200,
     "sliderScreenTextureScale": 1.15,
     "textScreenLevelScaleRange": "{\"min\":0,\"max\":2}",
@@ -239,10 +239,10 @@
     "checkboxDeviceInfoEnabled": true
   },
   "layout": {
-    "left": 32,
-    "top": 352,
+    "left": 33,
+    "top": 340,
     "width": 350,
-    "height": 76
+    "height": 439
   },
   "devPanelStyle": {
     "titleFontSize": 17,
@@ -12042,7 +12042,7 @@
       "checkboxTrackingEnabled": false,
       "sliderTrackingDamping": 0.27,
       "checkboxPalmFacesCursor": false,
-      "sliderScreenTextureOffsetY": -0.035,
+      "sliderScreenTextureOffsetY": -0.04,
       "sliderScreenTextureOffsetX": -0.01,
       "checkboxPhoneDisplaceAxisXEnabled": true,
       "checkboxPhoneDisplaceAxisZEnabled": true,
