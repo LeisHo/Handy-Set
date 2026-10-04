@@ -2720,16 +2720,30 @@ function onIkNodeRegistryChanged() {
 }
 
 // ---------------- solver ----------------
+// The chain runs from the target's bone UP through the finger bones, carpal,
+// wrist (rHand) and forearm to the arm's base (rForearmBend), so when a
+// target is out of the finger's reach the whole hand/arm swings toward it
+// ("move the target node as far as you can, and all the resultant other
+// bones" -- direct request 2026-10-04). Before this the chain stopped at the
+// finger: with the phone ~30 units away and a finger a few units long, turning
+// IK on only nudged the thumb ~3 units, i.e. the hand looked unchanged.
+const IK_ARM_BASE_BONE = 'rForearmBend'
 function ikChainFor(leaf) {
   const chain = []
   let b = leaf
-  while (b && b.isBone && chain.length < 3) {
+  while (b && b.isBone && b.name !== 'RootNode' && chain.length < 8) {
     chain.push(b)
-    if (!IK_FINGER_BONE.test(b.name)) break
+    if (b.name === IK_ARM_BASE_BONE) break
     b = b.parent
-    if (b && !IK_FINGER_BONE.test(b.name)) break
   }
   return chain
+}
+// Stretching lengthens only the FINGER part of the chain (its topmost finger
+// bone), never the carpal/hand/arm: scaling the arm root would stretch the
+// whole hand mesh. Palm/wrist targets have no finger bone -> no stretch.
+function ikStretchRootIndex(chain) {
+  for (let i = chain.length - 1; i >= 0; i--) if (IK_FINGER_BONE.test(chain[i].name)) return i
+  return -1
 }
 function ikStretchAxis(bone) {
   const kid = bone.children.find((c) => c.isBone)
@@ -2767,27 +2781,49 @@ function ikRunCcd(chain, nodeObj, iterations) {
 // reach multiplies by exactly `s`. Scaling each bone separately would
 // compound (a child under a x1.4 parent that is itself x1.4 ends up x1.96) and
 // overshoot -- found by the solver test on the real hand skeleton.
-function ikApplyStretch(chain, s) {
-  const root = chain[chain.length - 1]
+function ikApplyStretch(chain, si, s) {
+  const root = chain[si]
   const st = ikBoneState.get(root)
   root.scale[st.axis] = st.baseS[st.axis] * s
   root.updateMatrixWorld(true)
 }
+// Staged: the FINGER bones solve first; only if the finger alone can't put the
+// node on the goal do the carpal/wrist/forearm join in (CCD otherwise nudges
+// every bone on every pass, which made two pairs on one hand disturb each
+// other). Returns how many bones (from the leaf) ended up in use.
 function ikSolvePosition(chain, nodeObj) {
-  const root = chain[chain.length - 1]
+  const si = ikStretchRootIndex(chain)
+  const fingerLen = si >= 0 ? si + 1 : chain.length
+  let used = fingerLen
+  ikRunCcd(chain.slice(0, fingerLen), nodeObj, 12)
+  _ikNodeP.setFromMatrixPosition(nodeObj.matrixWorld)
+  _ikRootP.setFromMatrixPosition(chain[fingerLen - 1].matrixWorld)
+  if (fingerLen < chain.length && _ikNodeP.distanceTo(_ikGoalP) > 0.005 * Math.max(_ikNodeP.distanceTo(_ikRootP), 1e-6)) {
+    ikRunCcd(chain, nodeObj, 12)
+    used = chain.length
+  }
   let s = 1
   for (let outer = 0; outer < 3; outer++) {
-    ikRunCcd(chain, nodeObj, 12)
-    if (!cfg.ikAllowBoneStretch) break
+    ikRunCcd(chain.slice(0, used), nodeObj, 12)
+    if (!cfg.ikAllowBoneStretch || si < 0) break
     _ikNodeP.setFromMatrixPosition(nodeObj.matrixWorld)
-    _ikRootP.setFromMatrixPosition(root.matrixWorld)
-    const reach = _ikNodeP.distanceTo(_ikRootP), need = _ikGoalP.distanceTo(_ikRootP)
-    if (reach < 1e-6 || need <= reach * 1.0001 || _ikNodeP.distanceTo(_ikGoalP) < 0.01 * reach) break // reachable by bending alone
-    const newS = THREE.MathUtils.clamp(s * need / reach, 1, Math.max(1, cfg.ikMaxBoneStretch))
+    _ikRootP.setFromMatrixPosition(chain[si].matrixWorld)
+    const reach = _ikNodeP.distanceTo(_ikRootP), gap = _ikNodeP.distanceTo(_ikGoalP)
+    if (reach < 1e-6 || gap < 0.01 * reach) break // already on the goal
+    // Only stretch once the chain is saturated, i.e. extended straight at the goal
+    // (otherwise the goal may still be reachable by bending alone).
+    _ikToEnd.subVectors(_ikNodeP, _ikRootP); _ikToGoal.subVectors(_ikGoalP, _ikRootP)
+    if (_ikToEnd.angleTo(_ikToGoal) > 0.12) break
+    const newS = THREE.MathUtils.clamp(s * (reach + gap) / reach, 1, Math.max(1, cfg.ikMaxBoneStretch))
     if (Math.abs(newS - s) < 1e-4) break // already at the max stretch: stop at the furthest reach
     s = newS
-    ikApplyStretch(chain, s)
+    ikApplyStretch(chain, si, s)
   }
+  return used
+}
+function ikOrientationError(nodeObj, qDesired) {
+  nodeObj.matrixWorld.decompose(_ikPA, _ikQA, _ikSS)
+  return ikRotVec(_ikDelta.copy(qDesired).multiply(_ikQB.copy(_ikQA).invert()), _ikToEnd).length()
 }
 // The node's desired WORLD orientation: the source's (or the world's) axes,
 // then the pair's local XYZ rotation offset applied in the node's own frame.
@@ -2924,8 +2960,10 @@ function ikSolvePair(pair, touched) {
   src.object3d.matrixWorld.decompose(_ikGoalP, _ikGoalQ, _ikTmpS)
   ikDesiredNodeQuat(pair, _ikQd)
   if (pair.overlap) {
-    ikSolvePosition(chain, tgt.object3d)
-    ikRefine6D(chain, tgt.object3d, _ikQd, 24)
+    const used = ikSolvePosition(chain, tgt.object3d)
+    ikRefine6D(chain.slice(0, used), tgt.object3d, _ikQd, 24)
+    // Finger alone couldn't also match the orientation -> let the wrist/forearm help (position stays the primary task).
+    if (used < chain.length && ikOrientationError(tgt.object3d, _ikQd) > 0.1) ikRefine6D(chain, tgt.object3d, _ikQd, 24)
   } else ikApplyNodeOrientation(leaf, entry.binding, _ikQd)
 }
 // Called every frame from animate(). Returns true if it changed (or released)
