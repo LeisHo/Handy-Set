@@ -1220,3 +1220,4 @@ html, body {
 .ik-node-label { flex: 1; min-width: 0; font-size: calc(var(--dev-setting-title-font-size-px, 12) * 1px); opacity: 0.9; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ik-num { width: 48px; flex-shrink: 0; }
 .ik-node-select { flex: 1; min-width: 0; }
+.ik-pair-card.ik-pair-overlap .ik-pair-title { color: rgb(255, 77, 77); }

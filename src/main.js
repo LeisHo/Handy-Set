@@ -190,9 +190,15 @@ const cfg = {
   // IK Nodes (Debug) -- see the IK Nodes section for what these draw.
   ikNodesEnabled: false, ikNodeRadius: 0.8, ikAxesLength: 5, ikAxesThickness: 2, ikNodesRenderInFront: true,
   ikPosingEnabled: false,
-  // IK Influence (HANDO's 14 sliders, same defaults): master x per-part %, see ikInfluence(). Arm / forearm Bend / Twist (+ Tail) start at 0 so the arm stays put unless asked.
-  ikInfluenceMaster: 100, ikInfluenceFingers: 100, ikInfluenceWrist: 100, ikInfluenceRot: 100, ikInfluenceOff: 100, ikInfluenceArm: 0,
-  ikInfluenceBendRot: 0, ikInfluenceBendOff: 0, ikInfluenceBendTailRot: 0, ikInfluenceBendTailOff: 0, ikInfluenceTwistRot: 0, ikInfluenceTwistOff: 0, ikInfluenceTwistTailRot: 0, ikInfluenceTwistTailOff: 0,
+  // IK Influence (HANDO's CURRENT system, 2026-10-04 rewrite: one priority slider per existing pose slider + All, each with a hard
+  // Min / Max window as a range bar -- see ikInfluence() / solveIkHandPose()). Defaults as in HANDO: whole-hand offset/rotation and the
+  // arm start at 0 (locked), fingers and wrist at 100. Range values are JSON strings like every other range-bar in this file.
+  ikInfluenceMaster: 100, ikInfluenceFingers: 100, ikInfluenceOff: 0, ikInfluenceRot: 0,
+  ikInfluenceWristRot: 100, ikInfluenceWristSplay: 100, ikInfluenceWristBend: 100,
+  ikInfluenceElbowBend: 0, ikInfluenceElbowSideBend: 0, ikInfluenceForearmTwist: 0,
+  ikRangeFingers: '{"min":-200,"max":200}', ikRangeOff: '{"min":-100,"max":100}', ikRangeRot: '{"min":-360,"max":360}',
+  ikRangeWristRot: '{"min":-360,"max":360}', ikRangeWristSplay: '{"min":-360,"max":360}', ikRangeWristBend: '{"min":-360,"max":360}',
+  ikRangeElbowBend: '{"min":-10,"max":150}', ikRangeElbowSideBend: '{"min":-90,"max":90}', ikRangeForearmTwist: '{"min":-90,"max":90}',
   // Field Layout — defaults to a single centered hand (1 row x 1 col);
   // per direct request, the full multi-hand field controls are ported
   // even though only 1x1 is used today, so more hands can be added later.
@@ -713,6 +719,7 @@ const SAVED_LIGHTING = [
 ]
 const SAVED_TWEEN_SEQUENCES = []
 const SAVED_TOON = []
+const SAVED_IK_INFLUENCE = [] // IK Influence presets (HANDO's 'Saved IK Influence'): the All slider, every influence slider and every Min / Max range
 const SAVED_PHONE_POSES = [] // Phone Model's own Offset X/Y/Z + manual Rotation X/Y/Z presets (direct request 2026-10-04)
 const DEFAULT_POSE_NAME = 'Fist'
 const DEFAULT_CAMERA_NAME = 'FRONTOS'
@@ -731,6 +738,7 @@ loadListPickerItemsFromLocalStorage('cameras', SAVED_CAMERAS)
 loadListPickerItemsFromLocalStorage('lighting', SAVED_LIGHTING)
 loadListPickerItemsFromLocalStorage('toon', SAVED_TOON)
 loadListPickerItemsFromLocalStorage('phonePoses', SAVED_PHONE_POSES)
+loadListPickerItemsFromLocalStorage('ikInfluence', SAVED_IK_INFLUENCE)
 loadListPickerItemsFromLocalStorage('tweenSequences', SAVED_TWEEN_SEQUENCES)
 
 // ---------------------------------------------------------------------
@@ -3002,10 +3010,21 @@ const IK_FINGER_DOFS = {
   pinky: [FINGER_CURL_KEY.pinky, FINGER_SPLAY_KEY.pinky]
 }
 const IK_GLOBAL_DOFS = ['modelRotX', 'modelRotY', 'modelRotZ', 'poseOffsetX', 'poseOffsetY', 'poseOffsetZ', 'wristBend', 'wristSplay', 'wristRotation']
-const IK_ARM_DOFS = ['elbowBend', 'elbowSideBend', 'forearmTwist',
-  'forearmBendOffX', 'forearmBendOffY', 'forearmBendOffZ', 'forearmTwistOffX', 'forearmTwistOffY', 'forearmTwistOffZ', 'wristOffX', 'wristOffY', 'wristOffZ']
-const IK_INFLUENCE_ROW_KEYS = ['ikInfluenceMaster', 'ikInfluenceFingers', 'ikInfluenceWrist', 'ikInfluenceRot', 'ikInfluenceOff', 'ikInfluenceArm',
-  'ikInfluenceBendRot', 'ikInfluenceBendOff', 'ikInfluenceBendTailRot', 'ikInfluenceBendTailOff', 'ikInfluenceTwistRot', 'ikInfluenceTwistOff', 'ikInfluenceTwistTailRot', 'ikInfluenceTwistTailOff']
+// HANDO removed the 9 bone-offset DOFs (Forearm Bend / Twist / Wrist offsets) from the solver; this hand has no shoulder bone either.
+const IK_ARM_DOFS = ['elbowBend', 'elbowSideBend', 'forearmTwist']
+// One entry per influence slider (id = 'slider' + Key) and per Min / Max range bar (cfg key ikRange<Part>).
+const IK_INFLUENCE_PARTS = [
+  ['Fingers', 'Fingers (%)', 'Fingers Min / Max (%)', -200, 200, 1, 100],
+  ['Off', 'Pose Offset (%)', 'Pose Offset Min / Max (Units)', -100, 100, 0.5, 0],
+  ['Rot', 'Whole-Hand Rotation (%)', 'Whole-Hand Rotation Min / Max (Deg)', -360, 360, 1, 0],
+  ['WristRot', 'Wrist Rotation (%)', 'Wrist Rotation Min / Max (Deg)', -360, 360, 1, 100],
+  ['WristSplay', 'Wrist Splay (%)', 'Wrist Splay Min / Max (Deg)', -360, 360, 1, 100],
+  ['WristBend', 'Wrist Bend (%)', 'Wrist Bend Min / Max (Deg)', -360, 360, 1, 100],
+  ['ElbowBend', 'Elbow Bend (%)', 'Elbow Bend Min / Max (Deg)', -10, 150, 1, 0],
+  ['ElbowSideBend', 'Elbow Side Bend (%)', 'Elbow Side Bend Min / Max (Deg)', -90, 90, 1, 0],
+  ['ForearmTwist', 'Forearm Twist (%)', 'Forearm Twist Min / Max (Deg)', -90, 90, 1, 0]
+]
+const IK_INFLUENCE_ROW_KEYS = ['ikInfluenceMaster'].concat(...IK_INFLUENCE_PARTS.map(([part]) => ['ikInfluence' + part, 'ikRange' + part]))
 const IK_POS_WEIGHT = 1
 const IK_ROT_WEIGHT = 8 // position-units of error per radian of orientation error
 let ikBasePose = null
@@ -3030,23 +3049,23 @@ function toggleIkSolverPause(btn) {
 // "IK Influence": how much the solver may change each body part. Effective influence of a DOF =
 // master% x its part's %, 0..1. It caps how far the DOF may move FROM THE BASELINE pose, as a
 // fraction of its slider range: 0 = frozen at the baseline, 1 = the whole slider range.
+const IK_INFLUENCE_PART = { wristRotation: 'WristRot', wristSplay: 'WristSplay', wristBend: 'WristBend', elbowBend: 'ElbowBend', elbowSideBend: 'ElbowSideBend', forearmTwist: 'ForearmTwist' }
 function ikPartsOfKey(k) {
   if (k.startsWith('modelRot')) return ['Rot']
   if (k.startsWith('poseOffset')) return ['Off']
-  // rForearmBend / rForearmTwist and their Tail nodes. A bone's tail is its child's origin, so
-  // Bend's tail and Twist's origin are the same joint: both sliders govern the same DOFs and the
-  // LARGER one wins ('Arm' also governs elbow/twist).
-  if (k === 'elbowBend' || k === 'elbowSideBend') return ['Arm', 'BendRot']
-  if (k === 'forearmTwist') return ['Arm', 'TwistRot', 'BendTailRot']
-  if (k.startsWith('forearmBendOff')) return ['BendOff']
-  if (k.startsWith('forearmTwistOff')) return ['TwistOff', 'BendTailOff']
-  if (k.startsWith('wristOff')) return ['TwistTailOff']
-  if (k.startsWith('wrist')) return ['Wrist', 'TwistTailRot']
+  if (IK_INFLUENCE_PART[k]) return [IK_INFLUENCE_PART[k]]
+  if (IK_ARM_DOFS.includes(k)) return [] // no slider: never driven
   return ['Fingers']
 }
 function ikInfluence(k) {
   const pct = (v) => Math.min(1, Math.max(0, (Number(v) || 0) / 100))
-  return pct(cfg.ikInfluenceMaster) * Math.max(...ikPartsOfKey(k).map((part) => pct(cfg['ikInfluence' + part])))
+  const parts = ikPartsOfKey(k)
+  if (!parts.length) return 0
+  return pct(cfg.ikInfluenceMaster) * Math.max(...parts.map((part) => pct(cfg['ikInfluence' + part])))
+}
+function ikRangeOf(part) {
+  try { const r = JSON.parse(cfg['ikRange' + part]); if (r && Number.isFinite(Number(r.min)) && Number.isFinite(Number(r.max))) return { min: Number(r.min), max: Number(r.max) } } catch (e) { /* fall through */ }
+  return null
 }
 // A DOF's slider range (the dev-panel slider's own min/max), or unbounded if there is no slider.
 function ikPoseControlRange(key) {
@@ -3112,6 +3131,7 @@ function getActiveIkPairs() {
     out.push({
       i: idx + 1, id: pair.id, tgt, src, h, att: tgt.att,
       displace: !!pair.overlap,
+      priority: Math.min(1, Math.max(0, (pair.priority === undefined ? 100 : Number(pair.priority) || 0) / 100)), // Pair Priority (HANDO): scales this pair's errors in the solver
       world: pair.axesMode === 'world',
       qOff: new THREE.Quaternion().setFromEuler(new THREE.Euler(rad(pair.rotX || 0), rad(pair.rotY || 0), rad(pair.rotZ || 0), 'XYZ'))
     })
@@ -3121,10 +3141,25 @@ function getActiveIkPairs() {
 function ikSignature(pairs) {
   return IK_PAIR_MAX + '#' + IK_INFLUENCE_ROW_KEYS.map((k) => cfg[k]).join(',') + '#' + pairs.map((p) => {
     p.src.object3d.updateWorldMatrix(true, false)
-    return [p.i, p.tgt.id, p.src.id, p.displace, p.world, p.qOff.x.toFixed(4), p.qOff.y.toFixed(4), p.qOff.z.toFixed(4),
+    return [p.i, p.tgt.id, p.src.id, p.displace, p.priority, p.world, p.qOff.x.toFixed(4), p.qOff.y.toFixed(4), p.qOff.z.toFixed(4),
       p.src.object3d.matrixWorld.elements.map((e) => Math.round(e * 1000)).join(',')].join(':')
   }).join('|')
 }
+// HIERARCHICAL solve, ported from HANDO's current solveIkHandPose() (read directly, 2026-10-04): influence chooses WHICH
+// joints are used, not WHETHER the target is reached.
+//   Stage 1 -- minimise ONLY the real pair error (position for displace pairs, rotation for every pair, each pair scaled by its
+//     Pair Priority) over every active DOF, with just a tiny pull toward the baseline so the problem stays well-posed. Influence
+//     plays no part, so adding a DOF can only improve the best pair error found. Warm-started from the previous solve.
+//   Stage 2 -- from stage 1's pose, trade movement between DOFs with the influence cost (base + RHO x (base/0.15) x (1/influence - 1)
+//     per unit moved from the baseline), the pair error weighted so it is nearly a constraint, then GUARDED by a line search:
+//     accepted only if its pair error is within a small tolerance of stage 1's best, else stage 1 stands.
+// A DOF at 0% influence is not a DOF (ikDofKeys): frozen at its baseline. Hard limits are each DOF's Min / Max window (the range
+// bar the user typed, unrestricted; the pose slider's own range is only the fallback), enforced in both stages.
+// RHO 1.0, STAGE1 0.1, stage-2 weight 100 and the tolerance 0.05 / 0.5 % are HANDO's judgment calls, not measurements.
+const IK_PRIORITY_RHO = 1.0
+const IK_STAGE1_REG_SCALE = 0.1
+const IK_STAGE2_PAIR_WEIGHT = 100
+const IK_PAIR_TOL = 0.05
 function solveIkHandPose(pairs) {
   const t0 = performance.now()
   const base = ikBasePose
@@ -3133,18 +3168,30 @@ function solveIkHandPose(pairs) {
   POSE_PRESET_KEYS.forEach((k) => { if (!dofKeys.includes(k) && base[k] !== undefined) cfg[k] = base[k] })
   const defs = dofKeys.map(ikPoseControlRange)
   const x0 = dofKeys.map((k) => (typeof base[k] === 'number' ? base[k] : (POSE_KEY_DEFAULTS[k] || 0)))
-  // Each DOF may only move influence x (distance from the baseline to its slider end).
-  const lo = defs.map((d, i) => { const s = typeof d.min === 'number' ? d.min : -Infinity; return Math.max(s, x0[i] - ikInfluence(dofKeys[i]) * (x0[i] - s)) })
-  const hi = defs.map((d, i) => { const s = typeof d.max === 'number' ? d.max : Infinity; return Math.min(s, x0[i] + ikInfluence(dofKeys[i]) * (s - x0[i])) })
+  const win = defs.map((d, i) => {
+    let wMin = typeof d.min === 'number' ? d.min : -Infinity
+    let wMax = typeof d.max === 'number' ? d.max : Infinity
+    const rng = ikRangeOf(ikPartsOfKey(dofKeys[i])[0])
+    if (rng) { wMin = Math.min(rng.min, rng.max); wMax = Math.max(rng.min, rng.max) }
+    return { wMin, wMax }
+  })
+  const lo = win.map((w) => w.wMin)
+  const hi = win.map((w) => w.wMax)
   const clampX = (x) => x.map((v, i) => Math.min(hi[i], Math.max(lo[i], v)))
   const srcPose = pairs.map((p) => { p.src.object3d.updateWorldMatrix(true, false); const pos = new THREE.Vector3(), q = new THREE.Quaternion(); p.src.object3d.matrixWorld.decompose(pos, q, new THREE.Vector3()); return { pos, q } })
   const qDes = pairs.map((p, idx) => (p.world ? new THREE.Quaternion() : srcPose[idx].q.clone()).multiply(p.qOff))
-  const reg = dofKeys.map(ikRegWeight)
-  const residual = (x) => {
+  const regPlain = dofKeys.map((k) => ikRegWeight(k))
+  const regInfluence = dofKeys.map((k) => {
+    const b = ikRegWeight(k)
+    return b + IK_PRIORITY_RHO * (b / 0.15) * (1 / Math.max(ikInfluence(k), 0.01) - 1)
+  })
+  // Applies the pose for x and returns the pair residuals only (position, then rotation, per pair).
+  const pairResiduals = (x) => {
     dofKeys.forEach((k, i) => { cfg[k] = x[i] })
     ikApplyPose(extraSplay)
     const r = []
     pairs.forEach((p, idx) => {
+      const first = r.length
       ikAttachedWorldMatrix(p.att, p.h.skinnedMesh.skeleton, _iksM)
       _iksM.decompose(_iksP, _iksQ, _iksS)
       if (p.displace) r.push((_iksP.x - srcPose[idx].pos.x) * IK_POS_WEIGHT, (_iksP.y - srcPose[idx].pos.y) * IK_POS_WEIGHT, (_iksP.z - srcPose[idx].pos.z) * IK_POS_WEIGHT)
@@ -3154,41 +3201,73 @@ function solveIkHandPose(pairs) {
       const s = Math.sqrt(1 - qErr.w * qErr.w)
       const k = s < 1e-6 ? 2 : ang / s
       r.push(qErr.x * k * IK_ROT_WEIGHT, qErr.y * k * IK_ROT_WEIGHT, qErr.z * k * IK_ROT_WEIGHT)
+      // Pair Priority: this pair's share of the total error (the REPORTED errors in the status stay unweighted).
+      if (p.priority !== 1) for (let j = first; j < r.length; j++) r[j] *= p.priority
     })
-    dofKeys.forEach((k, i) => r.push(reg[i] * (x[i] - x0[i])))
+    return r
+  }
+  const makeResidual = (wPair, regs) => (x) => {
+    const r = pairResiduals(x)
+    if (wPair !== 1) for (let i = 0; i < r.length; i++) r[i] *= wPair
+    dofKeys.forEach((k, i) => r.push(regs[i] * (x[i] - x0[i])))
     return r
   }
   const sumsq = (r) => r.reduce((s, v) => s + v * v, 0)
-  let x = clampX(dofKeys.map((k, i) => (ikLastSolved && typeof ikLastSolved[k] === 'number' ? ikLastSolved[k] : x0[i])))
-  let r = residual(x), cost = sumsq(r), mu = 0.01, iters = 0, converged = false
-  const n = x.length
-  for (; iters < 14 && cost > 1e-3 && !converged; iters++) {
-    const cols = []
-    for (let k = 0; k < n; k++) {
-      const range = (hi[k] - lo[k]) || 100
-      let h = Math.max(Math.min(range, 1000) * 0.004, 0.05)
-      if (x[k] + h > hi[k]) h = -h
-      const xk = x.slice(); xk[k] += h
-      const rk = residual(xk)
-      cols.push(rk.map((v, i) => (v - r[i]) / h))
+  const pairCost = (x) => sumsq(pairResiduals(x))
+  const m = dofKeys.length
+  // Levenberg-Marquardt on whatever residual function it is given (finite-difference Jacobian).
+  const runLM = (residualFn, xStart, maxIt) => {
+    let x = xStart
+    let it = 0
+    let r = residualFn(x), cost = sumsq(r), mu = 0.01, converged = false
+    for (; it < maxIt && cost > 1e-3 && !converged; it++) {
+      const cols = []
+      for (let k = 0; k < m; k++) {
+        const range = (hi[k] - lo[k]) || 100
+        let h = Math.max(Math.min(range, 1000) * 0.004, 0.05)
+        if (x[k] + h > hi[k]) h = -h
+        const xk = x.slice(); xk[k] += h
+        const rk = residualFn(xk)
+        cols.push(rk.map((v, i) => (v - r[i]) / h))
+      }
+      const A = Array.from({ length: m }, () => new Array(m).fill(0))
+      const g = new Array(m).fill(0)
+      for (let a = 0; a < m; a++) {
+        for (let b = a; b < m; b++) { let sm = 0; for (let i = 0; i < r.length; i++) sm += cols[a][i] * cols[b][i]; A[a][b] = A[b][a] = sm }
+        for (let i = 0; i < r.length; i++) g[a] += cols[a][i] * r[i]
+      }
+      let accepted = false
+      for (let attempt = 0; attempt < 6 && !accepted; attempt++) {
+        const Ad = A.map((row, i) => row.map((v, j) => (i === j ? v + mu * (v + 1) : v)))
+        const dx = solveDense(Ad, g.map((v) => -v))
+        if (!dx) { mu *= 4; continue }
+        const xn = clampX(x.map((v, i) => v + dx[i]))
+        const rn = residualFn(xn), cn = sumsq(rn)
+        if (cn < cost) { const improved = cost - cn; x = xn; r = rn; cost = cn; mu = Math.max(mu / 3, 1e-6); accepted = true; if (improved < Math.max(1e-4, 1e-8 * cost)) converged = true }
+        else mu *= 4
+      }
+      if (!accepted) break
     }
-    const A = Array.from({ length: n }, () => new Array(n).fill(0))
-    const g = new Array(n).fill(0)
-    for (let a = 0; a < n; a++) {
-      for (let b = a; b < n; b++) { let s = 0; for (let i = 0; i < r.length; i++) s += cols[a][i] * cols[b][i]; A[a][b] = A[b][a] = s }
-      for (let i = 0; i < r.length; i++) g[a] += cols[a][i] * r[i]
+    return { x, iters: it }
+  }
+  const xStart = clampX(dofKeys.map((k, i) => (ikLastSolved && typeof ikLastSolved[k] === 'number' ? ikLastSolved[k] : x0[i])))
+  // Stage 1: best achievable pair error.
+  const s1 = runLM(makeResidual(1, regPlain.map((v) => v * IK_STAGE1_REG_SCALE)), xStart, 14)
+  let x = s1.x
+  const E1 = pairCost(x)
+  // Stage 2: choose the DOFs by influence while the pair error stays within tolerance of stage 1's best.
+  let iters = s1.iters
+  let stage2 = 'skipped'
+  if (m > 0) {
+    const s2 = runLM(makeResidual(IK_STAGE2_PAIR_WEIGHT, regInfluence), x, 8)
+    iters += s2.iters
+    const tolNorm = Math.max(IK_PAIR_TOL, 0.005 * Math.sqrt(E1))
+    const allowed = (Math.sqrt(E1) + tolNorm) ** 2
+    stage2 = 'rejected'
+    for (const t of [1, 0.5, 0.25, 0.125]) {
+      const xt = clampX(x.map((v, i) => v + t * (s2.x[i] - v)))
+      if (pairCost(xt) <= allowed) { x = xt; stage2 = t === 1 ? 'accepted' : 'accepted x' + t; break }
     }
-    let accepted = false
-    for (let attempt = 0; attempt < 6 && !accepted; attempt++) {
-      const Ad = A.map((row, i) => row.map((v, j) => (i === j ? v + mu * (v + 1) : v)))
-      const dx = solveDense(Ad, g.map((v) => -v))
-      if (!dx) { mu *= 4; continue }
-      const xn = clampX(x.map((v, i) => v + dx[i]))
-      const rn = residual(xn), cn = sumsq(rn)
-      if (cn < cost) { const improved = cost - cn; x = xn; r = rn; cost = cn; mu = Math.max(mu / 3, 1e-6); accepted = true; if (improved < 1e-4) converged = true }
-      else mu *= 4
-    }
-    if (!accepted) break
   }
   dofKeys.forEach((k, i) => { cfg[k] = x[i] })
   ikApplyPose(extraSplay)
@@ -3200,11 +3279,13 @@ function solveIkHandPose(pairs) {
     ikAttachedWorldMatrix(p.att, p.h.skinnedMesh.skeleton, _iksM); _iksM.decompose(_iksP, _iksQ, _iksS)
     return 'P' + p.i + ': ' + (p.displace ? 'pos ' + _iksP.distanceTo(srcPose[idx].pos).toFixed(2) + ' u, ' : '') + 'rot ' + THREE.MathUtils.radToDeg(_iksQ.angleTo(qDes[idx])).toFixed(1) + ' deg'
   })
-  setIkStatus((pairs.length ? errs.join(' | ') : 'No complete pairs (set target + source)') + ' | ' + iters + ' it, ' + Math.round(performance.now() - t0) + ' ms')
+  setIkStatus((pairs.length ? errs.join(' | ') : 'No complete pairs (set target + source)') + ' | ' + iters + ' it (' + s1.iters + '+' + (iters - s1.iters) + ', stage 2 ' + stage2 + '), ' + Math.round(performance.now() - t0) + ' ms')
 }
 function setIkPosingEnabled(v) {
   cfg.ikPosingEnabled = v
   ikLastSignature = null
+  // The solver only pushes a slider value when it differs from the last one it pushed; turning IK on/off changes the sliders behind its back (baseline restore), so forget what was pushed (HANDO fix).
+  Object.keys(ikSyncedValues).forEach((k) => { delete ikSyncedValues[k] })
   if (v) {
     if (!ikHandNodeCount()) setIkStatus('This hand has no IK nodes -- switch to Hand (HandiBonesB-IK)')
     // Before startup has settled the saved pose / Sync restore may not have landed yet: the baseline is then captured lazily by updateIkHandPose().
@@ -3248,7 +3329,7 @@ function updateIkHandPose() {
 
 // ---------------- pairs: state, persistence, picking ----------------
 function newIkPair() {
-  return { id: 'p' + Date.now().toString(36) + Math.floor(Math.random() * 46656).toString(36), targetId: '', sourceId: '', axesMode: 'source', rotX: 0, rotY: 0, rotZ: 0, overlap: true, enabled: true }
+  return { id: 'p' + Date.now().toString(36) + Math.floor(Math.random() * 46656).toString(36), targetId: '', sourceId: '', axesMode: 'source', rotX: 0, rotY: 0, rotZ: 0, overlap: true, enabled: true, priority: 100 }
 }
 function persistIkPairs() {
   ikLastSignature = null // any pair edit re-solves
@@ -3256,6 +3337,7 @@ function persistIkPairs() {
   lastSeenIkPairsJson = json
   if (ikPairsInputEl) ikPairsInputEl.value = json
   refreshIkNodeColors()
+  updateIkPairOverlapHighlight()
   requestRender()
 }
 function ikNodeLabelById(id) {
@@ -3345,7 +3427,8 @@ function renderIkPairsUI() {
   ikPairs.forEach((pair, i) => {
     const card = document.createElement('div'); card.className = 'ik-pair-card'
     const head = document.createElement('div'); head.className = 'ik-pair-head'
-    const title = document.createElement('span'); title.className = 'dev-label'; title.textContent = 'IK Pair ' + (i + 1)
+    card.dataset.pairId = pair.id
+    const title = document.createElement('span'); title.className = 'dev-label ik-pair-title'; title.textContent = 'IK Pair ' + (i + 1)
     // Pair On (HANDO): off = the solver ignores the pair, its other settings are kept.
     const onWrap = document.createElement('label'); onWrap.className = 'dev-label'; onWrap.style.cssText = 'margin-left:8px; cursor:pointer;'
     const onCb = document.createElement('input'); onCb.type = 'checkbox'; onCb.checked = pair.enabled !== false
@@ -3359,6 +3442,8 @@ function renderIkPairsUI() {
       persistIkPairs(); renderIkPairsUI()
     })
     delWrap.appendChild(del); head.append(title, onWrap, delWrap); card.appendChild(head)
+    // Pair Priority (HANDO): 100 = full weight, 0 = this pair adds no pull on the solve; scales the pair's errors in the solver.
+    card.appendChild(ikMakeSliderRow('Pair Priority (%)', 0, 100, pair.priority === undefined ? 100 : pair.priority, (v) => { pair.priority = v; persistIkPairs() }))
     const pickRow = (role, nodeId) => {
       const r = document.createElement('div'); r.className = 'dev-row ik-pair-row'
       const l = document.createElement('span'); l.className = 'dev-label'; l.textContent = role === 'target' ? 'Target (follows)' : 'Source (leads)'
@@ -3407,6 +3492,44 @@ function renderIkPairsUI() {
     ovRow.append(ovL, ov); card.appendChild(ovRow)
     ikPairsContainerEl.appendChild(card)
   })
+  updateIkPairOverlapHighlight()
+}
+// Pairs that overlap -- the same Target node or the same Source node used by 2 pairs that are both switched on -- get their title drawn
+// in red (HANDO, direct request 2026-10-04). A switched-off pair or an empty node never counts.
+function updateIkPairOverlapHighlight() {
+  if (!ikPairsContainerEl) return
+  const live = ikPairs.filter((p) => p.enabled !== false)
+  ikPairsContainerEl.querySelectorAll('.ik-pair-card').forEach((card) => {
+    const p = ikPairs.find((q) => q.id === card.dataset.pairId)
+    const sameT = p && p.enabled !== false && p.targetId ? live.filter((q) => q !== p && q.targetId === p.targetId).map((q) => ikPairs.indexOf(q) + 1) : []
+    const sameS = p && p.enabled !== false && p.sourceId ? live.filter((q) => q !== p && q.sourceId === p.sourceId).map((q) => ikPairs.indexOf(q) + 1) : []
+    card.classList.toggle('ik-pair-overlap', sameT.length > 0 || sameS.length > 0)
+    const why = []
+    if (sameT.length) why.push('Target also used by pair ' + sameT.join(', '))
+    if (sameS.length) why.push('Source also used by pair ' + sameS.join(', '))
+    card.title = why.join(' | ')
+  })
+}
+const ikCap = (k) => k.charAt(0).toUpperCase() + k.slice(1)
+const IK_INFLUENCE_DEFAULTS = (() => {
+  const d = { ikInfluenceMaster: 100 }
+  IK_INFLUENCE_PARTS.forEach(([part, , , tMin, tMax, , def]) => { d['ikInfluence' + part] = def; d['ikRange' + part] = JSON.stringify({ min: tMin, max: tMax }) })
+  return d
+})()
+function captureIkInfluencePreset() {
+  const item = {}
+  IK_INFLUENCE_ROW_KEYS.forEach((k) => { item[k] = cfg[k] })
+  return item
+}
+function useIkInfluencePreset(item) {
+  IK_INFLUENCE_ROW_KEYS.forEach((k) => {
+    // a key the preset predates falls back to the control's own default rather than whatever was left over
+    const v = item[k] !== undefined ? item[k] : IK_INFLUENCE_DEFAULTS[k]
+    cfg[k] = v
+    syncControlDom((k.startsWith('ikRange') ? 'text' : 'slider') + ikCap(k), v)
+  })
+  ikLastSignature = null // re-solve with the new influences
+  requestRender()
 }
 function renderIkPosingGroup(handModelContent) {
   const content = addSubgroup(handModelContent, 'IK POSING')
@@ -3416,19 +3539,37 @@ function renderIkPosingGroup(handModelContent) {
   ikStatusEl = document.createElement('div')
   ikStatusEl.style.cssText = 'font-size:11px; opacity:0.85; margin:2px 0 6px;'
   content.appendChild(ikStatusEl)
-  // IK Influence (HANDO's 14 sliders, same labels/defaults): how much the solver may change each part,
-  // as a % of that DOF's slider range away from the baseline pose (see ikInfluence()). Forearm Bend /
-  // Twist and their Tail nodes govern the elbow / forearm-twist / wrist-offset DOFs (ikPartsOfKey).
+  // IK Influence (HANDO's CURRENT system): one priority slider per existing pose slider + All, each with a Min / Max range bar =
+  // the hard window the solver may move that DOF inside. The % is how WILLING the solver is to use that DOF once the pairs are
+  // satisfied (100 = most flexible, 0 = frozen at the baseline) -- see ikInfluence() / solveIkHandPose().
   const subInfluence = addSubgroup(content, 'IK Influence')
-  ;[['ikInfluenceMaster', 'IK Influence - All (%)'], ['ikInfluenceFingers', 'Fingers (%)'], ['ikInfluenceWrist', 'Wrist (%)'], ['ikInfluenceRot', 'Whole-Hand Rotation (%)'],
-    ['ikInfluenceOff', 'Whole-Hand Offset (%)'], ['ikInfluenceArm', 'Arm (%)'],
-    ['ikInfluenceBendRot', 'Forearm Bend Rotation (%)'], ['ikInfluenceBendOff', 'Forearm Bend Offset (%)'], ['ikInfluenceBendTailRot', 'Forearm Bend Tail Rotation (%)'], ['ikInfluenceBendTailOff', 'Forearm Bend Tail Offset (%)'],
-    ['ikInfluenceTwistRot', 'Forearm Twist Rotation (%)'], ['ikInfluenceTwistOff', 'Forearm Twist Offset (%)'], ['ikInfluenceTwistTailRot', 'Forearm Twist Tail Rotation (%)'], ['ikInfluenceTwistTailOff', 'Forearm Twist Tail Offset (%)']
-  ].forEach(([k, label]) => {
-    const id = 'slider' + k.charAt(0).toUpperCase() + k.slice(1)
+  renderPresetPicker(subInfluence, 'Saved IK Influence', SAVED_IK_INFLUENCE, null, useIkInfluencePreset, captureIkInfluencePreset, { exportable: true, importable: true, storageKey: 'ikInfluence' })
+  addRow(subInfluence, { id: 'sliderIkInfluenceMaster', label: 'IK Influence - All (%)', type: 'slider', min: 0, max: 100, step: 1, value: cfg.ikInfluenceMaster })
+  wireSlider('sliderIkInfluenceMaster', (v) => { cfg.ikInfluenceMaster = v; ikLastSignature = null; requestRender() })
+  const ikRangeWatch = []
+  IK_INFLUENCE_PARTS.forEach(([part, label, rangeLabel, tMin, tMax, , def]) => {
+    const k = 'ikInfluence' + part, rk = 'ikRange' + part
+    const id = 'slider' + ikCap(k), rid = 'text' + ikCap(rk)
     addRow(subInfluence, { id, label, type: 'slider', min: 0, max: 100, step: 1, value: cfg[k] })
     wireSlider(id, (v) => { cfg[k] = v; ikLastSignature = null; requestRender() })
+    let rangeDefault = { min: tMin, max: tMax }
+    try { rangeDefault = JSON.parse(cfg[rk]) } catch (e) { /* keep fallback */ }
+    addRow(subInfluence, { id: rid, label: rangeLabel, type: 'range-bar', trackMin: tMin, trackMax: tMax, unit: '', defaultValue: rangeDefault })
+    ikRangeWatch.push({ rid, rk, last: document.getElementById(rid).value })
   })
+  // The generic range-bar only sets its hidden input's value (a live drag AND a Reset/Sync/Undo restore) and fires no event, and
+  // curveWidgetResyncs only ticks while the render loop runs (it stops when idle) -- so poll the 9 inputs on a light timer (string
+  // compares only) and re-solve on a change. Does nothing while IK Posing is off.
+  setInterval(() => {
+    ikRangeWatch.forEach((w) => {
+      const el = document.getElementById(w.rid)
+      if (!el || el.value === w.last) return
+      w.last = el.value
+      cfg[w.rk] = el.value
+      ikLastSignature = null
+      if (cfg.ikPosingEnabled) requestRender()
+    })
+  }, 250)
   // Hidden, Sync-participating JSON of the pair list -- same reason as every
   // other hand-built widget in this file (a plain DOM list is invisible to
   // devPanel.js's generic capture/restore otherwise).
@@ -10414,6 +10555,7 @@ async function loadRemoteSettingsOnStartup() {
     if (data.settings.listPicker_lighting) loadListPickerItemsFromRemoteData(data.settings.listPicker_lighting, SAVED_LIGHTING)
     if (data.settings.listPicker_toon) loadListPickerItemsFromRemoteData(data.settings.listPicker_toon, SAVED_TOON)
     if (data.settings.listPicker_phonePoses) loadListPickerItemsFromRemoteData(data.settings.listPicker_phonePoses, SAVED_PHONE_POSES)
+    if (data.settings.listPicker_ikInfluence) loadListPickerItemsFromRemoteData(data.settings.listPicker_ikInfluence, SAVED_IK_INFLUENCE)
     if (data.settings.listPicker_tweenSequences) loadListPickerItemsFromRemoteData(data.settings.listPicker_tweenSequences, SAVED_TWEEN_SEQUENCES)
     if (typeof window.ensureDevPanelBuilt === 'function') window.ensureDevPanelBuilt()
     phoneModelRestoreInProgress = true
