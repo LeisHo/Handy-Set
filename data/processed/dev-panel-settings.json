@@ -6,7 +6,7 @@
     "checkboxIkPosingEnabled": true,
     "checkboxIkAllowBoneStretch": false,
     "sliderIkMaxBoneStretch": 2,
-    "hiddenIkPairs": "[{\"id\":\"pmutoogmz3ou\",\"targetId\":\"\",\"sourceId\":\"\",\"axesMode\":\"source\",\"rotX\":0,\"rotY\":0,\"rotZ\":0,\"overlap\":true}]",
+    "hiddenIkPairs": "[{\"id\":\"pmutoogmz3ou\",\"targetId\":\"hand0|Thumb Points/Thumb - Last Segment  - Pad\",\"sourceId\":\"phone|Phone Side Points/Phone Right Side - 83\",\"axesMode\":\"world\",\"rotX\":0,\"rotY\":0,\"rotZ\":0,\"overlap\":true}]",
     "sliderFieldRows": 1,
     "sliderFieldCols": 1,
     "sliderRowSpacing": 9.5,
