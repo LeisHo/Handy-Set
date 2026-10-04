@@ -7,7 +7,20 @@ append-only history.
 
 ## Currently working on
 
-**Nothing in progress right now.** Most recent work: a round of
+**Nothing in progress right now.** Most recent work (2026-10-04):
+investigated "StationaryGate ACTIVE but ZUPT never engages." The dwell
+state machine was correct; the real bug was stale gate/ZUPT flags left
+frozen when the integrator doesn't evaluate the gate (Displace off, Tilt
+mode, null acceleration source) — fixed via `clearPhoneDisplaceGateState()`.
+Added `ZUPTDwell:<ms> (peak / need)` to the Displace Log: the log samples
+every ~200ms, and on the user's still-phone gyro data only 12% of samples
+were under the 2 °/s gate, so a continuous 150ms window is rare. Open: the
+next real test's `peak` value will show whether the gate is just flickering
+(then a tuning question) or something else. Also found and NOT fixed:
+Mobile-tab values for the Displace sliders never reach `cfg`. See CLAUDE.md's
+2 new Gotchas entries and CHANGELOG's 2026-10-04 entry.
+
+Before that: a round of
 dev-panel precision/formatting fixes. Set Displace Position/Velocity
 Decay Rate slider minimums to 0; found and fixed a 2nd instance of the
 "Desktop value fixed, Mobile-tab independent override still stale" bug

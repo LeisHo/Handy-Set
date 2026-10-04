@@ -3255,3 +3255,37 @@ wiring, and are still open:
   assume the earlier "probably touch-drag precision" theory is settled
   fact, since it was never confirmed against a real device, only argued
   from the absence of a found code bug.**
+- **"StationaryGate:ACTIVE but ZUPT inactive for far longer than the
+  dwell" has 2 non-bug explanations and 1 real bug — check them in this
+  order (investigated 2026-10-04; the dwell state machine itself was
+  verified correct, one writer, set-once dwell start).** (1) **Log
+  aliasing**: the Displace Log samples every ~200ms but devicemotion
+  ticks far faster, so ACTIVE on consecutive lines does NOT mean the gate
+  held continuously between them. Read the new `ZUPTDwell:… (peak …ms /
+  need …ms)` field — if peak < need, the gate is flickering, not the
+  timer failing. (2) **Sensor noise**: this phone's still-state gyro
+  magnitude has median 3.8 °/s (only 12% of samples under a 2 °/s gate),
+  so a continuous 150ms quiet window is rare; loosening the gate is a
+  tuning decision, not a bug fix. (3) **The real bug, now fixed**:
+  `integratePhoneDisplacement()` used to leave `phoneDisplaceIsStationary`/
+  `phoneDisplaceZuptActive`/`phoneDisplaceZuptDwellStart` frozen on any
+  tick that didn't evaluate the gate — Displace disabled, Tilt mode, or
+  an acceleration source returning `null` (e.g. `'nativeSensor'` with an
+  empty `e.acceleration`). `clearPhoneDisplaceGateState()` now clears
+  them at all three (never velocity/position). **Any NEW early-return or
+  skip path added to `integratePhoneDisplacement()` must call it too, or
+  the log will again show a stale flag pair that looks like a timer
+  failure.** The A/B shadow pipelines (`stepDisplaceShadowPipeline`) were
+  not changed and don't log dwell.
+- **Mobile-tab "Independent from Desktop" values for the Displace
+  sliders do not reach `cfg` (found 2026-10-04, NOT fixed).** Only
+  `sliderPhoneResponsiveRotationFineTuneX/Y/Z` and the Texture
+  offset/scale sliders have `wireDeviceSliderMirror()` bridges; every
+  other Displace slider (decay rates, damping, gate threshold, ZUPT,
+  Reference Distance) uses plain `wireSlider()`, which binds only the
+  Desktop element, so Mobile overrides sit unused in `devDeviceValues`
+  and the phone runs on Desktop values. This is the same bug class as
+  the 2026-10-01 Texture Offset fix, and it means the earlier "set the
+  Mobile override too" settings edits (Z Reference, Position Decay) were
+  harmless but ineffective on the phone. **Before telling the user a
+  Mobile-tab value is "in effect," confirm that control has a bridge.**

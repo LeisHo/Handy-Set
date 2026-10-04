@@ -1,3 +1,65 @@
+2026-10-04  -  ZUPT dwell investigation: stale gate flags fixed, dwell diagnostics
+
+Direct report, with a Displace Log: "StationaryGate:ACTIVE persists for
+well over the 150ms dwell but ZUPT stays inactive the entire time."
+Instruction: inspect integratePhoneDisplacement()'s ZUPT, find why
+phoneDisplaceZuptDwellStart isn't producing an active ZUPT, fix the
+state handling, add a dwell-duration field to the existing Displace
+Log, change no thresholds/decay/curve/rendering.
+
+FINDINGS (read the code, then tested against the user's own data):
+1. The dwell/ZUPT state machine is CORRECT as written. The dwell start
+   is set exactly once on the first stationary tick, nothing else in the
+   file writes it (grep: all 6 writes are inside the one gate block), and
+   ZUPT goes active on any later tick where now-start >= dwellMs. A
+   replica of the block engages ZUPT at 150-167ms of continuous quiet,
+   zeroes velocity, and leaves position untouched (requirements 1-8 all
+   verified). Nothing about timers, rendering, or logging resets it.
+2. REAL BUG FOUND: three paths never WRITE the flags at all -- Displace
+   disabled, Tilt mode, and any tick where the acceleration source
+   returns null (e.g. 'nativeSensor' with an empty e.acceleration, which
+   this device has been suspected of). The module variables simply kept
+   their last values, so a StationaryGate:ACTIVE / ZUPT:inactive pair
+   captured in the first <150ms of a stationary run stayed in the log
+   forever -- indistinguishable from a dwell-timer failure. Fixed with
+   clearPhoneDisplaceGateState() (clears dwell start/active/stationary/
+   elapsed only -- never velocity or position), called at all 3 paths.
+3. LIKELY EXPLANATION for the rest: the log samples every 200ms but
+   devicemotion ticks far faster, so "ACTIVE" on consecutive log lines
+   does not mean the gate held continuously in between. Measured on the
+   user's pasted still-phone gyro stretch (41 samples, 29.0-37.1s):
+   median |w| = 3.8 deg/s, min 1.75, only 12% of samples under the 2
+   deg/s gate, longest run of consecutive 200ms samples under it = 2.
+   A 150ms continuous window (9+ ticks at ~60Hz) essentially never
+   occurs on this sensor at that threshold, so the timer correctly keeps
+   resetting. NOT claimed as proven for the user's specific log (the
+   Displace Log itself was cut off in the paste) -- the new fields below
+   settle it on the next test.
+
+DIAGNOSTICS (existing Displace Log, no new mechanism): the line now
+reads  StationaryGate:<state> | ZUPTDwell:<now>ms (peak <p>ms / need
+<n>ms) | ZUPT:<state>  (order changed so these 3 sit together). "peak"
+is the longest continuous quiet run since the previous log line (reset
+after each print) -- the field that exposes flicker between samples.
+Also window.__debug.phoneDisplaceZuptDwell {elapsedMs, peakMs,
+neededMs}.
+
+SEPARATE FINDING, NOT CHANGED: every Displace slider (decay rates,
+damping, gate threshold, ZUPT, reference) is wired with plain
+wireSlider(), which only binds the Desktop element. Mobile-tab
+"Independent" values for them (e.g. gate 2.7, PosDecay, Zref 1.15)
+live only in devDeviceValues and never reach cfg -- only Rotation
+Fine-Tune and Texture offset/scale have a Mobile bridge
+(wireDeviceSliderMirror). The phone runs on the Desktop values (gate 2.0).
+
+Verified via a standalone replica (all checks): continuous quiet engages
+ZUPT at >=150ms with vel=0 and pos preserved, motion resets everything,
+a gate breaking every ~150ms never engages ZUPT while peak records the
+<150ms run, 200ms-sampled log lines read ACTIVE on most lines yet peak
+stays under need, and tilt/disabled/no-sample ticks no longer leave the
+flags frozen. Not verified on a real device.
+
+--------------------------------------------------------------------------------
 2026-10-02  -  Decay rate mins to 0, scale-slider step:any, 4-decimal cap
 
 Several direct requests in one round:
