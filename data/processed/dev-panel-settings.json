@@ -13344,5 +13344,25 @@
       "id": "buttonPauseToggle",
       "type": "button"
     }
-  }
+  },
+  "listPicker_phonePoses": [
+    {
+      "name": "Phone Pose 1",
+      "phoneModelOffsetX": 0.9917,
+      "phoneModelOffsetY": 1.9534,
+      "phoneModelOffsetZ": 0,
+      "phoneModelRotX": 33,
+      "phoneModelRotY": 2,
+      "phoneModelRotZ": -22
+    },
+    {
+      "name": "Phone Pose 2",
+      "phoneModelOffsetX": 0.9917,
+      "phoneModelOffsetY": 1.9534,
+      "phoneModelOffsetZ": 0,
+      "phoneModelRotX": 0,
+      "phoneModelRotY": 0,
+      "phoneModelRotZ": 0
+    }
+  ]
 }
