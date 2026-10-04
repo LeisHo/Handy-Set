@@ -2479,7 +2479,7 @@ function renderObjectAxesPicker() {
 }
 
 // =======================================================================
-// IK Nodes (Debug group) -- direct request 2026-10-05. The hand model
+// IK Nodes (Debug group) -- direct request 2026-10-04. The hand model
 // (HandiBonesB-IK.glb) and most phone models ship an "IK Target Points" /
 // "IK Target Nodes" layer of empty objects (each with its own XYZ axes).
 //
@@ -2647,7 +2647,7 @@ function updateIkViz() {
 }
 
 // =======================================================================
-// IK POSING (Hand Model group) -- direct request 2026-10-05. Each PAIR has a
+// IK POSING (Hand Model group) -- direct request 2026-10-04. Each PAIR has a
 // TARGET (a hand IK node) that follows a SOURCE (any IK node, usually on the
 // phone):
 //   - the target node's ORIENTATION always follows the source's axes
@@ -8144,7 +8144,7 @@ function renderHandModelItemSelector(parentContent) {
     renderHandModelItemSelector(parent)
   })
 
-  // Reorderable list (direct request 2026-10-05): the order lives in a hidden,
+  // Reorderable list (direct request 2026-10-04): the order lives in a hidden,
   // Sync-participating JSON control (same reason as hiddenHandModelFile
   // above). Applied to HAND_MODEL_OPTIONS in place -- the first entry is also
   // the fallback model when nothing has been selected yet.
@@ -9401,7 +9401,7 @@ function renderDebugExtras() {
   // Object Axes -- ported from 3JS ENGINE's own Debug/Diagnostics
   // subgroup (its src/main.js), per direct request. World Axes wasn't
   // requested, so only this half was ported.
-  // IK Nodes -- direct request 2026-10-05. One checkbox shows/hides every IK
+  // IK Nodes -- direct request 2026-10-04. One checkbox shows/hides every IK
   // node (a sphere) AND its XYZ axes, for both the hand and the phone model.
   // See the "IK Nodes" section near Object Axes for how the nodes are found.
   const ikNodesContent = addSubgroup(debugContent, 'IK Nodes')

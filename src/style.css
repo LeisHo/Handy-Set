@@ -1207,13 +1207,13 @@ html, body {
     .dev-section-group-disabled > .dev-section-content { display: none !important; }
     .dev-group-toggle-checkbox { margin-right: 4px; cursor: pointer; flex-shrink: 0; }
 
-/* Drag icon inside a list-picker row (Hand Model selector reorder, 2026-10-05).
+/* Drag icon inside a list-picker row (Hand Model selector reorder, 2026-10-04).
    touch-action:none so a finger drag on the icon reorders instead of scrolling. */
 .dp-list-picker-handle { cursor: grab; opacity: 0.7; flex-shrink: 0; touch-action: none; user-select: none; }
 .dp-list-picker-handle:hover { opacity: 1; }
 .dp-list-picker-item-dragging { opacity: 0.5; }
 
-/* IK POSING pair cards (2026-10-05). */
+/* IK POSING pair cards (2026-10-04). */
 .ik-pair-card { border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 4px; padding: 4px 6px; margin-bottom: 6px; background: rgba(255, 255, 255, 0.03); }
 .ik-pair-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 3px; }
 .ik-pair-row { align-items: center; gap: 6px; }

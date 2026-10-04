@@ -1,4 +1,4 @@
-2026-10-05  -  Hand Model selector reorder, Debug > IK Nodes, Hand Model > IK POSING, X/Z displace match Y
+2026-10-04  -  Hand Model selector reorder, Debug > IK Nodes, Hand Model > IK POSING, X/Z displace match Y
   1. Hand Model selector: each row has a ⠿ drag icon (drag starts ONLY from the icon;
      pointer events so it works by touch). Order is saved through a hidden Sync-participating
      control (hiddenHandModelOrder) and applied to HAND_MODEL_OPTIONS in place.
