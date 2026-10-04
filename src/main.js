@@ -526,6 +526,7 @@ const cfg = {
   // reads quiet, velocity below this speed (m/s) is zeroed immediately
   // instead of waiting for the full ZUPT dwell. Fixes slow creep (~0.01-0.02
   // m/s) when the gate flickers so the dwell rarely completes. 0 disables.
+  phoneDisplaceBiasInnovationClampMps2: 0.10, // see stepDisplaceBias(); 0 = old unclamped tracker
   phoneDisplaceVelSnapMps: 0.15, // 0.03 -> 0.15 (2026-10-04): real stop left +0.11 m/s that 0.03 ignored
   // Per-axis Min/Max Range + Curve + X Reference -- added 2026-10-01,
   // direct request ("Make me a displacement min max slider and a curved
@@ -3402,6 +3403,20 @@ const PHONE_DISPLACE_POSITION_DECAY_RATE_DEFAULT = 0.08 // 1/seconds -- position
 // problem (a cursor position has no analogous calibration error) and is
 // left untouched.
 const PHONE_DISPLACE_BIAS_TRACK_RATE = 0.4 // 1/seconds, ~2.5s time constant
+// One bias-tracker step, shared by the real pipeline and both A/B shadows.
+// The per-sample correction (sample - bias) is clamped to +-
+// cfg.phoneDisplaceBiasInnovationClampMps2 (added 2026-10-04): without it a
+// sustained push (~1.5 m/s^2 for ~0.5 s) was partly learned as "bias" (swing
+// up to 0.24 m/s^2 in a real log), which shrank the push and then inflated
+// the brake as the estimate relaxed, leaving 0.11-0.21 m/s of residual
+// velocity after every stop = the "bounce back". Slow genuine drift (well
+// under the clamp) is tracked exactly as before. 0 disables the clamp.
+function stepDisplaceBias(bias, sample, dt) {
+  let innovation = sample - bias
+  const c = cfg.phoneDisplaceBiasInnovationClampMps2
+  if (c > 0) innovation = Math.max(-c, Math.min(c, innovation))
+  return bias + innovation * PHONE_DISPLACE_BIAS_TRACK_RATE * dt
+}
 let phoneDisplaceBiasX = 0, phoneDisplaceBiasY = 0, phoneDisplaceBiasZ = 0
 let phoneDisplaceVelX = 0, phoneDisplaceVelY = 0, phoneDisplaceVelZ = 0
 let phoneDisplacePosX = 0, phoneDisplacePosY = 0, phoneDisplacePosZ = 0
@@ -3553,9 +3568,9 @@ function stepDisplaceShadowPipeline(state, e, linear) {
   let holdPos = false // this tick's Stationary Gate verdict -> position decay held off, same rule as the real pipeline (2026-10-04)
   if (linear) {
     // Bias high-pass -- identical formula/constant to the real pipeline.
-    state.biasX += (linear.x - state.biasX) * PHONE_DISPLACE_BIAS_TRACK_RATE * dt
-    state.biasY += (linear.y - state.biasY) * PHONE_DISPLACE_BIAS_TRACK_RATE * dt
-    state.biasZ += (linear.z - state.biasZ) * PHONE_DISPLACE_BIAS_TRACK_RATE * dt
+    state.biasX = stepDisplaceBias(state.biasX, linear.x, dt)
+    state.biasY = stepDisplaceBias(state.biasY, linear.y, dt)
+    state.biasZ = stepDisplaceBias(state.biasZ, linear.z, dt)
     // Y/Z swap -- same raw-axis convention as the real pipeline.
     ax = filterPhoneDisplaceRawComponent(linear.x - state.biasX)
     ay = filterPhoneDisplaceRawComponent(linear.z - state.biasZ)
@@ -3846,9 +3861,9 @@ function integratePhoneDisplacement(e) {
       // the full, un-clipped raw signal to accurately follow slow drift,
       // and bias is a property of each RAW sensor axis, not of the
       // display-mapped slot it ends up feeding.
-      phoneDisplaceBiasX += (linear.x - phoneDisplaceBiasX) * PHONE_DISPLACE_BIAS_TRACK_RATE * dt
-      phoneDisplaceBiasY += (linear.y - phoneDisplaceBiasY) * PHONE_DISPLACE_BIAS_TRACK_RATE * dt
-      phoneDisplaceBiasZ += (linear.z - phoneDisplaceBiasZ) * PHONE_DISPLACE_BIAS_TRACK_RATE * dt
+      phoneDisplaceBiasX = stepDisplaceBias(phoneDisplaceBiasX, linear.x, dt)
+      phoneDisplaceBiasY = stepDisplaceBias(phoneDisplaceBiasY, linear.y, dt)
+      phoneDisplaceBiasZ = stepDisplaceBias(phoneDisplaceBiasZ, linear.z, dt)
       ax = filterPhoneDisplaceRawComponent(linear.x - phoneDisplaceBiasX)
       ay = filterPhoneDisplaceRawComponent(linear.z - phoneDisplaceBiasZ)
       az = filterPhoneDisplaceRawComponent(linear.y - phoneDisplaceBiasY)
@@ -7361,7 +7376,7 @@ const PHONE_MODEL_PER_MODEL_CONTROL_IDS = [
   'checkboxPhoneDisplaceAxisZEnabled', 'sliderPhoneDisplaceScaleZ', 'checkboxPhoneDisplaceInvertZ',
   'sliderPhoneDisplaceDamping', 'sliderPhoneDisplaceVelDecayRate', 'sliderPhoneDisplacePosDecayRate',
   'checkboxPhoneDisplaceStationaryGateEnabled', 'sliderPhoneDisplaceStationaryGateDegPerSec',
-  'sliderPhoneDisplaceZuptAccelThresholdMps2', 'sliderPhoneDisplaceZuptDwellMs', 'sliderPhoneDisplaceVelSnapMps',
+  'sliderPhoneDisplaceZuptAccelThresholdMps2', 'sliderPhoneDisplaceZuptDwellMs', 'sliderPhoneDisplaceVelSnapMps', 'sliderPhoneDisplaceBiasInnovationClampMps2',
   // Same correction as Rotation's own, directly above: per-axis ids,
   // not the old shared pair.
   'textPhoneDisplaceRangeX', 'textPhoneDisplaceCurveX', 'sliderPhoneDisplaceXReferenceM',
@@ -8015,6 +8030,8 @@ function renderPhoneModelGroup(content) {
   wireSlider('sliderPhoneDisplaceZuptDwellMs', (v) => { cfg.phoneDisplaceZuptDwellMs = v })
   displaceNonTiltRows.push(addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplaceVelSnapMps', label: 'Low-Speed Velocity Snap (M/S)', type: 'slider', min: 0, max: 0.5, step: 'any', value: cfg.phoneDisplaceVelSnapMps }))
   wireSlider('sliderPhoneDisplaceVelSnapMps', (v) => { cfg.phoneDisplaceVelSnapMps = v })
+  displaceNonTiltRows.push(addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplaceBiasInnovationClampMps2', label: 'Bias Learning Limit (M/S²)', type: 'slider', min: 0, max: 1, step: 'any', value: cfg.phoneDisplaceBiasInnovationClampMps2 }))
+  wireSlider('sliderPhoneDisplaceBiasInnovationClampMps2', (v) => { cfg.phoneDisplaceBiasInnovationClampMps2 = v })
   // Per-axis Min/Max Range + Curve + Reference -- added 2026-10-01,
   // replacing the single shared Range/Curve pair above (one X/Y/Z
   // magnitude run through one shared curve). Each axis now gets its own
