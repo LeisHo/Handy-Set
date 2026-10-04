@@ -1,3 +1,28 @@
+2026-10-04  -  Log toggles filter copy/save; held-still creep fixed; deadzone step removed
+  - Sensor Log + Displace Log now store EVERY field per line ({ts, parts:[{k,t}]})
+    and apply the "Log ..." checkboxes when a line is shown / copied / saved /
+    included in COPY ALL / COPY SELECTED -- including lines already logged.
+    Unticking "Log A/B Compare" (or Target vs Rendered, ZUPT, etc.) drops that
+    data from the copy immediately; re-ticking brings it back (nothing is
+    discarded). Standing rule: any new toggleable log field must be a part with
+    a `k` mapped in SENSOR_LOG_FLAGS / DISPLACE_LOG_FLAGS. Side effect: ZUPT
+    "peak" now resets every log tick even with ZUPT logging off.
+  - Creep when held still (Y 25.08 -> 24.42 over 2.2 s, Vel ~-0.01 m/s): the gate
+    flickers so the 150 ms dwell rarely completes and leftover velocity kept
+    integrating. New cfg.phoneDisplaceVelSnapMps (default 0.03 m/s, slider
+    "Low-Speed Velocity Snap (M/S)", 0 disables): while the Stationary Gate reads
+    quiet, speed below it is zeroed immediately. Velocity only -- position is
+    never touched. Mirrored in the A/B shadow pipelines. Faster coasting (e.g.
+    0.10 m/s) still needs the normal ZUPT dwell.
+  - Center "31.00" flat spot + ~1-unit snap: output was exactly 0 inside the
+    0.02 deadzone, then jumped by curve(0.02)*range. computePhoneDisplaceAxisUnits
+    now feeds the curve the ratio remapped so the deadzone edge -> 0 and the
+    Reference Distance -> 1 (edge step 1.04 -> 0.00005 units in a linear-curve
+    model). Slight (~2%) slope change everywhere else.
+  - Verified with node --check + standalone replica script (log filter against
+    the real formatLogEntry source; snap and deadzone as replicas). NOT verified
+    on a real device.
+
 2026-10-04  -  Debug log item picker + COPY SELECTED; Copy All adds Device Info
   - New Debug subgroup 'Select Logs To Copy' (right under CLEAR/COPY ALL/PAUSE LOGS):
     one checkbox per item (Device Info, Mouse Log, Sensor Log, Phone Model Log,

@@ -7,7 +7,7 @@ append-only history.
 
 ## Currently working on
 
-**Nothing in progress right now.** Most recent work (2026-10-04, latest):
+**Nothing in progress right now.** Most recent work (2026-10-04, latest): log "Log ..." toggles now filter copy/save (A/B etc. can be left out of a copy), added a Low-Speed Velocity Snap for the held-still creep, and removed the ~1-unit step at the deadzone edge (awaiting real-device test). Before that:
 Debug group gained a 'Select Logs To Copy' checkbox picker + COPY SELECTED
 button (below CLEAR/COPY ALL/PAUSE LOGS); COPY ALL LOGS now also includes
 Device Info. Earlier the same day: Stationary Gate threshold raised 2 -> 8 deg/s (code default + synced

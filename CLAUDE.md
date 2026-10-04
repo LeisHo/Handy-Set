@@ -3308,3 +3308,25 @@ wiring, and are still open:
   rates actually in `cfg`, then `ZUPTDwell … peak`, before touching
   integrator math.** The hold rule does NOT fix cause (2); that needs a
   gate/velocity-decay tuning decision from the user.
+- **Debug-log "Log ..." checkboxes filter at VIEW/COPY time, not at write time
+  (2026-10-04, direct standing request: toggles must also change what gets
+  copied, e.g. "not copy the A/B data").** Sensor Log and Displace Log entries
+  are `{ts, parts:[{k,t}]}` with every field captured; `formatLogEntry()` +
+  `SENSOR_LOG_FLAGS` / `DISPLACE_LOG_FLAGS` apply the cfg flags when rendering,
+  copying, saving, and in COPY ALL / COPY SELECTED, and each checkbox handler
+  calls `render{Sensor,Displace}LogView()` to rebuild the on-screen list. **Any
+  NEW toggleable log field must be pushed as a part with a `k` registered in the
+  matching flag map -- never gate it with `if (cfg.x) parts.push(...)` at write
+  time, or old lines can't be re-filtered and the copy will ignore the toggle.**
+- **Low-Speed Velocity Snap (`cfg.phoneDisplaceVelSnapMps`, default 0.03 m/s):**
+  the Stationary Gate flickers on the real phone (still-state gyro median
+  3.8 deg/s), so the 150 ms ZUPT dwell rarely completes and a leftover
+  ~0.01-0.02 m/s velocity crept the phone (~0.3 units/s). While the gate reads
+  quiet, speed under this threshold is zeroed at once (velocity only, never
+  position); mirrored in `stepDisplaceShadowPipeline`. Not device-verified. If a
+  slow deliberate push seems swallowed, lower it; 0 disables.
+- **`computePhoneDisplaceAxisUnits()` feeds the curve a deadzone-REMAPPED ratio
+  (`(min(t,1)-DZ)/(1-DZ)`), not the raw ratio (2026-10-04).** The raw ratio made
+  output jump ~1 unit the instant |raw| crossed the 0.02 deadzone (visible as
+  repeated exact `31.00` readings then a snap). Reference Distance still maps to
+  full output; the deadzone edge now maps to 0.
