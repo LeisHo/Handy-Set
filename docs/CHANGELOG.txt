@@ -1,3 +1,23 @@
+2026-10-04  -  FIX: IK nodes never appeared (GLTFLoader renames nodes); dropdown pickers
+  - Root cause: GLTFLoader runs every node name through PropertyBinding.sanitizeNodeName
+    (whitespace -> '_', []./: removed), so "IK Target Points" arrives as "IK_Target_Points"
+    and the /ik\s*target/ search found nothing -> zero IK nodes on BOTH the hand and the phone.
+    My earlier Node tests built names straight from the GLB JSON, so they never saw it.
+    findIkLayer() now matches on ikNorm(name) (underscores back to spaces) and node names /
+    groups are shown normalized ("Phone Back Points / Back - Bottom Left").
+    Reproduced first (binding found 0 nodes with sanitized names), then fixed: the hand now
+    resolves 44 nodes (the GLB currently has 44 empties -- it was edited since the first
+    version), the 6 phone models with an IK layer resolve 47-53 each, Galaxy S2 / Motorola
+    Razr 0.
+  - IK POSING pairs: Target and Source each now have a dropdown of every node (target: hand
+    nodes only), grouped by owner/layer, next to the PICK-on-screen button.
+  - Nodes render moved + rotated with their parent: spheres and axes are written from each
+    node's live matrixWorld every frame. Verified with real three.js + real LineSegments2
+    buffers on all 8 phone trees: positions and axis directions match the nodes' world
+    transforms at rest and after moving/rotating the parent (44 assertions). Not verified
+    on a device/GPU.
+  - Test lesson: run GLB-derived test trees through THREE.PropertyBinding.sanitizeNodeName.
+
 2026-10-04  -  Hand Model selector reorder, Debug > IK Nodes, Hand Model > IK POSING, X/Z displace match Y
   1. Hand Model selector: each row has a ⠿ drag icon (drag starts ONLY from the icon;
      pointer events so it works by touch). Order is saved through a hidden Sync-participating
