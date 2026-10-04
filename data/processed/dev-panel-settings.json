@@ -157,7 +157,7 @@
     "checkboxPhoneDisplaceAxisYEnabled": false,
     "sliderPhoneDisplaceScaleY": 1,
     "checkboxPhoneDisplaceInvertY": false,
-    "checkboxPhoneDisplaceAxisZEnabled": true,
+    "checkboxPhoneDisplaceAxisZEnabled": false,
     "sliderPhoneDisplaceScaleZ": 1,
     "checkboxPhoneDisplaceInvertZ": false,
     "sliderPhoneDisplaceDamping": 1,
@@ -283,7 +283,7 @@
     "left": 26,
     "top": 71,
     "width": 349,
-    "height": 584
+    "height": 76
   },
   "devPanelStyle": {
     "titleFontSize": 17,
