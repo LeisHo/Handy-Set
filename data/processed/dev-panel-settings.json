@@ -11744,7 +11744,7 @@
     "desktop:Phone Model Log": true,
     "desktop:Displace Log": true,
     "desktop:Select Logs To Copy": true,
-    "desktop:IK Nodes": false,
+    "desktop:IK Nodes": true,
     "desktop:PHONE MODEL": true,
     "desktop:OFFSET": true,
     "desktop:PHONE ROTATION": true,
@@ -13293,7 +13293,7 @@
       "id": "checkboxTrackingEnabled",
       "type": "checkbox"
     },
-    "p": {
+    "pp": {
       "id": "buttonPauseToggle",
       "type": "button"
     }
