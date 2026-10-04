@@ -1,3 +1,19 @@
+2026-10-04  -  Fix: Absolute rotation mode had the Y and Z axes switched (iPhone 17 Max Pro, Samsung Galaxy S26)
+  - Report: "for iphone max pro and samsung galaxy 26 models, the y and z rotation axes got switched", then
+    "that probably also applies to displacement for those models", then "for absolute mode, switch the y and z axes".
+  - Cause found: those two models are the only ones whose saved per-model Rotation Mode is 'absolute' (all others
+    are 'gyro'). Gyro mode routes the Y/Z controls one way; Absolute mode (computePhoneAbsoluteOrientationRawQuat)
+    routed alpha (spin) to the Z controls and gamma (roll) to the Y controls, i.e. the other way round.
+  - FIX (main.js v=223): in Absolute mode alpha is now gated/scaled by the Y On/Off + Scale controls and gamma by the
+    Z ones. Displacement: in Absolute mode computePhoneResponsiveDisplacement() swaps the Y and Z controls (On/Off,
+    Scale, Invert, Range, Curve, Reference) so Y's drive the Z displacement and vice versa. Gyro/other modes and the
+    A/B shadow diagnostics are untouched. Not tested on a real phone (no device, no sandbox verification).
+  - Consequence: the saved per-model Y/Z values for those two models now apply to the other axis (e.g. S26 rotation
+    scale Z -1 now acts as the Y one) -- re-tune by hand if a sign looks wrong.
+  - Noted, NOT changed: worldPosition displacement rotates the already Y/Z-swapped acceleration by the raw W3C
+    orientation quaternion, which is a frame mismatch for any model using it; left alone because only these two
+    models were reported.
+
 2026-10-04  -  Fix: Phone Responsive Displace/Rotation ignored the Mobile/Landscape tab on a phone
   - Report: "phone responsive displace doesn't work. Even the y axis displacement we fixed earlier doesn't work"
     (answers: it MOVES but wrongly / barely visibly; edits made in the Desktop tab on the phone).
