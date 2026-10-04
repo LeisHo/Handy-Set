@@ -6170,6 +6170,7 @@ function applyCameraPreset(item) {
   Object.assign(cfg, { cameraX: camera.position.x, cameraY: camera.position.y, cameraZ: camera.position.z, cameraFov: camera.fov, targetX: controls.target.x, targetY: controls.target.y, targetZ: controls.target.z })
   syncCameraPanelFromLive()
   syncPairsFromCfg(CAMERA_SYNC_PAIRS)
+  if (typeof window.pushDevUndoState === 'function') window.pushDevUndoState()
 }
 function applyLightingPreset(item) {
   Object.assign(cfg, item)
@@ -6180,6 +6181,7 @@ function applyLightingPreset(item) {
   keyLight.color.set(cfg.keyColor)
   updateKeyLightPosition()
   syncPairsFromCfg(LIGHTING_SYNC_PAIRS)
+  if (typeof window.pushDevUndoState === 'function') window.pushDevUndoState()
 }
 // Ported verbatim from HANDY DANDIES' own TOON_PRESET_KEYS/
 // captureToonPreset()/useToonPreset() (itself ported field-for-field from
@@ -6202,6 +6204,7 @@ function applyToonPreset(item) {
   setToonUniform('rimColor', new THREE.Color(cfg.rimColor))
   rebuildGradientMap()
   syncPairsFromCfg(TOON_SYNC_PAIRS)
+  if (typeof window.pushDevUndoState === 'function') window.pushDevUndoState()
 }
 // CORRECTED 2026-09-26 -- REVERTED. The 2026-09-25 fix directly above
 // (kept here, struck through in spirit, for the same reason this file
@@ -6230,6 +6233,7 @@ function applyPosePreset(item) {
   Object.assign(cfg, withLiveFieldsPreserved(item))
   applyPoseValuesToHand(cfg)
   syncPairsFromCfg(POSE_SYNC_PAIRS)
+  if (typeof window.pushDevUndoState === 'function') window.pushDevUndoState()
 }
 function applyDefaultSelections() {
   const pose = SAVED_POSES.find((p) => p.name === DEFAULT_POSE_NAME) || SAVED_POSES[0]
@@ -6401,6 +6405,62 @@ function applyRendererSize(w, h) {
 window.addEventListener('resize', () => { applyRendererSize(window.innerWidth, window.innerHeight); requestRender() })
 
 let isPaused = false
+
+// Scene state capture for undo/redo system - captures all scene state
+// independent of dev panel controls (camera position/rotation/zoom, hand pose, cfg)
+function captureSceneStateForUndo() {
+  return {
+    // Camera state
+    cameraPosition: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
+    cameraTarget: { x: controls.target.x, y: controls.target.y, z: controls.target.z },
+    cameraFov: camera.fov,
+    cameraZoom: camera.zoom,
+    // All cfg state - this covers pose, colors, everything
+    cfg: JSON.parse(JSON.stringify(cfg))
+  }
+}
+
+// Restore scene state from undo/redo system
+function restoreSceneStateFromUndo(state) {
+  if (!state) return
+
+  // Restore camera state
+  if (state.cameraPosition) {
+    camera.position.set(state.cameraPosition.x, state.cameraPosition.y, state.cameraPosition.z)
+  }
+  if (state.cameraTarget) {
+    controls.target.set(state.cameraTarget.x, state.cameraTarget.y, state.cameraTarget.z)
+    controls.update()
+  }
+  if (state.cameraFov !== undefined) {
+    camera.fov = state.cameraFov
+    camera.updateProjectionMatrix()
+  }
+  if (state.cameraZoom !== undefined) {
+    camera.zoom = state.cameraZoom
+    camera.updateProjectionMatrix()
+  }
+
+  // Restore all cfg state and reapply to scene
+  if (state.cfg) {
+    Object.assign(cfg, state.cfg)
+    // Reapply pose to hand
+    if (hands.length > 0) {
+      applyPoseValuesToHand(cfg)
+      applyWristPoseToSkeleton('wrist', hands[0].skinnedMesh.skeleton, cfg.cameraZoom || 1)
+      applyReactiveWristSplayFrame()
+    }
+  }
+
+  requestRender()
+}
+
+// Wire the devPanel callbacks for undo/redo integration
+// This exposes scene state capture to the undo/redo system
+if (typeof window !== 'undefined') {
+  window.captureSceneStateForUndo = captureSceneStateForUndo
+  window.restoreSceneStateFromUndo = restoreSceneStateFromUndo
+}
 
 function animate() {
   if (renderer.getSize(new THREE.Vector2()).width !== window.innerWidth || renderer.getSize(new THREE.Vector2()).height !== window.innerHeight) {
@@ -7223,6 +7283,27 @@ function wireCheckbox(id, onChange) { const el = document.getElementById(id); if
 function wireColor(id, onChange) { const el = document.getElementById(id); if (el) el.addEventListener('input', (e) => { onChange(e.target.value); requestRender() }) }
 function wireTextInput(id, onChange) { const el = document.getElementById(id); if (el) el.addEventListener('input', (e) => { onChange(e.target.value); requestRender() }) }
 function wireSelect(id, onChange) { const el = document.getElementById(id); if (el) el.addEventListener('change', (e) => { onChange(e.target.value); requestRender() }) }
+
+// Global undo state capture when sliders finish being dragged (pointerup
+// after any slider interaction) -- pushDevUndoState() is called from
+// devPanel.js's own infrastructure when available, capturing both dev-panel
+// state and scene state (camera, pose, all cfg values). Prevents creating a
+// massive undo stack from intermediate values during a continuous drag.
+document.addEventListener('pointerup', (e) => {
+  const slider = e.target.closest('input[type="range"]')
+  if (slider && typeof window.pushDevUndoState === 'function') {
+    window.pushDevUndoState()
+  }
+}, { capture: true })
+
+// Similarly, capture undo state when the user releases a color picker or
+// finishes any other dev-panel interaction that fires 'change' (checkboxes,
+// selects). This ensures every meaningful user interaction is undoable.
+document.addEventListener('change', (e) => {
+  if ((e.target.type === 'checkbox' || e.target.tagName === 'SELECT') && typeof window.pushDevUndoState === 'function') {
+    window.pushDevUndoState()
+  }
+}, { capture: true })
 
 // REMOVED 2026-09-28 -- elLocal/commitTextControl/buildReactiveRangeWidget/
 // buildReactiveCurveWidget (the hand-built dual-handle range bar and
