@@ -11,6 +11,8 @@ import { clone as cloneSkinnedSkeleton } from 'three/addons/utils/SkeletonUtils.
 import { Line2 } from 'three/addons/lines/Line2.js'
 import { LineGeometry } from 'three/addons/lines/LineGeometry.js'
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js'
+import { LineSegments2 } from 'three/addons/lines/LineSegments2.js'
+import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js'
 import { detectDeviceInfo } from './deviceInfo.js'
 
 // Timestamp helper for debug logs
@@ -174,6 +176,8 @@ const cfg = {
   // whether that value can take effect. Default true (matches the
   // existing checkboxes being the only gate until this is turned off).
   responsiveRotationGlobalEnabled: true, responsiveDisplaceGlobalEnabled: true,
+  // IK Nodes (Debug) -- see the IK Nodes section for what these draw.
+  ikNodesEnabled: false, ikNodeRadius: 0.8, ikAxesLength: 5, ikAxesThickness: 2, ikNodesRenderInFront: true,
   // Field Layout — defaults to a single centered hand (1 row x 1 col);
   // per direct request, the full multi-hand field controls are ported
   // even though only 1x1 is used today, so more hands can be added later.
@@ -2474,6 +2478,171 @@ function renderObjectAxesPicker() {
 }
 
 // =======================================================================
+// IK Nodes (Debug group) -- direct request 2026-10-05. The hand model
+// (HandiBonesB-IK.glb) and most phone models ship an "IK Target Points" /
+// "IK Target Nodes" layer of empty objects (each with its own XYZ axes).
+//
+// PHONE: those empties already live inside the phone's own hierarchy, so
+// they follow the phone for free (any transform on phoneModelWrapper/Raw).
+//
+// HAND: the empties are children of the SKINNED MESH node, NOT of any bone
+// (verified by parsing the GLB: "IK Target Points" -> Hand.001, which has
+// skin and is not a joint), so left alone they would stay frozen at their
+// bind-pose positions while the fingers curl. measureAndSetHandModel()
+// therefore BINDS each empty to its nearest hand bone at load (distance to
+// the bone's head->tail segment, bind pose; verified offline against the
+// real GLB: all 40 empties land on the right finger/palm bone, tips on the
+// last finger bone), storing its offset in that bone's local space. Every
+// hand clone then gets a proxy Object3D under the matching bone
+// (setupIkNodesForHand) whose matrixWorld is the node's live world
+// transform. Models without such a layer (e.g. Hand2.glb, Galaxy S2,
+// Motorola Razr) simply contribute zero nodes.
+// =======================================================================
+const ikNodes = [] // live registry: {id, owner:'hand'|'phone', ownerIndex, group, name, label, object3d}
+let handIkBindings = [] // from the current hand template: {name, group, boneName, offset: Matrix4}
+let ikSpheres = null
+let ikAxes = null
+const ikSphereGeometry = new THREE.SphereGeometry(1, 12, 8)
+const _ikP = new THREE.Vector3(), _ikQ = new THREE.Quaternion(), _ikS = new THREE.Vector3(), _ikD = new THREE.Vector3(), _ikM = new THREE.Matrix4()
+const _ikUnitQ = new THREE.Quaternion()
+const IK_COLOR_HAND = new THREE.Color(0xffcc00)
+const IK_COLOR_PHONE = new THREE.Color(0x33ddff)
+function ikLeafEmpties(layer) {
+  const out = []
+  layer.traverse((o) => { if (o !== layer && !o.isMesh && !o.isBone && o.children.length === 0) out.push(o) })
+  return out
+}
+function findIkLayer(root) {
+  let found = null
+  root.traverse((o) => { if (!found && /ik\s*target/i.test(o.name || '')) found = o })
+  return found
+}
+function computeHandIkBindings(root, skinned) {
+  const layer = findIkLayer(root)
+  if (!layer) return []
+  root.updateMatrixWorld(true)
+  const skel = skinned.skeleton
+  const rootBone = skel.getBoneByName('rHand') || skel.bones[0]
+  const bones = []
+  ;(function rec(b) { bones.push(b); b.children.filter((c) => c.isBone).forEach(rec) })(rootBone)
+  const segs = bones.map((b) => {
+    const head = new THREE.Vector3().setFromMatrixPosition(b.matrixWorld)
+    const kids = b.children.filter((c) => c.isBone)
+    let tail
+    if (kids.length === 1) tail = new THREE.Vector3().setFromMatrixPosition(kids[0].matrixWorld)
+    else if (kids.length > 1) { tail = new THREE.Vector3(); kids.forEach((k) => tail.add(new THREE.Vector3().setFromMatrixPosition(k.matrixWorld))); tail.multiplyScalar(1 / kids.length) }
+    else { const ph = b.parent && b.parent.isBone ? new THREE.Vector3().setFromMatrixPosition(b.parent.matrixWorld) : head.clone(); tail = head.clone().add(head.clone().sub(ph)) } // leaf: extrapolate by the parent segment
+    return { bone: b, head, tail }
+  })
+  const _c = new THREE.Vector3(), _ab = new THREE.Vector3(), _ap = new THREE.Vector3()
+  return ikLeafEmpties(layer).map((e) => {
+    const p = new THREE.Vector3().setFromMatrixPosition(e.matrixWorld)
+    let best = null
+    segs.forEach((s) => {
+      _ab.subVectors(s.tail, s.head); _ap.subVectors(p, s.head)
+      const t = THREE.MathUtils.clamp(_ap.dot(_ab) / (_ab.lengthSq() || 1), 0, 1)
+      const d = _c.copy(s.head).addScaledVector(_ab, t).distanceTo(p)
+      if (!best || d < best.d) best = { s, d }
+    })
+    const offset = new THREE.Matrix4().copy(best.s.bone.matrixWorld).invert().multiply(e.matrixWorld)
+    return { name: e.name, group: (e.parent && e.parent !== layer ? e.parent.name : ''), boneName: best.s.bone.name, offset }
+  })
+}
+// Called from rebuildField() for each freshly cloned hand.
+function setupIkNodesForHand(handEntry) {
+  handEntry.ikProxies = []
+  const skel = handEntry.skinnedMesh.skeleton
+  handIkBindings.forEach((b) => {
+    const bone = skel.getBoneByName(b.boneName)
+    if (!bone) return
+    const proxy = new THREE.Object3D()
+    proxy.name = 'IK:' + b.name
+    proxy.matrixAutoUpdate = false
+    proxy.matrix.copy(b.offset)
+    proxy.matrixWorldNeedsUpdate = true
+    bone.add(proxy)
+    handEntry.ikProxies.push({ binding: b, proxy })
+  })
+}
+function rebuildIkNodeRegistry() {
+  ikNodes.length = 0
+  hands.forEach((h, hi) => (h.ikProxies || []).forEach(({ binding, proxy }) => {
+    ikNodes.push({ id: 'hand' + hi + '|' + binding.group + '/' + binding.name, owner: 'hand', ownerIndex: hi, group: binding.group, name: binding.name, label: (hands.length > 1 ? 'Hand ' + (hi + 1) + ' · ' : 'Hand · ') + binding.name, object3d: proxy })
+  }))
+  if (phoneModelRaw) {
+    const layer = findIkLayer(phoneModelRaw)
+    if (layer) ikLeafEmpties(layer).forEach((o) => {
+      const group = o.parent && o.parent !== layer ? o.parent.name : ''
+      ikNodes.push({ id: 'phone|' + group + '/' + o.name, owner: 'phone', ownerIndex: 0, group, name: o.name, label: 'Phone · ' + o.name, object3d: o })
+    })
+  }
+  rebuildIkViz()
+  if (typeof onIkNodeRegistryChanged === 'function') onIkNodeRegistryChanged()
+  requestRender()
+}
+function disposeIkViz() {
+  if (ikSpheres) { scene.remove(ikSpheres); ikSpheres.material.dispose(); ikSpheres.dispose(); ikSpheres = null }
+  if (ikAxes) {
+    scene.remove(ikAxes)
+    const idx = fatAxesLineMaterials.indexOf(ikAxes.material)
+    if (idx >= 0) fatAxesLineMaterials.splice(idx, 1)
+    ikAxes.geometry.dispose(); ikAxes.material.dispose(); ikAxes = null
+  }
+}
+function rebuildIkViz() {
+  disposeIkViz()
+  const n = ikNodes.length
+  if (!n) return
+  ikSpheres = new THREE.InstancedMesh(ikSphereGeometry, new THREE.MeshBasicMaterial({ color: 0xffffff }), n)
+  ikSpheres.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
+  ikSpheres.frustumCulled = false
+  ikNodes.forEach((node, i) => ikSpheres.setColorAt(i, node.owner === 'hand' ? IK_COLOR_HAND : IK_COLOR_PHONE))
+  ikSpheres.instanceColor.needsUpdate = true
+  const geo = new LineSegmentsGeometry()
+  const zeros = new Float32Array(n * 3 * 6)
+  geo.setPositions(zeros)
+  const colors = new Float32Array(n * 3 * 6)
+  for (let i = 0; i < n; i++) for (let a = 0; a < 3; a++) {
+    const c = new THREE.Color(AXES_COLORS[a])
+    const o = (i * 3 + a) * 6
+    colors.set([c.r, c.g, c.b, c.r, c.g, c.b], o)
+  }
+  geo.setColors(colors)
+  const mat = new LineMaterial({ vertexColors: true, linewidth: cfg.ikAxesThickness })
+  mat.resolution.set(renderer.domElement.width || 1, renderer.domElement.height || 1)
+  fatAxesLineMaterials.push(mat)
+  ikAxes = new LineSegments2(geo, mat)
+  ikAxes.frustumCulled = false
+  applyIkVizRenderState()
+  scene.add(ikSpheres, ikAxes)
+  ikSpheres.visible = ikAxes.visible = cfg.ikNodesEnabled
+}
+function applyIkVizRenderState() {
+  if (ikSpheres) { ikSpheres.material.depthTest = !cfg.ikNodesRenderInFront; ikSpheres.renderOrder = cfg.ikNodesRenderInFront ? 998 : 0 }
+  if (ikAxes) { ikAxes.material.depthTest = !cfg.ikNodesRenderInFront; ikAxes.renderOrder = cfg.ikNodesRenderInFront ? 999 : 0; ikAxes.material.linewidth = cfg.ikAxesThickness }
+}
+// Per-frame: copy every node's live world transform into the two batches.
+function updateIkViz() {
+  if (!ikSpheres || !cfg.ikNodesEnabled) return
+  scene.updateMatrixWorld(true)
+  const arr = ikAxes.geometry.attributes.instanceStart.data.array // shared interleaved buffer: [sx,sy,sz,ex,ey,ez] per segment; written in place (setPositions per frame would leak GPU buffers)
+  const len = cfg.ikAxesLength, r = cfg.ikNodeRadius
+  for (let i = 0; i < ikNodes.length; i++) {
+    ikNodes[i].object3d.matrixWorld.decompose(_ikP, _ikQ, _ikS)
+    _ikM.compose(_ikP, _ikUnitQ, _ikS.set(r, r, r))
+    ikSpheres.setMatrixAt(i, _ikM)
+    for (let a = 0; a < 3; a++) {
+      _ikD.set(AXES_DIRS[a][0], AXES_DIRS[a][1], AXES_DIRS[a][2]).applyQuaternion(_ikQ).multiplyScalar(len)
+      const o = (i * 3 + a) * 6
+      arr[o] = _ikP.x; arr[o + 1] = _ikP.y; arr[o + 2] = _ikP.z
+      arr[o + 3] = _ikP.x + _ikD.x; arr[o + 4] = _ikP.y + _ikD.y; arr[o + 5] = _ikP.z + _ikD.z
+    }
+  }
+  ikSpheres.instanceMatrix.needsUpdate = true
+  ikAxes.geometry.attributes.instanceStart.data.needsUpdate = true
+}
+
+// =======================================================================
 // Phone Model -- direct request 2026-09-27: a loadable smartphone GLB
 // (data/processed/SMARTPHONE MODELS/*.glb), positioned/scaled/rotated
 // independently of the hand, with its own phone-tilt-driven responsive
@@ -4314,6 +4483,7 @@ function disposePhoneModelRaw() {
   phoneModelRaw = null
   phoneScreenMeshes = []
   phoneScreenOriginalMaterials = []
+  rebuildIkNodeRegistry() // IK Nodes: drop the disposed model's nodes
 }
 // Finds the mesh(es) representing the phone's screen (Virtual Screen
 // render-to-texture target), by the name 'Screen Face' -- case/
@@ -4539,6 +4709,7 @@ function loadPhoneModel(relativePath) {
     }
     if (!phoneScreenMeshes.length) console.warn(ts() + ' Phone model has no "Screen Face" mesh -- Virtual Screen render will have no effect:', relativePath)
     applyPhoneModelTransform()
+    rebuildIkNodeRegistry() // IK Nodes: pick up this model's IK Target Nodes layer
     // On-demand rendering (2026-09-29) -- a model swap is triggered from
     // the Item Selector's own plain <div> rows (no input/change event,
     // not one of wireSlider/wireCheckbox/etc) and finishes asynchronously
@@ -5201,11 +5372,13 @@ function rebuildField() {
       // this needs to run every frame, not just on UI triggers.
       skinnedMesh.onBeforeRender = () => updateWristClipPlaneForHand(handEntry)
       setupFingerGizmosForHand(handEntry)
+      setupIkNodesForHand(handEntry)
       hands.push(handEntry)
       registerSceneObject('hand-' + (hands.length - 1), 'Hand ' + hands.length, wrapper) // Object Axes registry
     }
   }
   hand = hands[0]
+  rebuildIkNodeRegistry()
   relayoutField()
   outlinePass.selectedObjects = hands.map((h) => h.clone)
   sceneState.fieldRadius = Math.max(handBoundsRadiusLocal * computeBaseScale(), 5)
@@ -5346,6 +5519,7 @@ function measureAndSetHandModel(root, skinned) {
   skinned.skeleton.bones.forEach((bone) => { boneRestQuat[bone.name] = bone.quaternion.clone() })
 
   toonMaterial = createToonMaterial(skinned.material.map || null)
+  handIkBindings = computeHandIkBindings(root, skinned) // IK Nodes: bind the model's IK empties to bones while the skeleton is still at bind pose
   modelRoot = root
 }
 const handLoader = new GLTFLoader()
@@ -5710,6 +5884,7 @@ window.__debug = {
   get tiltMagnitude() { return tiltMagnitude }, get tiltAngle() { return tiltAngle },
   get phoneGyroQuat() { return phoneGyroQuat }, get lastInputSource() { return lastInputSource },
   get sensorLog() { return sensorLogLines() },
+  get ikNodes() { return ikNodes },
   // ZUPT diagnostics -- added 2026-10-01, exposed here per direct
   // request ("expose it in the existing diagnostics rather than
   // creating a separate system") instead of a new logging mechanism.
@@ -5948,6 +6123,7 @@ function renderOneFrame() {
     }
     updateAllFingerGizmos()
     updatePhoneModelFrame()
+    updateIkViz()
     renderVirtualScreen()
   }
   curveWidgetResyncs.forEach((fn) => fn())
@@ -7461,6 +7637,16 @@ function persistPhoneModelPerModelSettings() {
 // controls automatically are, so without this the selected hand model
 // would never actually survive a Sync/Reset/Undo round-trip.
 let handModelItemSelectorContainer = null
+// Reorders HAND_MODEL_OPTIONS in place from a saved JSON array of file paths;
+// unknown/missing entries keep their relative position at the end.
+function applyHandModelOrder(json) {
+  let order
+  try { order = JSON.parse(json) } catch (e) { return }
+  if (!Array.isArray(order)) return
+  const rank = (o) => { const i = order.indexOf(o.value); return i < 0 ? order.length : i }
+  const sorted = HAND_MODEL_OPTIONS.map((o, i) => ({ o, i })).sort((a, b) => rank(a.o) - rank(b.o) || a.i - b.i).map((x) => x.o)
+  HAND_MODEL_OPTIONS.splice(0, HAND_MODEL_OPTIONS.length, ...sorted)
+}
 function renderHandModelItemSelector(parentContent) {
   const parent = parentContent
   if (!parent) return
@@ -7490,10 +7676,62 @@ function renderHandModelItemSelector(parentContent) {
     renderHandModelItemSelector(parent)
   })
 
+  // Reorderable list (direct request 2026-10-05): the order lives in a hidden,
+  // Sync-participating JSON control (same reason as hiddenHandModelFile
+  // above). Applied to HAND_MODEL_OPTIONS in place -- the first entry is also
+  // the fallback model when nothing has been selected yet.
+  const orderRow = addRow(container, { id: 'hiddenHandModelOrder', label: 'Model Order (internal)', type: 'text', inputType: 'text', value: JSON.stringify(HAND_MODEL_OPTIONS.map((o) => o.value)), skipDeviceCheckbox: true })
+  orderRow.style.display = 'none'
+  const orderInput = orderRow.querySelector('#hiddenHandModelOrder')
+  applyHandModelOrder(orderInput.value)
+  let lastSeenHandModelOrder = orderInput.value
+  orderInput.addEventListener('input', () => {
+    if (orderInput.value === lastSeenHandModelOrder) return
+    lastSeenHandModelOrder = orderInput.value
+    applyHandModelOrder(orderInput.value)
+    renderHandModelItemSelector(parent)
+  })
+
   HAND_MODEL_OPTIONS.forEach((opt) => {
     const row = document.createElement('div')
     row.className = 'dp-list-picker-item' + (opt.value === cfg.handModelFile ? ' dp-list-picker-item-selected' : '')
-    row.textContent = opt.text
+    row.dataset.value = opt.value
+    const handle = document.createElement('span')
+    handle.className = 'dp-list-picker-handle'
+    handle.textContent = '⠿'
+    handle.addEventListener('click', (e) => e.stopPropagation()) // grabbing the icon must never select the model
+    handle.addEventListener('pointerdown', (e) => {
+      // Drag starts ONLY from this icon (workspace convention). Pointer
+      // events, not HTML5 drag-and-drop, so it works by touch on the phone.
+      e.preventDefault()
+      handle.setPointerCapture(e.pointerId)
+      row.classList.add('dp-list-picker-item-dragging')
+      const onMove = (ev) => {
+        const siblings = Array.from(listEl.children).filter((el) => el !== row)
+        const after = siblings.find((el) => { const r = el.getBoundingClientRect(); return ev.clientY < r.top + r.height / 2 })
+        if (after) { if (row.nextSibling !== after) listEl.insertBefore(row, after) } else if (listEl.lastChild !== row) listEl.appendChild(row)
+      }
+      const onUp = () => {
+        handle.removeEventListener('pointermove', onMove)
+        handle.removeEventListener('pointerup', onUp)
+        handle.removeEventListener('pointercancel', onUp)
+        row.classList.remove('dp-list-picker-item-dragging')
+        const newOrder = Array.from(listEl.children).map((el) => el.dataset.value)
+        const json = JSON.stringify(newOrder)
+        if (json === orderInput.value) return
+        applyHandModelOrder(json)
+        lastSeenHandModelOrder = json
+        orderInput.value = json
+      }
+      handle.addEventListener('pointermove', onMove)
+      handle.addEventListener('pointerup', onUp)
+      handle.addEventListener('pointercancel', onUp)
+    })
+    row.appendChild(handle)
+    const labelEl = document.createElement('span')
+    labelEl.className = 'dp-list-picker-item-label'
+    labelEl.textContent = opt.text
+    row.appendChild(labelEl)
     row.addEventListener('click', () => {
       if (opt.value === cfg.handModelFile) return
       cfg.handModelFile = opt.value
@@ -8695,6 +8933,23 @@ function renderDebugExtras() {
   // Object Axes -- ported from 3JS ENGINE's own Debug/Diagnostics
   // subgroup (its src/main.js), per direct request. World Axes wasn't
   // requested, so only this half was ported.
+  // IK Nodes -- direct request 2026-10-05. One checkbox shows/hides every IK
+  // node (a sphere) AND its XYZ axes, for both the hand and the phone model.
+  // See the "IK Nodes" section near Object Axes for how the nodes are found.
+  const ikNodesContent = addSubgroup(debugContent, 'IK Nodes')
+  addRow(ikNodesContent, { id: 'checkboxIkNodesEnabled', label: 'IK Nodes + Axes On/Off', type: 'checkbox' })
+  document.getElementById('checkboxIkNodesEnabled').checked = cfg.ikNodesEnabled
+  wireCheckbox('checkboxIkNodesEnabled', (v) => { cfg.ikNodesEnabled = v; if (ikSpheres) ikSpheres.visible = ikAxes.visible = v; requestRender() })
+  addRow(ikNodesContent, { id: 'sliderIkNodeRadius', label: 'Node Radius (World Units)', type: 'slider', min: 0.05, max: 10, step: 'any', value: cfg.ikNodeRadius })
+  wireSlider('sliderIkNodeRadius', (v) => { cfg.ikNodeRadius = v; requestRender() })
+  addRow(ikNodesContent, { id: 'sliderIkAxesLength', label: 'Axes Length (World Units)', type: 'slider', min: 0.5, max: 60, step: 'any', value: cfg.ikAxesLength })
+  wireSlider('sliderIkAxesLength', (v) => { cfg.ikAxesLength = v; requestRender() })
+  addRow(ikNodesContent, { id: 'sliderIkAxesThickness', label: 'Axes Thickness (Px)', type: 'slider', min: 0.5, max: 10, step: 'any', value: cfg.ikAxesThickness })
+  wireSlider('sliderIkAxesThickness', (v) => { cfg.ikAxesThickness = v; applyIkVizRenderState(); requestRender() })
+  addRow(ikNodesContent, { id: 'checkboxIkNodesRenderInFront', label: 'Render In Front', type: 'checkbox' })
+  document.getElementById('checkboxIkNodesRenderInFront').checked = cfg.ikNodesRenderInFront
+  wireCheckbox('checkboxIkNodesRenderInFront', (v) => { cfg.ikNodesRenderInFront = v; applyIkVizRenderState(); requestRender() })
+
   const objectAxesContent = addSubgroup(debugContent, 'Object Axes')
   addRow(objectAxesContent, { id: 'checkboxObjectAxesEnabled', label: 'Object Axes On/Off', type: 'checkbox' })
   document.getElementById('checkboxObjectAxesEnabled').checked = cfg.objectAxesEnabled
