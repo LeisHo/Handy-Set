@@ -2513,9 +2513,17 @@ function ikLeafEmpties(layer) {
   layer.traverse((o) => { if (o !== layer && !o.isMesh && !o.isBone && o.children.length === 0) out.push(o) })
   return out
 }
+// GLTFLoader sanitizes every node name (PropertyBinding.sanitizeNodeName: each
+// whitespace char -> '_', and []./: removed), so "IK Target Points" arrives as
+// "IK_Target_Points". Match and display on the name with '_' turned back into
+// a space. (The first version searched /ik\s*target/ and found NOTHING in the
+// real app -- my Node tests had built names straight from the GLB JSON, so
+// they never saw the sanitized form. Tests now run names through
+// THREE.PropertyBinding.sanitizeNodeName first.)
+function ikNorm(name) { return String(name || '').replace(/_/g, ' ').trim() }
 function findIkLayer(root) {
   let found = null
-  root.traverse((o) => { if (!found && /ik\s*target/i.test(o.name || '')) found = o })
+  root.traverse((o) => { if (!found && /^ik\s*target/i.test(ikNorm(o.name))) found = o })
   return found
 }
 function computeHandIkBindings(root, skinned) {
@@ -2548,7 +2556,7 @@ function computeHandIkBindings(root, skinned) {
     const offset = new THREE.Matrix4().copy(best.s.bone.matrixWorld).invert().multiply(e.matrixWorld)
     const oq = new THREE.Quaternion()
     offset.decompose(new THREE.Vector3(), oq, new THREE.Vector3())
-    return { name: e.name, group: (e.parent && e.parent !== layer ? e.parent.name : ''), boneName: best.s.bone.name, offset, offsetQInv: oq.invert() }
+    return { name: ikNorm(e.name), group: (e.parent && e.parent !== layer ? ikNorm(e.parent.name) : ''), boneName: best.s.bone.name, offset, offsetQInv: oq.invert() }
   })
 }
 // Called from rebuildField() for each freshly cloned hand.
@@ -2575,8 +2583,9 @@ function rebuildIkNodeRegistry() {
   if (phoneModelRaw) {
     const layer = findIkLayer(phoneModelRaw)
     if (layer) ikLeafEmpties(layer).forEach((o) => {
-      const group = o.parent && o.parent !== layer ? o.parent.name : ''
-      ikNodes.push({ id: 'phone|' + group + '/' + o.name, owner: 'phone', ownerIndex: 0, group, name: o.name, label: 'Phone · ' + o.name, object3d: o })
+      const group = o.parent && o.parent !== layer ? ikNorm(o.parent.name) : ''
+      const name = ikNorm(o.name)
+      ikNodes.push({ id: 'phone|' + group + '/' + name, owner: 'phone', ownerIndex: 0, group, name, label: 'Phone · ' + name, object3d: o })
     })
   }
   ikNodeById.clear()
@@ -3042,7 +3051,23 @@ function renderIkPairsUI() {
     const pickRow = (role, nodeId) => {
       const r = document.createElement('div'); r.className = 'dev-row ik-pair-row'
       const l = document.createElement('span'); l.className = 'dev-label'; l.textContent = role === 'target' ? 'Target (follows)' : 'Source (leads)'
-      const val = document.createElement('span'); val.className = 'ik-node-label'; val.textContent = ikNodeLabelById(nodeId)
+      // Dropdown of every node (target: hand nodes only), grouped by owner/layer;
+      // the PICK button below does the same by clicking the node on screen.
+      const val = document.createElement('select'); val.className = 'dev-select ik-node-select'
+      const none = document.createElement('option'); none.value = ''; none.textContent = '— not set —'; val.appendChild(none)
+      const groups = new Map()
+      ikNodes.forEach((n) => {
+        if (role === 'target' && n.owner !== 'hand') return
+        const gl = (n.owner === 'hand' ? (hands.length > 1 ? 'Hand ' + (n.ownerIndex + 1) : 'Hand') : 'Phone') + (n.group ? ' · ' + n.group : '')
+        if (!groups.has(gl)) { const og = document.createElement('optgroup'); og.label = gl; groups.set(gl, og); val.appendChild(og) }
+        const o = document.createElement('option'); o.value = n.id; o.textContent = n.name; groups.get(gl).appendChild(o)
+      })
+      if (nodeId && !ikNodeById.has(nodeId)) { const o = document.createElement('option'); o.value = nodeId; o.textContent = ikNodeLabelById(nodeId); val.appendChild(o) }
+      val.value = nodeId || ''
+      val.addEventListener('change', () => {
+        if (role === 'target') pair.targetId = val.value; else pair.sourceId = val.value
+        persistIkPairs()
+      })
       const bw = document.createElement('div'); bw.className = 'dev-buttons'
       const b = document.createElement('button'); b.type = 'button'
       const active = ikPicking && ikPicking.pairId === pair.id && ikPicking.role === role
