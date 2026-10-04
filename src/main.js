@@ -179,6 +179,7 @@ const cfg = {
   // IK Nodes (Debug) -- see the IK Nodes section for what these draw.
   ikNodesEnabled: false, ikNodeRadius: 0.8, ikAxesLength: 5, ikAxesThickness: 2, ikNodesRenderInFront: true,
   ikPosingEnabled: false, ikAllowBoneStretch: false, ikMaxBoneStretch: 2,
+  ikInfluence: 66, // 0-100, see ikGroupFreedom(): 0 fingers only -> wrist -> forearm -> whole model
   // Field Layout — defaults to a single centered hand (1 row x 1 col);
   // per direct request, the full multi-hand field controls are ported
   // even though only 1x1 is used today, so more hands can be added later.
@@ -2694,7 +2695,7 @@ const _ikNodeP = new THREE.Vector3(), _ikBoneP = new THREE.Vector3(), _ikRootP =
 const _ikToEnd = new THREE.Vector3(), _ikToGoal = new THREE.Vector3()
 const _ikDelta = new THREE.Quaternion(), _ikBoneWQ = new THREE.Quaternion(), _ikParentWQ = new THREE.Quaternion()
 const _ikEuler = new THREE.Euler(), _ikRotOffsetQ = new THREE.Quaternion(), _ikDesired = new THREE.Quaternion()
-const _ikQd = new THREE.Quaternion()
+const _ikQd = new THREE.Quaternion(), _ikRelQ = new THREE.Quaternion()
 
 function syncIkVizVisibility() {
   const vis = cfg.ikNodesEnabled || !!ikPicking
@@ -2727,16 +2728,80 @@ function onIkNodeRegistryChanged() {
 // bones" -- direct request 2026-10-04). Before this the chain stopped at the
 // finger: with the phone ~30 units away and a finger a few units long, turning
 // IK on only nudged the thumb ~3 units, i.e. the hand looked unchanged.
-const IK_ARM_BASE_BONE = 'rForearmBend'
+const IK_CARPAL_BONE = /^rCarpal\d$/
+// IK INFLUENCE (direct request 2026-10-04): how much of the model the solver may
+// move, as ONE 0-100 slider in four tiers. Fingers are always free. Then, as the
+// slider rises, each tier ramps from locked (0) to fully free (1) in order:
+//   0-33%   wrist (rHand + carpals: bend / splay / rotate),
+//   33-67%  forearm (rForearmTwist, rForearmBend),
+//   67-100% the WHOLE model (RootNode: rotates, and is translated toward the goal).
+// A tier's freedom caps how far its bones may rotate from the pose they had
+// before IK (freedom x 180 deg), so low values keep the arm still and the
+// top of the slider lets everything move.
+function ikBoneGroup(bone) {
+  const n = bone.name
+  if (IK_FINGER_BONE.test(n)) return 'finger'
+  if (n === 'rHand' || IK_CARPAL_BONE.test(n)) return 'wrist'
+  if (n === 'RootNode') return 'model'
+  return 'forearm'
+}
+function ikGroupFreedom(group) {
+  const i = cfg.ikInfluence
+  if (group === 'finger') return 1
+  if (group === 'wrist') return THREE.MathUtils.clamp(i / (100 / 3), 0, 1)
+  if (group === 'forearm') return THREE.MathUtils.clamp((i - 100 / 3) / (100 / 3), 0, 1)
+  return THREE.MathUtils.clamp((i - 200 / 3) / (100 / 3), 0, 1) // 'model'
+}
+function ikBoneLimitRad(bone) {
+  const g = ikBoneGroup(bone)
+  return g === 'finger' ? Infinity : ikGroupFreedom(g) * Math.PI
+}
+// The chain runs from the target's bone up through the finger, carpal, wrist
+// (rHand), forearm and finally RootNode (the whole model). Which of those may
+// actually move is decided per tier (ikActiveChain). Before the arm joined the
+// chain at all, a ~30-unit-away phone only nudged the thumb ~3 units.
 function ikChainFor(leaf) {
   const chain = []
   let b = leaf
-  while (b && b.isBone && b.name !== 'RootNode' && chain.length < 8) {
+  while (b && b.isBone && chain.length < 10) {
     chain.push(b)
-    if (b.name === IK_ARM_BASE_BONE) break
+    if (b.name === 'RootNode') break
     b = b.parent
   }
   return chain
+}
+// Leaf-first prefix of the chain whose bones have any freedom (freedoms only
+// fall as you go up the chain, so this is always a prefix).
+function ikActiveChain(chain) {
+  let n = 0
+  while (n < chain.length && ikBoneLimitRad(chain[n]) > 1e-4) n++
+  return chain.slice(0, n)
+}
+function ikClampToLimit(bone) {
+  const lim = ikBoneLimitRad(bone)
+  if (!(lim < Math.PI - 1e-3)) return
+  const st = ikBoneState.get(bone)
+  if (!st) return
+  _ikRelQ.copy(st.baseQ).invert().multiply(bone.quaternion)
+  const ang = 2 * Math.acos(Math.min(1, Math.abs(_ikRelQ.w)))
+  if (ang > lim) {
+    bone.quaternion.slerpQuaternions(st.baseQ, bone.quaternion, lim / ang)
+    bone.updateMatrixWorld(true)
+  }
+}
+// Whole-model stage: after the rotations have done what they can, slide the
+// RootNode bone so the node closes `freedom` of the remaining gap
+// (1 = lands on the goal). Nothing else in this project translates a bone, so
+// this does not fight the pose or the wrapper/clone placement systems.
+function ikTranslateModel(rootBone, nodeObj, freedom) {
+  _ikNodeP.setFromMatrixPosition(nodeObj.matrixWorld)
+  _ikToGoal.subVectors(_ikGoalP, _ikNodeP)
+  if (_ikToGoal.lengthSq() < 1e-14 || freedom <= 0) return
+  rootBone.getWorldPosition(_ikRootP)
+  _ikRootP.addScaledVector(_ikToGoal, freedom)
+  rootBone.parent.worldToLocal(_ikRootP)
+  rootBone.position.copy(_ikRootP)
+  rootBone.updateMatrixWorld(true)
 }
 // Stretching lengthens only the FINGER part of the chain (its topmost finger
 // bone), never the carpal/hand/arm: scaling the arm root would stretch the
@@ -2752,7 +2817,7 @@ function ikStretchAxis(bone) {
   return ay >= ax && ay >= az ? 'y' : (ax >= az ? 'x' : 'z')
 }
 function ensureIkBoneState(bone) {
-  if (!ikBoneState.has(bone)) ikBoneState.set(bone, { baseQ: bone.quaternion.clone(), baseS: bone.scale.clone(), writtenQ: null, writtenS: null, axis: ikStretchAxis(bone) })
+  if (!ikBoneState.has(bone)) ikBoneState.set(bone, { baseQ: bone.quaternion.clone(), baseS: bone.scale.clone(), baseP: bone.position.clone(), writtenQ: null, writtenS: null, writtenP: null, axis: ikStretchAxis(bone) })
   return ikBoneState.get(bone)
 }
 // HANDO's solveFingerIK() inner loop, generalized: the end effector is the
@@ -2773,6 +2838,7 @@ function ikRunCcd(chain, nodeObj, iterations) {
       bone.parent.getWorldQuaternion(_ikParentWQ).invert()
       bone.quaternion.copy(_ikParentWQ.multiply(_ikDelta))
       bone.updateMatrixWorld(true)
+      ikClampToLimit(bone) // this bone's tier may only rotate so far from its pre-IK pose
     }
   }
 }
@@ -2886,6 +2952,7 @@ function ikRotateBoneWorld(bone, ax, ay, az, angle) { // world-space rotation of
   bone.parent.getWorldQuaternion(_ikParentWQ).invert()
   bone.quaternion.copy(_ikParentWQ.multiply(_ikAxisQ))
   bone.updateMatrixWorld(true)
+  ikClampToLimit(bone)
 }
 function ikRefine6D(chain, nodeObj, qDesired, iterations) {
   const n = chain.length, m = n * 3
@@ -2955,12 +3022,17 @@ function ikSolvePair(pair, touched) {
   if (!entry) return
   const leaf = h.skinnedMesh.skeleton.getBoneByName(entry.binding.boneName)
   if (!leaf || !leaf.parent) return
-  const chain = ikChainFor(leaf)
-  chain.forEach((b) => { ensureIkBoneState(b); touched.add(b) })
+  const fullChain = ikChainFor(leaf)
+  fullChain.forEach((b) => ensureIkBoneState(b)) // (clamping needs a base for every bone it may touch)
+  const chain = ikActiveChain(fullChain)
+  if (!chain.length) return
+  chain.forEach((b) => touched.add(b))
   src.object3d.matrixWorld.decompose(_ikGoalP, _ikGoalQ, _ikTmpS)
   ikDesiredNodeQuat(pair, _ikQd)
   if (pair.overlap) {
     const used = ikSolvePosition(chain, tgt.object3d)
+    const top = chain[chain.length - 1]
+    if (top.name === 'RootNode') ikTranslateModel(top, tgt.object3d, ikGroupFreedom('model')) // whole-model tier: slide the model toward the goal
     ikRefine6D(chain.slice(0, used), tgt.object3d, _ikQd, 24)
     // Finger alone couldn't also match the orientation -> let the wrist/forearm help (position stays the primary task).
     if (used < chain.length && ikOrientationError(tgt.object3d, _ikQd) > 0.1) ikRefine6D(chain, tgt.object3d, _ikQd, 24)
@@ -2972,16 +3044,16 @@ function applyIkPosing() {
   if (!ikBoneState.size && !(cfg.ikPosingEnabled && ikPairs.length)) return false
   // 1. Put every tracked bone back to the pose system's own value (or adopt a new one).
   ikBoneState.forEach((st, bone) => {
-    if (st.writtenQ && !(bone.quaternion.equals(st.writtenQ) && bone.scale.equals(st.writtenS))) { st.baseQ.copy(bone.quaternion); st.baseS.copy(bone.scale) } // rewritten externally = a new pose
-    else { bone.quaternion.copy(st.baseQ); bone.scale.copy(st.baseS) }
-    st.writtenQ = null; st.writtenS = null
+    if (st.writtenQ && !(bone.quaternion.equals(st.writtenQ) && bone.scale.equals(st.writtenS) && bone.position.equals(st.writtenP))) { st.baseQ.copy(bone.quaternion); st.baseS.copy(bone.scale); st.baseP.copy(bone.position) } // rewritten externally = a new pose
+    else { bone.quaternion.copy(st.baseQ); bone.scale.copy(st.baseS); bone.position.copy(st.baseP) }
+    st.writtenQ = null; st.writtenS = null; st.writtenP = null
   })
   const touched = new Set()
   scene.updateMatrixWorld(true)
   if (cfg.ikPosingEnabled) for (const pair of ikPairs) ikSolvePair(pair, touched)
   // 2. Remember what we wrote; release bones no pair touches any more.
   ikBoneState.forEach((st, bone) => {
-    if (touched.has(bone)) { st.writtenQ = bone.quaternion.clone(); st.writtenS = bone.scale.clone() } else ikBoneState.delete(bone)
+    if (touched.has(bone)) { st.writtenQ = bone.quaternion.clone(); st.writtenS = bone.scale.clone(); st.writtenP = bone.position.clone() } else ikBoneState.delete(bone)
   })
   scene.updateMatrixWorld(true)
   return true
@@ -3148,6 +3220,17 @@ function renderIkPosingGroup(handModelContent) {
   addRow(content, { id: 'checkboxIkPosingEnabled', label: 'IK Posing On/Off', type: 'checkbox' })
   document.getElementById('checkboxIkPosingEnabled').checked = cfg.ikPosingEnabled
   wireCheckbox('checkboxIkPosingEnabled', (v) => { cfg.ikPosingEnabled = v; requestRender() })
+  // How much of the model IK may move: fingers always; then wrist -> forearm -> whole model as it rises.
+  addRow(content, { id: 'sliderIkInfluence', label: 'IK Influence (%)', type: 'slider', min: 0, max: 100, step: 1, value: cfg.ikInfluence })
+  const ikInfluenceCaption = document.createElement('div')
+  ikInfluenceCaption.style.cssText = 'font-size:11px; opacity:0.85; margin:-2px 0 6px;'
+  const updateIkInfluenceCaption = () => {
+    const pc = (g) => Math.round(ikGroupFreedom(g) * 100) + '%'
+    ikInfluenceCaption.textContent = 'Fingers: free · Wrist: ' + pc('wrist') + ' · Forearm: ' + pc('forearm') + ' · Whole model: ' + pc('model')
+  }
+  wireSlider('sliderIkInfluence', (v) => { cfg.ikInfluence = v; updateIkInfluenceCaption(); requestRender() })
+  content.appendChild(ikInfluenceCaption)
+  updateIkInfluenceCaption()
   addRow(content, { id: 'checkboxIkAllowBoneStretch', label: 'Allow Bone Stretching', type: 'checkbox' })
   document.getElementById('checkboxIkAllowBoneStretch').checked = cfg.ikAllowBoneStretch
   wireCheckbox('checkboxIkAllowBoneStretch', (v) => { cfg.ikAllowBoneStretch = v; requestRender() })
