@@ -1,3 +1,23 @@
+2026-10-04  -  Hand Model Import GLB, Set as Default on both model selectors, Saved Phone Poses
+  - Hand Model > Model selector now has the Phone selector's "Import GLB..." flow: a same-name
+    import asks "Overwrite it?", the file loads locally at once through a blob: URL, then uploads
+    to GitHub (api/upload-phone-model.js, now `?kind=hand|phone`, a fixed folder whitelist:
+    data/processed/HAND3D vs SMARTPHONE MODELS) and swaps in the real path. A new
+    data/processed/HAND3D/manifest.json (seeded with the 2 existing hands) is the persistent list
+    (loadHandModelManifest(): live endpoint, then the static file, else the built-in 2). The
+    Phone selector's Import GLB already had the overwrite prompt and is unchanged.
+  - Both selectors got a "Set as Default" button (the Saved-Presets one: saveFieldAsDefault ->
+    settings.defaultHandModel / defaultPhoneModel) and a star marks the default row. Defaults are
+    applied right after the normal Sync restore in loadRemoteSettingsOnStartup (so a deliberate
+    default wins). The hand seed label lost its hardcoded "(Default)" suffix for this reason.
+  - PHONE MODEL > "Saved Phone Poses": the standard list-picker (Save / Overwrite / Use / Rename /
+    Delete / +Group, Export / Import, Set as Default) over Offset X/Y/Z + manual Rotation X/Y/Z.
+    Scale is excluded on purpose (model-specific). Persisted like the other pickers
+    (localStorage `phonePoses` + settings.listPicker_phonePoses), default in settings.defaultPhonePose.
+  - API hardening: filename may not contain / \ or "..". Tested the validation with a mock
+    handler. NOT tested: a real GitHub commit for a hand import or the live UI (no sandbox
+    verification for this project; needs the Vercel deploy). main.js v=218.
+
 2026-10-04  -  IK POSING: "IK Influence (%)" slider (how much of the model IK may move)
   - New slider in Hand Model > IK POSING with a live caption ("Fingers: free . Wrist: 100% .
     Forearm: 98% . Whole model: 0%"). Four tiers, each ramping 0 -> 100% in order as the slider
