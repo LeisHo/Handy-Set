@@ -13364,5 +13364,13 @@
       "phoneModelRotY": 0,
       "phoneModelRotZ": 0
     }
-  ]
+  ],
+  "defaultPhonePose": {
+    "phoneModelOffsetX": 0.9917,
+    "phoneModelOffsetY": 1.9534,
+    "phoneModelOffsetZ": 0,
+    "phoneModelRotX": 0,
+    "phoneModelRotY": 0,
+    "phoneModelRotZ": 0
+  }
 }
