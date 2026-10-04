@@ -7,8 +7,12 @@ append-only history.
 
 ## Currently working on
 
-**Nothing in progress right now.** Most recent work (2026-10-04, later):
-traced the "phone returns to Y=31 while held still" report. Position
+**Nothing in progress right now.** Most recent work (2026-10-04, latest):
+Stationary Gate threshold raised 2 -> 8 deg/s (code default + synced
+settings) on the user's instruction; replay of their real log showed ZUPT
+landing 0.4s after stopping with ~1 Y unit of drift afterward (vs ~15.5
+at 2). Awaiting a real-device test; if slow pushes get swallowed, lower
+toward 6. Earlier (2026-10-04): traced the "phone returns to Y=31 while held still" report. Position
 decay was held off on Stationary-Gate ticks (`holdPosition` in
 `applyPhoneDisplaceSample`, mirrored in the A/B shadows), but the
 synced decays are 0/0, where that line is a no-op; replaying the user's
