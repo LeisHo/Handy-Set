@@ -181,7 +181,7 @@
     "checkboxScreenRenderEnabled": true,
     "sliderScreenRecursionLevels": 10,
     "sliderScreenRenderResolution": 175,
-    "sliderScreenTextureScale": 1.41315772272698,
+    "sliderScreenTextureScale": 1.6,
     "textScreenLevelScaleRange": "{\"min\":1,\"max\":1}",
     "textScreenLevelScaleCurve": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"linear\"}",
     "sliderScreenTextureRotation": 180,
@@ -281,7 +281,7 @@
   },
   "layout": {
     "left": 26,
-    "top": 437,
+    "top": 151,
     "width": 349,
     "height": 76
   },
@@ -11302,7 +11302,7 @@
     "mobile:PHONE MODEL": false,
     "mobile:OFFSET": false,
     "mobile:PHONE ROTATION": true,
-    "mobile:RECURSIVE RENDER": false,
+    "mobile:RECURSIVE RENDER": true,
     "mobile:RESPONSIVE BEHAVIOUR - PHONE": true,
     "mobile:Responsive Rotation": false,
     "mobile:RESPONSIVE DISPLACE": false,
