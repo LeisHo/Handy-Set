@@ -526,7 +526,7 @@ const cfg = {
   // reads quiet, velocity below this speed (m/s) is zeroed immediately
   // instead of waiting for the full ZUPT dwell. Fixes slow creep (~0.01-0.02
   // m/s) when the gate flickers so the dwell rarely completes. 0 disables.
-  phoneDisplaceVelSnapMps: 0.03,
+  phoneDisplaceVelSnapMps: 0.15, // 0.03 -> 0.15 (2026-10-04): real stop left +0.11 m/s that 0.03 ignored
   // Per-axis Min/Max Range + Curve + X Reference -- added 2026-10-01,
   // direct request ("Make me a displacement min max slider and a curved
   // editor for all 3 axes") then refined ("x to be recorded... displacement
@@ -8013,7 +8013,7 @@ function renderPhoneModelGroup(content) {
   wireSlider('sliderPhoneDisplaceZuptAccelThresholdMps2', (v) => { cfg.phoneDisplaceZuptAccelThresholdMps2 = v })
   displaceNonTiltRows.push(addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplaceZuptDwellMs', label: 'ZUPT Dwell Time (Ms)', type: 'slider', min: 0, max: 500, step: 10, value: cfg.phoneDisplaceZuptDwellMs }))
   wireSlider('sliderPhoneDisplaceZuptDwellMs', (v) => { cfg.phoneDisplaceZuptDwellMs = v })
-  displaceNonTiltRows.push(addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplaceVelSnapMps', label: 'Low-Speed Velocity Snap (M/S)', type: 'slider', min: 0, max: 0.2, step: 'any', value: cfg.phoneDisplaceVelSnapMps }))
+  displaceNonTiltRows.push(addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplaceVelSnapMps', label: 'Low-Speed Velocity Snap (M/S)', type: 'slider', min: 0, max: 0.5, step: 'any', value: cfg.phoneDisplaceVelSnapMps }))
   wireSlider('sliderPhoneDisplaceVelSnapMps', (v) => { cfg.phoneDisplaceVelSnapMps = v })
   // Per-axis Min/Max Range + Curve + Reference -- added 2026-10-01,
   // replacing the single shared Range/Curve pair above (one X/Y/Z
