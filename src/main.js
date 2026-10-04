@@ -219,15 +219,13 @@ const cfg = {
   // applyModelRootTransform()'s comments for the visual side.
   handMirrorX: false, handMirrorY: false, handMirrorZ: false,
   // Hand Model Selector -- see HAND_MODEL_OPTIONS'/loadHandModel()'s own
-  // comments. Defaults to MODEL_URL (the pre-existing hardcoded default)
-  // so the very first, synchronous handLoader.load() call below has a
-  // sensible value before any Sync/remote-settings restore has had a
-  // chance to run (those resolve async, after this file's top-level code
-  // has already executed) -- a user who previously selected a different
-  // model sees a brief flash of the default on a fresh page load, then
-  // the restore-triggered swap corrects it a moment later, same timing
-  // trade-off this file's other restore-dependent settings already have.
-  handModelFile: MODEL_URL,
+  // comments. Defaults to the FIRST entry of HAND_MODEL_OPTIONS so the very
+  // first loadHandModel() call (made at module load, before any Sync/remote
+  // settings restore has run -- those resolve async) has a sensible value; a
+  // user who previously selected a different model sees a brief flash of the
+  // default on a fresh page load, then the restore-triggered swap corrects it
+  // a moment later (that swap is token-guarded against the first load).
+  handModelFile: HAND_MODEL_OPTIONS[0].value, // first entry (HandiBonesB-IK); was MODEL_URL (Hand2) which made every fresh load fetch Hand2 first -- see loadHandModel()'s race note
   // Reactive Arm Length — ported from HANDY DANDIES (see docs/CHANGELOG.txt
   // for the porting account). HANDY DANDIES normalizes "distance" against
   // the live min/max distance across a whole FIELD of hands each frame —
@@ -2508,9 +2506,12 @@ const _ikP = new THREE.Vector3(), _ikQ = new THREE.Quaternion(), _ikS = new THRE
 const _ikUnitQ = new THREE.Quaternion()
 const IK_COLOR_HAND = new THREE.Color(0xffcc00)
 const IK_COLOR_PHONE = new THREE.Color(0x33ddff)
-function ikLeafEmpties(layer) {
+// EVERY descendant of the IK layer is an IK node (direct request 2026-10-04:
+// "all child objects within the layer IK Target Points"): the finger/palm
+// group objects as well as the empties inside them, at any depth.
+function ikLayerNodes(layer) {
   const out = []
-  layer.traverse((o) => { if (o !== layer && !o.isMesh && !o.isBone && o.children.length === 0) out.push(o) })
+  layer.traverse((o) => { if (o !== layer) out.push(o) })
   return out
 }
 // GLTFLoader sanitizes every node name (PropertyBinding.sanitizeNodeName: each
@@ -2544,7 +2545,7 @@ function computeHandIkBindings(root, skinned) {
     return { bone: b, head, tail }
   })
   const _c = new THREE.Vector3(), _ab = new THREE.Vector3(), _ap = new THREE.Vector3()
-  return ikLeafEmpties(layer).map((e) => {
+  return ikLayerNodes(layer).map((e) => {
     const p = new THREE.Vector3().setFromMatrixPosition(e.matrixWorld)
     let best = null
     segs.forEach((s) => {
@@ -2582,7 +2583,7 @@ function rebuildIkNodeRegistry() {
   }))
   if (phoneModelRaw) {
     const layer = findIkLayer(phoneModelRaw)
-    if (layer) ikLeafEmpties(layer).forEach((o) => {
+    if (layer) ikLayerNodes(layer).forEach((o) => {
       const group = o.parent && o.parent !== layer ? ikNorm(o.parent.name) : ''
       const name = ikNorm(o.name)
       ikNodes.push({ id: 'phone|' + group + '/' + name, owner: 'phone', ownerIndex: 0, group, name, label: 'Phone · ' + name, object3d: o })
@@ -2706,7 +2707,14 @@ function refreshIkNodeColors() {
   ikNodes.forEach((n, i) => ikSpheres.setColorAt(i, targets.has(n.id) ? IK_COLOR_TARGET : sources.has(n.id) ? IK_COLOR_SOURCE : (n.owner === 'hand' ? IK_COLOR_HAND : IK_COLOR_PHONE)))
   ikSpheres.instanceColor.needsUpdate = true
 }
+let ikNodesStatusEl = null
+function updateIkNodesStatus() {
+  if (!ikNodesStatusEl) return
+  const hn = ikNodes.filter((n) => n.owner === 'hand').length
+  ikNodesStatusEl.textContent = 'Hand IK nodes: ' + hn + ' · Phone IK nodes: ' + (ikNodes.length - hn) + ' · Hand model: ' + String(cfg.handModelFile || '').split('/').pop()
+}
 function onIkNodeRegistryChanged() {
+  updateIkNodesStatus()
   refreshIkNodeColors()
   if (ikPairsContainerEl) renderIkPairsUI()
 }
@@ -2917,7 +2925,7 @@ function ikSolvePair(pair, touched) {
   ikDesiredNodeQuat(pair, _ikQd)
   if (pair.overlap) {
     ikSolvePosition(chain, tgt.object3d)
-    ikRefine6D(chain, tgt.object3d, _ikQd, 10)
+    ikRefine6D(chain, tgt.object3d, _ikQd, 24)
   } else ikApplyNodeOrientation(leaf, entry.binding, _ikQd)
 }
 // Called every frame from animate(). Returns true if it changed (or released)
@@ -6013,39 +6021,8 @@ function measureAndSetHandModel(root, skinned) {
   handIkBindings = computeHandIkBindings(root, skinned) // IK Nodes: bind the model's IK empties to bones while the skeleton is still at bind pose
   modelRoot = root
 }
-const handLoader = new GLTFLoader()
-handLoader.setDRACOLoader(dracoLoader)
-handLoader.setMeshoptDecoder(MeshoptDecoder)
-handLoader.load(cfg.handModelFile || MODEL_URL, async (gltf) => {
-  const root = gltf.scene
-  const skinned = findSkinnedMesh(root)
-  if (!skinned) { loadingEl.textContent = 'No skinned mesh found in model.'; return }
-  measureAndSetHandModel(root, skinned)
-
-  rebuildField()
-  applyDefaultSelections()
-  // "Set as Default" overrides -- applied AFTER the hardcoded literal
-  // defaults above, matching Hando's own boot order (its own
-  // loadDefaultXIfSaved() calls run after the runtime objects they write
-  // into exist, and intentionally override whatever the normal restore
-  // already set). A fresh project with nothing ever set-as-default is a
-  // silent no-op (loadFieldDefaultIfSaved only applies when the fetched
-  // settings actually contain that field).
-  await Promise.all([
-    loadFieldDefaultIfSaved('defaultPose', applyPosePreset),
-    loadFieldDefaultIfSaved('defaultCamera', applyCameraPreset),
-    loadFieldDefaultIfSaved('defaultLighting', applyLightingPreset),
-    loadFieldDefaultIfSaved('defaultToon', applyToonPreset)
-  ])
-  loadingEl.classList.add('hidden')
-  initMotionInput()
-  setupPhoneRotationResetGesture()
-  renderLoopRunning = true // first frame runs synchronously here, not via RAF -- see startRenderLoop()'s own comment
-  animate()
-}, undefined, (err) => {
-  console.error(ts() + ' Failed to load hand model', err)
-  loadingEl.textContent = 'Failed to load hand model — see console.'
-})
+// (The app's FIRST hand load now goes through loadHandModel() below, with the
+// same token guard as every later selection -- see its race note.)
 
 // disposeOldHandModelRoot -- same reasoning/pattern as disposePhoneModelRaw()
 // (that function's own comment): the OLD modelRoot is the TEMPLATE object
@@ -6076,6 +6053,37 @@ function disposeOldHandModelRoot(oldRoot) {
 // Token-guarded the same way loadPhoneModel() is, in case 2 selections
 // happen in quick succession before the first finishes loading.
 let handModelLoadToken = 0
+let handFirstLoadTailDone = false
+// RACE FOUND 2026-10-04 on the live site (window.__debug showed the selector on
+// HandiBonesB-IK while the hand actually on screen was Hand2, 0 IK proxies):
+// the app's first load used to be a separate, UNGUARDED loader for MODEL_URL
+// (Hand2.glb, 1.6 MB). The synced selection then triggered a guarded swap to
+// the small IK hand, which usually finished FIRST -- and the slower first load
+// then completed last and overwrote it with Hand2. Now every load, including
+// the first, takes a token; only the newest request is allowed to build hands.
+// The one-time boot work (default pose/camera/..., motion input, render loop)
+// runs after whichever load first succeeds.
+async function runHandFirstLoadTail() {
+  applyDefaultSelections()
+  // "Set as Default" overrides -- applied AFTER the hardcoded literal
+  // defaults above, matching Hando's own boot order (its own
+  // loadDefaultXIfSaved() calls run after the runtime objects they write
+  // into exist, and intentionally override whatever the normal restore
+  // already set). A fresh project with nothing ever set-as-default is a
+  // silent no-op (loadFieldDefaultIfSaved only applies when the fetched
+  // settings actually contain that field).
+  await Promise.all([
+    loadFieldDefaultIfSaved('defaultPose', applyPosePreset),
+    loadFieldDefaultIfSaved('defaultCamera', applyCameraPreset),
+    loadFieldDefaultIfSaved('defaultLighting', applyLightingPreset),
+    loadFieldDefaultIfSaved('defaultToon', applyToonPreset)
+  ])
+  loadingEl.classList.add('hidden')
+  initMotionInput()
+  setupPhoneRotationResetGesture()
+  renderLoopRunning = true // first frame runs synchronously here, not via RAF -- see startRenderLoop()'s own comment
+  animate()
+}
 function loadHandModel(relativePath) {
   if (!relativePath) return
   const token = ++handModelLoadToken
@@ -6086,16 +6094,23 @@ function loadHandModel(relativePath) {
     if (token !== handModelLoadToken) return // superseded by a newer selection before this one finished
     const root = gltf.scene
     const skinned = findSkinnedMesh(root)
-    if (!skinned) { console.error(ts() + ' Hand Model Selector: no skinned mesh found in', relativePath); return }
+    if (!skinned) {
+      console.error(ts() + ' Hand Model Selector: no skinned mesh found in', relativePath)
+      if (!handFirstLoadTailDone) loadingEl.textContent = 'No skinned mesh found in model.'
+      return
+    }
     const oldRoot = modelRoot
     measureAndSetHandModel(root, skinned)
     disposeOldHandModelRoot(oldRoot)
     rebuildField()
-    applyPoseValuesToHand(cfg)
+    if (!handFirstLoadTailDone) { handFirstLoadTailDone = true; runHandFirstLoadTail() }
+    else applyPoseValuesToHand(cfg)
   }, undefined, (err) => {
     console.error(ts() + ' Hand Model Selector: failed to load', relativePath, err)
+    if (!handFirstLoadTailDone) loadingEl.textContent = 'Failed to load hand model — see console.'
   })
 }
+loadHandModel(cfg.handModelFile || MODEL_URL) // the app's first hand load
 
 // Retargets an imported camera preset onto our single centered hand.
 // HANDY DANDIES' own saved cameras were captured against its much larger
@@ -9523,6 +9538,11 @@ function renderDebugExtras() {
   addRow(ikNodesContent, { id: 'checkboxIkNodesRenderInFront', label: 'Render In Front', type: 'checkbox' })
   document.getElementById('checkboxIkNodesRenderInFront').checked = cfg.ikNodesRenderInFront
   wireCheckbox('checkboxIkNodesRenderInFront', (v) => { cfg.ikNodesRenderInFront = v; applyIkVizRenderState(); requestRender() })
+  // Live count of what was actually found (0 hand nodes = the loaded hand model has no IK layer).
+  ikNodesStatusEl = document.createElement('div')
+  ikNodesStatusEl.style.cssText = 'font-size:11px; opacity:0.85; margin-top:4px;'
+  ikNodesContent.appendChild(ikNodesStatusEl)
+  updateIkNodesStatus()
 
   const objectAxesContent = addSubgroup(debugContent, 'Object Axes')
   addRow(objectAxesContent, { id: 'checkboxObjectAxesEnabled', label: 'Object Axes On/Off', type: 'checkbox' })
