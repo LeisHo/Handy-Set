@@ -488,7 +488,14 @@ const cfg = {
   // comfortably above the ~0 deg/s this project's own real "static" tests
   // show and comfortably below the 5-90 deg/s range its own real
   // deliberate-motion tests show.
-  phoneDisplaceStationaryGateEnabled: true, phoneDisplaceStationaryGateDegPerSec: 2.0,
+  // Gate threshold raised 2.0 -> 8.0 deg/s on 2026-10-04. Measured on the
+  // user's real still-phone log: this phone's gyro noise at rest has a
+  // median of 3.8 deg/s, so a 2.0 gate was active only ~9% of ticks (ZUPT
+  // ~4%) and velocity was almost never zeroed. At 8.0 the replay showed
+  // ZUPT on ~87% of still ticks, first ZUPT 0.4s after stopping, drift
+  // after it ~1 Y unit (vs ~15 at 2.0), while only ~7% of ticks during
+  // real handling were mis-flagged stationary (10.0 mis-flagged 26%).
+  phoneDisplaceStationaryGateEnabled: true, phoneDisplaceStationaryGateDegPerSec: 8.0,
   // ZUPT upgrade -- added 2026-10-01, direct report with real device
   // data: persistent position drift while physically stationary, even
   // with phoneDisplacePosDecayRate manually set to 0 (no position
