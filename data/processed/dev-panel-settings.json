@@ -149,7 +149,7 @@
     "textPhoneRotationRangeZ": "{\"min\":0,\"max\":180}",
     "textPhoneRotationCurveZ": "{\"points\":[{\"x\":0,\"y\":0.035416158040364576},{\"x\":1,\"y\":1}],\"method\":\"catmullrom\"}",
     "checkboxPhoneResponsiveDisplaceEnabled": true,
-    "selectPhoneDisplaceMode": "nativeSensor",
+    "selectPhoneDisplaceMode": "worldPosition",
     "checkboxPhoneDisplaceResetEnabled": true,
     "checkboxPhoneDisplaceAxisXEnabled": false,
     "sliderPhoneDisplaceScaleX": 0.4,
@@ -177,7 +177,7 @@
     "sliderPhoneDisplaceYReferenceM": 1,
     "textPhoneDisplaceRangeZ": "{\"min\":0,\"max\":51}",
     "textPhoneDisplaceCurveZ": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"monotone\"}",
-    "sliderPhoneDisplaceZReferenceM": 1.56,
+    "sliderPhoneDisplaceZReferenceM": 1.27,
     "checkboxScreenRenderEnabled": true,
     "sliderScreenRecursionLevels": 10,
     "sliderScreenRenderResolution": 175,
@@ -283,7 +283,7 @@
     "left": 36,
     "top": 193,
     "width": 349,
-    "height": 628
+    "height": 76
   },
   "devPanelStyle": {
     "titleFontSize": 17,
