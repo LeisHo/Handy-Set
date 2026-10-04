@@ -178,6 +178,7 @@ const cfg = {
   responsiveRotationGlobalEnabled: true, responsiveDisplaceGlobalEnabled: true,
   // IK Nodes (Debug) -- see the IK Nodes section for what these draw.
   ikNodesEnabled: false, ikNodeRadius: 0.8, ikAxesLength: 5, ikAxesThickness: 2, ikNodesRenderInFront: true,
+  ikPosingEnabled: false, ikAllowBoneStretch: false, ikMaxBoneStretch: 2,
   // Field Layout — defaults to a single centered hand (1 row x 1 col);
   // per direct request, the full multi-hand field controls are ported
   // even though only 1x1 is used today, so more hands can be added later.
@@ -2545,7 +2546,9 @@ function computeHandIkBindings(root, skinned) {
       if (!best || d < best.d) best = { s, d }
     })
     const offset = new THREE.Matrix4().copy(best.s.bone.matrixWorld).invert().multiply(e.matrixWorld)
-    return { name: e.name, group: (e.parent && e.parent !== layer ? e.parent.name : ''), boneName: best.s.bone.name, offset }
+    const oq = new THREE.Quaternion()
+    offset.decompose(new THREE.Vector3(), oq, new THREE.Vector3())
+    return { name: e.name, group: (e.parent && e.parent !== layer ? e.parent.name : ''), boneName: best.s.bone.name, offset, offsetQInv: oq.invert() }
   })
 }
 // Called from rebuildField() for each freshly cloned hand.
@@ -2576,6 +2579,8 @@ function rebuildIkNodeRegistry() {
       ikNodes.push({ id: 'phone|' + group + '/' + o.name, owner: 'phone', ownerIndex: 0, group, name: o.name, label: 'Phone · ' + o.name, object3d: o })
     })
   }
+  ikNodeById.clear()
+  ikNodes.forEach((n) => ikNodeById.set(n.id, n))
   rebuildIkViz()
   if (typeof onIkNodeRegistryChanged === 'function') onIkNodeRegistryChanged()
   requestRender()
@@ -2596,8 +2601,7 @@ function rebuildIkViz() {
   ikSpheres = new THREE.InstancedMesh(ikSphereGeometry, new THREE.MeshBasicMaterial({ color: 0xffffff }), n)
   ikSpheres.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
   ikSpheres.frustumCulled = false
-  ikNodes.forEach((node, i) => ikSpheres.setColorAt(i, node.owner === 'hand' ? IK_COLOR_HAND : IK_COLOR_PHONE))
-  ikSpheres.instanceColor.needsUpdate = true
+  refreshIkNodeColors()
   const geo = new LineSegmentsGeometry()
   const zeros = new Float32Array(n * 3 * 6)
   geo.setPositions(zeros)
@@ -2615,7 +2619,7 @@ function rebuildIkViz() {
   ikAxes.frustumCulled = false
   applyIkVizRenderState()
   scene.add(ikSpheres, ikAxes)
-  ikSpheres.visible = ikAxes.visible = cfg.ikNodesEnabled
+  syncIkVizVisibility()
 }
 function applyIkVizRenderState() {
   if (ikSpheres) { ikSpheres.material.depthTest = !cfg.ikNodesRenderInFront; ikSpheres.renderOrder = cfg.ikNodesRenderInFront ? 998 : 0 }
@@ -2623,7 +2627,7 @@ function applyIkVizRenderState() {
 }
 // Per-frame: copy every node's live world transform into the two batches.
 function updateIkViz() {
-  if (!ikSpheres || !cfg.ikNodesEnabled) return
+  if (!ikSpheres || !(cfg.ikNodesEnabled || ikPicking)) return
   scene.updateMatrixWorld(true)
   const arr = ikAxes.geometry.attributes.instanceStart.data.array // shared interleaved buffer: [sx,sy,sz,ex,ey,ez] per segment; written in place (setPositions per frame would leak GPU buffers)
   const len = cfg.ikAxesLength, r = cfg.ikNodeRadius
@@ -2640,6 +2644,468 @@ function updateIkViz() {
   }
   ikSpheres.instanceMatrix.needsUpdate = true
   ikAxes.geometry.attributes.instanceStart.data.needsUpdate = true
+}
+
+// =======================================================================
+// IK POSING (Hand Model group) -- direct request 2026-10-05. Each PAIR has a
+// TARGET (a hand IK node) that follows a SOURCE (any IK node, usually on the
+// phone):
+//   - the target node's ORIENTATION always follows the source's axes
+//     ("Match Source Axes") or the world axes, plus a local XYZ rotation
+//     offset (the pair's three sliders);
+//   - with "Overlap Position" checked, the finger chain ending at the
+//     target's bone is bent by CCD (ported from HANDO's solveFingerIK(), the
+//     project's existing real IK: rotate each bone, tip->root, by the world
+//     delta that swings the end effector toward the goal) until the target
+//     node reaches the source;
+//   - if the goal is out of reach the chain simply ends as close as it can
+//     get (fully extended toward the goal); with "Allow Bone Stretching" on
+//     the chain bones may also lengthen (up to Max Bone Stretch) to reach
+//     further, with it off bones never change length.
+// Every frame the chain bones are first put back to the pose the normal pose
+// system left them in, then solved fresh (deterministic, no drift); a bone
+// whose rotation changed since IK last wrote it is treated as a new pose and
+// becomes the new base. Turning IK off / deleting a pair releases the bones
+// back to that pose.
+// =======================================================================
+let ikPairs = [] // [{id, targetId, sourceId, axesMode:'source'|'world', rotX, rotY, rotZ, overlap}]
+let ikPicking = null // {pairId, role:'target'|'source'} while waiting for a click on a node
+let ikPairsContainerEl = null
+let ikPairsInputEl = null
+let ikPickStatusEl = null
+let lastSeenIkPairsJson = '[]'
+const IK_COLOR_TARGET = new THREE.Color(0x44ff66)
+const IK_COLOR_SOURCE = new THREE.Color(0xff44dd)
+const ikNodeById = new Map()
+const ikBoneState = new Map() // Bone -> {baseQ, baseS, writtenQ, writtenS, axis}
+const IK_FINGER_BONE = /^r(Index|Mid|Ring|Pinky|Thumb)\d$/
+const _ikGoalP = new THREE.Vector3(), _ikGoalQ = new THREE.Quaternion(), _ikTmpS = new THREE.Vector3()
+const _ikNodeP = new THREE.Vector3(), _ikBoneP = new THREE.Vector3(), _ikRootP = new THREE.Vector3()
+const _ikToEnd = new THREE.Vector3(), _ikToGoal = new THREE.Vector3()
+const _ikDelta = new THREE.Quaternion(), _ikBoneWQ = new THREE.Quaternion(), _ikParentWQ = new THREE.Quaternion()
+const _ikEuler = new THREE.Euler(), _ikRotOffsetQ = new THREE.Quaternion(), _ikDesired = new THREE.Quaternion()
+const _ikQd = new THREE.Quaternion()
+
+function syncIkVizVisibility() {
+  const vis = cfg.ikNodesEnabled || !!ikPicking
+  if (ikSpheres) ikSpheres.visible = vis
+  if (ikAxes) ikAxes.visible = vis
+}
+function refreshIkNodeColors() {
+  if (!ikSpheres) return
+  const targets = new Set(ikPairs.map((p) => p.targetId)), sources = new Set(ikPairs.map((p) => p.sourceId))
+  ikNodes.forEach((n, i) => ikSpheres.setColorAt(i, targets.has(n.id) ? IK_COLOR_TARGET : sources.has(n.id) ? IK_COLOR_SOURCE : (n.owner === 'hand' ? IK_COLOR_HAND : IK_COLOR_PHONE)))
+  ikSpheres.instanceColor.needsUpdate = true
+}
+function onIkNodeRegistryChanged() {
+  refreshIkNodeColors()
+  if (ikPairsContainerEl) renderIkPairsUI()
+}
+
+// ---------------- solver ----------------
+function ikChainFor(leaf) {
+  const chain = []
+  let b = leaf
+  while (b && b.isBone && chain.length < 3) {
+    chain.push(b)
+    if (!IK_FINGER_BONE.test(b.name)) break
+    b = b.parent
+    if (b && !IK_FINGER_BONE.test(b.name)) break
+  }
+  return chain
+}
+function ikStretchAxis(bone) {
+  const kid = bone.children.find((c) => c.isBone)
+  const v = kid ? kid.position : bone.position
+  const ax = Math.abs(v.x), ay = Math.abs(v.y), az = Math.abs(v.z)
+  return ay >= ax && ay >= az ? 'y' : (ax >= az ? 'x' : 'z')
+}
+function ensureIkBoneState(bone) {
+  if (!ikBoneState.has(bone)) ikBoneState.set(bone, { baseQ: bone.quaternion.clone(), baseS: bone.scale.clone(), writtenQ: null, writtenS: null, axis: ikStretchAxis(bone) })
+  return ikBoneState.get(bone)
+}
+// HANDO's solveFingerIK() inner loop, generalized: the end effector is the
+// target IK node itself rather than an estimated fingertip.
+function ikRunCcd(chain, nodeObj, iterations) {
+  for (let it = 0; it < iterations; it++) {
+    for (let i = 0; i < chain.length; i++) {
+      const bone = chain[i]
+      _ikBoneP.setFromMatrixPosition(bone.matrixWorld)
+      _ikNodeP.setFromMatrixPosition(nodeObj.matrixWorld)
+      _ikToEnd.subVectors(_ikNodeP, _ikBoneP)
+      _ikToGoal.subVectors(_ikGoalP, _ikBoneP)
+      if (_ikToEnd.lengthSq() < 1e-8 || _ikToGoal.lengthSq() < 1e-8) continue
+      _ikToEnd.normalize(); _ikToGoal.normalize()
+      _ikDelta.setFromUnitVectors(_ikToEnd, _ikToGoal)
+      bone.getWorldQuaternion(_ikBoneWQ)
+      _ikDelta.multiply(_ikBoneWQ) // world-space delta on top of the current world orientation
+      bone.parent.getWorldQuaternion(_ikParentWQ).invert()
+      bone.quaternion.copy(_ikParentWQ.multiply(_ikDelta))
+      bone.updateMatrixWorld(true)
+    }
+  }
+}
+// Only the chain's ROOT bone is scaled (along its length axis): every
+// descendant inherits that scale through the hierarchy, so the whole chain's
+// reach multiplies by exactly `s`. Scaling each bone separately would
+// compound (a child under a x1.4 parent that is itself x1.4 ends up x1.96) and
+// overshoot -- found by the solver test on the real hand skeleton.
+function ikApplyStretch(chain, s) {
+  const root = chain[chain.length - 1]
+  const st = ikBoneState.get(root)
+  root.scale[st.axis] = st.baseS[st.axis] * s
+  root.updateMatrixWorld(true)
+}
+function ikSolvePosition(chain, nodeObj) {
+  const root = chain[chain.length - 1]
+  let s = 1
+  for (let outer = 0; outer < 3; outer++) {
+    ikRunCcd(chain, nodeObj, 12)
+    if (!cfg.ikAllowBoneStretch) break
+    _ikNodeP.setFromMatrixPosition(nodeObj.matrixWorld)
+    _ikRootP.setFromMatrixPosition(root.matrixWorld)
+    const reach = _ikNodeP.distanceTo(_ikRootP), need = _ikGoalP.distanceTo(_ikRootP)
+    if (reach < 1e-6 || need <= reach * 1.0001 || _ikNodeP.distanceTo(_ikGoalP) < 0.01 * reach) break // reachable by bending alone
+    const newS = THREE.MathUtils.clamp(s * need / reach, 1, Math.max(1, cfg.ikMaxBoneStretch))
+    if (Math.abs(newS - s) < 1e-4) break // already at the max stretch: stop at the furthest reach
+    s = newS
+    ikApplyStretch(chain, s)
+  }
+}
+// The node's desired WORLD orientation: the source's (or the world's) axes,
+// then the pair's local XYZ rotation offset applied in the node's own frame.
+function ikDesiredNodeQuat(pair, out) {
+  if (pair.axesMode === 'world') out.identity(); else out.copy(_ikGoalQ)
+  _ikRotOffsetQ.setFromEuler(_ikEuler.set(THREE.MathUtils.degToRad(pair.rotX || 0), THREE.MathUtils.degToRad(pair.rotY || 0), THREE.MathUtils.degToRad(pair.rotZ || 0), 'XYZ'))
+  return out.multiply(_ikRotOffsetQ)
+}
+// Orientation-only (Overlap Position off): rotate the node's own bone so the
+// node's axes match exactly; position is left wherever the pose puts it.
+function ikApplyNodeOrientation(leaf, binding, qNode) {
+  _ikDesired.copy(qNode).multiply(binding.offsetQInv) // node world quat = bone world quat * offset quat
+  leaf.parent.getWorldQuaternion(_ikParentWQ).invert()
+  leaf.quaternion.copy(_ikParentWQ.multiply(_ikDesired))
+  leaf.updateMatrixWorld(true)
+}
+// Overlap on: POSITION is the primary task, ORIENTATION the secondary one.
+// After CCD has put the node on the goal (or as close as it can get), a few
+// damped-least-squares steps refine the chain in two priorities (classic
+// task-priority IK): the position task first, then the orientation task
+// using ONLY joint motions that leave the position task unchanged (the null
+// space of the position Jacobian). So orientation is matched exactly
+// whenever the finger has the freedom for both, and where it doesn't, the
+// node stays on the source and the orientation gets as close as it can.
+// (Measured on the real hand: CCD alone leaves the tip pointing 55-145 deg
+// off the requested axes; orientation weighting INSIDE CCD cost 10-50 mm of
+// position; this keeps position at ~0 mm.) Jacobians are numeric
+// (finite-difference world-space rotations of each bone), the chain is <= 3
+// bones so each is a 3x9 matrix and every inverse is 3x3.
+const IK_FD_EPS = 1e-3
+const _ikPA = new THREE.Vector3(), _ikPB = new THREE.Vector3(), _ikQA = new THREE.Quaternion(), _ikQB = new THREE.Quaternion(), _ikSS = new THREE.Vector3(), _ikAxisQ = new THREE.Quaternion(), _ikAxisV = new THREE.Vector3()
+function ikRotVec(q, out) { // rotation vector (axis * angle) of q, shortest way round
+  let x = q.x, y = q.y, z = q.z, w = q.w
+  if (w < 0) { x = -x; y = -y; z = -z; w = -w }
+  const sn = Math.sqrt(x * x + y * y + z * z)
+  if (sn < 1e-12) return out.set(0, 0, 0)
+  const k = (2 * Math.atan2(sn, w)) / sn
+  return out.set(x * k, y * k, z * k)
+}
+function ikMatMul(A, B) { const r = A.length, k = B.length, c = B[0].length, o = []; for (let i = 0; i < r; i++) { o.push(new Array(c).fill(0)); for (let j = 0; j < c; j++) { let sum = 0; for (let t = 0; t < k; t++) sum += A[i][t] * B[t][j]; o[i][j] = sum } } return o }
+function ikTranspose(A) { return A[0].map((_, j) => A.map((row) => row[j])) }
+function ikInv3(M) {
+  const [[a, b, c], [d, e, f], [g, h, i]] = M
+  const A = e * i - f * h, B = -(d * i - f * g), C = d * h - e * g
+  const det = a * A + b * B + c * C
+  if (Math.abs(det) < 1e-18) return [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
+  const D = -(b * i - c * h), E = a * i - c * g, F = -(a * h - b * g), G = b * f - c * e, H = -(a * f - c * d), I = a * e - b * d
+  return [[A / det, D / det, G / det], [B / det, E / det, H / det], [C / det, F / det, I / det]]
+}
+function ikDlsPinv(J, lambda) { // m x 3 damped pseudo-inverse of the 3 x m matrix J
+  const Jt = ikTranspose(J), JJt = ikMatMul(J, Jt)
+  for (let i = 0; i < 3; i++) JJt[i][i] += lambda * lambda
+  return ikMatMul(Jt, ikInv3(JJt))
+}
+function ikMeasureNode(nodeObj, pOut, qOut) { nodeObj.matrixWorld.decompose(pOut, qOut, _ikSS) }
+function ikRotateBoneWorld(bone, ax, ay, az, angle) { // world-space rotation of `angle` about the axis through the bone's own head
+  _ikAxisQ.setFromAxisAngle(_ikAxisV.set(ax, ay, az), angle)
+  bone.getWorldQuaternion(_ikBoneWQ)
+  _ikAxisQ.multiply(_ikBoneWQ)
+  bone.parent.getWorldQuaternion(_ikParentWQ).invert()
+  bone.quaternion.copy(_ikParentWQ.multiply(_ikAxisQ))
+  bone.updateMatrixWorld(true)
+}
+function ikRefine6D(chain, nodeObj, qDesired, iterations) {
+  const n = chain.length, m = n * 3
+  _ikRootP.setFromMatrixPosition(chain[n - 1].matrixWorld)
+  ikMeasureNode(nodeObj, _ikPA, _ikQA)
+  const posTol = Math.max(1e-6, 0.005 * _ikPA.distanceTo(_ikRootP)) // final position may differ from the position solve's result by this much
+  const savedQ = chain.map((b) => b.quaternion.clone())
+  const posErrStart = _ikPA.distanceTo(_ikGoalP)
+  ikRotVec(_ikDelta.copy(qDesired).multiply(_ikQA.invert()), _ikToEnd)
+  const orErrStart = _ikToEnd.length()
+  const dTheta = new Array(m)
+  for (let it = 0; it < iterations; it++) {
+    ikMeasureNode(nodeObj, _ikPA, _ikQA) // current node pose
+    const ePos = [_ikGoalP.x - _ikPA.x, _ikGoalP.y - _ikPA.y, _ikGoalP.z - _ikPA.z]
+    ikRotVec(_ikDelta.copy(qDesired).multiply(_ikQB.copy(_ikQA).invert()), _ikToEnd) // orientation error as a rotation vector
+    const eOr = [_ikToEnd.x, _ikToEnd.y, _ikToEnd.z]
+    if (Math.hypot(...ePos) < 1e-5 && Math.hypot(...eOr) < 2e-3) break
+    // numeric Jacobian: column per (bone, world axis)
+    const J1 = [[], [], []], J2 = [[], [], []]
+    for (let bi = 0; bi < n; bi++) for (let a = 0; a < 3; a++) {
+      const bone = chain[bi], q0 = bone.quaternion.clone()
+      ikRotateBoneWorld(bone, a === 0 ? 1 : 0, a === 1 ? 1 : 0, a === 2 ? 1 : 0, IK_FD_EPS)
+      ikMeasureNode(nodeObj, _ikPB, _ikQB)
+      ikRotVec(_ikDelta.copy(_ikQB).multiply(_ikQA.clone().invert()), _ikToGoal)
+      const col = bi * 3 + a
+      J1[0][col] = (_ikPB.x - _ikPA.x) / IK_FD_EPS; J1[1][col] = (_ikPB.y - _ikPA.y) / IK_FD_EPS; J1[2][col] = (_ikPB.z - _ikPA.z) / IK_FD_EPS
+      J2[0][col] = _ikToGoal.x / IK_FD_EPS; J2[1][col] = _ikToGoal.y / IK_FD_EPS; J2[2][col] = _ikToGoal.z / IK_FD_EPS
+      bone.quaternion.copy(q0); bone.updateMatrixWorld(true)
+    }
+    // primary: position
+    const P1 = ikDlsPinv(J1, 0.004)
+    const d1 = ikMatMul(P1, ePos.map((v) => [v])).map((r) => r[0])
+    // secondary: orientation inside the null space of the position task
+    const N1 = ikMatMul(P1, J1).map((row, i) => row.map((v, j) => (i === j ? 1 : 0) - v))
+    const J2N = ikMatMul(J2, N1)
+    const resid = eOr.map((v, i) => v - J2[i].reduce((s2, c, j) => s2 + c * d1[j], 0))
+    const P2 = ikDlsPinv(J2N, 0.05)
+    const d2 = ikMatMul(N1, ikMatMul(P2, resid.map((v) => [v]))).map((r) => r[0])
+    let maxStep = 0
+    for (let j = 0; j < m; j++) { dTheta[j] = d1[j] + d2[j]; maxStep = Math.max(maxStep, Math.abs(dTheta[j])) }
+    const scale = maxStep > 0.4 ? 0.4 / maxStep : 1 // keep each step small so the linearization holds
+    for (let bi = n - 1; bi >= 0; bi--) { // root first
+      const x = dTheta[bi * 3] * scale, y = dTheta[bi * 3 + 1] * scale, z = dTheta[bi * 3 + 2] * scale
+      const ang = Math.hypot(x, y, z)
+      if (ang > 1e-9) ikRotateBoneWorld(chain[bi], x / ang, y / ang, z / ang, ang)
+    }
+  }
+  // Judge the FINAL pose, not every step (the route to a good pose may pass
+  // through poses that stray from the goal): keep it only if position did not
+  // end up worse than the position solve left it (beyond a small tolerance)
+  // AND orientation improved; otherwise restore the pre-refinement pose. This
+  // is also what protects a fully straight (singular) chain from being swung off.
+  ikMeasureNode(nodeObj, _ikPB, _ikQB)
+  const posErrAfter = _ikPB.distanceTo(_ikGoalP)
+  ikRotVec(_ikDelta.copy(qDesired).multiply(_ikQA.copy(_ikQB).invert()), _ikToEnd)
+  const orErrAfter = _ikToEnd.length()
+  if (posErrAfter > Math.max(posErrStart, posTol) || orErrAfter >= orErrStart) {
+    chain.forEach((b, i) => b.quaternion.copy(savedQ[i]))
+    chain[n - 1].updateMatrixWorld(true)
+  }
+}
+function ikSolvePair(pair, touched) {
+  const tgt = ikNodeById.get(pair.targetId), src = ikNodeById.get(pair.sourceId)
+  if (!tgt || !src || tgt.owner !== 'hand') return
+  const h = hands[tgt.ownerIndex]
+  const entry = h && h.ikProxies && h.ikProxies.find((p) => p.proxy === tgt.object3d)
+  if (!entry) return
+  const leaf = h.skinnedMesh.skeleton.getBoneByName(entry.binding.boneName)
+  if (!leaf || !leaf.parent) return
+  const chain = ikChainFor(leaf)
+  chain.forEach((b) => { ensureIkBoneState(b); touched.add(b) })
+  src.object3d.matrixWorld.decompose(_ikGoalP, _ikGoalQ, _ikTmpS)
+  ikDesiredNodeQuat(pair, _ikQd)
+  if (pair.overlap) {
+    ikSolvePosition(chain, tgt.object3d)
+    ikRefine6D(chain, tgt.object3d, _ikQd, 10)
+  } else ikApplyNodeOrientation(leaf, entry.binding, _ikQd)
+}
+// Called every frame from animate(). Returns true if it changed (or released)
+// any bone, so the caller can refresh dependent visuals.
+function applyIkPosing() {
+  if (!ikBoneState.size && !(cfg.ikPosingEnabled && ikPairs.length)) return false
+  // 1. Put every tracked bone back to the pose system's own value (or adopt a new one).
+  ikBoneState.forEach((st, bone) => {
+    if (st.writtenQ && !(bone.quaternion.equals(st.writtenQ) && bone.scale.equals(st.writtenS))) { st.baseQ.copy(bone.quaternion); st.baseS.copy(bone.scale) } // rewritten externally = a new pose
+    else { bone.quaternion.copy(st.baseQ); bone.scale.copy(st.baseS) }
+    st.writtenQ = null; st.writtenS = null
+  })
+  const touched = new Set()
+  scene.updateMatrixWorld(true)
+  if (cfg.ikPosingEnabled) for (const pair of ikPairs) ikSolvePair(pair, touched)
+  // 2. Remember what we wrote; release bones no pair touches any more.
+  ikBoneState.forEach((st, bone) => {
+    if (touched.has(bone)) { st.writtenQ = bone.quaternion.clone(); st.writtenS = bone.scale.clone() } else ikBoneState.delete(bone)
+  })
+  scene.updateMatrixWorld(true)
+  return true
+}
+
+// ---------------- pairs: state, persistence, picking ----------------
+function newIkPair() {
+  return { id: 'p' + Date.now().toString(36) + Math.floor(Math.random() * 46656).toString(36), targetId: '', sourceId: '', axesMode: 'source', rotX: 0, rotY: 0, rotZ: 0, overlap: true }
+}
+function persistIkPairs() {
+  const json = JSON.stringify(ikPairs)
+  lastSeenIkPairsJson = json
+  if (ikPairsInputEl) ikPairsInputEl.value = json
+  refreshIkNodeColors()
+  requestRender()
+}
+function ikNodeLabelById(id) {
+  if (!id) return '— not set —'
+  const n = ikNodeById.get(id)
+  return n ? n.label : (id.split('/').pop() + ' (not loaded)')
+}
+function startIkPick(pairId, role) {
+  ikPicking = { pairId, role }
+  syncIkVizVisibility()
+  renderIkPairsUI()
+  setIkPickStatus('Click an IK node on screen to set the ' + role + (role === 'target' ? ' (a hand node)' : '') + '…')
+  requestRender()
+}
+function cancelIkPick() {
+  if (!ikPicking) return
+  ikPicking = null
+  syncIkVizVisibility()
+  setIkPickStatus('')
+  renderIkPairsUI()
+  requestRender()
+}
+function setIkPickStatus(msg) { if (ikPickStatusEl) ikPickStatusEl.textContent = msg }
+function findIkNodeNearPointer(clientX, clientY, ownerFilter) {
+  const rect = renderer.domElement.getBoundingClientRect()
+  const v = new THREE.Vector3()
+  let best = null
+  ikNodes.forEach((n) => {
+    if (ownerFilter && n.owner !== ownerFilter) return
+    v.setFromMatrixPosition(n.object3d.matrixWorld).project(camera)
+    if (v.z > 1) return
+    const d = Math.hypot(rect.left + (v.x * 0.5 + 0.5) * rect.width - clientX, rect.top + (-v.y * 0.5 + 0.5) * rect.height - clientY)
+    if (d < 36 && (!best || d < best.d)) best = { n, d }
+  })
+  return best && best.n
+}
+let ikPickListenersAttached = false
+function attachIkPickListeners() {
+  if (ikPickListenersAttached) return
+  ikPickListenersAttached = true
+  let down = null
+  renderer.domElement.addEventListener('pointerdown', (e) => { down = { x: e.clientX, y: e.clientY } })
+  renderer.domElement.addEventListener('pointerup', (e) => {
+    if (!ikPicking || !down) return
+    const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y)
+    down = null
+    if (moved > 8) return // a drag (orbit/pan), not a click
+    const pair = ikPairs.find((p) => p.id === ikPicking.pairId)
+    if (!pair) { cancelIkPick(); return }
+    const node = findIkNodeNearPointer(e.clientX, e.clientY, ikPicking.role === 'target' ? 'hand' : null)
+    if (!node) { setIkPickStatus('No ' + (ikPicking.role === 'target' ? 'hand ' : '') + 'IK node near that spot — click closer to a node, or press Pick again to cancel.'); return }
+    if (ikPicking.role === 'target') pair.targetId = node.id; else pair.sourceId = node.id
+    ikPicking = null
+    syncIkVizVisibility()
+    setIkPickStatus('Set: ' + node.label)
+    persistIkPairs()
+    renderIkPairsUI()
+  })
+}
+
+// ---------------- pairs: UI ----------------
+function ikMakeSliderRow(label, min, max, value, onInput) {
+  const row = document.createElement('div')
+  row.className = 'dev-row ik-pair-row'
+  const l = document.createElement('span'); l.className = 'dev-label'; l.textContent = label
+  const slider = document.createElement('input'); slider.type = 'range'; slider.className = 'dev-slider'; slider.min = min; slider.max = max; slider.step = 'any'; slider.value = value
+  const num = document.createElement('input'); num.type = 'text'; num.className = 'ik-num'; num.value = window.formatDevNumericValue ? window.formatDevNumericValue(value) : String(value)
+  slider.addEventListener('input', () => { num.value = window.formatDevNumericValue ? window.formatDevNumericValue(slider.value) : slider.value; onInput(parseFloat(slider.value)) })
+  num.addEventListener('change', () => {
+    const v = parseFloat(num.value)
+    if (isNaN(v)) { num.value = slider.value; return }
+    if (v < parseFloat(slider.min)) slider.min = v
+    if (v > parseFloat(slider.max)) slider.max = v
+    slider.value = v; onInput(v)
+  })
+  row.append(l, slider, num)
+  return row
+}
+function renderIkPairsUI() {
+  if (!ikPairsContainerEl) return
+  ikPairsContainerEl.innerHTML = ''
+  if (!ikPairs.length) {
+    const empty = document.createElement('div'); empty.className = 'dev-label'; empty.textContent = '(no IK pairs — press ADD IK PAIR)'
+    ikPairsContainerEl.appendChild(empty)
+    return
+  }
+  ikPairs.forEach((pair, i) => {
+    const card = document.createElement('div'); card.className = 'ik-pair-card'
+    const head = document.createElement('div'); head.className = 'ik-pair-head'
+    const title = document.createElement('span'); title.className = 'dev-label'; title.textContent = 'IK Pair ' + (i + 1)
+    const delWrap = document.createElement('div'); delWrap.className = 'dev-buttons'
+    const del = document.createElement('button'); del.type = 'button'; del.textContent = 'DELETE PAIR'
+    del.addEventListener('click', () => {
+      if (ikPicking && ikPicking.pairId === pair.id) cancelIkPick()
+      ikPairs = ikPairs.filter((p) => p.id !== pair.id)
+      persistIkPairs(); renderIkPairsUI()
+    })
+    delWrap.appendChild(del); head.append(title, delWrap); card.appendChild(head)
+    const pickRow = (role, nodeId) => {
+      const r = document.createElement('div'); r.className = 'dev-row ik-pair-row'
+      const l = document.createElement('span'); l.className = 'dev-label'; l.textContent = role === 'target' ? 'Target (follows)' : 'Source (leads)'
+      const val = document.createElement('span'); val.className = 'ik-node-label'; val.textContent = ikNodeLabelById(nodeId)
+      const bw = document.createElement('div'); bw.className = 'dev-buttons'
+      const b = document.createElement('button'); b.type = 'button'
+      const active = ikPicking && ikPicking.pairId === pair.id && ikPicking.role === role
+      b.textContent = active ? 'CANCEL' : 'PICK'
+      b.addEventListener('click', () => { if (active) cancelIkPick(); else startIkPick(pair.id, role) })
+      bw.appendChild(b); r.append(l, val, bw)
+      return r
+    }
+    card.appendChild(pickRow('target', pair.targetId))
+    card.appendChild(pickRow('source', pair.sourceId))
+    // Axes mode
+    const axRow = document.createElement('div'); axRow.className = 'dev-row ik-pair-row'
+    const axL = document.createElement('span'); axL.className = 'dev-label'; axL.textContent = 'Axes'
+    const sel = document.createElement('select'); sel.className = 'dev-select'
+    ;[['source', 'Match Source Node Axes'], ['world', 'World Axes']].forEach(([v, t]) => { const o = document.createElement('option'); o.value = v; o.textContent = t; sel.appendChild(o) })
+    sel.value = pair.axesMode
+    sel.addEventListener('change', () => { pair.axesMode = sel.value; persistIkPairs() })
+    axRow.append(axL, sel); card.appendChild(axRow)
+    card.appendChild(ikMakeSliderRow('Rotate X (Deg)', -180, 180, pair.rotX, (v) => { pair.rotX = v; persistIkPairs() }))
+    card.appendChild(ikMakeSliderRow('Rotate Y (Deg)', -180, 180, pair.rotY, (v) => { pair.rotY = v; persistIkPairs() }))
+    card.appendChild(ikMakeSliderRow('Rotate Z (Deg)', -180, 180, pair.rotZ, (v) => { pair.rotZ = v; persistIkPairs() }))
+    const ovRow = document.createElement('div'); ovRow.className = 'dev-row ik-pair-row'
+    const ovL = document.createElement('span'); ovL.className = 'dev-label'; ovL.textContent = 'Overlap Position (Bend Finger To Reach)'
+    const ov = document.createElement('input'); ov.type = 'checkbox'; ov.checked = !!pair.overlap
+    ov.addEventListener('change', () => { pair.overlap = ov.checked; persistIkPairs() })
+    ovRow.append(ovL, ov); card.appendChild(ovRow)
+    ikPairsContainerEl.appendChild(card)
+  })
+}
+function renderIkPosingGroup(handModelContent) {
+  const content = addSubgroup(handModelContent, 'IK POSING')
+  addRow(content, { id: 'checkboxIkPosingEnabled', label: 'IK Posing On/Off', type: 'checkbox' })
+  document.getElementById('checkboxIkPosingEnabled').checked = cfg.ikPosingEnabled
+  wireCheckbox('checkboxIkPosingEnabled', (v) => { cfg.ikPosingEnabled = v; requestRender() })
+  addRow(content, { id: 'checkboxIkAllowBoneStretch', label: 'Allow Bone Stretching', type: 'checkbox' })
+  document.getElementById('checkboxIkAllowBoneStretch').checked = cfg.ikAllowBoneStretch
+  wireCheckbox('checkboxIkAllowBoneStretch', (v) => { cfg.ikAllowBoneStretch = v; requestRender() })
+  addRow(content, { id: 'sliderIkMaxBoneStretch', label: 'Max Bone Stretch (x)', type: 'slider', min: 1, max: 4, step: 'any', value: cfg.ikMaxBoneStretch })
+  wireSlider('sliderIkMaxBoneStretch', (v) => { cfg.ikMaxBoneStretch = v; requestRender() })
+  // Hidden, Sync-participating JSON of the pair list -- same reason as every
+  // other hand-built widget in this file (a plain DOM list is invisible to
+  // devPanel.js's generic capture/restore otherwise).
+  const hiddenRow = addRow(content, { id: 'hiddenIkPairs', label: 'IK Pairs (internal)', type: 'text', inputType: 'text', value: JSON.stringify(ikPairs), skipDeviceCheckbox: true })
+  hiddenRow.style.display = 'none'
+  ikPairsInputEl = hiddenRow.querySelector('#hiddenIkPairs')
+  lastSeenIkPairsJson = ikPairsInputEl.value
+  ikPairsInputEl.addEventListener('input', () => {
+    if (ikPairsInputEl.value === lastSeenIkPairsJson) return
+    lastSeenIkPairsJson = ikPairsInputEl.value
+    try { const parsed = JSON.parse(ikPairsInputEl.value); ikPairs = Array.isArray(parsed) ? parsed : [] } catch (e) { return }
+    refreshIkNodeColors(); renderIkPairsUI(); requestRender()
+  })
+  ikPairsContainerEl = document.createElement('div')
+  content.appendChild(ikPairsContainerEl)
+  const addWrap = document.createElement('div'); addWrap.className = 'dev-buttons'
+  const addBtn = document.createElement('button'); addBtn.type = 'button'; addBtn.textContent = 'ADD IK PAIR'
+  addBtn.addEventListener('click', () => { ikPairs.push(newIkPair()); persistIkPairs(); renderIkPairsUI() })
+  addWrap.appendChild(addBtn); content.appendChild(addWrap)
+  ikPickStatusEl = document.createElement('div')
+  ikPickStatusEl.style.cssText = 'font-size:11px; opacity:0.85; margin-top:4px;'
+  content.appendChild(ikPickStatusEl)
+  attachIkPickListeners()
+  renderIkPairsUI()
 }
 
 // =======================================================================
@@ -5885,6 +6351,7 @@ window.__debug = {
   get phoneGyroQuat() { return phoneGyroQuat }, get lastInputSource() { return lastInputSource },
   get sensorLog() { return sensorLogLines() },
   get ikNodes() { return ikNodes },
+  get ikPairs() { return ikPairs },
   // ZUPT diagnostics -- added 2026-10-01, exposed here per direct
   // request ("expose it in the existing diagnostics rather than
   // creating a separate system") instead of a new logging mechanism.
@@ -6123,6 +6590,7 @@ function renderOneFrame() {
     }
     updateAllFingerGizmos()
     updatePhoneModelFrame()
+    if (applyIkPosing()) updateAllFingerGizmos() // IK Posing (after the phone has moved this frame, so sources are current)
     updateIkViz()
     renderVirtualScreen()
   }
@@ -8939,7 +9407,7 @@ function renderDebugExtras() {
   const ikNodesContent = addSubgroup(debugContent, 'IK Nodes')
   addRow(ikNodesContent, { id: 'checkboxIkNodesEnabled', label: 'IK Nodes + Axes On/Off', type: 'checkbox' })
   document.getElementById('checkboxIkNodesEnabled').checked = cfg.ikNodesEnabled
-  wireCheckbox('checkboxIkNodesEnabled', (v) => { cfg.ikNodesEnabled = v; if (ikSpheres) ikSpheres.visible = ikAxes.visible = v; requestRender() })
+  wireCheckbox('checkboxIkNodesEnabled', (v) => { cfg.ikNodesEnabled = v; syncIkVizVisibility(); requestRender() })
   addRow(ikNodesContent, { id: 'sliderIkNodeRadius', label: 'Node Radius (World Units)', type: 'slider', min: 0.05, max: 10, step: 'any', value: cfg.ikNodeRadius })
   wireSlider('sliderIkNodeRadius', (v) => { cfg.ikNodeRadius = v; requestRender() })
   addRow(ikNodesContent, { id: 'sliderIkAxesLength', label: 'Axes Length (World Units)', type: 'slider', min: 0.5, max: 60, step: 'any', value: cfg.ikAxesLength })
@@ -8998,6 +9466,7 @@ function renderHandysetDevGroups() {
   // liek the phone and load in this geometry... HandiBonesB-IK.glb". See
   // HAND_MODEL_OPTIONS'/renderHandModelItemSelector()'s own comments.
   renderHandModelItemSelector(handModelContent)
+  renderIkPosingGroup(handModelContent)
 
   const fieldContent = addSubgroup(handModelContent, 'Field Layout')
   addRow(fieldContent, { id: 'sliderFieldRows', label: 'Rows (Count)', type: 'slider', min: 1, max: 40, step: 1, value: cfg.fieldRows })
