@@ -1,3 +1,27 @@
+2026-10-04  -  IK POSING: the whole hand/arm now swings toward out-of-reach targets
+  - Report: "when I turn on IK posing, the rigged hand should change its pose accordingly".
+    Probed the live site with the user's own pair (thumb pad -> phone side point, IK on, stretch
+    off): the solver ran, but the chain stopped at the finger (<= 3 bones) while the target was
+    ~30 world units away (hand ~8 units long) -> IK on only nudged the thumb ~3 units, i.e. the
+    hand looked unchanged.
+  - ikChainFor() now runs from the target's bone UP through finger bones, carpal, wrist (rHand) and
+    forearm to rForearmBend (<= 8 bones) -- "move the target node as far as you can, and all the
+    resultant other bones". Solving is STAGED: the finger bones solve first; carpal/wrist/forearm
+    join only if the finger alone can't put the node on the goal (otherwise CCD nudges every bone
+    each pass and two pairs on one hand disturbed each other: 61 mm error -> 0.000 mm with staging).
+    Orientation refinement likewise tries the finger-only sub-chain first, then the full chain.
+  - Bone stretching lengthens only the FINGER part of the chain (its topmost finger bone), never
+    the arm (scaling the arm root would stretch the whole hand mesh); palm/wrist targets have no
+    finger bone -> no stretch. The stretch factor is now (reach+gap)/reach and only applies once the
+    chain is extended straight at the goal.
+  - Node test (real three.js, real hand skeleton, thumb pad): goal at 0.5x / 1x the pad's distance
+    from the arm base -> lands exactly (0.0 mm) with the wrist rotating 16 / 32 deg; goal at 2x -> the
+    arm swings ~45 deg and closes 88 mm of a 402 mm gap (173 mm left with stretching on).
+    Live site v=216 with the user's pair: pad 30.74 -> 27.47 units from the node, wrist +44 deg,
+    thumb joints +56..66 deg. The remaining gap is the arm's genuine reach limit.
+  - Measurement lesson: in the browser pane an unfocused tab pauses requestAnimationFrame, so a
+    state read right after a toggle can show NO change; pump a frame (screenshot) between steps.
+
 2026-10-04  -  FIX: hand IK nodes missing -- the first hand load raced (and beat) the selected model
   - Found by probing the LIVE site (window.__debug): the selector said HandiBonesB-IK, but the
     hand on screen was Hand2.glb (clone children "Cube"/"RootNode", 22 bones, 0 IK proxies).
