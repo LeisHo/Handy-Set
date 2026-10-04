@@ -1,3 +1,27 @@
+2026-10-04  -  FIX: hand IK nodes missing -- the first hand load raced (and beat) the selected model
+  - Found by probing the LIVE site (window.__debug): the selector said HandiBonesB-IK, but the
+    hand on screen was Hand2.glb (clone children "Cube"/"RootNode", 22 bones, 0 IK proxies).
+    Cause: the app's first hand load was a separate, unguarded loader for MODEL_URL (Hand2.glb,
+    1.6 MB); the synced selection then triggered a token-guarded swap to the small IK hand,
+    which usually finished first -- the slower first load then completed LAST and overwrote it.
+    Commit e63c145 ("make HandiBonesB-IK the default") had only reordered the selector list.
+  - Fix: the first load now goes through loadHandModel() with the same token guard (only the
+    newest request may build hands); the one-time boot work (default pose/camera/..., motion
+    input, render loop) runs after whichever load first succeeds (runHandFirstLoadTail);
+    cfg.handModelFile defaults to the first HAND_MODEL_OPTIONS entry (was MODEL_URL).
+    Simulated the failing order against the real code: stale first load can no longer overwrite.
+  - Every descendant of the "IK Target Points" layer is now an IK node (direct request):
+    the 6 finger/palm GROUP objects as well as the empties in them (hand: 46 on the committed
+    GLB, 50 on the user's newer local one; phones: 52-58). Group objects sit at the layer origin.
+  - Debug > IK Nodes now shows a live status line: "Hand IK nodes: N . Phone IK nodes: M .
+    Hand model: <file>" -- 0 hand nodes means the loaded hand has no IK layer.
+  - IK refinement iterations 10 -> 24 (on the user's current hand 10 left a tilted-fingertip
+    case at 134 deg; 20+ reaches 0.01 mm / 0.0 deg).
+  - Verified on the deployed v=215: hand = IK hand (23 bones), 46 hand + 54 phone nodes,
+    status line present, axes drawing.
+  - Not committed by the assistant: the user's locally edited HandiBonesB-IK.glb (44 empties,
+    78 KB, Draco) -- Vercel serves the committed 836 KB version (40 empties) until it is committed.
+
 2026-10-04  -  FIX: IK nodes never appeared (GLTFLoader renames nodes); dropdown pickers
   - Root cause: GLTFLoader runs every node name through PropertyBinding.sanitizeNodeName
     (whitespace -> '_', []./: removed), so "IK Target Points" arrives as "IK_Target_Points"
