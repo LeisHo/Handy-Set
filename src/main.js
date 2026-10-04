@@ -2351,7 +2351,7 @@ function initMotionInput() {
   // answer: "Fully independent") -- requesting permission on EITHER
   // being on at load ensures Displace's own real devicemotion listener
   // is attached even when Tracking Enabled itself is off.
-  if (cfg.trackingEnabled || cfg.phoneResponsiveDisplaceEnabled) requestMotionPermissionIfNeeded()
+  if (cfg.trackingEnabled || cfg.phoneResponsiveDisplaceEnabled || cfg.phoneResponsiveRotationEnabled) requestMotionPermissionIfNeeded()
 }
 // Rotation Reset gesture -- direct request 2026-09-28: double-tap
 // (mobile)/double-click (desktop) ANYWHERE on screen re-baselines Phone
@@ -3650,7 +3650,7 @@ function computeScreenLevelScale(depth, levels) {
 // position can still sit very close to dead-center.
 const PHONE_RESPONSIVE_DEADZONE = 0.02 // ~1deg-equivalent (0.02 * 45)
 function computePhoneResponsiveAxisDeg(rawComponent, axis) {
-  if (!cfg.trackingEnabled) return 0
+  // (no Tracking Enabled gate, 2026-10-04: Phone Responsive Rotation is independent of the hand-tracking master)
   if (!cfg.responsiveRotationGlobalEnabled) return 0
   if (!cfg.phoneResponsiveRotationEnabled) return 0
   if (Math.abs(rawComponent) < PHONE_RESPONSIVE_DEADZONE) return 0
@@ -4097,7 +4097,16 @@ function computePhoneCombinedQuat() {
   _phoneManualQuat.setFromEuler(new THREE.Euler(
     THREE.MathUtils.degToRad(cfg.phoneModelRotX), THREE.MathUtils.degToRad(cfg.phoneModelRotY), THREE.MathUtils.degToRad(cfg.phoneModelRotZ), 'XYZ'
   ))
-  if (lastInputSource === 'device' && latestOrientation) {
+  // GATING FIXED 2026-10-04 (direct report: "phone responsive rotation doesnt work"): Phone Model
+  // Responsive Rotation depends ONLY on its own On/Off checkbox + the Debug global override -- NOT on the
+  // hand's "Tracking Enabled" master (Palm Rotation / Wrist Splay / Crop), which the synced settings had
+  // OFF. That coupling (desktop branch + gyro integrator + motion-permission request + continuous
+  // render) silently killed the phone rotation whenever hand tracking was off, exactly as Responsive
+  // Displace already avoids ("Fully independent"). The device branch below also never checked its own
+  // checkbox at all in 'absolute' mode; it does now.
+  if (!cfg.phoneResponsiveRotationEnabled || !cfg.responsiveRotationGlobalEnabled) {
+    _phoneResponsiveQuat.identity()
+  } else if (lastInputSource === 'device' && latestOrientation) {
     // MOBILE -- Rotation Mode selector, added 2026-09-30. 'gyro' (the
     // ORIGINAL, UNCHANGED implementation) reads phoneGyroQuat, already
     // fully-integrated by integratePhoneGyroRotation() every devicemotion
@@ -4120,7 +4129,7 @@ function computePhoneCombinedQuat() {
     // wiring itself).
     _phoneResponsiveQuat.copy(phoneGyroQuat)
     }
-  } else if (cfg.trackingEnabled && cfg.phoneResponsiveRotationEnabled) {
+  } else {
     // DESKTOP: cursor-distance-driven, through the per-axis curve/range
     // system. CHANGED 2026-10-01: each axis now independently evaluates
     // its OWN raw signed component through its OWN curve
@@ -4186,8 +4195,6 @@ function computePhoneCombinedQuat() {
       _phoneDesktopSpinQuat.setFromAxisAngle(UP, THREE.MathUtils.degToRad(alphaDeg))
       _phoneResponsiveQuat.multiply(_phoneDesktopSpinQuat)
     }
-  } else {
-    _phoneResponsiveQuat.identity()
   }
   return _phoneCombinedQuat.copy(_phoneManualQuat).multiply(_phoneResponsiveQuat)
 }
@@ -4225,7 +4232,7 @@ function computePhoneCombinedQuat() {
 // beta=X/gamma=Y/alpha=Z-in-slot-order assumption this comment
 // originally described.
 function integratePhoneGyroRotation(e) {
-  if (!cfg.trackingEnabled || !cfg.responsiveRotationGlobalEnabled || !cfg.phoneResponsiveRotationEnabled || !e.rotationRate) {
+  if (!cfg.responsiveRotationGlobalEnabled || !cfg.phoneResponsiveRotationEnabled || !e.rotationRate) {
     phoneGyroLastTimestamp = null // clean restart, no big jump, whenever this resumes
     return
   }
@@ -6848,7 +6855,9 @@ function animate() {
   // cursor-delta sampling (and mobile's per-frame visual read of the
   // leaky-integrated position) would silently stop running the moment
   // the render loop goes idle with Tracking Enabled off.
-  const continuousRenderNeeded = !isPaused && ((cfg.trackingEnabled && hands.length > 0) || cfg.phoneResponsiveDisplaceEnabled)
+  // Phone Responsive Rotation also forces continuous rendering (2026-10-04), independent of Tracking Enabled: its per-frame slerp/sensor read only runs inside a rendered frame.
+  const phoneRotationLive = cfg.phoneModelEnabled && cfg.phoneResponsiveRotationEnabled && cfg.responsiveRotationGlobalEnabled
+  const continuousRenderNeeded = !isPaused && ((cfg.trackingEnabled && hands.length > 0) || cfg.phoneResponsiveDisplaceEnabled || phoneRotationLive)
   const shouldRender = continuousRenderNeeded || needsRender
   if (shouldRender) {
     needsRender = false
@@ -9085,7 +9094,7 @@ function renderPhoneModelGroup(content) {
   // comment for why this matters (3 rounds of reports proved the SAME
   // code can look like a different permutation depending on the
   // phone's starting orientation).
-  wireCheckbox('checkboxPhoneResponsiveRotationEnabled', (v) => { cfg.phoneResponsiveRotationEnabled = v; if (v) resetPhoneModelRotationBaseline() })
+  wireCheckbox('checkboxPhoneResponsiveRotationEnabled', (v) => { cfg.phoneResponsiveRotationEnabled = v; if (v) { requestMotionPermissionIfNeeded(); resetPhoneModelRotationBaseline() } requestRender() })
   // Rotation Mode -- direct request 2026-09-30: a selectable alternative
   // to the existing Gyro/Integrated system, added specifically to
   // eliminate accumulated gyro-drift/path-dependence. See
@@ -9797,7 +9806,7 @@ function renderDebugExtras() {
   // cfg.responsiveRotationGlobalEnabled's own declaration comment.
   addRow(debugContent, { id: 'checkboxResponsiveRotationGlobalEnabled', label: 'Responsive Rotation (Global Override)', type: 'checkbox' })
   document.getElementById('checkboxResponsiveRotationGlobalEnabled').checked = cfg.responsiveRotationGlobalEnabled
-  wireCheckbox('checkboxResponsiveRotationGlobalEnabled', (v) => { cfg.responsiveRotationGlobalEnabled = v; if (v) resetPhoneModelRotationBaseline() })
+  wireCheckbox('checkboxResponsiveRotationGlobalEnabled', (v) => { cfg.responsiveRotationGlobalEnabled = v; if (v) { requestMotionPermissionIfNeeded(); resetPhoneModelRotationBaseline() } requestRender() })
   addRow(debugContent, { id: 'checkboxResponsiveDisplaceGlobalEnabled', label: 'Responsive Displacement (Global Override)', type: 'checkbox' })
   document.getElementById('checkboxResponsiveDisplaceGlobalEnabled').checked = cfg.responsiveDisplaceGlobalEnabled
   wireCheckbox('checkboxResponsiveDisplaceGlobalEnabled', (v) => { cfg.responsiveDisplaceGlobalEnabled = v })
