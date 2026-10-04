@@ -155,7 +155,7 @@
     "sliderPhoneDisplaceScaleX": -1,
     "checkboxPhoneDisplaceInvertX": true,
     "checkboxPhoneDisplaceAxisYEnabled": true,
-    "sliderPhoneDisplaceScaleY": 2.11355284962894,
+    "sliderPhoneDisplaceScaleY": 1,
     "checkboxPhoneDisplaceInvertY": false,
     "checkboxPhoneDisplaceAxisZEnabled": false,
     "sliderPhoneDisplaceScaleZ": 1,
@@ -172,7 +172,7 @@
     "textPhoneDisplaceRangeX": "{\"min\":0,\"max\":20}",
     "textPhoneDisplaceCurveX": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"monotone\"}",
     "sliderPhoneDisplaceXReferenceM": 1,
-    "textPhoneDisplaceRangeY": "{\"min\":9,\"max\":20}",
+    "textPhoneDisplaceRangeY": "{\"min\":9,\"max\":100}",
     "textPhoneDisplaceCurveY": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"monotone\"}",
     "sliderPhoneDisplaceYReferenceM": 1,
     "textPhoneDisplaceRangeZ": "{\"min\":0,\"max\":20}",
@@ -283,7 +283,7 @@
     "left": 26,
     "top": 151,
     "width": 349,
-    "height": 76
+    "height": 628
   },
   "devPanelStyle": {
     "titleFontSize": 17,
@@ -11244,7 +11244,7 @@
     "desktop:RECURSIVE RENDER": true,
     "desktop:RESPONSIVE BEHAVIOUR - PHONE": false,
     "desktop:Responsive Rotation": true,
-    "desktop:RESPONSIVE DISPLACE": true,
+    "desktop:RESPONSIVE DISPLACE": false,
     "desktop:Saved Phone Poses": false,
     "desktop:HAND MODEL": true,
     "desktop:Field Layout": true,
