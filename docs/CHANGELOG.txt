@@ -1,3 +1,48 @@
+2026-10-05  -  Hand Model selector reorder, Debug > IK Nodes, Hand Model > IK POSING, X/Z displace match Y
+  1. Hand Model selector: each row has a ⠿ drag icon (drag starts ONLY from the icon;
+     pointer events so it works by touch). Order is saved through a hidden Sync-participating
+     control (hiddenHandModelOrder) and applied to HAND_MODEL_OPTIONS in place.
+  2. Debug > IK Nodes: "IK Nodes + Axes On/Off", Node Radius, Axes Length, Axes Thickness (Px),
+     Render In Front. One InstancedMesh (spheres) + one LineSegments2 (axes) for ALL nodes.
+     Phone: the model's own "IK Target Nodes" empties (6 of 8 phone GLBs have ~50; Galaxy S2 and
+     Motorola Razr have none). Hand: HandiBonesB-IK.glb has 40 empties under "IK Target Points"
+     -- but they are children of the SKINNED MESH node, not of any bone, so they would never
+     follow the fingers. measureAndSetHandModel() binds each to its nearest hand bone (distance
+     to the bone's head->tail segment at bind pose; checked offline on the real GLB: 40/40 land
+     on the right finger/palm bone, tips on the last finger bone) and every hand clone gets a
+     proxy Object3D under that bone. Hand2.glb has no IK layer -> zero nodes.
+  3. Hand Model > IK POSING: On/Off, Allow Bone Stretching, Max Bone Stretch (x), then a list of
+     PAIRS (ADD IK PAIR / DELETE PAIR). Per pair: Target (a hand node) and Source (any node) set
+     by pressing PICK then clicking the node on screen (nodes auto-show while picking; nearest
+     node within 36 px of the click; a drag is not a click); Axes = Match Source Node Axes or
+     World Axes; Rotate X/Y/Z (Deg) = extra rotation in the target node's own frame;
+     "Overlap Position (Bend Finger To Reach)". Target nodes show green, sources magenta.
+     Pairs persist through Sync (hiddenIkPairs). Pair node ids are name-based, so pairs survive
+     phone-model swaps.
+     Solver (per frame, after the phone moved): HANDO's CCD (8-12 iterations, tip->root) bends the
+     finger chain (<= 3 bones) until the target node reaches the source; out of reach -> the
+     chain ends fully extended toward it ("as far as it can go"); with stretching on the chain's
+     ROOT bone lengthens (up to Max Bone Stretch) -- root only, because scaling every bone
+     compounds through the hierarchy and overshoots. Then a prioritized damped-least-squares
+     refinement (position = primary task, orientation = secondary task in the position Jacobian's
+     null space; kept only if position doesn't end worse and orientation improves). Overlap off
+     = orientation only, matched exactly by rotating the node's own bone. Each frame the chain
+     bones are first restored to the pose system's value, so IK never drifts; a bone rewritten
+     by the pose system is adopted as the new base; turning IK off / deleting a pair releases
+     the default pose exactly.
+     Verified with real three.js r169 on the real GLB skeleton (node scripts): reach 0.00 mm,
+     point + 20 deg tilt together 0.00 mm / 0.0 deg, no drift, exact release, stretch clamp,
+     160-case sweep (all 40 nodes x overlap x stretch) with 0 NaN and 0 position regressions,
+     two pairs at once 0.01 mm. NOT verified in a browser/on a device: the dev-panel UI,
+     click-picking and rendering of the node spheres/axes.
+     Interpretation made (the answer to "what does unchecked do?" was cut off mid-sentence):
+     orientation ALWAYS follows the source; position is forced only when the box is checked.
+     Easy to change if that is not what was meant.
+  4. Displace X/Z now match Y in the synced settings: both axes enabled (they were OFF, which is
+     why X/Z read 0.00 in every log), Range max 80, Reference Distance 1.15, Scale 0.6 (X keeps
+     its inverted sign: -0.6). All displacement code fixes were already axis-generic. Other
+     phone models keep their own stored copies (hiddenPhoneModelPerModelSettings).
+
 2026-10-04  -  Bias-tracker learning clamp: the real cause of the stop "bounce back"
   - Full up/pause/down/pause log: every stop left residual velocity opposite to the
     motion (+0.11 m/s cycle 1, -0.21 m/s cycle 2, ~25-37% of peak speed) that nothing
