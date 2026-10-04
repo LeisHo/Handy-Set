@@ -1,3 +1,30 @@
+2026-10-04  -  IK POSING: "IK Influence (%)" slider (how much of the model IK may move)
+  - New slider in Hand Model > IK POSING with a live caption ("Fingers: free . Wrist: 100% .
+    Forearm: 98% . Whole model: 0%"). Four tiers, each ramping 0 -> 100% in order as the slider
+    rises: fingers are ALWAYS free; 0-33% wrist (rHand + rCarpal*: bend / splay / rotate);
+    33-67% forearm (rForearmTwist/Bend); 67-100% the WHOLE model (RootNode). Default 66 (wrist +
+    forearm free, whole model locked = the previous behaviour). Set low and the arm stays still;
+    at the top everything can move.
+  - A tier's freedom caps how far its bones may rotate from the pose they had before IK
+    (freedom x 180 deg, ikClampToLimit, applied inside CCD and the 6-DoF refinement, so a
+    saturated joint simply stops responding). ikActiveChain() keeps the leaf-first prefix of the
+    chain that has any freedom, so a locked wrist means fingers-only solving.
+  - Whole-model tier: the chain now ends at RootNode (it rotates within its limit) and
+    ikTranslateModel() slides the RootNode BONE by `freedom` x the remaining gap (1 = lands on the
+    goal). Translating a bone is safe here: no other system translates bones, so it doesn't
+    fight the wrapper/clone placement code. ikBoneState now also tracks bone POSITION (restored
+    exactly when IK is turned off).
+  - Node tests (real three.js, real hand skeleton, a far target): 0% -> fingers move, wrist /
+    forearm / whole model exactly still; 15% -> wrist free to <= 81 deg, forearm locked;
+    50% -> forearm <= 90 deg, whole model locked; 100% -> lands on the far target (0.00 mm);
+    reach never decreases as influence rises (525>516>516>493>493>296>0 mm); exact release incl.
+    position; 170 random cases, no NaN. Live site v=217 with the user's pair: gap 27.92 @0% ->
+    27.47 @40% (wrist +44 deg, forearm +6 deg) -> 0.00 @100% (RootNode slid).
+  - Cost note: the whole-model tier puts RootNode (the entire skeleton subtree) in the chain, so
+    its numeric Jacobian is the most expensive; only active above ~67%.
+  - Several pairs with the whole-model tier on share the one RootNode translation: the last pair
+    solved wins (the earlier ones can be pulled off).
+
 2026-10-04  -  IK POSING: the whole hand/arm now swings toward out-of-reach targets
   - Report: "when I turn on IK posing, the rigged hand should change its pose accordingly".
     Probed the live site with the user's own pair (thumb pad -> phone side point, IK on, stretch
