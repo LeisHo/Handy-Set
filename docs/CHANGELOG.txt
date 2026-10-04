@@ -1,3 +1,31 @@
+2026-10-04  -  IK brought up to date with HANDO's CURRENT IK system (main.js v=224)
+  - Request: "look at the ik system in HANDO. then implement it in the same way". HANDO's IK had moved on a lot since the
+    first port (HANDO changelog 2026-10-04 10:37 AM - 5:27 PM), so HANDO's real source (src/main.js IK HAND POSE block +
+    its IK Hand Pose DEV_GROUPS entry) was read directly and diffed against this file's IK block.
+  - Ported: (1) HIERARCHICAL two-stage solver (stage 1 = best pair error only, stage 2 = influence-weighted joint choice,
+    accepted by a line search only if the pair error stays within tolerance) -- replaces the single blended objective, so
+    the All slider no longer changes whether a target is reached. (2) IK Influence rewritten: one % slider per EXISTING
+    pose slider (Fingers, Pose Offset, Whole-Hand Rotation, Wrist Rotation / Splay / Bend, Elbow Bend, Elbow Side Bend,
+    Forearm Twist) + All, each with a Min / Max RANGE BAR = hard window (typed numbers unrestricted; the pose slider's own
+    range is only the fallback). (3) Pair Priority (%) slider on every pair (scales that pair's errors). (4) Overlap
+    highlight: a pair title turns red when another ON pair uses the same Target or Source node. (5) Saved IK Influence
+    preset picker (Save/Overwrite/Use/Rename/Delete/Export/Import; localStorage + Sync key listPicker_ikInfluence).
+    (6) Fix: switching IK on/off now clears the "last value pushed to the sliders" memory so the sliders cannot keep
+    showing the baseline while the hand is posed.
+  - Removed from the solver (as in HANDO): the 14-slider influence set incl. Forearm Bend/Twist (+Tail) Rotation/Offset,
+    Wrist (%) and Arm (%), and the 9 bone-offset DOFs. The bone-offset POSE sliders themselves are still in the Pose group
+    (HANDO deleted them; not removed here -- user-facing pose controls) but IK never drives them.
+  - Defaults as HANDO: Off 0, Rot 0, elbow/side/twist 0, fingers + wrist 100. Saved Sync values still win, so a synced
+    sliderIkInfluenceRot / sliderIkInfluenceOff of 100 keeps the whole hand free. Old saved keys (Wrist, Arm, Bend*, Twist*)
+    are ignored.
+  - TESTED (Node, real three r169 + the real Draco-decoded hand GLB, run6.mjs, 14 checks pass): arm/whole-hand at 0 stay
+    untouched; master 0 changes nothing; All 100 -> 30 keeps accuracy (2.390 -> 2.427 u); arm unlocked reaches closer
+    (7.70 -> 5.33 u); typed windows are hard limits (-5..5 held; 400..500 beyond the slider honoured); priority 0 adds no
+    pull; whole-hand unlocked lands the tip at 0.000 u. With whole-hand locked a 2 u move only gets to 1.07 u -- the same
+    consequence HANDO documents. NOT tested in a browser (project rule): the range-bar rows, preset picker, red overlap
+    label and priority slider UI. Range bars are watched by a 250 ms string-compare timer because the generic range-bar
+    fires no event and the render loop stops when idle.
+
 2026-10-04  -  Fix: Absolute rotation mode had the Y and Z axes switched (iPhone 17 Max Pro, Samsung Galaxy S26)
   - Report: "for iphone max pro and samsung galaxy 26 models, the y and z rotation axes got switched", then
     "that probably also applies to displacement for those models", then "for absolute mode, switch the y and z axes".
