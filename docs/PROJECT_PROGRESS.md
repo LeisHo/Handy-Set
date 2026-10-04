@@ -8,7 +8,9 @@ append-only history.
 ## Currently working on
 
 **Nothing in progress right now.** Most recent work (2026-10-04, latest):
-Stationary Gate threshold raised 2 -> 8 deg/s (code default + synced
+Debug group gained a 'Select Logs To Copy' checkbox picker + COPY SELECTED
+button (below CLEAR/COPY ALL/PAUSE LOGS); COPY ALL LOGS now also includes
+Device Info. Earlier the same day: Stationary Gate threshold raised 2 -> 8 deg/s (code default + synced
 settings) on the user's instruction; replay of their real log showed ZUPT
 landing 0.4s after stopping with ~1 Y unit of drift afterward (vs ~15.5
 at 2). Awaiting a real-device test; if slow pushes get swallowed, lower

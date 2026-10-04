@@ -1,3 +1,13 @@
+2026-10-04  -  Debug log item picker + COPY SELECTED; Copy All adds Device Info
+  - New Debug subgroup 'Select Logs To Copy' (right under CLEAR/COPY ALL/PAUSE LOGS):
+    one checkbox per item (Device Info, Mouse Log, Sensor Log, Phone Model Log,
+    Displace Log, all default on, synced via cfg.logPick*), then a COPY SELECTED
+    button that copies only the checked items.
+  - COPY ALL LOGS already included Sensor + Phone Model logs; the missing 'phone
+    data' was the Device Information block (brand/model/OS/browser/viewport), now
+    included in both Copy All and the picker. Shared LOG_COPY_ITEMS registry +
+    copyLogItems() in main.js. Not browser-verified (project rule); node --check only.
+
 2026-10-04  -  Stationary Gate threshold 2 -> 8 deg/s (the actual fix for the drift)
 
 Direct instruction: "raise it. just fix this so i get what i want."
