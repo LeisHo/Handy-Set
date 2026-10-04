@@ -7651,6 +7651,68 @@ function wireDeviceSliderMirror(desktopId, cfgKey) {
     })
   })
 }
+// ---------------------------------------------------------------------
+// DEVICE-AWARE Phone Displace / Phone Rotation values (2026-10-04, direct report: "phone responsive
+// displace doesn't work"). Each of these controls can be INDEPENDENT per device in the dev panel
+// (the Mobile / Landscape tab row has its own saved value, e.g. Displace damping 0.16, decay 0, stationary
+// gate 8 deg/s, axes ON), but the app's wired callbacks only ever listened to the DESKTOP element, so a
+// phone silently ran on the Desktop values -- the tuning done in the Mobile tab never applied (the same
+// class of bug getRuntimeDeviceSuffix() fixed for the texture offsets on 2026-10-01). This bridge makes a
+// touch device use the Mobile (portrait) / Landscape row's live value for these controls: that row mirrors
+// Desktop unless it is marked independent, so "not independent" keeps following Desktop exactly as before.
+// On a desktop (no touch) nothing changes. cfg keys are derived from the control id
+// (sliderPhoneDisplaceDamping -> cfg.phoneDisplaceDamping); only ids whose key exists in cfg are touched.
+// Range/curve widgets and the per-axis FineTune sliders are NOT included (they have their own paths).
+// ---------------------------------------------------------------------
+const PHONE_DEVICE_AWARE_ID = /^(slider|checkbox|select)(PhoneDisplace(?!Range|Curve)\w+|PhoneResponsiveDisplaceEnabled|PhoneAxis[XYZ]Enabled|PhoneRotationScale[XYZ]|PhoneResponsiveRotationEnabled|PhoneRotationDamping|PhoneRotationMode|PhoneRotationResetEnabled)$/
+function applyPhoneDeviceAwareValue(desktopId) {
+  const m = desktopId.match(PHONE_DEVICE_AWARE_ID)
+  if (!m) return
+  const key = m[2].charAt(0).toLowerCase() + m[2].slice(1)
+  if (!(key in cfg)) return
+  const suffix = getRuntimeDeviceSuffix()
+  const el = (suffix && document.getElementById(m[1] + suffix + m[2])) || document.getElementById(desktopId)
+  if (!el) return
+  let v
+  if (m[1] === 'checkbox') v = !!el.checked
+  else if (m[1] === 'slider') v = roundSliderValue(el.value)
+  else v = el.value
+  if (typeof cfg[key] === 'number' && (typeof v !== 'number' || Number.isNaN(v))) return
+  if (cfg[key] === v) return
+  cfg[key] = v
+  if (key === 'phoneResponsiveDisplaceEnabled' && v) requestMotionPermissionIfNeeded()
+  if (key === 'phoneResponsiveRotationEnabled' && v) { requestMotionPermissionIfNeeded(); resetPhoneModelRotationBaseline() }
+  if (key === 'phoneDisplaceMode') resetPhoneDisplaceTiltBaseline()
+}
+function applyAllPhoneDeviceAwareValues() {
+  document.querySelectorAll('input[id], select[id]').forEach((el) => {
+    if (PHONE_DEVICE_AWARE_ID.test(el.id)) applyPhoneDeviceAwareValue(el.id)
+  })
+  requestRender()
+}
+let phoneDeviceAwareTimer = null
+function schedulePhoneDeviceAwareApply(ms) {
+  clearTimeout(phoneDeviceAwareTimer)
+  phoneDeviceAwareTimer = setTimeout(applyAllPhoneDeviceAwareValues, ms)
+}
+function onPhoneDeviceAwareEdit(e) {
+  const id = e.target && e.target.id
+  if (!id) return
+  const m = id.match(/^(slider|checkbox|select)(?:Mobile|Landscape)?(Phone\w+)$/)
+  if (!m) return
+  const desktopId = m[1] + m[2]
+  if (PHONE_DEVICE_AWARE_ID.test(desktopId)) { applyPhoneDeviceAwareValue(desktopId); requestRender() }
+}
+// Delegated (bubbles after each element's own wired handler), so a Mobile/Landscape row edit and a
+// Desktop edit both end with the device-correct value in cfg.
+document.addEventListener('input', onPhoneDeviceAwareEdit)
+document.addEventListener('change', onPhoneDeviceAwareEdit)
+// Sync / Reset / Undo / tab clicks restore values without a per-control event on the right element:
+// re-apply shortly after any click inside the dev panel, and whenever the orientation (Mobile <-> Landscape) changes.
+document.addEventListener('click', (e) => { if (e.target && e.target.closest && e.target.closest('#devPanel')) schedulePhoneDeviceAwareApply(120) })
+window.addEventListener('resize', () => schedulePhoneDeviceAwareApply(250))
+window.addEventListener('orientationchange', () => schedulePhoneDeviceAwareApply(250))
+
 function wireCheckbox(id, onChange) { const el = document.getElementById(id); if (el) el.addEventListener('change', (e) => { onChange(e.target.checked); requestRender() }) }
 function wireColor(id, onChange) { const el = document.getElementById(id); if (el) el.addEventListener('input', (e) => { onChange(e.target.value); requestRender() }) }
 function wireTextInput(id, onChange) { const el = document.getElementById(id); if (el) el.addEventListener('input', (e) => { onChange(e.target.value); requestRender() }) }
@@ -10343,6 +10405,7 @@ async function loadRemoteSettingsOnStartup() {
     if (typeof window.ensureDevPanelBuilt === 'function') window.ensureDevPanelBuilt()
     phoneModelRestoreInProgress = true
     try { apply(data.settings) } finally { setTimeout(() => { phoneModelRestoreInProgress = false }, 1500) }
+    schedulePhoneDeviceAwareApply(500); setTimeout(applyAllPhoneDeviceAwareValues, 2500) // device-aware Phone Displace/Rotation values (see PHONE_DEVICE_AWARE_ID)
     // "Set as Default" for the 2 model selectors and the phone pose -- applied
     // AFTER the normal Sync restore so a deliberate default wins (same
     // precedence the other defaultX fields get at boot), from this one shared
