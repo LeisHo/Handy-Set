@@ -3892,6 +3892,16 @@ function computePhoneResponsiveDisplacement() {
     const y = cfg.phoneDisplaceAxisYEnabled ? raw.y * cfg.phoneDisplaceScaleY * (cfg.phoneDisplaceInvertY ? -1 : 1) : 0
     return _phoneDisplaceResultVec.set(x, y, 0) // Z always 0 in Tilt mode -- see this function's own leading comment
   }
+  // Y/Z SWAPPED in Absolute rotation mode 2026-10-04 (direct request, same report as the rotation swap in
+  // computePhoneAbsoluteOrientationRawQuat()): the Y controls (On/Off, Scale, Invert, Range, Curve, Reference)
+  // now drive the Z displacement and vice versa. Other rotation modes are unchanged.
+  if (cfg.phoneRotationMode === 'absolute') {
+    return _phoneDisplaceResultVec.set(
+      computePhoneDisplaceAxisUnits(phoneDisplacePosX, cfg.phoneDisplaceAxisXEnabled, cfg.phoneDisplaceScaleX, cfg.phoneDisplaceInvertX, 'X'),
+      computePhoneDisplaceAxisUnits(phoneDisplacePosY, cfg.phoneDisplaceAxisZEnabled, cfg.phoneDisplaceScaleZ, cfg.phoneDisplaceInvertZ, 'Z'),
+      computePhoneDisplaceAxisUnits(phoneDisplacePosZ, cfg.phoneDisplaceAxisYEnabled, cfg.phoneDisplaceScaleY, cfg.phoneDisplaceInvertY, 'Y')
+    )
+  }
   return _phoneDisplaceResultVec.set(
     computePhoneDisplaceAxisUnits(phoneDisplacePosX, cfg.phoneDisplaceAxisXEnabled, cfg.phoneDisplaceScaleX, cfg.phoneDisplaceInvertX, 'X'),
     computePhoneDisplaceAxisUnits(phoneDisplacePosY, cfg.phoneDisplaceAxisYEnabled, cfg.phoneDisplaceScaleY, cfg.phoneDisplaceInvertY, 'Y'),
@@ -3965,9 +3975,12 @@ function computeDeviceOrientationQuat(alphaDeg, betaDeg, gammaDeg) {
 // can capture the SAME raw quaternion (pre-baseline) to invert into a new
 // baseline, without duplicating the alphaDeg/betaDeg/gammaDeg computation.
 function computePhoneAbsoluteOrientationRawQuat(e) {
-  const alphaDeg = cfg.phoneAxisZEnabled ? (e.alpha || 0) * cfg.phoneRotationScaleZ : 0
+  // Y/Z SWAPPED 2026-10-04 (direct report: on the iPhone 17 Max Pro and Galaxy S26, the only models using
+  // Absolute mode, "the y and z rotation axes got switched" vs Gyro mode): alpha (spin) is now gated/scaled by
+  // the Y On/Off + Scale controls and gamma (roll) by the Z ones -- previously the other way round.
+  const alphaDeg = cfg.phoneAxisYEnabled ? (e.alpha || 0) * cfg.phoneRotationScaleY : 0
   const betaDeg = cfg.phoneAxisXEnabled ? (e.beta || 0) * cfg.phoneRotationScaleX : 0
-  const gammaDeg = cfg.phoneAxisYEnabled ? (e.gamma || 0) * cfg.phoneRotationScaleY : 0
+  const gammaDeg = cfg.phoneAxisZEnabled ? (e.gamma || 0) * cfg.phoneRotationScaleZ : 0
   return computeDeviceOrientationQuat(alphaDeg, betaDeg, gammaDeg) // returns the shared _phoneAbsoluteQuat instance
 }
 // Baseline for Absolute/Orientation mode -- added 2026-09-30, direct
