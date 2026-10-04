@@ -21,69 +21,6 @@
     // Timestamp helper for debug logs
     function ts() { return '[' + new Date().toISOString() + ']' }
 
-    // Undo/Redo system - tracks all state changes including camera, zoom, poses
-    let devUndoStack = [];
-    let devRedoStack = [];
-    const DEV_UNDO_MAX_HISTORY = 100; // Max undo steps to keep in memory
-
-    function captureDevPanelState() {
-        const state = {
-            panelState: captureAllRegisteredControlValues(),
-            timestamp: Date.now()
-        };
-        // Project-supplied callback to capture scene state (camera, zoom, poses, etc.)
-        if (typeof captureSceneStateForUndo === 'function') {
-            state.sceneState = captureSceneStateForUndo();
-        }
-        return state;
-    }
-
-    function pushDevUndoState() {
-        devRedoStack = []; // Clear redo stack on new action
-        const state = captureDevPanelState();
-        devUndoStack.push(state);
-        if (devUndoStack.length > DEV_UNDO_MAX_HISTORY) {
-            devUndoStack.shift(); // Remove oldest if too many
-        }
-    }
-
-    function devUndo() {
-        if (devUndoStack.length === 0) return;
-        const currentState = captureDevPanelState();
-        devRedoStack.push(currentState);
-        const previousState = devUndoStack.pop();
-        restoreDevState(previousState);
-    }
-
-    function devRedo() {
-        if (devRedoStack.length === 0) return;
-        const currentState = captureDevPanelState();
-        devUndoStack.push(currentState);
-        const nextState = devRedoStack.pop();
-        restoreDevState(nextState);
-    }
-
-    function restoreDevState(state) {
-        if (!state) return;
-        // Restore panel state
-        applyControlValues(state.panelState);
-        // Restore scene state (camera, zoom, poses, etc.)
-        if (state.sceneState && typeof restoreSceneStateFromUndo === 'function') {
-            restoreSceneStateFromUndo(state.sceneState);
-        }
-    }
-
-    // Wire up keyboard shortcuts
-    document.addEventListener('keydown', (e) => {
-        if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
-            e.preventDefault();
-            devUndo();
-        } else if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) {
-            e.preventDefault();
-            devRedo();
-        }
-    });
-
     // isDevAllowed gates both the panel's CSS visibility (the early
     // <head> script above sets html.dev-mode from this SAME condition,
     // kept in sync manually - see its own comment for why it can't
@@ -150,66 +87,6 @@
         withPreservedTitleCheckbox(titleEl, () => {
             titleEl.textContent = content.classList.contains('collapsed') ? '▶ ' + titleEl.textContent.slice(2) : '▼ ' + titleEl.textContent.slice(2);
         });
-    }
-
-    // Step-through collapse: collapse only the deepest nesting level on each click
-    let collapseStepLevel = 0;
-    function collapseAllDevGroups() {
-        const tabEl = document.getElementById(getActiveDevPanelTab() + 'TabContent');
-
-        // Get all groups in the tab
-        const allGroups = Array.from(tabEl.querySelectorAll('.dev-section'));
-
-        // Calculate nesting level for each group
-        const groupsWithLevel = allGroups.map(group => {
-            let level = 0;
-            let parent = group.parentElement;
-            while (parent && parent !== tabEl) {
-                if (parent.classList.contains('dev-section-content')) level++;
-                parent = parent.parentElement;
-            }
-            return { group, level };
-        });
-
-        // Find max nesting level
-        const maxLevel = Math.max(...groupsWithLevel.map(g => g.level), 0);
-
-        // Find deepest open groups at the current collapse step level
-        const targetLevel = maxLevel - collapseStepLevel;
-        const groupsToCollapse = groupsWithLevel.filter(g =>
-            g.level === targetLevel &&
-            g.group.querySelector(':scope > .dev-section-content:not(.collapsed)')
-        );
-
-        if (groupsToCollapse.length === 0) {
-            // No more groups to collapse, reset to start
-            collapseStepLevel = 0;
-            // Collapse all from scratch
-            allGroups.forEach(group => {
-                const content = group.querySelector(':scope > .dev-section-content');
-                const title = group.querySelector(':scope > .dev-section-title');
-                if (content && title && !content.classList.contains('collapsed')) {
-                    content.classList.add('collapsed');
-                    withPreservedTitleCheckbox(title, () => {
-                        title.textContent = '▶ ' + title.textContent.slice(2);
-                    });
-                }
-            });
-            collapseStepLevel = 1;
-        } else {
-            // Collapse the groups at target level
-            groupsToCollapse.forEach(({ group }) => {
-                const content = group.querySelector(':scope > .dev-section-content');
-                const title = group.querySelector(':scope > .dev-section-title');
-                if (content && title && !content.classList.contains('collapsed')) {
-                    content.classList.add('collapsed');
-                    withPreservedTitleCheckbox(title, () => {
-                        title.textContent = '▶ ' + title.textContent.slice(2);
-                    });
-                }
-            });
-            collapseStepLevel++;
-        }
     }
 
     // `tab` ('desktop' | 'mobile' | 'landscape') decides which kind of
@@ -488,7 +365,23 @@
     function getActiveDevPanelTab() {
         return DEV_PANEL_TABS.find(t => !document.getElementById(t + 'TabContent').classList.contains('hidden')) || 'desktop';
     }
-    // Wires the header icon buttons - per direct request ("Text Edit
+    // "Collapse All" - per direct request. Collapses every group (any
+    // nesting depth) in the currently active tab that isn't already
+    // collapsed - reuses toggleSection()'s own collapse/expand mechanics
+    // directly (not a call to toggleSection() itself, since that also
+    // handles Text Edit Mode's click-to-rename branch, irrelevant here).
+    function collapseAllDevGroups() {
+        const tabEl = document.getElementById(getActiveDevPanelTab() + 'TabContent');
+        tabEl.querySelectorAll('.dev-section-title').forEach(titleEl => {
+            const content = titleEl.nextElementSibling;
+            if (!content || content.classList.contains('collapsed')) return;
+            content.classList.add('collapsed');
+            withPreservedTitleCheckbox(titleEl, () => {
+                titleEl.textContent = '▶ ' + titleEl.textContent.slice(2);
+            });
+        });
+    }
+    // Wires the 3 header icon buttons - per direct request ("Text Edit
     // Mode and Add Group are now icon buttons on the Dev Panel Title
     // Label bit. Also provide a 'Collapse All' button there... If i
     // right click the Add Group button, I want to be able to left click
@@ -539,10 +432,6 @@
         }
         const collapseAllBtn = document.getElementById('devCollapseAllBtn');
         if (collapseAllBtn) collapseAllBtn.addEventListener('click', collapseAllDevGroups);
-        const undoBtn = document.getElementById('devUndoBtn');
-        if (undoBtn) undoBtn.addEventListener('click', devUndo);
-        const redoBtn = document.getElementById('devRedoBtn');
-        if (redoBtn) redoBtn.addEventListener('click', devRedo);
         const deleteGroupBtn = document.getElementById('devDeleteGroupBtn');
         if (deleteGroupBtn) {
             // A plain click arms/disarms (toggle) - unlike Add Group,
