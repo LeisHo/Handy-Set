@@ -3409,6 +3409,28 @@ let phoneDisplaceZuptActive = false
 // phoneDisplaceZuptDwellMs of a stop (Stationary: active, ZUPT: not
 // yet) -- logging both separately is the point, not redundant.
 let phoneDisplaceIsStationary = false
+// Added 2026-10-04 -- diagnostics for the ZUPT dwell timer. Elapsed =
+// how long the gate has been CONTINUOUSLY quiet as of the last evaluated
+// tick (0 whenever it isn't). Peak = the longest such run since the
+// Displace Log last printed (the log resets it after reading). Peak
+// exists because the log only samples every ~200ms while devicemotion
+// ticks far faster: a gate that flickers off for one tick between log
+// lines still prints "ACTIVE" on every line, but its peak shows the
+// dwell never got near the configured threshold.
+let phoneDisplaceZuptDwellElapsedMs = 0
+let phoneDisplaceZuptDwellPeakMs = 0
+// Added 2026-10-04 -- clears ONLY the gate/ZUPT state (never velocity or
+// position). Called wherever a tick does NOT evaluate the gate
+// (integrator off, Tilt mode, or no usable acceleration sample), because
+// those paths used to simply leave the previous tick's flags in place:
+// a stale "StationaryGate:ACTIVE" with "ZUPT:inactive" could sit in the
+// log forever, indistinguishable from a real dwell-timer failure.
+function clearPhoneDisplaceGateState() {
+  phoneDisplaceZuptDwellStart = null
+  phoneDisplaceZuptActive = false
+  phoneDisplaceIsStationary = false
+  phoneDisplaceZuptDwellElapsedMs = 0
+}
 // Added 2026-10-01, same Debug-log request -- the ACTUAL ax/ay/az that
 // reached the integrator this tick, captured at the one real shared
 // entry point (applyPhoneDisplaceSample(), see its own comment) so both
@@ -3728,6 +3750,7 @@ function computePhoneLinearAccelNative(e) {
 function integratePhoneDisplacement(e) {
   if (!cfg.responsiveDisplaceGlobalEnabled || !cfg.phoneResponsiveDisplaceEnabled) {
     phoneDisplaceLastTimestamp = null // clean restart, no big jump, whenever this resumes -- same convention as integratePhoneGyroRotation's own phoneGyroLastTimestamp
+    clearPhoneDisplaceGateState()
     return
   }
   // TILT mode reads orientation directly every frame (computePhoneResponsiveDisplacement())
@@ -3736,7 +3759,7 @@ function integratePhoneDisplacement(e) {
   // do. Still update the timestamp so a later mode switch back to
   // 'acceleration'/'worldPosition'/'freeze' doesn't see a stale
   // phoneDisplaceLastTimestamp and compute one huge dt on its first tick.
-  if (cfg.phoneDisplaceMode === 'tilt') { phoneDisplaceLastTimestamp = performance.now(); return }
+  if (cfg.phoneDisplaceMode === 'tilt') { phoneDisplaceLastTimestamp = performance.now(); clearPhoneDisplaceGateState(); return }
   const now = performance.now()
   if (phoneDisplaceLastTimestamp !== null) {
     // CORRECTED 2026-09-30 (1st round): this used to also bail out
@@ -3857,15 +3880,19 @@ function integratePhoneDisplacement(e) {
           // this test, or whatever the user has it set to otherwise)
           // means position is held EXACTLY where it is -- a legitimate
           // zero-velocity update, not a position reset.
-          phoneDisplaceZuptActive = (now - phoneDisplaceZuptDwellStart) >= cfg.phoneDisplaceZuptDwellMs
+          phoneDisplaceZuptDwellElapsedMs = now - phoneDisplaceZuptDwellStart
+          if (phoneDisplaceZuptDwellElapsedMs > phoneDisplaceZuptDwellPeakMs) phoneDisplaceZuptDwellPeakMs = phoneDisplaceZuptDwellElapsedMs
+          phoneDisplaceZuptActive = phoneDisplaceZuptDwellElapsedMs >= cfg.phoneDisplaceZuptDwellMs
           if (phoneDisplaceZuptActive) { phoneDisplaceVelX = 0; phoneDisplaceVelY = 0; phoneDisplaceVelZ = 0 }
         } else {
           phoneDisplaceZuptDwellStart = null // real motion resumed -- dwell must re-accumulate from scratch next time
           phoneDisplaceZuptActive = false
+          phoneDisplaceZuptDwellElapsedMs = 0
         }
       } else {
         phoneDisplaceZuptDwellStart = null
         phoneDisplaceZuptActive = false
+        phoneDisplaceZuptDwellElapsedMs = 0
       }
       phoneDisplaceIsStationary = isStationary
       if (cfg.phoneDisplaceMode === 'worldPosition' && latestOrientation) {
@@ -3873,6 +3900,13 @@ function integratePhoneDisplacement(e) {
         _phoneDisplaceWorldVec.set(ax, ay, az).applyQuaternion(q)
         ax = _phoneDisplaceWorldVec.x; ay = _phoneDisplaceWorldVec.y; az = _phoneDisplaceWorldVec.z
       }
+    } else {
+      // No usable acceleration sample this tick (e.g. 'nativeSensor' mode
+      // when e.acceleration is null) -- the gate was NOT evaluated, so it
+      // cannot be reported as stationary, and a dwell can't be claimed
+      // across a tick that never measured anything. Before 2026-10-04
+      // this branch did nothing, leaving the previous tick's flags frozen.
+      clearPhoneDisplaceGateState()
     }
     // FREEZE mode -- added 2026-10-01, direct request: "once I stop
     // moving it, hold the position until I deliberately do something
@@ -5631,6 +5665,7 @@ window.__debug = {
   // maps into on-screen world units.
   get phoneDisplaceZuptActive() { return phoneDisplaceZuptActive },
   get phoneDisplaceIsStationary() { return phoneDisplaceIsStationary },
+  get phoneDisplaceZuptDwell() { return { elapsedMs: phoneDisplaceZuptDwellElapsedMs, peakMs: phoneDisplaceZuptDwellPeakMs, neededMs: cfg.phoneDisplaceZuptDwellMs } },
   get phoneDisplaceLastProcessedAccel() { return { x: phoneDisplaceLastAx, y: phoneDisplaceLastAy, z: phoneDisplaceLastAz } },
   get phoneDisplaceBoundary() { return { x: phoneDisplaceBoundaryX, y: phoneDisplaceBoundaryY, z: phoneDisplaceBoundaryZ } },
   // A/B diagnostic pipelines -- added 2026-10-02, see
@@ -6101,14 +6136,26 @@ function restartDisplaceLogTimer() {
     // its own `rawMeters` input BEFORE the curve/range mapping runs (Tilt
     // mode never reaches this state at all -- see that mode's own comment).
     if (cfg.displaceLogPosition) parts.push(`PosPreCurve x:${fmt(phoneDisplacePosX)} y:${fmt(phoneDisplacePosY)} z:${fmt(phoneDisplacePosZ)}`)
-    if (cfg.displaceLogZupt) parts.push(`ZUPT:${phoneDisplaceZuptActive ? 'ACTIVE' : 'inactive'}`)
-    // DELIBERATELY a separate field from ZUPT above, not a duplicate --
+    // DELIBERATELY separate fields, not duplicates --
     // phoneDisplaceIsStationary flips true the instant the gate reads
     // quiet (gyro+accel both below threshold); phoneDisplaceZuptActive
     // only goes true once that quiet state has held for the full dwell
     // window. The 2 can legitimately disagree for the first
-    // phoneDisplaceZuptDwellMs of a stop.
+    // phoneDisplaceZuptDwellMs of a stop. Order is
+    // StationaryGate | ZUPTDwell | ZUPT (2026-10-04, direct request).
     if (cfg.displaceLogStationary) parts.push(`StationaryGate:${phoneDisplaceIsStationary ? 'ACTIVE' : 'inactive'}`)
+    if (cfg.displaceLogZupt) {
+      // Dwell = continuous quiet time as of the last evaluated tick.
+      // "peak" = longest continuous run since the previous log line --
+      // the log samples ~every 200ms while devicemotion ticks much
+      // faster, so a gate that dropped out and recovered between 2 log
+      // lines still reads ACTIVE on both; peak is what shows whether it
+      // ever held long enough to reach the dwell threshold. Reset after
+      // reading so each line reports only its own interval.
+      parts.push(`ZUPTDwell:${Math.round(phoneDisplaceZuptDwellElapsedMs)}ms (peak ${Math.round(phoneDisplaceZuptDwellPeakMs)}ms / need ${cfg.phoneDisplaceZuptDwellMs}ms)`)
+      phoneDisplaceZuptDwellPeakMs = phoneDisplaceZuptDwellElapsedMs
+      parts.push(`ZUPT:${phoneDisplaceZuptActive ? 'ACTIVE' : 'inactive'}`)
+    }
     if (cfg.displaceLogBias) parts.push(`Bias x:${fmt(phoneDisplaceBiasX)} y:${fmt(phoneDisplaceBiasY)} z:${fmt(phoneDisplaceBiasZ)}`)
     // Target (computePhoneResponsiveDisplacement()'s own undamped output)
     // vs. Rendered (the SAME value after cfg.phoneDisplaceDamping's lerp
