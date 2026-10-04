@@ -103,9 +103,9 @@
     "sliderPhoneModelOffsetX": 0.99173553719008,
     "sliderPhoneModelOffsetY": 1.95341848234412,
     "sliderPhoneModelOffsetZ": 0,
-    "sliderPhoneModelRotX": 0,
-    "sliderPhoneModelRotY": 0,
-    "sliderPhoneModelRotZ": 0,
+    "sliderPhoneModelRotX": 33,
+    "sliderPhoneModelRotY": 2,
+    "sliderPhoneModelRotZ": -22,
     "checkboxPhoneResponsiveRotationEnabled": false,
     "selectPhoneRotationMode": "absolute",
     "checkboxPhoneRotationResetEnabled": true,
@@ -177,16 +177,16 @@
     "checkboxWristSplayReactiveEnabled": true,
     "textWristSplayRange": "{\"min\":5,\"max\":-71}",
     "textWristSplayCurve": "{\"points\":[{\"x\":0,\"y\":1},{\"x\":0.31833343505859374,\"y\":0.6961458841959636},{\"x\":1,\"y\":0.042812347412109375}],\"method\":\"catmullrom\"}",
-    "sliderCameraX": 50,
-    "sliderCameraY": 58.5,
-    "sliderCameraZ": -60,
+    "sliderCameraX": -39.5,
+    "sliderCameraY": 86,
+    "sliderCameraZ": 15,
     "sliderCameraFov": 15,
-    "sliderCameraZoom": 35.5,
+    "sliderCameraZoom": 26,
     "checkboxLockCameraPan": false,
     "checkboxLockCameraZoom": false,
     "checkboxLockCameraRotate": false,
-    "sliderCameraYaw": 139,
-    "sliderCameraPitch": 37,
+    "sliderCameraYaw": -69,
+    "sliderCameraPitch": 58,
     "checkboxCameraMaxExtentsEnabled": false,
     "sliderKeyAzimuth": 360,
     "sliderKeyElevation": 53,
@@ -246,7 +246,7 @@
     "checkboxDisplaceLogBoundary": true,
     "checkboxDisplaceLogAbCompare": true,
     "checkboxIkNodesEnabled": true,
-    "sliderIkNodeRadius": 0.212555612282109,
+    "sliderIkNodeRadius": 0.142888921304062,
     "sliderIkAxesLength": 2.30526584494202,
     "sliderIkAxesThickness": 1.1429873823937,
     "checkboxIkNodesRenderInFront": true,
@@ -2732,6 +2732,15 @@
                 }
               ]
             }
+          },
+          {
+            "type": "group",
+            "section": {
+              "key": "desktop:Saved Phone Poses",
+              "items": [],
+              "rowKeys": [],
+              "subgroups": []
+            }
           }
         ],
         "rowKeys": [
@@ -3408,6 +3417,12 @@
                 "subgroups": []
               }
             ]
+          },
+          {
+            "key": "desktop:Saved Phone Poses",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
           }
         ]
       },
@@ -7401,6 +7416,15 @@
                 }
               ]
             }
+          },
+          {
+            "type": "group",
+            "section": {
+              "key": "mobile:Saved Phone Poses",
+              "items": [],
+              "rowKeys": [],
+              "subgroups": []
+            }
           }
         ],
         "rowKeys": [],
@@ -7937,6 +7961,12 @@
                 "subgroups": []
               }
             ]
+          },
+          {
+            "key": "mobile:Saved Phone Poses",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
           }
         ]
       },
@@ -10176,6 +10206,15 @@
                 }
               ]
             }
+          },
+          {
+            "type": "group",
+            "section": {
+              "key": "landscape:Saved Phone Poses",
+              "items": [],
+              "rowKeys": [],
+              "subgroups": []
+            }
           }
         ],
         "rowKeys": [],
@@ -10712,6 +10751,12 @@
                 "subgroups": []
               }
             ]
+          },
+          {
+            "key": "landscape:Saved Phone Poses",
+            "items": [],
+            "rowKeys": [],
+            "subgroups": []
           }
         ]
       },
@@ -11752,18 +11797,19 @@
     "desktop:Settings": true,
     "desktop:Mouse Log": true,
     "desktop:Sensors": true,
-    "desktop:Phone Model Log": true,
+    "desktop:Phone Model Log": false,
     "desktop:Displace Log": true,
     "desktop:Select Logs To Copy": true,
     "desktop:IK Nodes": true,
-    "desktop:PHONE MODEL": true,
+    "desktop:PHONE MODEL": false,
     "desktop:OFFSET": true,
-    "desktop:PHONE ROTATION": true,
+    "desktop:PHONE ROTATION": false,
     "desktop:RECURSIVE RENDER": true,
     "desktop:RESPONSIVE BEHAVIOUR - PHONE": true,
     "desktop:Responsive Rotation": true,
     "desktop:RESPONSIVE DISPLACE": true,
-    "desktop:HAND MODEL": false,
+    "desktop:Saved Phone Poses": false,
+    "desktop:HAND MODEL": true,
     "desktop:Field Layout": true,
     "desktop:Pose": true,
     "desktop:ROTATION": true,
@@ -11821,6 +11867,7 @@
     "mobile:RESPONSIVE BEHAVIOUR - PHONE": false,
     "mobile:Responsive Rotation": true,
     "mobile:RESPONSIVE DISPLACE": false,
+    "mobile:Saved Phone Poses": false,
     "mobile:HAND MODEL": true,
     "mobile:Field Layout": false,
     "mobile:Pose": true,
@@ -11880,6 +11927,7 @@
     "landscape:RESPONSIVE BEHAVIOUR - PHONE": false,
     "landscape:Responsive Rotation": false,
     "landscape:RESPONSIVE DISPLACE": false,
+    "landscape:Saved Phone Poses": false,
     "landscape:HAND MODEL": false,
     "landscape:Field Layout": true,
     "landscape:Pose": true,
@@ -12295,7 +12343,9 @@
     "mobile:IK POSING": null,
     "landscape:Select Logs To Copy": null,
     "landscape:IK Nodes": null,
-    "landscape:IK POSING": null
+    "landscape:IK POSING": null,
+    "mobile:Saved Phone Poses": null,
+    "landscape:Saved Phone Poses": null
   },
   "devTextOverridesManual": [
     "desktop:New Group",
@@ -13308,16 +13358,5 @@
       "id": "buttonPauseToggle",
       "type": "button"
     }
-  },
-  "listPicker_phonePoses": [
-    {
-      "name": "Phone Pose 1",
-      "phoneModelOffsetX": 0.9917,
-      "phoneModelOffsetY": 1.9534,
-      "phoneModelOffsetZ": 0,
-      "phoneModelRotX": 33,
-      "phoneModelRotY": 2,
-      "phoneModelRotZ": -22
-    }
-  ]
+  }
 }
