@@ -129,14 +129,14 @@
     "sliderPhoneModelRotX": 0,
     "sliderPhoneModelRotY": 0,
     "sliderPhoneModelRotZ": 0,
-    "checkboxPhoneResponsiveRotationEnabled": false,
+    "checkboxPhoneResponsiveRotationEnabled": true,
     "selectPhoneRotationMode": "absolute",
     "checkboxPhoneRotationResetEnabled": true,
-    "checkboxPhoneAxisXEnabled": false,
+    "checkboxPhoneAxisXEnabled": true,
     "sliderPhoneRotationScaleX": 1,
-    "checkboxPhoneAxisYEnabled": false,
+    "checkboxPhoneAxisYEnabled": true,
     "sliderPhoneRotationScaleY": 1,
-    "checkboxPhoneAxisZEnabled": false,
+    "checkboxPhoneAxisZEnabled": true,
     "sliderPhoneRotationScaleZ": 1,
     "sliderPhoneResponsiveRotationFineTuneX": 0,
     "sliderPhoneResponsiveRotationFineTuneY": 0,
@@ -148,7 +148,7 @@
     "textPhoneRotationCurveY": "{\"points\":[{\"x\":0,\"y\":0.03041661580403643},{\"x\":1,\"y\":0.7770833333333333}],\"method\":\"catmullrom\"}",
     "textPhoneRotationRangeZ": "{\"min\":0,\"max\":180}",
     "textPhoneRotationCurveZ": "{\"points\":[{\"x\":0,\"y\":0.035416158040364576},{\"x\":1,\"y\":1}],\"method\":\"catmullrom\"}",
-    "checkboxPhoneResponsiveDisplaceEnabled": true,
+    "checkboxPhoneResponsiveDisplaceEnabled": false,
     "selectPhoneDisplaceMode": "worldPosition",
     "checkboxPhoneDisplaceResetEnabled": true,
     "checkboxPhoneDisplaceAxisXEnabled": false,
@@ -283,7 +283,7 @@
     "left": 26,
     "top": 71,
     "width": 349,
-    "height": 494
+    "height": 628
   },
   "devPanelStyle": {
     "titleFontSize": 17,
@@ -7520,46 +7520,6 @@
                     "items": [
                       {
                         "type": "row",
-                        "key": "checkboxMobilePhoneResponsiveRotationEnabled"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderMobilePhoneRotationDamping"
-                      },
-                      {
-                        "type": "row",
-                        "key": "checkboxMobilePhoneRotationResetEnabled"
-                      },
-                      {
-                        "type": "row",
-                        "key": "checkboxMobilePhoneAxisXEnabled"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderMobilePhoneRotationScaleX"
-                      },
-                      {
-                        "type": "row",
-                        "key": "checkboxMobilePhoneAxisYEnabled"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderMobilePhoneRotationScaleY"
-                      },
-                      {
-                        "type": "row",
-                        "key": "checkboxMobilePhoneAxisZEnabled"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderMobilePhoneRotationScaleZ"
-                      },
-                      {
-                        "type": "row",
-                        "key": "selectMobilePhoneRotationMode"
-                      },
-                      {
-                        "type": "row",
                         "key": "textPhoneRotationRangeX"
                       },
                       {
@@ -7584,16 +7544,6 @@
                       }
                     ],
                     "rowKeys": [
-                      "checkboxMobilePhoneResponsiveRotationEnabled",
-                      "sliderMobilePhoneRotationDamping",
-                      "checkboxMobilePhoneRotationResetEnabled",
-                      "checkboxMobilePhoneAxisXEnabled",
-                      "sliderMobilePhoneRotationScaleX",
-                      "checkboxMobilePhoneAxisYEnabled",
-                      "sliderMobilePhoneRotationScaleY",
-                      "checkboxMobilePhoneAxisZEnabled",
-                      "sliderMobilePhoneRotationScaleZ",
-                      "selectMobilePhoneRotationMode",
                       "textPhoneRotationRangeX",
                       "textPhoneRotationCurveX",
                       "textPhoneRotationRangeY",
@@ -7653,46 +7603,6 @@
                   "items": [
                     {
                       "type": "row",
-                      "key": "checkboxMobilePhoneResponsiveRotationEnabled"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderMobilePhoneRotationDamping"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxMobilePhoneRotationResetEnabled"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxMobilePhoneAxisXEnabled"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderMobilePhoneRotationScaleX"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxMobilePhoneAxisYEnabled"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderMobilePhoneRotationScaleY"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxMobilePhoneAxisZEnabled"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderMobilePhoneRotationScaleZ"
-                    },
-                    {
-                      "type": "row",
-                      "key": "selectMobilePhoneRotationMode"
-                    },
-                    {
-                      "type": "row",
                       "key": "textPhoneRotationRangeX"
                     },
                     {
@@ -7717,16 +7627,6 @@
                     }
                   ],
                   "rowKeys": [
-                    "checkboxMobilePhoneResponsiveRotationEnabled",
-                    "sliderMobilePhoneRotationDamping",
-                    "checkboxMobilePhoneRotationResetEnabled",
-                    "checkboxMobilePhoneAxisXEnabled",
-                    "sliderMobilePhoneRotationScaleX",
-                    "checkboxMobilePhoneAxisYEnabled",
-                    "sliderMobilePhoneRotationScaleY",
-                    "checkboxMobilePhoneAxisZEnabled",
-                    "sliderMobilePhoneRotationScaleZ",
-                    "selectMobilePhoneRotationMode",
                     "textPhoneRotationRangeX",
                     "textPhoneRotationCurveX",
                     "textPhoneRotationRangeY",
@@ -7849,46 +7749,6 @@
                   "items": [
                     {
                       "type": "row",
-                      "key": "checkboxMobilePhoneResponsiveRotationEnabled"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderMobilePhoneRotationDamping"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxMobilePhoneRotationResetEnabled"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxMobilePhoneAxisXEnabled"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderMobilePhoneRotationScaleX"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxMobilePhoneAxisYEnabled"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderMobilePhoneRotationScaleY"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxMobilePhoneAxisZEnabled"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderMobilePhoneRotationScaleZ"
-                    },
-                    {
-                      "type": "row",
-                      "key": "selectMobilePhoneRotationMode"
-                    },
-                    {
-                      "type": "row",
                       "key": "textPhoneRotationRangeX"
                     },
                     {
@@ -7913,16 +7773,6 @@
                     }
                   ],
                   "rowKeys": [
-                    "checkboxMobilePhoneResponsiveRotationEnabled",
-                    "sliderMobilePhoneRotationDamping",
-                    "checkboxMobilePhoneRotationResetEnabled",
-                    "checkboxMobilePhoneAxisXEnabled",
-                    "sliderMobilePhoneRotationScaleX",
-                    "checkboxMobilePhoneAxisYEnabled",
-                    "sliderMobilePhoneRotationScaleY",
-                    "checkboxMobilePhoneAxisZEnabled",
-                    "sliderMobilePhoneRotationScaleZ",
-                    "selectMobilePhoneRotationMode",
                     "textPhoneRotationRangeX",
                     "textPhoneRotationCurveX",
                     "textPhoneRotationRangeY",
@@ -7982,46 +7832,6 @@
                 "items": [
                   {
                     "type": "row",
-                    "key": "checkboxMobilePhoneResponsiveRotationEnabled"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderMobilePhoneRotationDamping"
-                  },
-                  {
-                    "type": "row",
-                    "key": "checkboxMobilePhoneRotationResetEnabled"
-                  },
-                  {
-                    "type": "row",
-                    "key": "checkboxMobilePhoneAxisXEnabled"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderMobilePhoneRotationScaleX"
-                  },
-                  {
-                    "type": "row",
-                    "key": "checkboxMobilePhoneAxisYEnabled"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderMobilePhoneRotationScaleY"
-                  },
-                  {
-                    "type": "row",
-                    "key": "checkboxMobilePhoneAxisZEnabled"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderMobilePhoneRotationScaleZ"
-                  },
-                  {
-                    "type": "row",
-                    "key": "selectMobilePhoneRotationMode"
-                  },
-                  {
-                    "type": "row",
                     "key": "textPhoneRotationRangeX"
                   },
                   {
@@ -8046,16 +7856,6 @@
                   }
                 ],
                 "rowKeys": [
-                  "checkboxMobilePhoneResponsiveRotationEnabled",
-                  "sliderMobilePhoneRotationDamping",
-                  "checkboxMobilePhoneRotationResetEnabled",
-                  "checkboxMobilePhoneAxisXEnabled",
-                  "sliderMobilePhoneRotationScaleX",
-                  "checkboxMobilePhoneAxisYEnabled",
-                  "sliderMobilePhoneRotationScaleY",
-                  "checkboxMobilePhoneAxisZEnabled",
-                  "sliderMobilePhoneRotationScaleZ",
-                  "selectMobilePhoneRotationMode",
                   "textPhoneRotationRangeX",
                   "textPhoneRotationCurveX",
                   "textPhoneRotationRangeY",
@@ -9940,46 +9740,6 @@
                     "items": [
                       {
                         "type": "row",
-                        "key": "checkboxLandscapePhoneResponsiveRotationEnabled"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderLandscapePhoneRotationDamping"
-                      },
-                      {
-                        "type": "row",
-                        "key": "checkboxLandscapePhoneRotationResetEnabled"
-                      },
-                      {
-                        "type": "row",
-                        "key": "checkboxLandscapePhoneAxisXEnabled"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderLandscapePhoneRotationScaleX"
-                      },
-                      {
-                        "type": "row",
-                        "key": "checkboxLandscapePhoneAxisYEnabled"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderLandscapePhoneRotationScaleY"
-                      },
-                      {
-                        "type": "row",
-                        "key": "checkboxLandscapePhoneAxisZEnabled"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderLandscapePhoneRotationScaleZ"
-                      },
-                      {
-                        "type": "row",
-                        "key": "selectLandscapePhoneRotationMode"
-                      },
-                      {
-                        "type": "row",
                         "key": "textPhoneRotationRangeX"
                       },
                       {
@@ -10004,16 +9764,6 @@
                       }
                     ],
                     "rowKeys": [
-                      "checkboxLandscapePhoneResponsiveRotationEnabled",
-                      "sliderLandscapePhoneRotationDamping",
-                      "checkboxLandscapePhoneRotationResetEnabled",
-                      "checkboxLandscapePhoneAxisXEnabled",
-                      "sliderLandscapePhoneRotationScaleX",
-                      "checkboxLandscapePhoneAxisYEnabled",
-                      "sliderLandscapePhoneRotationScaleY",
-                      "checkboxLandscapePhoneAxisZEnabled",
-                      "sliderLandscapePhoneRotationScaleZ",
-                      "selectLandscapePhoneRotationMode",
                       "textPhoneRotationRangeX",
                       "textPhoneRotationCurveX",
                       "textPhoneRotationRangeY",
@@ -10073,46 +9823,6 @@
                   "items": [
                     {
                       "type": "row",
-                      "key": "checkboxLandscapePhoneResponsiveRotationEnabled"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapePhoneRotationDamping"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxLandscapePhoneRotationResetEnabled"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxLandscapePhoneAxisXEnabled"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapePhoneRotationScaleX"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxLandscapePhoneAxisYEnabled"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapePhoneRotationScaleY"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxLandscapePhoneAxisZEnabled"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapePhoneRotationScaleZ"
-                    },
-                    {
-                      "type": "row",
-                      "key": "selectLandscapePhoneRotationMode"
-                    },
-                    {
-                      "type": "row",
                       "key": "textPhoneRotationRangeX"
                     },
                     {
@@ -10137,16 +9847,6 @@
                     }
                   ],
                   "rowKeys": [
-                    "checkboxLandscapePhoneResponsiveRotationEnabled",
-                    "sliderLandscapePhoneRotationDamping",
-                    "checkboxLandscapePhoneRotationResetEnabled",
-                    "checkboxLandscapePhoneAxisXEnabled",
-                    "sliderLandscapePhoneRotationScaleX",
-                    "checkboxLandscapePhoneAxisYEnabled",
-                    "sliderLandscapePhoneRotationScaleY",
-                    "checkboxLandscapePhoneAxisZEnabled",
-                    "sliderLandscapePhoneRotationScaleZ",
-                    "selectLandscapePhoneRotationMode",
                     "textPhoneRotationRangeX",
                     "textPhoneRotationCurveX",
                     "textPhoneRotationRangeY",
@@ -10269,46 +9969,6 @@
                   "items": [
                     {
                       "type": "row",
-                      "key": "checkboxLandscapePhoneResponsiveRotationEnabled"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapePhoneRotationDamping"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxLandscapePhoneRotationResetEnabled"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxLandscapePhoneAxisXEnabled"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapePhoneRotationScaleX"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxLandscapePhoneAxisYEnabled"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapePhoneRotationScaleY"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxLandscapePhoneAxisZEnabled"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapePhoneRotationScaleZ"
-                    },
-                    {
-                      "type": "row",
-                      "key": "selectLandscapePhoneRotationMode"
-                    },
-                    {
-                      "type": "row",
                       "key": "textPhoneRotationRangeX"
                     },
                     {
@@ -10333,16 +9993,6 @@
                     }
                   ],
                   "rowKeys": [
-                    "checkboxLandscapePhoneResponsiveRotationEnabled",
-                    "sliderLandscapePhoneRotationDamping",
-                    "checkboxLandscapePhoneRotationResetEnabled",
-                    "checkboxLandscapePhoneAxisXEnabled",
-                    "sliderLandscapePhoneRotationScaleX",
-                    "checkboxLandscapePhoneAxisYEnabled",
-                    "sliderLandscapePhoneRotationScaleY",
-                    "checkboxLandscapePhoneAxisZEnabled",
-                    "sliderLandscapePhoneRotationScaleZ",
-                    "selectLandscapePhoneRotationMode",
                     "textPhoneRotationRangeX",
                     "textPhoneRotationCurveX",
                     "textPhoneRotationRangeY",
@@ -10402,46 +10052,6 @@
                 "items": [
                   {
                     "type": "row",
-                    "key": "checkboxLandscapePhoneResponsiveRotationEnabled"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderLandscapePhoneRotationDamping"
-                  },
-                  {
-                    "type": "row",
-                    "key": "checkboxLandscapePhoneRotationResetEnabled"
-                  },
-                  {
-                    "type": "row",
-                    "key": "checkboxLandscapePhoneAxisXEnabled"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderLandscapePhoneRotationScaleX"
-                  },
-                  {
-                    "type": "row",
-                    "key": "checkboxLandscapePhoneAxisYEnabled"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderLandscapePhoneRotationScaleY"
-                  },
-                  {
-                    "type": "row",
-                    "key": "checkboxLandscapePhoneAxisZEnabled"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderLandscapePhoneRotationScaleZ"
-                  },
-                  {
-                    "type": "row",
-                    "key": "selectLandscapePhoneRotationMode"
-                  },
-                  {
-                    "type": "row",
                     "key": "textPhoneRotationRangeX"
                   },
                   {
@@ -10466,16 +10076,6 @@
                   }
                 ],
                 "rowKeys": [
-                  "checkboxLandscapePhoneResponsiveRotationEnabled",
-                  "sliderLandscapePhoneRotationDamping",
-                  "checkboxLandscapePhoneRotationResetEnabled",
-                  "checkboxLandscapePhoneAxisXEnabled",
-                  "sliderLandscapePhoneRotationScaleX",
-                  "checkboxLandscapePhoneAxisYEnabled",
-                  "sliderLandscapePhoneRotationScaleY",
-                  "checkboxLandscapePhoneAxisZEnabled",
-                  "sliderLandscapePhoneRotationScaleZ",
-                  "selectLandscapePhoneRotationMode",
                   "textPhoneRotationRangeX",
                   "textPhoneRotationCurveX",
                   "textPhoneRotationRangeY",
@@ -11644,7 +11244,7 @@
     "desktop:RECURSIVE RENDER": true,
     "desktop:RESPONSIVE BEHAVIOUR - PHONE": false,
     "desktop:Responsive Rotation": true,
-    "desktop:RESPONSIVE DISPLACE": false,
+    "desktop:RESPONSIVE DISPLACE": true,
     "desktop:Saved Phone Poses": false,
     "desktop:HAND MODEL": true,
     "desktop:Field Layout": true,
@@ -11703,8 +11303,8 @@
     "mobile:OFFSET": false,
     "mobile:PHONE ROTATION": true,
     "mobile:RECURSIVE RENDER": true,
-    "mobile:RESPONSIVE BEHAVIOUR - PHONE": false,
-    "mobile:Responsive Rotation": true,
+    "mobile:RESPONSIVE BEHAVIOUR - PHONE": true,
+    "mobile:Responsive Rotation": false,
     "mobile:RESPONSIVE DISPLACE": false,
     "mobile:Saved Phone Poses": false,
     "mobile:HAND MODEL": true,
@@ -12230,7 +11830,13 @@
     "sliderMobilePhoneDisplaceVelSnapMps": null,
     "sliderLandscapePhoneDisplaceVelSnapMps": null,
     "sliderMobilePhoneDisplaceBiasInnovationClampMps2": null,
-    "sliderLandscapePhoneDisplaceBiasInnovationClampMps2": null
+    "sliderLandscapePhoneDisplaceBiasInnovationClampMps2": null,
+    "sliderMobilePhoneResponsiveRotationFineTuneX": null,
+    "sliderLandscapePhoneResponsiveRotationFineTuneX": null,
+    "sliderMobilePhoneResponsiveRotationFineTuneY": null,
+    "sliderLandscapePhoneResponsiveRotationFineTuneY": null,
+    "sliderMobilePhoneResponsiveRotationFineTuneZ": null,
+    "sliderLandscapePhoneResponsiveRotationFineTuneZ": null
   },
   "devTextOverridesManual": [
     "desktop:New Group",
@@ -12310,17 +11916,17 @@
     "textArmLengthCurve": false,
     "sliderScreenTextureOffsetX": true,
     "sliderPhoneModelOffsetY": false,
-    "checkboxPhoneResponsiveRotationEnabled": true,
+    "checkboxPhoneResponsiveRotationEnabled": false,
     "sliderPhoneResponsiveRotationFineTune": true,
-    "sliderPhoneRotationDamping": true,
-    "checkboxPhoneRotationResetEnabled": true,
-    "checkboxPhoneAxisXEnabled": true,
-    "sliderPhoneRotationScaleX": true,
-    "checkboxPhoneAxisYEnabled": true,
-    "sliderPhoneRotationScaleY": true,
-    "checkboxPhoneAxisZEnabled": true,
-    "sliderPhoneRotationScaleZ": true,
-    "selectPhoneRotationMode": true,
+    "sliderPhoneRotationDamping": false,
+    "checkboxPhoneRotationResetEnabled": false,
+    "checkboxPhoneAxisXEnabled": false,
+    "sliderPhoneRotationScaleX": false,
+    "checkboxPhoneAxisYEnabled": false,
+    "sliderPhoneRotationScaleY": false,
+    "checkboxPhoneAxisZEnabled": false,
+    "sliderPhoneRotationScaleZ": false,
+    "selectPhoneRotationMode": false,
     "sliderScreenTextureOffsetY": true,
     "sliderPhoneModelRotX": false,
     "sliderPhoneModelRotY": false,
@@ -12366,7 +11972,10 @@
     "sliderPhoneDisplaceZuptAccelThresholdMps2": false,
     "sliderPhoneDisplaceZuptDwellMs": false,
     "sliderPhoneDisplaceVelSnapMps": false,
-    "sliderPhoneDisplaceBiasInnovationClampMps2": false
+    "sliderPhoneDisplaceBiasInnovationClampMps2": false,
+    "sliderPhoneResponsiveRotationFineTuneX": false,
+    "sliderPhoneResponsiveRotationFineTuneY": false,
+    "sliderPhoneResponsiveRotationFineTuneZ": false
   },
   "devIndependence": {
     "mobile": {
@@ -12395,7 +12004,8 @@
       "sliderPhoneRotationScaleX": -2,
       "sliderPhoneRotationScaleY": 1,
       "sliderScreenRecursionLevels": 10,
-      "sliderScreenRenderResolution": 200
+      "sliderScreenRenderResolution": 200,
+      "checkboxPhoneResponsiveRotationEnabled": true
     },
     "landscape": {}
   },
