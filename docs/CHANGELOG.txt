@@ -1,3 +1,51 @@
+2026-10-04  -  IK: ported HANDO's IK Hand Pose; camera anchor = world origin
+  - Direct request: "reference project Hando and implement the IK implementation just as that project
+    does". Read HANDO's real source (IK NODES + IK HAND POSE blocks) and replaced this project's bone-
+    level CCD / 6-DoF solver (+ bone stretching, single IK Influence slider, whole-model RootNode slide).
+  - Solver (solveIkHandPose, ported in structure): the existing POSE SLIDERS are the unknowns --
+    whole-hand rotation/offset, wrist bend/splay/rotation, the arm (elbow bend / side bend / forearm
+    twist + forearm-bend/forearm-twist/wrist bone OFFSETS) and the curl/splay of only the fingers
+    involved. Damped least squares (LM, 14 iterations, warm-started) over position (if "Displace" is on)
+    + orientation (source axes or world axes + the pair's local XYZ) residuals, with a small penalty for
+    leaving the BASELINE pose. Turning IK on captures the baseline (lazily, once startup has settled:
+    3 s after the hand loads); turning it off restores it. Writing real sliders means the result is
+    visible, saveable and tweenable. Re-solves only when a pair, a source node's pose or an influence
+    changed (signature).
+  - IK Influence: HANDO's 14 sliders (All / Fingers / Wrist / Whole-Hand Rotation / Whole-Hand Offset /
+    Arm / Forearm Bend + Twist x Rotation + Offset + Tail), same defaults (Arm and Bend/Twist = 0 so the
+    arm stays put unless asked). Each DOF may move (master % x its part %) of its slider range from the baseline.
+  - New ARM pose group (HANDO's applyArmPoseToSkeleton, axes MEASURED by HANDO on this same rig):
+    Elbow Bend (rForearmBend local Z), Elbow Side Bend (X), Forearm Twist (rForearmTwist local Y) and 9 bone
+    offsets; 12 new pose keys (saved poses/tween/capture include them; older saved poses reset them to 0).
+    HANDO's 3 shoulder keys are NOT ported (this rig has no shoulder bone). computeCurlAxisRefQuat() now
+    follows the whole arm chain (elbow x twist x wrist net change since rest), measured at <= 0.04 deg finger-
+    orientation drift for every arm axis (and unchanged ~0 for wrist / whole-hand rotation).
+  - IK nodes now ride the SKIN like HANDO's: rigid nearest-bone + inverse-distance skin-weight blend of the 4
+    nearest vertices + nearest-triangle (barycentric, each vertex skinned) position, all in the glTF's file
+    space; plus the two forearm TAIL nodes (rForearmBend_Tail / rForearmTwist_Tail). Unposed they sit within
+    0.13 u of the authored empties; with a curled fist 38 nodes follow the fingers. The expensive vertex/triangle
+    scans are deferred until a node's matrix is first needed.
+  - Pairs: "Pair On" checkbox, "Displace Target To Overlap Source", axes labels as HANDO, max 8; Debug > IK
+    Nodes got "Pause IK Solver"; the solver status line (per-pair pos/rot error, iterations, ms) shows under
+    IK POSING On/Off.
+  - IK OFF = nothing runs (direct request): no solve, no baseline, no signature, no node following unless
+    the node display (or an armed pick) is on; the skin binding itself is lazy.
+  - CAMERA ANCHOR (direct request, AskUserQuestion: "pivot at (0,0,0), pan stays free"): controls.target now
+    starts at world (0,0,0); applyCameraPreset() ignores a saved camera's stored target (tx/ty/tz) and sets
+    (0,0,0) -- position/FOV/zoom still restore literally. Orbit/rotate, Zoom (distance) and Yaw/Pitch all
+    pivot on it. Side effect to expect: with the camera aimed at the origin the hand (which sits ~Y33 up) is no
+    longer centered; saved cameras need re-saving to frame it.
+  - TESTED (Node, REAL three r169 + the REAL Draco-decoded HandiBonesB-IK.glb + the real functions
+    extracted from main.js): arm-axis drift, node binding vs authored position, node motion under curl, solver
+    convergence (default influence 0.095 u, far target with arm influence 0.19 u, arm DOFs only touched when
+    their influence > 0, master 0% freezes everything); then on the LIVE deployed site: no console errors, 52
+    hand nodes bound, IK on -> baseline captured + "P1: pos 11.11 u, rot 69.3 deg | 14 it, 38 ms", IK off ->
+    baseline restored. NOT tested: the pair-card UI clicks / on-screen picking (project rule), and real
+    gyro-driven source motion.
+  - Differences from HANDO, on purpose: pairs are HANDYSET's own dynamic list (dropdown + PICK) instead of 8
+    pre-declared slots + datalists; no hand2; thumb DOFs are curl+splay only (this project has no
+    thumbBaseSplay key); bone stretching and the CCD solver are gone (HANDO has neither). main.js v=219.
+
 2026-10-04  -  Hand Model Import GLB, Set as Default on both model selectors, Saved Phone Poses
   - Hand Model > Model selector now has the Phone selector's "Import GLB..." flow: a same-name
     import asks "Overwrite it?", the file loads locally at once through a blob: URL, then uploads
