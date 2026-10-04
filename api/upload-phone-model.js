@@ -26,6 +26,12 @@
 // here per the direct 2026-09-29 decision to accept this ceiling for
 // now rather than add that complexity up front.
 //
+// KINDS (added 2026-10-04): the same endpoint now also backs the HAND Model
+// Item Selector's "Import GLB" -- pick the target folder with `?kind=hand|phone`
+// (GET) or the `x-dev-panel-model-kind` header (POST); default `phone`. The
+// folders are a fixed whitelist, never taken from the request, and the
+// filename may not contain a path separator or "..".
+//
 // Required Vercel project environment variables (same as save-settings.js):
 //   GITHUB_TOKEN            - fine-grained PAT, contents:read+write on this repo
 //   DEV_PANEL_SAVE_SECRET   - shared anti-abuse token; must match the client's copy (POST only)
@@ -33,11 +39,16 @@
 //   GITHUB_REPO             - "owner/repo", defaults to "LeisHo/Handy-Set"
 //   GITHUB_BRANCH           - defaults to "main"
 //   PHONE_MODEL_DIR         - defaults to "data/processed/SMARTPHONE MODELS"
+//   HAND_MODEL_DIR          - defaults to "data/processed/HAND3D"
 
 const DEFAULT_REPO = 'LeisHo/Handy-Set';
 const DEFAULT_BRANCH = 'main';
 const DEFAULT_DIR = 'data/processed/SMARTPHONE MODELS';
 const MANIFEST_NAME = 'manifest.json';
+const KINDS = {
+    phone: { env: 'PHONE_MODEL_DIR', dir: DEFAULT_DIR },
+    hand: { env: 'HAND_MODEL_DIR', dir: 'data/processed/HAND3D' },
+};
 
 module.exports = async (req, res) => {
     if (req.method !== 'POST' && req.method !== 'GET') {
@@ -61,7 +72,13 @@ module.exports = async (req, res) => {
 
     const repo = process.env.GITHUB_REPO || DEFAULT_REPO;
     const branch = process.env.GITHUB_BRANCH || DEFAULT_BRANCH;
-    const dir = process.env.PHONE_MODEL_DIR || DEFAULT_DIR;
+    const kindRaw = String((req.method === 'GET' ? ((req.query && req.query.kind) || '') : (req.headers['x-dev-panel-model-kind'] || '')) || 'phone').toLowerCase();
+    const kindCfg = KINDS[kindRaw];
+    if (!kindCfg) {
+        res.status(400).json({ ok: false, error: `Unknown kind "${kindRaw}" (expected: ${Object.keys(KINDS).join(', ')})` });
+        return;
+    }
+    const dir = process.env[kindCfg.env] || kindCfg.dir;
     const manifestPath = `${dir}/${MANIFEST_NAME}`;
     const apiBase = `https://api.github.com/repos/${repo}`;
     const headers = {
@@ -102,6 +119,10 @@ module.exports = async (req, res) => {
     const filename = req.headers['x-dev-panel-model-filename'];
     if (!filename || typeof filename !== 'string' || !filename.toLowerCase().endsWith('.glb')) {
         res.status(400).json({ ok: false, error: 'Missing or invalid x-dev-panel-model-filename header (must end in .glb)' });
+        return;
+    }
+    if (filename.includes('/') || filename.includes('\\') || filename.includes('..')) {
+        res.status(400).json({ ok: false, error: 'Invalid filename (no path separators or "..")' });
         return;
     }
     const displayName = req.headers['x-dev-panel-model-display-name'] || filename.replace(/\.glb$/i, '');

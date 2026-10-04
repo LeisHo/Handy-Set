@@ -154,10 +154,21 @@ const loadingEl = document.getElementById('loading')
 // port: a hand has no per-model tunables the way a phone has (Recursive
 // Render/Screen settings), and nothing asked for uploading NEW hand
 // models from the UI, only selecting between known ones.
+// UPDATED 2026-10-04 (direct request: "for hand and phone model item selector,
+// allow me to import models... use the same ui for hand model so i can set
+// default, etc"): the Hand selector now has the Phone selector's Import GLB
+// flow (overwrite prompt on a same name, local blob load, GitHub upload via
+// api/upload-phone-model.js ?kind=hand, persistent HAND3D/manifest.json) plus
+// a Set as Default button on both selectors. The list below is only the
+// fallback used until/unless the manifest loads.
+const HAND_MODEL_DIR = 'data/processed/HAND3D'
+const HAND_MODEL_MANIFEST_URL = '/api/upload-phone-model?kind=hand'
 const HAND_MODEL_OPTIONS = [
-  { value: 'data/processed/HAND3D/HandiBonesB-IK.glb', text: 'HandiBonesB-IK (Default)' },
+  { value: 'data/processed/HAND3D/HandiBonesB-IK.glb', text: 'HandiBonesB-IK' },
   { value: 'data/processed/HAND3D/Hand2.glb', text: 'Hand2' }
 ]
+let handModelDefaultFile = null // set via "Set as Default" (settings.defaultHandModel), marks the row with a star
+let phoneModelDefaultFile = null // same, settings.defaultPhoneModel
 
 // ---------------------------------------------------------------------
 // Live tunable state (dev-panel-backed). Plain object, read/written
@@ -700,6 +711,7 @@ const SAVED_LIGHTING = [
 ]
 const SAVED_TWEEN_SEQUENCES = []
 const SAVED_TOON = []
+const SAVED_PHONE_POSES = [] // Phone Model's own Offset X/Y/Z + manual Rotation X/Y/Z presets (direct request 2026-10-04)
 const DEFAULT_POSE_NAME = 'Fist'
 const DEFAULT_CAMERA_NAME = 'FRONTOS'
 const DEFAULT_LIGHTING_NAME = 'FLABOVE'
@@ -716,6 +728,7 @@ loadListPickerItemsFromLocalStorage('poses', SAVED_POSES)
 loadListPickerItemsFromLocalStorage('cameras', SAVED_CAMERAS)
 loadListPickerItemsFromLocalStorage('lighting', SAVED_LIGHTING)
 loadListPickerItemsFromLocalStorage('toon', SAVED_TOON)
+loadListPickerItemsFromLocalStorage('phonePoses', SAVED_PHONE_POSES)
 loadListPickerItemsFromLocalStorage('tweenSequences', SAVED_TWEEN_SEQUENCES)
 
 // ---------------------------------------------------------------------
@@ -7541,6 +7554,24 @@ function addFingerSliders(content, finger) {
   })
 }
 
+const PHONE_POSE_SYNC_PAIRS = [
+  ['sliderPhoneModelOffsetX', 'phoneModelOffsetX'], ['sliderPhoneModelOffsetY', 'phoneModelOffsetY'], ['sliderPhoneModelOffsetZ', 'phoneModelOffsetZ'],
+  ['sliderPhoneModelRotX', 'phoneModelRotX'], ['sliderPhoneModelRotY', 'phoneModelRotY'], ['sliderPhoneModelRotZ', 'phoneModelRotZ']
+]
+// Scale is deliberately NOT part of a phone pose: it's model-specific (see
+// PHONE_MODEL_PER_MODEL_CONTROL_IDS), a pose is just where the phone sits and
+// how it's turned.
+function capturePhonePoseFromCfg() { const o = {}; PHONE_POSE_SYNC_PAIRS.forEach(([, k]) => { o[k] = cfg[k] }); return o }
+function applyPhonePosePreset(item) {
+  PHONE_POSE_SYNC_PAIRS.forEach(([id, k]) => {
+    if (typeof item[k] !== 'number') return
+    cfg[k] = item[k]
+    syncControlDom(id, item[k])
+  })
+  applyPhoneModelTransform()
+  requestRender()
+  if (typeof window.pushDevUndoState === 'function') window.pushDevUndoState()
+}
 function capturePoseFromCfg() { const o = {}; POSE_PRESET_KEYS.forEach((k) => { o[k] = cfg[k] }); return o }
 function captureCameraFromLive() { return { x: camera.position.x, y: camera.position.y, z: camera.position.z, fov: camera.fov, tx: controls.target.x, ty: controls.target.y, tz: controls.target.z, zoom: cfg.cameraZoom } }
 function captureLightingFromLive() { const o = {}; LIGHTING_PRESET_KEYS.forEach((k) => { o[k] = cfg[k] }); return o }
@@ -8357,9 +8388,92 @@ function applyHandModelOrder(json) {
   const sorted = HAND_MODEL_OPTIONS.map((o, i) => ({ o, i })).sort((a, b) => rank(a.o) - rank(b.o) || a.i - b.i).map((x) => x.o)
   HAND_MODEL_OPTIONS.splice(0, HAND_MODEL_OPTIONS.length, ...sorted)
 }
+let handModelItemSelectorParent = null
+// Same steps as clicking a row, callable without the DOM (Set as Default
+// restore at boot, an import swapping in a real path).
+function selectHandModelFile(file) {
+  if (!file || /^blob:/.test(file) || file === cfg.handModelFile) return
+  cfg.handModelFile = file
+  const h = document.getElementById('hiddenHandModelFile')
+  if (h) h.value = file
+  loadHandModel(file)
+  renderHandModelItemSelector()
+}
+function handManifestToOptions(models) {
+  return (Array.isArray(models) ? models : [])
+    .filter((m) => m && typeof m.file === 'string')
+    .map((m) => ({ value: HAND_MODEL_DIR + '/' + m.file, text: m.name || m.file }))
+}
+function setHandModelOptions(options) {
+  if (!options.length) return
+  HAND_MODEL_OPTIONS.splice(0, HAND_MODEL_OPTIONS.length, ...options)
+  const orderEl = document.getElementById('hiddenHandModelOrder')
+  if (orderEl) applyHandModelOrder(orderEl.value) // keep the user's saved order, new files land at the end
+  renderHandModelItemSelector()
+}
+// Live manifest first (reflects an import from moments ago), then the static
+// file from the last deploy, else keep the built-in fallback list.
+async function loadHandModelManifest() {
+  try {
+    const resp = await fetch(HAND_MODEL_MANIFEST_URL, { cache: 'no-store' })
+    const body = await resp.json().catch(() => ({}))
+    if (resp.ok && body.ok === true && body.manifest && Array.isArray(body.manifest.models) && body.manifest.models.length) { setHandModelOptions(handManifestToOptions(body.manifest.models)); return }
+  } catch (e) { /* fall through to the static file */ }
+  try {
+    const resp = await fetch(HAND_MODEL_DIR + '/manifest.json', { cache: 'no-store' })
+    if (resp.ok) { const m = await resp.json(); if (m && Array.isArray(m.models) && m.models.length) setHandModelOptions(handManifestToOptions(m.models)) }
+  } catch (e) { /* keep the fallback list */ }
+}
+// Import flow = importPhoneModelFile()'s twin: confirm overwrite on a same
+// name, load it locally right away through a blob: URL, then upload to GitHub
+// (kind=hand -> data/processed/HAND3D + its manifest.json) and swap in the
+// permanent path once that commit succeeds.
+async function importHandModelFile(file) {
+  const setStatus = (msg) => { const el = document.getElementById('handModelImportStatus'); if (el) el.textContent = msg }
+  const realPath = HAND_MODEL_DIR + '/' + file.name
+  const baseName = file.name.replace(/\.glb$/i, '')
+  const existing = HAND_MODEL_OPTIONS.find((o) => o.value === realPath || o.text === baseName)
+  let overwrite = false
+  if (existing) {
+    overwrite = confirm(`"${file.name}" already exists. Overwrite it?`)
+    if (!overwrite) { setStatus('Import cancelled.'); return }
+  }
+  const blobUrl = URL.createObjectURL(file)
+  if (existing) existing.value = blobUrl
+  else HAND_MODEL_OPTIONS.push({ value: blobUrl, text: baseName })
+  cfg.handModelFile = blobUrl
+  loadHandModel(blobUrl)
+  renderHandModelItemSelector()
+  setStatus('Loaded locally — uploading to GitHub for permanent storage…')
+  try {
+    const buf = await file.arrayBuffer()
+    const resp = await fetch(HAND_MODEL_MANIFEST_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/octet-stream',
+        'X-Dev-Panel-Secret': DEV_PANEL_SAVE_SECRET,
+        'X-Dev-Panel-Model-Filename': file.name,
+        'X-Dev-Panel-Model-Kind': 'hand',
+        'X-Dev-Panel-Overwrite': overwrite ? 'true' : 'false'
+      },
+      body: buf
+    })
+    const body = await resp.json().catch(() => ({}))
+    if (!resp.ok || body.ok !== true) throw new Error(body.error || ('HTTP ' + resp.status))
+    const entry = HAND_MODEL_OPTIONS.find((o) => o.value === blobUrl)
+    if (entry) entry.value = realPath
+    if (cfg.handModelFile === blobUrl) cfg.handModelFile = realPath
+    setStatus('Saved to GitHub.')
+    setTimeout(() => setStatus(''), 4000)
+    renderHandModelItemSelector()
+  } catch (err) {
+    setStatus('GitHub upload failed (still usable locally this session): ' + err.message)
+  }
+}
 function renderHandModelItemSelector(parentContent) {
-  const parent = parentContent
+  const parent = parentContent || handModelItemSelectorParent
   if (!parent) return
+  handModelItemSelectorParent = parent
   if (handModelItemSelectorContainer) handModelItemSelectorContainer.remove()
 
   const container = document.createElement('div')
@@ -8381,6 +8495,7 @@ function renderHandModelItemSelector(parentContent) {
   hiddenInput.addEventListener('input', () => {
     if (hiddenInput.value === lastSeenHandModelFile) return
     lastSeenHandModelFile = hiddenInput.value
+    if (/^blob:/.test(hiddenInput.value)) return // a never-uploaded import can't be restored
     cfg.handModelFile = hiddenInput.value
     loadHandModel(cfg.handModelFile)
     renderHandModelItemSelector(parent)
@@ -8440,23 +8555,65 @@ function renderHandModelItemSelector(parentContent) {
     row.appendChild(handle)
     const labelEl = document.createElement('span')
     labelEl.className = 'dp-list-picker-item-label'
-    labelEl.textContent = opt.text
+    labelEl.textContent = (opt.value === handModelDefaultFile ? '★ ' : '') + opt.text
     row.appendChild(labelEl)
     row.addEventListener('click', () => {
-      if (opt.value === cfg.handModelFile) return
-      cfg.handModelFile = opt.value
       lastSeenHandModelFile = opt.value
-      hiddenInput.value = opt.value
-      loadHandModel(opt.value)
-      renderHandModelItemSelector(parent)
+      selectHandModelFile(opt.value)
     })
     listEl.appendChild(row)
   })
+
+  const btnRow = document.createElement('div')
+  btnRow.className = 'dev-buttons'
+  const importBtn = document.createElement('button')
+  importBtn.type = 'button'
+  importBtn.textContent = 'Import GLB...'
+  const fileInput = document.createElement('input')
+  fileInput.type = 'file'
+  fileInput.accept = '.glb'
+  fileInput.style.display = 'none'
+  importBtn.addEventListener('click', () => fileInput.click())
+  fileInput.addEventListener('change', () => {
+    const f = fileInput.files && fileInput.files[0]
+    fileInput.value = '' // so importing the SAME filename again still fires 'change'
+    if (f) importHandModelFile(f)
+  })
+  const defaultBtn = document.createElement('button')
+  defaultBtn.type = 'button'
+  defaultBtn.textContent = 'Set as Default'
+  defaultBtn.addEventListener('click', async () => {
+    if (/^blob:/.test(cfg.handModelFile || '')) { alert('Wait for the GitHub upload to finish first, then Set as Default.'); return }
+    const file = cfg.handModelFile
+    if (await saveFieldAsDefault('defaultHandModel', () => file, defaultBtn)) { handModelDefaultFile = file; renderHandModelItemSelector() }
+  })
+  btnRow.appendChild(importBtn)
+  btnRow.appendChild(fileInput)
+  btnRow.appendChild(defaultBtn)
+  container.appendChild(btnRow)
+  const statusEl = document.createElement('div')
+  statusEl.id = 'handModelImportStatus'
+  statusEl.style.cssText = 'font-size:11px; opacity:0.8; margin-top:4px;'
+  container.appendChild(statusEl)
 
   parent.appendChild(container)
   handModelItemSelectorContainer = container
 }
 
+// Same steps as clicking a row, callable without the DOM (the "Set as Default"
+// restore at boot). Imported-but-not-yet-uploaded blob: URLs are never valid
+// targets for a restore.
+function selectPhoneModelFile(file) {
+  if (!file || /^blob:/.test(file) || file === cfg.phoneModelFile) return
+  const previousFile = cfg.phoneModelFile
+  cfg.phoneModelFile = file
+  const h = document.getElementById('hiddenPhoneModelFile')
+  if (h) h.value = file
+  capturePhoneModelPerModelSettings(previousFile)
+  applyPhoneModelPerModelSettings(file)
+  if (cfg.phoneModelEnabled) loadPhoneModel(file)
+  renderPhoneModelItemSelector()
+}
 function renderPhoneModelItemSelector(parentContent) {
   const parent = parentContent || phoneModelItemSelectorParent
   if (!parent) return // manifest resolved before the dev panel was ever built -- the next real build reads PHONE_MODEL_OPTIONS fresh anyway
@@ -8555,16 +8712,10 @@ function renderPhoneModelItemSelector(parentContent) {
   PHONE_MODEL_OPTIONS.forEach((opt) => {
     const row = document.createElement('div')
     row.className = 'dp-list-picker-item' + (opt.value === cfg.phoneModelFile ? ' dp-list-picker-item-selected' : '')
-    row.textContent = opt.text
+    row.textContent = (opt.value === phoneModelDefaultFile ? '★ ' : '') + opt.text
     row.addEventListener('click', () => {
-      const previousFile = cfg.phoneModelFile
-      cfg.phoneModelFile = opt.value
       lastSeenPhoneModelFile = opt.value
-      hiddenInput.value = opt.value
-      capturePhoneModelPerModelSettings(previousFile)
-      applyPhoneModelPerModelSettings(opt.value)
-      if (cfg.phoneModelEnabled) loadPhoneModel(opt.value)
-      renderPhoneModelItemSelector()
+      selectPhoneModelFile(opt.value)
     })
     listEl.appendChild(row)
   })
@@ -8586,6 +8737,15 @@ function renderPhoneModelItemSelector(parentContent) {
   })
   btnRow.appendChild(importBtn)
   btnRow.appendChild(fileInput)
+  const phoneDefaultBtn = document.createElement('button')
+  phoneDefaultBtn.type = 'button'
+  phoneDefaultBtn.textContent = 'Set as Default'
+  phoneDefaultBtn.addEventListener('click', async () => {
+    if (/^blob:/.test(cfg.phoneModelFile || '')) { alert('Wait for the GitHub upload to finish first, then Set as Default.'); return }
+    const file = cfg.phoneModelFile
+    if (await saveFieldAsDefault('defaultPhoneModel', () => file, phoneDefaultBtn)) { phoneModelDefaultFile = file; renderPhoneModelItemSelector() }
+  })
+  btnRow.appendChild(phoneDefaultBtn)
   container.appendChild(btnRow)
 
   const statusEl = document.createElement('div')
@@ -8701,6 +8861,12 @@ function renderPhoneModelGroup(content) {
   wireSlider('sliderPhoneModelRotY', (v) => { cfg.phoneModelRotY = v; applyPhoneModelTransform() })
   addRow(subRotation, { id: 'sliderPhoneModelRotZ', label: 'Z Rotation (Deg)', type: 'slider', min: -90, max: 89, step: 1, value: cfg.phoneModelRotZ })
   wireSlider('sliderPhoneModelRotZ', (v) => { cfg.phoneModelRotZ = v; applyPhoneModelTransform() })
+
+  // Saved Phone Poses (direct request 2026-10-04): the standard Saved-Presets
+  // list-picker (Save / Overwrite / Use / Rename / Delete / +Group, Export /
+  // Import, Set as Default) over the phone's Offset X/Y/Z + manual Rotation
+  // X/Y/Z. Persists via localStorage + the remote Sync like the other pickers.
+  renderPresetPicker(content, 'Saved Phone Poses', SAVED_PHONE_POSES, null, applyPhonePosePreset, capturePhonePoseFromCfg, { exportable: true, importable: true, defaultFieldKey: 'defaultPhonePose', storageKey: 'phonePoses' })
 
   // RESPONSIVE BEHAVIOUR - PHONE (level 2, per direct correction) >
   // Responsive Rotation (level 3). On/Off, Mode, Reset, per-axis On/Off
@@ -9891,10 +10057,12 @@ async function saveFieldAsDefault(fieldKey, captureFn, btn) {
       body: JSON.stringify(merged)
     })
     const postBody = await postResp.json().catch(() => ({}))
-    if (postResp.ok && postBody.ok === true) { flash('Saved!'); return }
+    if (postResp.ok && postBody.ok === true) { flash('Saved!'); return true }
     flash('Save failed: ' + (postBody.error || ('HTTP ' + postResp.status)))
+    return false
   } catch (err) {
     flash('Save failed: offline/unreachable')
+    return false
   }
 }
 async function loadFieldDefaultIfSaved(fieldKey, useFn) {
@@ -9947,9 +10115,19 @@ async function loadRemoteSettingsOnStartup() {
     if (data.settings.listPicker_cameras) loadListPickerItemsFromRemoteData(data.settings.listPicker_cameras, SAVED_CAMERAS)
     if (data.settings.listPicker_lighting) loadListPickerItemsFromRemoteData(data.settings.listPicker_lighting, SAVED_LIGHTING)
     if (data.settings.listPicker_toon) loadListPickerItemsFromRemoteData(data.settings.listPicker_toon, SAVED_TOON)
+    if (data.settings.listPicker_phonePoses) loadListPickerItemsFromRemoteData(data.settings.listPicker_phonePoses, SAVED_PHONE_POSES)
     if (data.settings.listPicker_tweenSequences) loadListPickerItemsFromRemoteData(data.settings.listPicker_tweenSequences, SAVED_TWEEN_SEQUENCES)
     if (typeof window.ensureDevPanelBuilt === 'function') window.ensureDevPanelBuilt()
     apply(data.settings)
+    // "Set as Default" for the 2 model selectors and the phone pose -- applied
+    // AFTER the normal Sync restore so a deliberate default wins (same
+    // precedence the other defaultX fields get at boot), from this one shared
+    // fetch rather than 3 more round-trips.
+    if (typeof data.settings.defaultHandModel === 'string') { handModelDefaultFile = data.settings.defaultHandModel; selectHandModelFile(handModelDefaultFile) }
+    if (typeof data.settings.defaultPhoneModel === 'string') { phoneModelDefaultFile = data.settings.defaultPhoneModel; selectPhoneModelFile(phoneModelDefaultFile) }
+    if (data.settings.defaultPhonePose && typeof data.settings.defaultPhonePose === 'object') applyPhonePosePreset(data.settings.defaultPhonePose)
+    renderHandModelItemSelector()
+    renderPhoneModelItemSelector()
   } catch (err) {
     console.warn(ts() + ' Remote dev panel settings unavailable (expected on a plain static server, e.g. local dev):', err.message)
   }
@@ -9962,3 +10140,4 @@ loadRemoteSettingsOnStartup()
 // `if (!parent) return` guard) and the panel's first real build reads
 // PHONE_MODEL_OPTIONS fresh, already updated by then in the common case.
 loadPhoneModelManifest()
+loadHandModelManifest()

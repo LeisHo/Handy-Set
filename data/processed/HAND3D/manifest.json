@@ -1,0 +1,12 @@
+{
+  "models": [
+    {
+      "file": "HandiBonesB-IK.glb",
+      "name": "HandiBonesB-IK"
+    },
+    {
+      "file": "Hand2.glb",
+      "name": "Hand2"
+    }
+  ]
+}
