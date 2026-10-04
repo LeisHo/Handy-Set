@@ -149,7 +149,7 @@
     "textPhoneRotationRangeZ": "{\"min\":0,\"max\":180}",
     "textPhoneRotationCurveZ": "{\"points\":[{\"x\":0,\"y\":0.035416158040364576},{\"x\":1,\"y\":1}],\"method\":\"catmullrom\"}",
     "checkboxPhoneResponsiveDisplaceEnabled": true,
-    "selectPhoneDisplaceMode": "worldPosition",
+    "selectPhoneDisplaceMode": "nativeSensor",
     "checkboxPhoneDisplaceResetEnabled": true,
     "checkboxPhoneDisplaceAxisXEnabled": false,
     "sliderPhoneDisplaceScaleX": -1,
