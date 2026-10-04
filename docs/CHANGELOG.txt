@@ -1,3 +1,13 @@
+2026-10-04  -  Velocity snap default 0.03 -> 0.15 m/s (stop bounce)
+  - Up/pause/down/pause test: Y bottomed at 21.80 then bounced to 24.27 during the
+    pause. Displace Log: velocity flipped -0.44 -> +0.11 m/s across the stop (braking
+    pulses integrate to more than the push), and the +0.11 persisted ~0.4 s (gate
+    flicker + 150 ms dwell) -- the 0.03 snap ignored it. Default now 0.15; slider
+    max 0.5. Estimated to remove the last ~1.2 of the ~2.5-unit bounce; the first
+    ~1.3 (braking overshoot while the gate is still inactive) is not addressed.
+  - Bias-tracker absorption evaluated (synthetic sim) and ruled out as the main
+    cause (~0.02-0.05 m/s of the 0.11); not changed. Not device-verified.
+
 2026-10-04  -  Log toggles filter copy/save; held-still creep fixed; deadzone step removed
   - Sensor Log + Displace Log now store EVERY field per line ({ts, parts:[{k,t}]})
     and apply the "Log ..." checkboxes when a line is shown / copied / saved /
