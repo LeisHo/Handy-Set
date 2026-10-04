@@ -154,8 +154,8 @@
     "checkboxPhoneDisplaceAxisXEnabled": false,
     "sliderPhoneDisplaceScaleX": -1,
     "checkboxPhoneDisplaceInvertX": true,
-    "checkboxPhoneDisplaceAxisYEnabled": false,
-    "sliderPhoneDisplaceScaleY": 1,
+    "checkboxPhoneDisplaceAxisYEnabled": true,
+    "sliderPhoneDisplaceScaleY": 2.11355284962894,
     "checkboxPhoneDisplaceInvertY": false,
     "checkboxPhoneDisplaceAxisZEnabled": false,
     "sliderPhoneDisplaceScaleZ": 1,
@@ -202,14 +202,14 @@
     "textWristSplayCurve": "{\"points\":[{\"x\":0,\"y\":1},{\"x\":0.31833343505859374,\"y\":0.6961458841959636},{\"x\":1,\"y\":0.042812347412109375}],\"method\":\"catmullrom\"}",
     "sliderCameraX": 0,
     "sliderCameraY": 114,
-    "sliderCameraZ": 7.5,
+    "sliderCameraZ": 2,
     "sliderCameraFov": 15,
     "sliderCameraZoom": 114,
     "checkboxLockCameraPan": true,
     "checkboxLockCameraZoom": true,
-    "checkboxLockCameraRotate": false,
+    "checkboxLockCameraRotate": true,
     "sliderCameraYaw": 1,
-    "sliderCameraPitch": 86,
+    "sliderCameraPitch": 89,
     "checkboxCameraMaxExtentsEnabled": false,
     "sliderKeyAzimuth": 360,
     "sliderKeyElevation": 53,
@@ -283,7 +283,7 @@
     "left": 26,
     "top": 71,
     "width": 349,
-    "height": 76
+    "height": 494
   },
   "devPanelStyle": {
     "titleFontSize": 17,
@@ -7611,83 +7611,11 @@
                     "items": [
                       {
                         "type": "row",
-                        "key": "checkboxMobilePhoneResponsiveDisplaceEnabled"
-                      },
-                      {
-                        "type": "row",
-                        "key": "selectMobilePhoneDisplaceMode"
-                      },
-                      {
-                        "type": "row",
-                        "key": "checkboxMobilePhoneDisplaceAxisXEnabled"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderMobilePhoneDisplaceScaleX"
-                      },
-                      {
-                        "type": "row",
-                        "key": "checkboxMobilePhoneDisplaceAxisYEnabled"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderMobilePhoneDisplaceScaleY"
-                      },
-                      {
-                        "type": "row",
-                        "key": "checkboxMobilePhoneDisplaceAxisZEnabled"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderMobilePhoneDisplaceScaleZ"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderMobilePhoneDisplaceDamping"
-                      },
-                      {
-                        "type": "row",
-                        "key": "checkboxMobilePhoneDisplaceResetEnabled"
-                      },
-                      {
-                        "type": "row",
-                        "key": "checkboxMobilePhoneDisplaceInvertX"
-                      },
-                      {
-                        "type": "row",
-                        "key": "checkboxMobilePhoneDisplaceInvertY"
-                      },
-                      {
-                        "type": "row",
-                        "key": "checkboxMobilePhoneDisplaceInvertZ"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderMobilePhoneDisplaceVelDecayRate"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderMobilePhoneDisplacePosDecayRate"
-                      },
-                      {
-                        "type": "row",
-                        "key": "checkboxMobilePhoneDisplaceStationaryGateEnabled"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderMobilePhoneDisplaceStationaryGateDegPerSec"
-                      },
-                      {
-                        "type": "row",
                         "key": "textPhoneDisplaceRangeX"
                       },
                       {
                         "type": "row",
                         "key": "textPhoneDisplaceCurveX"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderMobilePhoneDisplaceXReferenceM"
                       },
                       {
                         "type": "row",
@@ -7699,48 +7627,20 @@
                       },
                       {
                         "type": "row",
-                        "key": "sliderMobilePhoneDisplaceYReferenceM"
-                      },
-                      {
-                        "type": "row",
                         "key": "textPhoneDisplaceRangeZ"
                       },
                       {
                         "type": "row",
                         "key": "textPhoneDisplaceCurveZ"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderMobilePhoneDisplaceZReferenceM"
                       }
                     ],
                     "rowKeys": [
-                      "checkboxMobilePhoneResponsiveDisplaceEnabled",
-                      "selectMobilePhoneDisplaceMode",
-                      "checkboxMobilePhoneDisplaceAxisXEnabled",
-                      "sliderMobilePhoneDisplaceScaleX",
-                      "checkboxMobilePhoneDisplaceAxisYEnabled",
-                      "sliderMobilePhoneDisplaceScaleY",
-                      "checkboxMobilePhoneDisplaceAxisZEnabled",
-                      "sliderMobilePhoneDisplaceScaleZ",
-                      "sliderMobilePhoneDisplaceDamping",
-                      "checkboxMobilePhoneDisplaceResetEnabled",
-                      "checkboxMobilePhoneDisplaceInvertX",
-                      "checkboxMobilePhoneDisplaceInvertY",
-                      "checkboxMobilePhoneDisplaceInvertZ",
-                      "sliderMobilePhoneDisplaceVelDecayRate",
-                      "sliderMobilePhoneDisplacePosDecayRate",
-                      "checkboxMobilePhoneDisplaceStationaryGateEnabled",
-                      "sliderMobilePhoneDisplaceStationaryGateDegPerSec",
                       "textPhoneDisplaceRangeX",
                       "textPhoneDisplaceCurveX",
-                      "sliderMobilePhoneDisplaceXReferenceM",
                       "textPhoneDisplaceRangeY",
                       "textPhoneDisplaceCurveY",
-                      "sliderMobilePhoneDisplaceYReferenceM",
                       "textPhoneDisplaceRangeZ",
-                      "textPhoneDisplaceCurveZ",
-                      "sliderMobilePhoneDisplaceZReferenceM"
+                      "textPhoneDisplaceCurveZ"
                     ],
                     "subgroups": []
                   }
@@ -7841,83 +7741,11 @@
                   "items": [
                     {
                       "type": "row",
-                      "key": "checkboxMobilePhoneResponsiveDisplaceEnabled"
-                    },
-                    {
-                      "type": "row",
-                      "key": "selectMobilePhoneDisplaceMode"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxMobilePhoneDisplaceAxisXEnabled"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderMobilePhoneDisplaceScaleX"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxMobilePhoneDisplaceAxisYEnabled"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderMobilePhoneDisplaceScaleY"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxMobilePhoneDisplaceAxisZEnabled"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderMobilePhoneDisplaceScaleZ"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderMobilePhoneDisplaceDamping"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxMobilePhoneDisplaceResetEnabled"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxMobilePhoneDisplaceInvertX"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxMobilePhoneDisplaceInvertY"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxMobilePhoneDisplaceInvertZ"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderMobilePhoneDisplaceVelDecayRate"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderMobilePhoneDisplacePosDecayRate"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxMobilePhoneDisplaceStationaryGateEnabled"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderMobilePhoneDisplaceStationaryGateDegPerSec"
-                    },
-                    {
-                      "type": "row",
                       "key": "textPhoneDisplaceRangeX"
                     },
                     {
                       "type": "row",
                       "key": "textPhoneDisplaceCurveX"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderMobilePhoneDisplaceXReferenceM"
                     },
                     {
                       "type": "row",
@@ -7929,48 +7757,20 @@
                     },
                     {
                       "type": "row",
-                      "key": "sliderMobilePhoneDisplaceYReferenceM"
-                    },
-                    {
-                      "type": "row",
                       "key": "textPhoneDisplaceRangeZ"
                     },
                     {
                       "type": "row",
                       "key": "textPhoneDisplaceCurveZ"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderMobilePhoneDisplaceZReferenceM"
                     }
                   ],
                   "rowKeys": [
-                    "checkboxMobilePhoneResponsiveDisplaceEnabled",
-                    "selectMobilePhoneDisplaceMode",
-                    "checkboxMobilePhoneDisplaceAxisXEnabled",
-                    "sliderMobilePhoneDisplaceScaleX",
-                    "checkboxMobilePhoneDisplaceAxisYEnabled",
-                    "sliderMobilePhoneDisplaceScaleY",
-                    "checkboxMobilePhoneDisplaceAxisZEnabled",
-                    "sliderMobilePhoneDisplaceScaleZ",
-                    "sliderMobilePhoneDisplaceDamping",
-                    "checkboxMobilePhoneDisplaceResetEnabled",
-                    "checkboxMobilePhoneDisplaceInvertX",
-                    "checkboxMobilePhoneDisplaceInvertY",
-                    "checkboxMobilePhoneDisplaceInvertZ",
-                    "sliderMobilePhoneDisplaceVelDecayRate",
-                    "sliderMobilePhoneDisplacePosDecayRate",
-                    "checkboxMobilePhoneDisplaceStationaryGateEnabled",
-                    "sliderMobilePhoneDisplaceStationaryGateDegPerSec",
                     "textPhoneDisplaceRangeX",
                     "textPhoneDisplaceCurveX",
-                    "sliderMobilePhoneDisplaceXReferenceM",
                     "textPhoneDisplaceRangeY",
                     "textPhoneDisplaceCurveY",
-                    "sliderMobilePhoneDisplaceYReferenceM",
                     "textPhoneDisplaceRangeZ",
-                    "textPhoneDisplaceCurveZ",
-                    "sliderMobilePhoneDisplaceZReferenceM"
+                    "textPhoneDisplaceCurveZ"
                   ],
                   "subgroups": []
                 }
@@ -8140,83 +7940,11 @@
                   "items": [
                     {
                       "type": "row",
-                      "key": "checkboxMobilePhoneResponsiveDisplaceEnabled"
-                    },
-                    {
-                      "type": "row",
-                      "key": "selectMobilePhoneDisplaceMode"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxMobilePhoneDisplaceAxisXEnabled"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderMobilePhoneDisplaceScaleX"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxMobilePhoneDisplaceAxisYEnabled"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderMobilePhoneDisplaceScaleY"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxMobilePhoneDisplaceAxisZEnabled"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderMobilePhoneDisplaceScaleZ"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderMobilePhoneDisplaceDamping"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxMobilePhoneDisplaceResetEnabled"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxMobilePhoneDisplaceInvertX"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxMobilePhoneDisplaceInvertY"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxMobilePhoneDisplaceInvertZ"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderMobilePhoneDisplaceVelDecayRate"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderMobilePhoneDisplacePosDecayRate"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxMobilePhoneDisplaceStationaryGateEnabled"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderMobilePhoneDisplaceStationaryGateDegPerSec"
-                    },
-                    {
-                      "type": "row",
                       "key": "textPhoneDisplaceRangeX"
                     },
                     {
                       "type": "row",
                       "key": "textPhoneDisplaceCurveX"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderMobilePhoneDisplaceXReferenceM"
                     },
                     {
                       "type": "row",
@@ -8228,48 +7956,20 @@
                     },
                     {
                       "type": "row",
-                      "key": "sliderMobilePhoneDisplaceYReferenceM"
-                    },
-                    {
-                      "type": "row",
                       "key": "textPhoneDisplaceRangeZ"
                     },
                     {
                       "type": "row",
                       "key": "textPhoneDisplaceCurveZ"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderMobilePhoneDisplaceZReferenceM"
                     }
                   ],
                   "rowKeys": [
-                    "checkboxMobilePhoneResponsiveDisplaceEnabled",
-                    "selectMobilePhoneDisplaceMode",
-                    "checkboxMobilePhoneDisplaceAxisXEnabled",
-                    "sliderMobilePhoneDisplaceScaleX",
-                    "checkboxMobilePhoneDisplaceAxisYEnabled",
-                    "sliderMobilePhoneDisplaceScaleY",
-                    "checkboxMobilePhoneDisplaceAxisZEnabled",
-                    "sliderMobilePhoneDisplaceScaleZ",
-                    "sliderMobilePhoneDisplaceDamping",
-                    "checkboxMobilePhoneDisplaceResetEnabled",
-                    "checkboxMobilePhoneDisplaceInvertX",
-                    "checkboxMobilePhoneDisplaceInvertY",
-                    "checkboxMobilePhoneDisplaceInvertZ",
-                    "sliderMobilePhoneDisplaceVelDecayRate",
-                    "sliderMobilePhoneDisplacePosDecayRate",
-                    "checkboxMobilePhoneDisplaceStationaryGateEnabled",
-                    "sliderMobilePhoneDisplaceStationaryGateDegPerSec",
                     "textPhoneDisplaceRangeX",
                     "textPhoneDisplaceCurveX",
-                    "sliderMobilePhoneDisplaceXReferenceM",
                     "textPhoneDisplaceRangeY",
                     "textPhoneDisplaceCurveY",
-                    "sliderMobilePhoneDisplaceYReferenceM",
                     "textPhoneDisplaceRangeZ",
-                    "textPhoneDisplaceCurveZ",
-                    "sliderMobilePhoneDisplaceZReferenceM"
+                    "textPhoneDisplaceCurveZ"
                   ],
                   "subgroups": []
                 }
@@ -8370,83 +8070,11 @@
                 "items": [
                   {
                     "type": "row",
-                    "key": "checkboxMobilePhoneResponsiveDisplaceEnabled"
-                  },
-                  {
-                    "type": "row",
-                    "key": "selectMobilePhoneDisplaceMode"
-                  },
-                  {
-                    "type": "row",
-                    "key": "checkboxMobilePhoneDisplaceAxisXEnabled"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderMobilePhoneDisplaceScaleX"
-                  },
-                  {
-                    "type": "row",
-                    "key": "checkboxMobilePhoneDisplaceAxisYEnabled"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderMobilePhoneDisplaceScaleY"
-                  },
-                  {
-                    "type": "row",
-                    "key": "checkboxMobilePhoneDisplaceAxisZEnabled"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderMobilePhoneDisplaceScaleZ"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderMobilePhoneDisplaceDamping"
-                  },
-                  {
-                    "type": "row",
-                    "key": "checkboxMobilePhoneDisplaceResetEnabled"
-                  },
-                  {
-                    "type": "row",
-                    "key": "checkboxMobilePhoneDisplaceInvertX"
-                  },
-                  {
-                    "type": "row",
-                    "key": "checkboxMobilePhoneDisplaceInvertY"
-                  },
-                  {
-                    "type": "row",
-                    "key": "checkboxMobilePhoneDisplaceInvertZ"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderMobilePhoneDisplaceVelDecayRate"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderMobilePhoneDisplacePosDecayRate"
-                  },
-                  {
-                    "type": "row",
-                    "key": "checkboxMobilePhoneDisplaceStationaryGateEnabled"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderMobilePhoneDisplaceStationaryGateDegPerSec"
-                  },
-                  {
-                    "type": "row",
                     "key": "textPhoneDisplaceRangeX"
                   },
                   {
                     "type": "row",
                     "key": "textPhoneDisplaceCurveX"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderMobilePhoneDisplaceXReferenceM"
                   },
                   {
                     "type": "row",
@@ -8458,48 +8086,20 @@
                   },
                   {
                     "type": "row",
-                    "key": "sliderMobilePhoneDisplaceYReferenceM"
-                  },
-                  {
-                    "type": "row",
                     "key": "textPhoneDisplaceRangeZ"
                   },
                   {
                     "type": "row",
                     "key": "textPhoneDisplaceCurveZ"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderMobilePhoneDisplaceZReferenceM"
                   }
                 ],
                 "rowKeys": [
-                  "checkboxMobilePhoneResponsiveDisplaceEnabled",
-                  "selectMobilePhoneDisplaceMode",
-                  "checkboxMobilePhoneDisplaceAxisXEnabled",
-                  "sliderMobilePhoneDisplaceScaleX",
-                  "checkboxMobilePhoneDisplaceAxisYEnabled",
-                  "sliderMobilePhoneDisplaceScaleY",
-                  "checkboxMobilePhoneDisplaceAxisZEnabled",
-                  "sliderMobilePhoneDisplaceScaleZ",
-                  "sliderMobilePhoneDisplaceDamping",
-                  "checkboxMobilePhoneDisplaceResetEnabled",
-                  "checkboxMobilePhoneDisplaceInvertX",
-                  "checkboxMobilePhoneDisplaceInvertY",
-                  "checkboxMobilePhoneDisplaceInvertZ",
-                  "sliderMobilePhoneDisplaceVelDecayRate",
-                  "sliderMobilePhoneDisplacePosDecayRate",
-                  "checkboxMobilePhoneDisplaceStationaryGateEnabled",
-                  "sliderMobilePhoneDisplaceStationaryGateDegPerSec",
                   "textPhoneDisplaceRangeX",
                   "textPhoneDisplaceCurveX",
-                  "sliderMobilePhoneDisplaceXReferenceM",
                   "textPhoneDisplaceRangeY",
                   "textPhoneDisplaceCurveY",
-                  "sliderMobilePhoneDisplaceYReferenceM",
                   "textPhoneDisplaceRangeZ",
-                  "textPhoneDisplaceCurveZ",
-                  "sliderMobilePhoneDisplaceZReferenceM"
+                  "textPhoneDisplaceCurveZ"
                 ],
                 "subgroups": []
               }
@@ -10431,83 +10031,11 @@
                     "items": [
                       {
                         "type": "row",
-                        "key": "checkboxLandscapePhoneResponsiveDisplaceEnabled"
-                      },
-                      {
-                        "type": "row",
-                        "key": "selectLandscapePhoneDisplaceMode"
-                      },
-                      {
-                        "type": "row",
-                        "key": "checkboxLandscapePhoneDisplaceAxisXEnabled"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderLandscapePhoneDisplaceScaleX"
-                      },
-                      {
-                        "type": "row",
-                        "key": "checkboxLandscapePhoneDisplaceAxisYEnabled"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderLandscapePhoneDisplaceScaleY"
-                      },
-                      {
-                        "type": "row",
-                        "key": "checkboxLandscapePhoneDisplaceAxisZEnabled"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderLandscapePhoneDisplaceScaleZ"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderLandscapePhoneDisplaceDamping"
-                      },
-                      {
-                        "type": "row",
-                        "key": "checkboxLandscapePhoneDisplaceResetEnabled"
-                      },
-                      {
-                        "type": "row",
-                        "key": "checkboxLandscapePhoneDisplaceInvertX"
-                      },
-                      {
-                        "type": "row",
-                        "key": "checkboxLandscapePhoneDisplaceInvertY"
-                      },
-                      {
-                        "type": "row",
-                        "key": "checkboxLandscapePhoneDisplaceInvertZ"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderLandscapePhoneDisplaceVelDecayRate"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderLandscapePhoneDisplacePosDecayRate"
-                      },
-                      {
-                        "type": "row",
-                        "key": "checkboxLandscapePhoneDisplaceStationaryGateEnabled"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderLandscapePhoneDisplaceStationaryGateDegPerSec"
-                      },
-                      {
-                        "type": "row",
                         "key": "textPhoneDisplaceRangeX"
                       },
                       {
                         "type": "row",
                         "key": "textPhoneDisplaceCurveX"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderLandscapePhoneDisplaceXReferenceM"
                       },
                       {
                         "type": "row",
@@ -10519,48 +10047,20 @@
                       },
                       {
                         "type": "row",
-                        "key": "sliderLandscapePhoneDisplaceYReferenceM"
-                      },
-                      {
-                        "type": "row",
                         "key": "textPhoneDisplaceRangeZ"
                       },
                       {
                         "type": "row",
                         "key": "textPhoneDisplaceCurveZ"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderLandscapePhoneDisplaceZReferenceM"
                       }
                     ],
                     "rowKeys": [
-                      "checkboxLandscapePhoneResponsiveDisplaceEnabled",
-                      "selectLandscapePhoneDisplaceMode",
-                      "checkboxLandscapePhoneDisplaceAxisXEnabled",
-                      "sliderLandscapePhoneDisplaceScaleX",
-                      "checkboxLandscapePhoneDisplaceAxisYEnabled",
-                      "sliderLandscapePhoneDisplaceScaleY",
-                      "checkboxLandscapePhoneDisplaceAxisZEnabled",
-                      "sliderLandscapePhoneDisplaceScaleZ",
-                      "sliderLandscapePhoneDisplaceDamping",
-                      "checkboxLandscapePhoneDisplaceResetEnabled",
-                      "checkboxLandscapePhoneDisplaceInvertX",
-                      "checkboxLandscapePhoneDisplaceInvertY",
-                      "checkboxLandscapePhoneDisplaceInvertZ",
-                      "sliderLandscapePhoneDisplaceVelDecayRate",
-                      "sliderLandscapePhoneDisplacePosDecayRate",
-                      "checkboxLandscapePhoneDisplaceStationaryGateEnabled",
-                      "sliderLandscapePhoneDisplaceStationaryGateDegPerSec",
                       "textPhoneDisplaceRangeX",
                       "textPhoneDisplaceCurveX",
-                      "sliderLandscapePhoneDisplaceXReferenceM",
                       "textPhoneDisplaceRangeY",
                       "textPhoneDisplaceCurveY",
-                      "sliderLandscapePhoneDisplaceYReferenceM",
                       "textPhoneDisplaceRangeZ",
-                      "textPhoneDisplaceCurveZ",
-                      "sliderLandscapePhoneDisplaceZReferenceM"
+                      "textPhoneDisplaceCurveZ"
                     ],
                     "subgroups": []
                   }
@@ -10661,83 +10161,11 @@
                   "items": [
                     {
                       "type": "row",
-                      "key": "checkboxLandscapePhoneResponsiveDisplaceEnabled"
-                    },
-                    {
-                      "type": "row",
-                      "key": "selectLandscapePhoneDisplaceMode"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxLandscapePhoneDisplaceAxisXEnabled"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapePhoneDisplaceScaleX"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxLandscapePhoneDisplaceAxisYEnabled"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapePhoneDisplaceScaleY"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxLandscapePhoneDisplaceAxisZEnabled"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapePhoneDisplaceScaleZ"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapePhoneDisplaceDamping"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxLandscapePhoneDisplaceResetEnabled"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxLandscapePhoneDisplaceInvertX"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxLandscapePhoneDisplaceInvertY"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxLandscapePhoneDisplaceInvertZ"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapePhoneDisplaceVelDecayRate"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapePhoneDisplacePosDecayRate"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxLandscapePhoneDisplaceStationaryGateEnabled"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapePhoneDisplaceStationaryGateDegPerSec"
-                    },
-                    {
-                      "type": "row",
                       "key": "textPhoneDisplaceRangeX"
                     },
                     {
                       "type": "row",
                       "key": "textPhoneDisplaceCurveX"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapePhoneDisplaceXReferenceM"
                     },
                     {
                       "type": "row",
@@ -10749,48 +10177,20 @@
                     },
                     {
                       "type": "row",
-                      "key": "sliderLandscapePhoneDisplaceYReferenceM"
-                    },
-                    {
-                      "type": "row",
                       "key": "textPhoneDisplaceRangeZ"
                     },
                     {
                       "type": "row",
                       "key": "textPhoneDisplaceCurveZ"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapePhoneDisplaceZReferenceM"
                     }
                   ],
                   "rowKeys": [
-                    "checkboxLandscapePhoneResponsiveDisplaceEnabled",
-                    "selectLandscapePhoneDisplaceMode",
-                    "checkboxLandscapePhoneDisplaceAxisXEnabled",
-                    "sliderLandscapePhoneDisplaceScaleX",
-                    "checkboxLandscapePhoneDisplaceAxisYEnabled",
-                    "sliderLandscapePhoneDisplaceScaleY",
-                    "checkboxLandscapePhoneDisplaceAxisZEnabled",
-                    "sliderLandscapePhoneDisplaceScaleZ",
-                    "sliderLandscapePhoneDisplaceDamping",
-                    "checkboxLandscapePhoneDisplaceResetEnabled",
-                    "checkboxLandscapePhoneDisplaceInvertX",
-                    "checkboxLandscapePhoneDisplaceInvertY",
-                    "checkboxLandscapePhoneDisplaceInvertZ",
-                    "sliderLandscapePhoneDisplaceVelDecayRate",
-                    "sliderLandscapePhoneDisplacePosDecayRate",
-                    "checkboxLandscapePhoneDisplaceStationaryGateEnabled",
-                    "sliderLandscapePhoneDisplaceStationaryGateDegPerSec",
                     "textPhoneDisplaceRangeX",
                     "textPhoneDisplaceCurveX",
-                    "sliderLandscapePhoneDisplaceXReferenceM",
                     "textPhoneDisplaceRangeY",
                     "textPhoneDisplaceCurveY",
-                    "sliderLandscapePhoneDisplaceYReferenceM",
                     "textPhoneDisplaceRangeZ",
-                    "textPhoneDisplaceCurveZ",
-                    "sliderLandscapePhoneDisplaceZReferenceM"
+                    "textPhoneDisplaceCurveZ"
                   ],
                   "subgroups": []
                 }
@@ -10960,83 +10360,11 @@
                   "items": [
                     {
                       "type": "row",
-                      "key": "checkboxLandscapePhoneResponsiveDisplaceEnabled"
-                    },
-                    {
-                      "type": "row",
-                      "key": "selectLandscapePhoneDisplaceMode"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxLandscapePhoneDisplaceAxisXEnabled"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapePhoneDisplaceScaleX"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxLandscapePhoneDisplaceAxisYEnabled"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapePhoneDisplaceScaleY"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxLandscapePhoneDisplaceAxisZEnabled"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapePhoneDisplaceScaleZ"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapePhoneDisplaceDamping"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxLandscapePhoneDisplaceResetEnabled"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxLandscapePhoneDisplaceInvertX"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxLandscapePhoneDisplaceInvertY"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxLandscapePhoneDisplaceInvertZ"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapePhoneDisplaceVelDecayRate"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapePhoneDisplacePosDecayRate"
-                    },
-                    {
-                      "type": "row",
-                      "key": "checkboxLandscapePhoneDisplaceStationaryGateEnabled"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapePhoneDisplaceStationaryGateDegPerSec"
-                    },
-                    {
-                      "type": "row",
                       "key": "textPhoneDisplaceRangeX"
                     },
                     {
                       "type": "row",
                       "key": "textPhoneDisplaceCurveX"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapePhoneDisplaceXReferenceM"
                     },
                     {
                       "type": "row",
@@ -11048,48 +10376,20 @@
                     },
                     {
                       "type": "row",
-                      "key": "sliderLandscapePhoneDisplaceYReferenceM"
-                    },
-                    {
-                      "type": "row",
                       "key": "textPhoneDisplaceRangeZ"
                     },
                     {
                       "type": "row",
                       "key": "textPhoneDisplaceCurveZ"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderLandscapePhoneDisplaceZReferenceM"
                     }
                   ],
                   "rowKeys": [
-                    "checkboxLandscapePhoneResponsiveDisplaceEnabled",
-                    "selectLandscapePhoneDisplaceMode",
-                    "checkboxLandscapePhoneDisplaceAxisXEnabled",
-                    "sliderLandscapePhoneDisplaceScaleX",
-                    "checkboxLandscapePhoneDisplaceAxisYEnabled",
-                    "sliderLandscapePhoneDisplaceScaleY",
-                    "checkboxLandscapePhoneDisplaceAxisZEnabled",
-                    "sliderLandscapePhoneDisplaceScaleZ",
-                    "sliderLandscapePhoneDisplaceDamping",
-                    "checkboxLandscapePhoneDisplaceResetEnabled",
-                    "checkboxLandscapePhoneDisplaceInvertX",
-                    "checkboxLandscapePhoneDisplaceInvertY",
-                    "checkboxLandscapePhoneDisplaceInvertZ",
-                    "sliderLandscapePhoneDisplaceVelDecayRate",
-                    "sliderLandscapePhoneDisplacePosDecayRate",
-                    "checkboxLandscapePhoneDisplaceStationaryGateEnabled",
-                    "sliderLandscapePhoneDisplaceStationaryGateDegPerSec",
                     "textPhoneDisplaceRangeX",
                     "textPhoneDisplaceCurveX",
-                    "sliderLandscapePhoneDisplaceXReferenceM",
                     "textPhoneDisplaceRangeY",
                     "textPhoneDisplaceCurveY",
-                    "sliderLandscapePhoneDisplaceYReferenceM",
                     "textPhoneDisplaceRangeZ",
-                    "textPhoneDisplaceCurveZ",
-                    "sliderLandscapePhoneDisplaceZReferenceM"
+                    "textPhoneDisplaceCurveZ"
                   ],
                   "subgroups": []
                 }
@@ -11190,83 +10490,11 @@
                 "items": [
                   {
                     "type": "row",
-                    "key": "checkboxLandscapePhoneResponsiveDisplaceEnabled"
-                  },
-                  {
-                    "type": "row",
-                    "key": "selectLandscapePhoneDisplaceMode"
-                  },
-                  {
-                    "type": "row",
-                    "key": "checkboxLandscapePhoneDisplaceAxisXEnabled"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderLandscapePhoneDisplaceScaleX"
-                  },
-                  {
-                    "type": "row",
-                    "key": "checkboxLandscapePhoneDisplaceAxisYEnabled"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderLandscapePhoneDisplaceScaleY"
-                  },
-                  {
-                    "type": "row",
-                    "key": "checkboxLandscapePhoneDisplaceAxisZEnabled"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderLandscapePhoneDisplaceScaleZ"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderLandscapePhoneDisplaceDamping"
-                  },
-                  {
-                    "type": "row",
-                    "key": "checkboxLandscapePhoneDisplaceResetEnabled"
-                  },
-                  {
-                    "type": "row",
-                    "key": "checkboxLandscapePhoneDisplaceInvertX"
-                  },
-                  {
-                    "type": "row",
-                    "key": "checkboxLandscapePhoneDisplaceInvertY"
-                  },
-                  {
-                    "type": "row",
-                    "key": "checkboxLandscapePhoneDisplaceInvertZ"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderLandscapePhoneDisplaceVelDecayRate"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderLandscapePhoneDisplacePosDecayRate"
-                  },
-                  {
-                    "type": "row",
-                    "key": "checkboxLandscapePhoneDisplaceStationaryGateEnabled"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderLandscapePhoneDisplaceStationaryGateDegPerSec"
-                  },
-                  {
-                    "type": "row",
                     "key": "textPhoneDisplaceRangeX"
                   },
                   {
                     "type": "row",
                     "key": "textPhoneDisplaceCurveX"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderLandscapePhoneDisplaceXReferenceM"
                   },
                   {
                     "type": "row",
@@ -11278,48 +10506,20 @@
                   },
                   {
                     "type": "row",
-                    "key": "sliderLandscapePhoneDisplaceYReferenceM"
-                  },
-                  {
-                    "type": "row",
                     "key": "textPhoneDisplaceRangeZ"
                   },
                   {
                     "type": "row",
                     "key": "textPhoneDisplaceCurveZ"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderLandscapePhoneDisplaceZReferenceM"
                   }
                 ],
                 "rowKeys": [
-                  "checkboxLandscapePhoneResponsiveDisplaceEnabled",
-                  "selectLandscapePhoneDisplaceMode",
-                  "checkboxLandscapePhoneDisplaceAxisXEnabled",
-                  "sliderLandscapePhoneDisplaceScaleX",
-                  "checkboxLandscapePhoneDisplaceAxisYEnabled",
-                  "sliderLandscapePhoneDisplaceScaleY",
-                  "checkboxLandscapePhoneDisplaceAxisZEnabled",
-                  "sliderLandscapePhoneDisplaceScaleZ",
-                  "sliderLandscapePhoneDisplaceDamping",
-                  "checkboxLandscapePhoneDisplaceResetEnabled",
-                  "checkboxLandscapePhoneDisplaceInvertX",
-                  "checkboxLandscapePhoneDisplaceInvertY",
-                  "checkboxLandscapePhoneDisplaceInvertZ",
-                  "sliderLandscapePhoneDisplaceVelDecayRate",
-                  "sliderLandscapePhoneDisplacePosDecayRate",
-                  "checkboxLandscapePhoneDisplaceStationaryGateEnabled",
-                  "sliderLandscapePhoneDisplaceStationaryGateDegPerSec",
                   "textPhoneDisplaceRangeX",
                   "textPhoneDisplaceCurveX",
-                  "sliderLandscapePhoneDisplaceXReferenceM",
                   "textPhoneDisplaceRangeY",
                   "textPhoneDisplaceCurveY",
-                  "sliderLandscapePhoneDisplaceYReferenceM",
                   "textPhoneDisplaceRangeZ",
-                  "textPhoneDisplaceCurveZ",
-                  "sliderLandscapePhoneDisplaceZReferenceM"
+                  "textPhoneDisplaceCurveZ"
                 ],
                 "subgroups": []
               }
@@ -12418,7 +11618,7 @@
     ]
   },
   "sectionCollapseState": {
-    "desktop:Saved Dev Settings": false,
+    "desktop:Saved Dev Settings": true,
     "desktop:Dev Panel": true,
     "desktop:MECHANICS": true,
     "desktop:PANEL UI": true,
@@ -12429,7 +11629,7 @@
     "desktop:TABS": true,
     "desktop:BUTTONS": true,
     "desktop:Hotkeys": true,
-    "desktop:Debug": false,
+    "desktop:Debug": true,
     "desktop:Object Axes": false,
     "desktop:Settings": true,
     "desktop:Mouse Log": true,
@@ -12445,7 +11645,7 @@
     "desktop:RESPONSIVE BEHAVIOUR - PHONE": false,
     "desktop:Responsive Rotation": true,
     "desktop:RESPONSIVE DISPLACE": false,
-    "desktop:Saved Phone Poses": true,
+    "desktop:Saved Phone Poses": false,
     "desktop:HAND MODEL": true,
     "desktop:Field Layout": true,
     "desktop:Pose": true,
@@ -13022,7 +12222,15 @@
     "sliderMobileIkInfluenceTwistTailRot": null,
     "sliderLandscapeIkInfluenceTwistTailRot": null,
     "sliderMobileIkInfluenceTwistTailOff": null,
-    "sliderLandscapeIkInfluenceTwistTailOff": null
+    "sliderLandscapeIkInfluenceTwistTailOff": null,
+    "sliderMobilePhoneDisplaceZuptAccelThresholdMps2": null,
+    "sliderLandscapePhoneDisplaceZuptAccelThresholdMps2": null,
+    "sliderMobilePhoneDisplaceZuptDwellMs": null,
+    "sliderLandscapePhoneDisplaceZuptDwellMs": null,
+    "sliderMobilePhoneDisplaceVelSnapMps": null,
+    "sliderLandscapePhoneDisplaceVelSnapMps": null,
+    "sliderMobilePhoneDisplaceBiasInnovationClampMps2": null,
+    "sliderLandscapePhoneDisplaceBiasInnovationClampMps2": null
   },
   "devTextOverridesManual": [
     "desktop:New Group",
@@ -13117,26 +12325,26 @@
     "sliderPhoneModelRotX": false,
     "sliderPhoneModelRotY": false,
     "sliderPhoneModelRotZ": false,
-    "checkboxPhoneResponsiveDisplaceEnabled": true,
-    "selectPhoneDisplaceMode": true,
-    "checkboxPhoneDisplaceAxisXEnabled": true,
-    "sliderPhoneDisplaceScaleX": true,
-    "checkboxPhoneDisplaceAxisYEnabled": true,
-    "sliderPhoneDisplaceScaleY": true,
-    "checkboxPhoneDisplaceAxisZEnabled": true,
-    "sliderPhoneDisplaceScaleZ": true,
-    "sliderPhoneDisplaceDamping": true,
-    "checkboxPhoneDisplaceResetEnabled": true,
-    "checkboxPhoneDisplaceInvertX": true,
-    "checkboxPhoneDisplaceInvertY": true,
-    "checkboxPhoneDisplaceInvertZ": true,
-    "sliderPhoneDisplaceVelDecayRate": true,
-    "sliderPhoneDisplacePosDecayRate": true,
-    "checkboxPhoneDisplaceStationaryGateEnabled": true,
-    "sliderPhoneDisplaceStationaryGateDegPerSec": true,
-    "sliderPhoneDisplaceXReferenceM": true,
-    "sliderPhoneDisplaceYReferenceM": true,
-    "sliderPhoneDisplaceZReferenceM": true,
+    "checkboxPhoneResponsiveDisplaceEnabled": false,
+    "selectPhoneDisplaceMode": false,
+    "checkboxPhoneDisplaceAxisXEnabled": false,
+    "sliderPhoneDisplaceScaleX": false,
+    "checkboxPhoneDisplaceAxisYEnabled": false,
+    "sliderPhoneDisplaceScaleY": false,
+    "checkboxPhoneDisplaceAxisZEnabled": false,
+    "sliderPhoneDisplaceScaleZ": false,
+    "sliderPhoneDisplaceDamping": false,
+    "checkboxPhoneDisplaceResetEnabled": false,
+    "checkboxPhoneDisplaceInvertX": false,
+    "checkboxPhoneDisplaceInvertY": false,
+    "checkboxPhoneDisplaceInvertZ": false,
+    "sliderPhoneDisplaceVelDecayRate": false,
+    "sliderPhoneDisplacePosDecayRate": false,
+    "checkboxPhoneDisplaceStationaryGateEnabled": false,
+    "sliderPhoneDisplaceStationaryGateDegPerSec": false,
+    "sliderPhoneDisplaceXReferenceM": false,
+    "sliderPhoneDisplaceYReferenceM": false,
+    "sliderPhoneDisplaceZReferenceM": false,
     "sliderScreenRecursionLevels": true,
     "sliderScreenRenderResolution": true,
     "checkboxIkPosingEnabled": false,
@@ -13154,7 +12362,11 @@
     "sliderIkInfluenceTwistOff": false,
     "sliderIkInfluenceTwistTailRot": false,
     "sliderIkInfluenceTwistTailOff": false,
-    "hiddenIkPairs": false
+    "hiddenIkPairs": false,
+    "sliderPhoneDisplaceZuptAccelThresholdMps2": false,
+    "sliderPhoneDisplaceZuptDwellMs": false,
+    "sliderPhoneDisplaceVelSnapMps": false,
+    "sliderPhoneDisplaceBiasInnovationClampMps2": false
   },
   "devIndependence": {
     "mobile": {
