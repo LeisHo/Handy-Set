@@ -153,8 +153,8 @@ const loadingEl = document.getElementById('loading')
 // Render/Screen settings), and nothing asked for uploading NEW hand
 // models from the UI, only selecting between known ones.
 const HAND_MODEL_OPTIONS = [
-  { value: 'data/processed/HAND3D/Hand2.glb', text: 'Hand2 (Default)' },
-  { value: 'data/processed/HAND3D/HandiBonesB-IK.glb', text: 'HandiBonesB-IK' }
+  { value: 'data/processed/HAND3D/HandiBonesB-IK.glb', text: 'HandiBonesB-IK (Default)' },
+  { value: 'data/processed/HAND3D/Hand2.glb', text: 'Hand2' }
 ]
 
 // ---------------------------------------------------------------------
