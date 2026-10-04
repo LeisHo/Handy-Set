@@ -1,3 +1,24 @@
+2026-10-04  -  Fix: Phone Responsive Rotation did nothing (2 independent causes)
+  - Report: "phone responsive rotation doesnt work regardless of ik on off". Not IK -- found by reading the
+    gates and the synced settings (data/processed/dev-panel-settings.json), then probing the live site.
+  - CAUSE 1: it was gated by the HAND's "Tracking Enabled" master (Palm Rotation / Wrist Splay / Crop), which the
+    synced settings had OFF. The gate sat in 5 places: computePhoneCombinedQuat() (desktop branch),
+    computePhoneResponsiveAxisDeg(), integratePhoneGyroRotation(), initMotionInput() (sensor listeners were
+    never attached unless tracking or Displace was on) and the render loop's continuousRenderNeeded (the loop
+    went idle, so the per-frame sensor read/slerp never ran). Phone Responsive Rotation now depends only on its
+    own On/Off + the Debug global override, exactly like Responsive Displace ("fully independent"); it also forces
+    continuous rendering and requests the motion sensors at load / when its checkbox or the global override is
+    turned on. Its On/Off now also gates 'absolute' mode (that branch never checked it).
+  - CAUSE 2: the Phone Model Item Selector's startup-restore handler treated the settings restore as a model
+    SWITCH: it captured the current control values under the wrong model's key and then applied the restored
+    model's stored per-model snapshot over the just-restored values. The iPhone17MaxPro snapshot still said
+    Responsive Rotation OFF, so a saved ON came back OFF on every refresh. The handler now skips both steps while
+    the startup restore is running (phoneModelRestoreInProgress / first 8 s).
+  - Verified on the LIVE site (v=221): after a plain reload cfg shows tracking=false, respRot=true; a mouse move
+    changes the phone wrapper quaternion (0,0,0,1) -> (0.879,0.137,0.453,0.058); no console errors. NOT tested: a
+    real phone's gyro/orientation stream (no device here). The stale iPhone17MaxPro per-model entry in the settings
+    file is left alone (it self-corrects the next time that model is switched away from).
+
 2026-10-04  -  IK: ported HANDO's IK Hand Pose; camera anchor = world origin
   - Direct request: "reference project Hando and implement the IK implementation just as that project
     does". Read HANDO's real source (IK NODES + IK HAND POSE blocks) and replaced this project's bone-
