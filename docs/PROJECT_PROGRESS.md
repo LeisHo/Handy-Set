@@ -7,8 +7,17 @@ append-only history.
 
 ## Currently working on
 
-**Nothing in progress right now.** Most recent work (2026-10-04):
-investigated "StationaryGate ACTIVE but ZUPT never engages." The dwell
+**Nothing in progress right now.** Most recent work (2026-10-04, later):
+traced the "phone returns to Y=31 while held still" report. Position
+decay was held off on Stationary-Gate ticks (`holdPosition` in
+`applyPhoneDisplaceSample`, mirrored in the A/B shadows), but the
+synced decays are 0/0, where that line is a no-op; replaying the user's
+real still log showed the actual driver is velocity-driven wander (gate
+active ~9% of ticks, ZUPT ~3.6%, no velocity decay). **Open decision for
+the user:** raise Stationary Gate Threshold (~6–8 °/s made ZUPT engage
+72–87% of ticks in the replay) and/or use a non-zero Velocity Decay.
+Displace Log now prints the decay rates actually in effect. Earlier
+today: investigated "StationaryGate ACTIVE but ZUPT never engages." The dwell
 state machine was correct; the real bug was stale gate/ZUPT flags left
 frozen when the integrator doesn't evaluate the gate (Displace off, Tilt
 mode, null acceleration source) — fixed via `clearPhoneDisplaceGateState()`.

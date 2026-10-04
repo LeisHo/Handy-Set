@@ -3289,3 +3289,22 @@ wiring, and are still open:
   Mobile override too" settings edits (Z Reference, Position Decay) were
   harmless but ineffective on the phone. **Before telling the user a
   Mobile-tab value is "in effect," confirm that control has a bridge.**
+- **"The phone drifts back to center while held still" has TWO separate
+  causes in this integrator — don't conflate them (investigated
+  2026-10-04).** (1) **Position decay**: `applyPhoneDisplaceSample()`'s
+  `pos = pos*posDecay + vel*dt` shrinks position every tick, even on
+  ZUPT ticks, whenever `cfg.phoneDisplacePosDecayRate > 0` (code default
+  0.08). Fixed by `holdPosition` (decay factor 1 on Stationary-Gate
+  ticks; shadow pipelines use the same rule via a local `holdPos`).
+  (2) **Velocity-driven wander**: with Velocity Decay 0 an unzeroed
+  velocity integrates forever, and ZUPT only zeroes it when the gate
+  holds. On this phone the still-state gyro magnitude has median 3.8 °/s,
+  so a 2 °/s gate is active ~9% of ticks (ZUPT ~3.6%): replaying the
+  user's real still log with decay 0/0 gave 0.14–0.24 m of wander on a
+  motionless phone. A gate of ~6–8 °/s made ZUPT engage 72–87% of ticks
+  and zeroed final velocity. **When the settings show decay 0, the
+  position-decay line is a no-op and cannot be the cause — check the
+  Displace Log's `(decay vel:… pos:…)` readout (added 2026-10-04) for the
+  rates actually in `cfg`, then `ZUPTDwell … peak`, before touching
+  integrator math.** The hold rule does NOT fix cause (2); that needs a
+  gate/velocity-decay tuning decision from the user.

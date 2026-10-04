@@ -1,3 +1,63 @@
+2026-10-04  -  Position held through stationary ticks; "return to center" traced
+
+Direct report: after reaching Y ~38.5 the phone drifts back to Y=31
+(38.48 -> 38.03 -> 37.16 -> 36.34 -> ... -> 32.20 -> 31.00) while held
+still; diagnosed by the user as position decay pulling internal position
+to zero, not ZUPT. Requested: ZUPT zeroes velocity but never position,
+stationary gating never changes position, position decay must not
+recenter the phone while stationary, internal position stays where the
+physical movement left it, boundary fix / Native mode / A/B untouched.
+
+WHAT WAS FOUND (code + the user's own sensor data):
+- The ONLY line that modifies phoneDisplacePosX/Y/Z (besides the Reset
+  gesture) is applyPhoneDisplaceSample(), `pos = pos*posDecay + vel*dt`
+  (3 lines, X/Y/Z), plus the identical shadow-pipeline copy. posDecay =
+  exp(-cfg.phoneDisplacePosDecayRate*dt); code default 0.08/s.
+  `pos*posDecay` ran on EVERY tick including ZUPT/stationary ones, so
+  ZUPT zeroing velocity did NOT protect position whenever rate > 0.
+- BUT the synced settings now read Position Decay 0 AND Velocity Decay 0
+  (Desktop and Mobile). At posDecay 0 that term is a literal no-op, so
+  it cannot have produced the return. Whether the phone had a non-zero
+  rate during the test cannot be determined from the data available
+  (and Mobile-tab slider values never reach cfg for these controls, so
+  the panel and the running app can disagree).
+- Replaying the user's real still-phone Sensor Log (17 s motionless)
+  through the exact Y-path math with decay 0/0 and ZUPT on: position
+  still wandered to 0.14 m (max 0.24 m, ~6-10 output units on Y, the
+  size of the reported move), final velocity 0.11 m/s. Gate active only
+  9.2% of ticks, ZUPT 3.6%. With velocity decay 0 an unzeroed velocity
+  integrates forever; this is a velocity-driven path (`+ vel*dt`), not
+  position decay. With velDecay 3 the same data drifts only 0.03 m.
+  Gate sweep (decay 0/0): at 6 deg/s ZUPT engages 72% of ticks and final
+  velocity is exactly 0; at 8 deg/s 87%. At the current 2 deg/s, 3.6%.
+  Replay caveat: 200ms samples held for 12 ticks (correlated noise) and
+  the bias filter starts cold, so magnitudes are approximate; the
+  mechanism, not the exact number, is the finding.
+
+CHANGE: applyPhoneDisplaceSample(ax,ay,az,dt,holdPosition=false). When
+the Stationary Gate classifies the tick as quiet the position-decay
+factor is exactly 1, so gating/ZUPT cannot shrink position; velocity
+decay and ZUPT's velocity zeroing are unchanged. Real pipeline passes
+isStationary; the desktop cursor path is untouched (default false). The
+A/B shadow pipelines apply the identical rule through a local holdPos
+flag (not state.isStationary, which goes stale on a null sample) so
+Existing vs Native still differ only in acceleration source. Internal
+position is still never clamped. Verified (all checks): under the
+default 0.08 decay a -0.166 m displacement decayed to -0.015 m in 30 s
+of stillness before and holds at exactly -0.1660 now; ZUPT leaves
+position untouched; decay still acts on non-stationary ticks; moving
+back moves position back from the held value.
+LIMITATION (stated, not hidden): only ticks the GATE calls stationary
+are held, and the gate is the weak link on this sensor, so with a
+non-zero decay rate most ticks on this phone still decay. The change
+does not by itself stop the velocity-driven wander above.
+DIAGNOSTIC: the Displace Log's PosPreCurve field now ends with
+`(decay vel:<rate> pos:<rate>)` -- the rates actually in cfg on the
+device -- so the next capture states which regime applied.
+Not changed: gate threshold, accel threshold, decays, curve, boundary,
+rotation, sensor input, ZUPTDwell logging. Not tested on a real device.
+
+--------------------------------------------------------------------------------
 2026-10-04  -  ZUPT dwell investigation: stale gate flags fixed, dwell diagnostics
 
 Direct report, with a Displace Log: "StationaryGate:ACTIVE persists for
