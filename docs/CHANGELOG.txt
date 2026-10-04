@@ -1,3 +1,23 @@
+2026-10-04  -  Bias-tracker learning clamp: the real cause of the stop "bounce back"
+  - Full up/pause/down/pause log: every stop left residual velocity opposite to the
+    motion (+0.11 m/s cycle 1, -0.21 m/s cycle 2, ~25-37% of peak speed) that nothing
+    removed (gate inactive 1.2 s in cycle 2 because wrist wobble read ~10 deg/s, over
+    the 8 deg/s threshold), sliding Y 38.56 -> 31.00 after the pause.
+  - Root cause: the bias high-pass learned the push itself. Logged Bias swung up to
+    0.24 m/s^2 during a push (Z column), shrinking the push, then relaxed during the
+    brake, inflating it. A 1.5 m/s^2 / 0.5 s push + equal brake integrated to
+    -0.08 m/s instead of 0.
+  - CORRECTION: the previous entry ("Velocity snap default 0.03 -> 0.15") said the
+    bias tracker was ruled out (~0.02-0.05 m/s). That synthetic sim used pushes about
+    half as long as real ones; redone with realistic pushes it reproduces the log.
+  - Fix: stepDisplaceBias() clamps the per-sample correction to
+    cfg.phoneDisplaceBiasInnovationClampMps2 (default 0.10 m/s^2, slider "Bias
+    Learning Limit (M/S^2)", 0 = old unclamped tracker); used by the real pipeline
+    and both A/B shadows. Balanced push/brake residual: -0.08 -> -0.01/-0.02 m/s
+    (extracted real function, node). Slow drift (<clamp) tracks identically. Cost: a
+    static offset > 0.1 m/s^2 is learned slower (0.3 m/s^2 reaches 0.287 in 10 s).
+    Not device-verified. Velocity snap stays at 0.15.
+
 2026-10-04  -  Velocity snap default 0.03 -> 0.15 m/s (stop bounce)
   - Up/pause/down/pause test: Y bottomed at 21.80 then bounced to 24.27 during the
     pause. Displace Log: velocity flipped -0.44 -> +0.11 m/s across the stop (braking
