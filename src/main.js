@@ -3448,10 +3448,19 @@ const _phoneDisplaceWorldVec = new THREE.Vector3()
 // SAME function, so both platforms write into the exact same
 // phoneDisplacePosX/Y/Z state and get read back identically by
 // computePhoneResponsiveDisplacement().
-function applyPhoneDisplaceSample(ax, ay, az, dt) {
+// holdPosition -- added 2026-10-04, direct request: position decay must
+// NOT pull the phone back toward its starting point while it is held
+// still. When true (the Stationary Gate classified THIS tick as quiet),
+// the position-decay factor is exactly 1, so the only thing that can
+// change position this tick is velocity*dt -- and on a ZUPT tick that is
+// 0. Velocity decay is deliberately left alone (it is not what the
+// request is about, and ZUPT already zeroes velocity outright). Default
+// false keeps every other caller (the desktop cursor-delta path) exactly
+// as before.
+function applyPhoneDisplaceSample(ax, ay, az, dt, holdPosition = false) {
   phoneDisplaceLastAx = ax; phoneDisplaceLastAy = ay; phoneDisplaceLastAz = az
   const velDecay = Math.exp(-(cfg.phoneDisplaceVelDecayRate ?? PHONE_DISPLACE_VELOCITY_DECAY_RATE_DEFAULT) * dt)
-  const posDecay = Math.exp(-(cfg.phoneDisplacePosDecayRate ?? PHONE_DISPLACE_POSITION_DECAY_RATE_DEFAULT) * dt)
+  const posDecay = holdPosition ? 1 : Math.exp(-(cfg.phoneDisplacePosDecayRate ?? PHONE_DISPLACE_POSITION_DECAY_RATE_DEFAULT) * dt)
   phoneDisplaceVelX = phoneDisplaceVelX * velDecay + ax * dt
   phoneDisplaceVelY = phoneDisplaceVelY * velDecay + ay * dt
   phoneDisplaceVelZ = phoneDisplaceVelZ * velDecay + az * dt
@@ -3522,6 +3531,7 @@ function stepDisplaceShadowPipeline(state, e, linear) {
   const dt = Math.min((now - state.lastTimestamp) / 1000, 0.05)
   state.lastTimestamp = now
   let ax = 0, ay = 0, az = 0
+  let holdPos = false // this tick's Stationary Gate verdict -> position decay held off, same rule as the real pipeline (2026-10-04)
   if (linear) {
     // Bias high-pass -- identical formula/constant to the real pipeline.
     state.biasX += (linear.x - state.biasX) * PHONE_DISPLACE_BIAS_TRACK_RATE * dt
@@ -3539,6 +3549,7 @@ function stepDisplaceShadowPipeline(state, e, linear) {
       state.isStationary = gyroMag < cfg.phoneDisplaceStationaryGateDegPerSec && accelMag < cfg.phoneDisplaceZuptAccelThresholdMps2
       if (state.isStationary) {
         ax = 0; ay = 0; az = 0
+        holdPos = true
         if (state.zuptDwellStart === null) state.zuptDwellStart = now
         state.zuptActive = (now - state.zuptDwellStart) >= cfg.phoneDisplaceZuptDwellMs
         if (state.zuptActive) { state.velX = 0; state.velY = 0; state.velZ = 0 }
@@ -3555,7 +3566,7 @@ function stepDisplaceShadowPipeline(state, e, linear) {
   // Leaky integrator -- identical formula/decay-rate controls to
   // applyPhoneDisplaceSample(), operating on this shadow's OWN vel/pos.
   const velDecay = Math.exp(-(cfg.phoneDisplaceVelDecayRate ?? PHONE_DISPLACE_VELOCITY_DECAY_RATE_DEFAULT) * dt)
-  const posDecay = Math.exp(-(cfg.phoneDisplacePosDecayRate ?? PHONE_DISPLACE_POSITION_DECAY_RATE_DEFAULT) * dt)
+  const posDecay = holdPos ? 1 : Math.exp(-(cfg.phoneDisplacePosDecayRate ?? PHONE_DISPLACE_POSITION_DECAY_RATE_DEFAULT) * dt)
   state.velX = state.velX * velDecay + ax * dt
   state.velY = state.velY * velDecay + ay * dt
   state.velZ = state.velZ * velDecay + az * dt
@@ -3937,7 +3948,9 @@ function integratePhoneDisplacement(e) {
       phoneDisplaceLastTimestamp = now
       return
     }
-    applyPhoneDisplaceSample(ax, ay, az, dt)
+    // isStationary => position decay is held off this tick (see
+    // applyPhoneDisplaceSample()'s holdPosition comment).
+    applyPhoneDisplaceSample(ax, ay, az, dt, isStationary)
   }
   phoneDisplaceLastTimestamp = now
 }
@@ -5923,6 +5936,9 @@ let sensorLog = []
 // changes -- see toggleAllLogsPaused() below.
 let allLogsPaused = false
 function fmt(n) { return (typeof n === 'number' && !Number.isNaN(n)) ? n.toFixed(2) : '--' }
+// Rate formatter for the Displace Log's "decay" readout: <=4 decimals,
+// trailing zeros stripped (reuses the engine's formatter when present).
+function fmtRate(n) { return window.formatDevNumericValue ? window.formatDevNumericValue(n) : String(n) }
 function pushSensorLog(text) {
   if (allLogsPaused) return
   const line = ts() + ' ' + text
@@ -6135,7 +6151,11 @@ function restartDisplaceLogTimer() {
     // METERS, i.e. exactly what computePhoneDisplaceAxisUnits() takes as
     // its own `rawMeters` input BEFORE the curve/range mapping runs (Tilt
     // mode never reaches this state at all -- see that mode's own comment).
-    if (cfg.displaceLogPosition) parts.push(`PosPreCurve x:${fmt(phoneDisplacePosX)} y:${fmt(phoneDisplacePosY)} z:${fmt(phoneDisplacePosZ)}`)
+    // "Decay" = the vel/pos decay rates actually in cfg on THIS device right
+    // now (added 2026-10-04). Mobile-tab slider values do not reach cfg for
+    // these controls, so what the panel shows on the Mobile tab and what
+    // the integrator runs on can differ -- this is the ground truth.
+    if (cfg.displaceLogPosition) parts.push(`PosPreCurve x:${fmt(phoneDisplacePosX)} y:${fmt(phoneDisplacePosY)} z:${fmt(phoneDisplacePosZ)} (decay vel:${fmtRate(cfg.phoneDisplaceVelDecayRate ?? PHONE_DISPLACE_VELOCITY_DECAY_RATE_DEFAULT)} pos:${fmtRate(cfg.phoneDisplacePosDecayRate ?? PHONE_DISPLACE_POSITION_DECAY_RATE_DEFAULT)})`)
     // DELIBERATELY separate fields, not duplicates --
     // phoneDisplaceIsStationary flips true the instant the gate reads
     // quiet (gyro+accel both below threshold); phoneDisplaceZuptActive
