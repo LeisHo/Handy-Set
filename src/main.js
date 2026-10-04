@@ -325,6 +325,7 @@ const cfg = {
   // Per-sensor log toggles -- direct request 2026-09-28. Default all on,
   // matching the log line's pre-existing (always-all-3) behavior.
   sensorLogAccel: true, sensorLogGyro: true, sensorLogCompass: true,
+  logPickDeviceInfo: true, logPickMouse: true, logPickSensor: true, logPickPhoneModel: true, logPickDisplace: true,
   // Diagnostic field -- added 2026-09-30, direct real-device test found
   // Sensor Log's own "Accel" field (accelerationIncludingGravity) is a
   // DIFFERENT signal than what Responsive Displace actually consumes
@@ -6253,17 +6254,48 @@ function clearAllLogs() {
   clearPhoneModelLog()
   clearDisplaceLog()
 }
-function copyAllLogsText(btn) {
-  const text = '=== Mouse Log ===\n' + getMouseLogText() +
-    '\n\n=== Sensor Log ===\n' + sensorLog.join('\n') +
-    '\n\n=== Phone Model Log ===\n' + phoneModelLog.join('\n') +
-    '\n\n=== Displace Log ===\n' + displaceLog.join('\n')
+// Registry of every copyable log/data item -- shared by COPY ALL LOGS and the
+// checkbox picker + COPY SELECTED (direct request 2026-10-04). `cfgKey` is
+// the picker checkbox's cfg flag. Device Info is the one "phone data" block
+// not in the streaming logs (brand/model/platform/OS/browser).
+function formatDeviceInfoText() {
+  const i = latestDeviceInfo
+  if (!i) return '(device info not detected yet)'
+  return [
+    'Device Type: ' + i.deviceType, 'Brand: ' + i.brand, 'Model: ' + (i.model || 'Not exposed by browser'),
+    'Platform: ' + i.platform, 'OS Version: ' + i.platformVersion,
+    'Browser: ' + i.browser, 'Browser Version: ' + i.browserVersion,
+    'Mobile: ' + i.mobile, 'Model Source: ' + i.modelSource, 'Confidence: ' + i.modelConfidence,
+    'UA Client Hints Supported: ' + i.userAgentDataSupported,
+    'Viewport: ' + window.innerWidth + 'x' + window.innerHeight + ' @' + window.devicePixelRatio + 'x',
+    'Raw: ' + JSON.stringify(i.raw),
+  ].join('\n')
+}
+const LOG_COPY_ITEMS = [
+  { key: 'deviceInfo', cfgKey: 'logPickDeviceInfo', label: 'Device Info', title: 'Device Info', text: formatDeviceInfoText },
+  { key: 'mouse', cfgKey: 'logPickMouse', label: 'Mouse Log', title: 'Mouse Log', text: () => getMouseLogText() },
+  { key: 'sensor', cfgKey: 'logPickSensor', label: 'Sensor Log', title: 'Sensor Log', text: () => sensorLog.join('\n') },
+  { key: 'phoneModel', cfgKey: 'logPickPhoneModel', label: 'Phone Model Log', title: 'Phone Model Log', text: () => phoneModelLog.join('\n') },
+  { key: 'displace', cfgKey: 'logPickDisplace', label: 'Displace Log', title: 'Displace Log', text: () => displaceLog.join('\n') },
+]
+async function copyLogItems(items, btn) {
   const flash = (msg) => { const orig = btn.textContent; btn.textContent = msg; setTimeout(() => { btn.textContent = orig }, 900) }
+  if (!items.length) { flash('Nothing selected'); return }
+  if (items.some((it) => it.key === 'deviceInfo') && !latestDeviceInfo) {
+    try { await refreshDeviceInfo() } catch (e) { /* formatDeviceInfoText handles null */ }
+  }
+  const text = items.map((it) => '=== ' + it.title + ' ===\n' + it.text()).join('\n\n')
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(text).then(() => flash('Copied!')).catch(() => flash('Copy failed'))
   } else {
     flash('Copy failed')
   }
+}
+function copyAllLogsText(btn) {
+  return copyLogItems(LOG_COPY_ITEMS, btn)
+}
+function copySelectedLogsText(btn) {
+  return copyLogItems(LOG_COPY_ITEMS.filter((it) => cfg[it.cfgKey]), btn)
 }
 // Independent of each log's own streaming state (Stream Sensor Data
 // checkbox, Mouse Log's own always-on click capture) -- a pure overlay
@@ -8402,6 +8434,20 @@ function renderDebugExtras() {
   clearAllLogsBtn.addEventListener('click', clearAllLogs)
   copyAllLogsBtn.addEventListener('click', () => copyAllLogsText(copyAllLogsBtn))
   pauseAllLogsBtn.addEventListener('click', () => toggleAllLogsPaused(pauseAllLogsBtn))
+
+  // Log item picker + COPY SELECTED -- direct request 2026-10-04.
+  const logPickSub = addSubgroup(debugContent, 'Select Logs To Copy')
+  LOG_COPY_ITEMS.forEach((it) => {
+    const id = 'checkboxLogPick' + it.key.charAt(0).toUpperCase() + it.key.slice(1)
+    addRow(logPickSub, { id, label: it.label, type: 'checkbox' })
+    document.getElementById(id).checked = cfg[it.cfgKey]
+    wireCheckbox(id, (v) => { cfg[it.cfgKey] = v })
+  })
+  const copySelRow = document.createElement('div'); copySelRow.className = 'dev-buttons'
+  const copySelBtn = document.createElement('button'); copySelBtn.type = 'button'; copySelBtn.textContent = 'COPY SELECTED'
+  copySelRow.appendChild(copySelBtn); logPickSub.appendChild(copySelRow)
+  copySelBtn.addEventListener('click', () => copySelectedLogsText(copySelBtn))
+  detectDeviceInfo().then((i) => { if (!latestDeviceInfo) latestDeviceInfo = i }).catch(() => {})
 
   const sensorSub = addSubgroup(debugContent, 'Sensors')
   if (!isTouchDevice) {
