@@ -8518,6 +8518,7 @@ const PHONE_MODEL_PER_MODEL_CONTROL_IDS = [
   'checkboxScreenMirrorAlternatingX', 'checkboxScreenMirrorAlternatingY',
   'checkboxScreenMirrorPhaseX', 'checkboxScreenMirrorPhaseY',
 ]
+let phoneModelRestoreInProgress = false // true while loadRemoteSettingsOnStartup() applies the saved settings (see the Item Selector's restore handler)
 let phoneModelPerModelSettings = {} // { [modelFile]: { [controlId]: value } } -- persisted via hiddenPhoneModelPerModelSettings below
 
 function capturePhoneModelPerModelSettings(modelFile) {
@@ -8904,7 +8905,15 @@ function renderPhoneModelItemSelector(parentContent) {
     const previousFile = cfg.phoneModelFile
     lastSeenPhoneModelFile = hiddenInput.value
     cfg.phoneModelFile = hiddenInput.value
-    capturePhoneModelPerModelSettings(previousFile)
+    // STARTUP RESTORE IS NOT A MODEL SWITCH (2026-10-04, found with "phone responsive rotation doesnt work"):
+    // while the saved settings are being restored every control (incl. the per-model ones) already holds the
+    // value saved FOR THE SAVED MODEL. Capturing "the previous model" here stored those values under the wrong
+    // model's key, and applying the restored model's stored snapshot then OVERRODE the just-restored values
+    // with whatever was last captured when the user switched away from it -- e.g. Responsive Rotation saved ON
+    // came back OFF on every refresh because the iPhone17MaxPro snapshot still said off. (This handler only
+    // fires for external restores; a row click sets .value directly without an event.)
+    const startupRestore = phoneModelRestoreInProgress || performance.now() < 8000
+    if (!startupRestore) capturePhoneModelPerModelSettings(previousFile)
     // Deferred one macrotask: this fires from an EXTERNAL restore
     // (Sync/Reset/Undo), where devPanel.js's applyControlValues() may
     // restore hiddenPhoneModelPerModelSettings (this file's own JSON
@@ -8914,7 +8923,7 @@ function renderPhoneModelItemSelector(parentContent) {
     // first. setTimeout(fn, 0) guarantees the whole restore loop (a
     // single synchronous forEach) has finished before this reads it,
     // regardless of which control's own registration order comes first.
-    setTimeout(() => applyPhoneModelPerModelSettings(cfg.phoneModelFile), 0)
+    if (!startupRestore) setTimeout(() => applyPhoneModelPerModelSettings(cfg.phoneModelFile), 0)
     if (cfg.phoneModelEnabled) loadPhoneModel(cfg.phoneModelFile)
     renderPhoneModelItemSelector()
   })
@@ -10332,7 +10341,8 @@ async function loadRemoteSettingsOnStartup() {
     if (data.settings.listPicker_phonePoses) loadListPickerItemsFromRemoteData(data.settings.listPicker_phonePoses, SAVED_PHONE_POSES)
     if (data.settings.listPicker_tweenSequences) loadListPickerItemsFromRemoteData(data.settings.listPicker_tweenSequences, SAVED_TWEEN_SEQUENCES)
     if (typeof window.ensureDevPanelBuilt === 'function') window.ensureDevPanelBuilt()
-    apply(data.settings)
+    phoneModelRestoreInProgress = true
+    try { apply(data.settings) } finally { setTimeout(() => { phoneModelRestoreInProgress = false }, 1500) }
     // "Set as Default" for the 2 model selectors and the phone pose -- applied
     // AFTER the normal Sync restore so a deliberate default wins (same
     // precedence the other defaultX fields get at boot), from this one shared
