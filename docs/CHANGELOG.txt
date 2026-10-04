@@ -1,3 +1,31 @@
+2026-10-04  -  Fix: Phone Responsive Displace/Rotation ignored the Mobile/Landscape tab on a phone
+  - Report: "phone responsive displace doesn't work. Even the y axis displacement we fixed earlier doesn't work"
+    (answers: it MOVES but wrongly / barely visibly; edits made in the Desktop tab on the phone).
+  - What was ruled out first (so it is not re-investigated): the integrator, bias/ZUPT/gate, mapping and
+    boundary code are healthy with the user's exact synced settings -- replayed in Node (real code sliced from
+    main.js) AND live (a same-origin srcdoc iframe with the motion-permission API stubbed so the real
+    devicemotion/deviceorientation listeners attach, driven with synthetic events + a busy-wait clock): velocity/
+    position integrate and the phone wrapper moves. No displace code changed today. Per-axis visibility: the saved
+    default camera is TOP-DOWN (y=114, fov 15), so the vertical (Y) displacement only changes the phone's size
+    (11 of 112 units toward the camera); X/Z are the visible axes.
+  - REAL GAP FOUND: the dev panel keeps INDEPENDENT per-device values for these controls (the user's tuned phone
+    values live in the Mobile tab: damping 0.16, vel/pos decay 0/0, stationary gate 8 deg/s, axes ON, Z
+    reference 1.15, rotation scale X -2), but every wired callback only listens to the DESKTOP element, so a phone
+    silently ran on the Desktop values (damping 1, decay 3/0.08, gate 2) -- the same class of bug
+    getRuntimeDeviceSuffix() fixed for the texture offsets on 2026-10-01 ("behavior is still dictated by desktop
+    tab"). Heavy decay + a gate that flickers on a real phone + damping 1 = a short, snappy, cut-off motion.
+  - FIX: PHONE_DEVICE_AWARE_ID bridge (main.js): on a TOUCH device the Phone Displace + Phone Rotation checkbox/
+    slider/select values are read from the Mobile (portrait) / Landscape row (that row mirrors Desktop unless the
+    user ticked "Independent from Desktop"), re-applied after the startup Sync restore, on any edit of either row,
+    after any click inside the dev panel (Sync/Reset/Undo/tab switch) and on resize/orientation change. Desktop
+    (no touch) is unchanged. Range/curve widgets and the FineTune sliders are not included (own paths).
+  - Verified on the LIVE site (v=222) in a simulated touch portrait phone: cfg damping 0.16, vel/pos decay 0/0,
+    gate 8, axes true/true/true, rotation scale X -2 (the Mobile tab's values); on a normal desktop load: damping
+    1, decay 3, gate 2 (unchanged). NOT tested on a real phone.
+  - Consequence to know: on a phone, a Desktop-tab edit of a control whose Mobile row is marked "Independent from
+    Desktop" no longer changes behavior (that is what independent means) -- edit the Mobile tab, or untick
+    Independent on that row to follow Desktop.
+
 2026-10-04  -  Fix: Phone Responsive Rotation did nothing (2 independent causes)
   - Report: "phone responsive rotation doesnt work regardless of ik on off". Not IK -- found by reading the
     gates and the synced settings (data/processed/dev-panel-settings.json), then probing the live site.
