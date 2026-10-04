@@ -522,6 +522,11 @@ const cfg = {
   // measurement -- short enough to feel instant, long enough to reject
   // one single noisy tick.
   phoneDisplaceZuptAccelThresholdMps2: 0.6, phoneDisplaceZuptDwellMs: 150,
+  // Low-speed velocity snap (added 2026-10-04): while the Stationary Gate
+  // reads quiet, velocity below this speed (m/s) is zeroed immediately
+  // instead of waiting for the full ZUPT dwell. Fixes slow creep (~0.01-0.02
+  // m/s) when the gate flickers so the dwell rarely completes. 0 disables.
+  phoneDisplaceVelSnapMps: 0.03,
   // Per-axis Min/Max Range + Curve + X Reference -- added 2026-10-01,
   // direct request ("Make me a displacement min max slider and a curved
   // editor for all 3 axes") then refined ("x to be recorded... displacement
@@ -2784,7 +2789,13 @@ function computePhoneDisplaceAxisUnits(rawMeters, axisEnabled, axisScale, axisIn
   // undefined. This does NOT reintroduce the bug above: curveY stops
   // changing past t=1, but the OVERFLOW term below keeps the overall
   // magnitude moving regardless.
-  const curveY = THREE.MathUtils.clamp(window.evaluateCurveEditorPoints(slot.curve, Math.min(tRaw, 1), slot.method), 0, 1)
+  // Deadzone-edge continuity (2026-10-04): the curve lookup runs on the
+  // ratio REMAPPED so the deadzone edge maps to 0 and the Reference Distance
+  // still maps to 1. Previously the curve saw the raw ratio, so output was
+  // exactly 0 inside the deadzone and jumped by curve(0.02)*range (~1 unit
+  // at Y's 1.15 m / 52 range) the instant |raw| crossed it.
+  const tCurve = (Math.min(tRaw, 1) - PHONE_DISPLACE_DEADZONE) / (1 - PHONE_DISPLACE_DEADZONE)
+  const curveY = THREE.MathUtils.clamp(window.evaluateCurveEditorPoints(slot.curve, tCurve, slot.method), 0, 1)
   const { min, max } = slot.range
   // Linear extension past the curve's own ceiling -- added 2026-10-01,
   // same fix. Once tRaw exceeds 1 (rawMeters past the Reference
@@ -3561,6 +3572,8 @@ function stepDisplaceShadowPipeline(state, e, linear) {
         if (state.zuptDwellStart === null) state.zuptDwellStart = now
         state.zuptActive = (now - state.zuptDwellStart) >= cfg.phoneDisplaceZuptDwellMs
         if (state.zuptActive) { state.velX = 0; state.velY = 0; state.velZ = 0 }
+        // Low-speed snap -- same rule as the real pipeline (2026-10-04).
+        if (Math.hypot(state.velX, state.velY, state.velZ) < (cfg.phoneDisplaceVelSnapMps || 0)) { state.velX = 0; state.velY = 0; state.velZ = 0 }
       } else {
         state.zuptDwellStart = null
         state.zuptActive = false
@@ -3903,6 +3916,12 @@ function integratePhoneDisplacement(e) {
           if (phoneDisplaceZuptDwellElapsedMs > phoneDisplaceZuptDwellPeakMs) phoneDisplaceZuptDwellPeakMs = phoneDisplaceZuptDwellElapsedMs
           phoneDisplaceZuptActive = phoneDisplaceZuptDwellElapsedMs >= cfg.phoneDisplaceZuptDwellMs
           if (phoneDisplaceZuptActive) { phoneDisplaceVelX = 0; phoneDisplaceVelY = 0; phoneDisplaceVelZ = 0 }
+          // Low-speed snap (2026-10-04): the gate flickers on this phone, so
+          // the dwell rarely completes and a leftover ~0.01-0.02 m/s keeps
+          // integrating into a slow creep. While the gate reads quiet (input
+          // already zeroed above), nothing can legitimately sustain a speed
+          // this small, so zero velocity (never position) right away.
+          if (Math.hypot(phoneDisplaceVelX, phoneDisplaceVelY, phoneDisplaceVelZ) < (cfg.phoneDisplaceVelSnapMps || 0)) { phoneDisplaceVelX = 0; phoneDisplaceVelY = 0; phoneDisplaceVelZ = 0 }
         } else {
           phoneDisplaceZuptDwellStart = null // real motion resumed -- dwell must re-accumulate from scratch next time
           phoneDisplaceZuptActive = false
@@ -5675,7 +5694,7 @@ window.__debug = {
   get sceneObjectEntries() { return sceneObjectEntries },
   get tiltMagnitude() { return tiltMagnitude }, get tiltAngle() { return tiltAngle },
   get phoneGyroQuat() { return phoneGyroQuat }, get lastInputSource() { return lastInputSource },
-  get sensorLog() { return sensorLog },
+  get sensorLog() { return sensorLogLines() },
   // ZUPT diagnostics -- added 2026-10-01, exposed here per direct
   // request ("expose it in the existing diagnostics rather than
   // creating a separate system") instead of a new logging mechanism.
@@ -5947,12 +5966,50 @@ function fmt(n) { return (typeof n === 'number' && !Number.isNaN(n)) ? n.toFixed
 // Rate formatter for the Displace Log's "decay" readout: <=4 decimals,
 // trailing zeros stripped (reuses the engine's formatter when present).
 function fmtRate(n) { return window.formatDevNumericValue ? window.formatDevNumericValue(n) : String(n) }
-function pushSensorLog(text) {
+// Log entries are stored as {ts, parts:[{k, t}]} with EVERY field captured
+// regardless of the "Log ..." checkboxes; the checkboxes are applied when an
+// entry is rendered/copied/saved (direct request 2026-10-04: toggling a data
+// set on/off must also change what gets copied, including lines already
+// logged). Any NEW toggleable field must be added as a part whose `k` maps
+// to its cfg flag in SENSOR_LOG_FLAGS / DISPLACE_LOG_FLAGS.
+const SENSOR_LOG_FLAGS = {
+  accel: 'sensorLogAccel', linearAccel: 'sensorLogLinearAccel', gyro: 'sensorLogGyro',
+  compass: 'sensorLogCompass', orientBeta: 'sensorLogOrientBeta', orientGamma: 'sensorLogOrientGamma',
+}
+function formatLogEntry(entry, flagMap, mergeOrient) {
+  const on = entry.parts.filter((p) => cfg[flagMap[p.k]])
+  if (!on.length) return null
+  const texts = []
+  const orient = []
+  for (const p of on) {
+    if (mergeOrient && (p.k === 'orientBeta' || p.k === 'orientGamma')) {
+      if (!orient.length) texts.push(null) // placeholder keeps the Orient block's position
+      orient.push(p.t)
+    } else texts.push(p.t)
+  }
+  return entry.ts + ' ' + texts.map((t) => (t === null ? 'Orient ' + orient.join(' ') : t)).join('  |  ')
+}
+function sensorLogLines() {
+  return sensorLog.map((e) => formatLogEntry(e, SENSOR_LOG_FLAGS, true)).filter((l) => l !== null)
+}
+function renderSensorLogView() {
+  if (!sensorLogEl) return
+  sensorLogEl.innerHTML = ''
+  for (const line of sensorLogLines()) {
+    const lineEl = document.createElement('div')
+    lineEl.textContent = line
+    sensorLogEl.appendChild(lineEl)
+  }
+  sensorLogEl.scrollTop = sensorLogEl.scrollHeight
+}
+function pushSensorLog(parts) {
   if (allLogsPaused) return
-  const line = ts() + ' ' + text
-  sensorLog.push(line)
+  const entry = { ts: ts(), parts }
+  sensorLog.push(entry)
   if (sensorLog.length > 200) sensorLog.shift()
   if (!sensorLogEl) return
+  const line = formatLogEntry(entry, SENSOR_LOG_FLAGS, true)
+  if (line === null) return
   const lineEl = document.createElement('div')
   lineEl.textContent = line
   sensorLogEl.appendChild(lineEl)
@@ -5972,34 +6029,32 @@ function restartSensorTimer() {
     // Per-sensor toggles -- direct request 2026-09-28: only the
     // checked sensors' own fields are included; if none are checked,
     // skip the tick entirely (no empty/blank log lines).
+    // Every field is captured; the checkboxes filter at view/copy time
+    // (see SENSOR_LOG_FLAGS).
     const parts = []
-    if (cfg.sensorLogAccel) {
+    {
       const accel = (latestMotion && latestMotion.accelerationIncludingGravity) || {}
-      parts.push(`Accel x:${fmt(accel.x)} y:${fmt(accel.y)} z:${fmt(accel.z)}`)
+      parts.push({ k: 'accel', t: `Accel x:${fmt(accel.x)} y:${fmt(accel.y)} z:${fmt(accel.z)}` })
     }
-    if (cfg.sensorLogLinearAccel) {
+    {
       const linear = latestMotion ? computePhoneLinearAccelDeviceLocal(latestMotion) : null
-      parts.push(linear ? `LinearAccel x:${fmt(linear.x)} y:${fmt(linear.y)} z:${fmt(linear.z)}` : 'LinearAccel (unavailable)')
+      parts.push({ k: 'linearAccel', t: linear ? `LinearAccel x:${fmt(linear.x)} y:${fmt(linear.y)} z:${fmt(linear.z)}` : 'LinearAccel (unavailable)' })
     }
-    if (cfg.sensorLogGyro) {
+    {
       const gyro = (latestMotion && latestMotion.rotationRate) || {}
-      parts.push(`Gyro α:${fmt(gyro.alpha)} β:${fmt(gyro.beta)} γ:${fmt(gyro.gamma)}`)
+      parts.push({ k: 'gyro', t: `Gyro α:${fmt(gyro.alpha)} β:${fmt(gyro.beta)} γ:${fmt(gyro.gamma)}` })
     }
-    if (cfg.sensorLogCompass) {
+    {
       const heading = latestOrientation ? latestOrientation.alpha : null
-      parts.push(`Compass:${fmt(heading)}°`)
+      parts.push({ k: 'compass', t: `Compass:${fmt(heading)}°` })
     }
     // Absolute orientation angle (deviceorientation.beta/gamma) -- NOT the
     // same numbers as Gyro's rotationRate alpha/beta/gamma above (that's
     // angular velocity); labeled "Orient" so the two never read as
     // duplicates despite sharing greek-letter names.
-    if (cfg.sensorLogOrientBeta || cfg.sensorLogOrientGamma) {
-      const bits = []
-      if (cfg.sensorLogOrientBeta) bits.push(`β:${fmt(latestOrientation ? latestOrientation.beta : null)}°`)
-      if (cfg.sensorLogOrientGamma) bits.push(`γ:${fmt(latestOrientation ? latestOrientation.gamma : null)}°`)
-      parts.push(`Orient ${bits.join(' ')}`)
-    }
-    if (parts.length) pushSensorLog(parts.join('  |  '))
+    parts.push({ k: 'orientBeta', t: `β:${fmt(latestOrientation ? latestOrientation.beta : null)}°` })
+    parts.push({ k: 'orientGamma', t: `γ:${fmt(latestOrientation ? latestOrientation.gamma : null)}°` })
+    pushSensorLog(parts)
   }, cfg.sensorIntervalMs)
 }
 // Copy/Save/Clear -- direct request 2026-09-28, same pattern as
@@ -6008,7 +6063,7 @@ function restartSensorTimer() {
 // .md export (works fine in a real dev session, not a sandboxed
 // Artifact context), and an explicit-only clear.
 function copySensorLog(btn) {
-  const text = sensorLog.join('\n')
+  const text = sensorLogLines().join('\n')
   const flash = (msg) => { const orig = btn.textContent; btn.textContent = msg; setTimeout(() => { btn.textContent = orig }, 900) }
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(text).then(() => flash('Copied!')).catch(() => flash('Copy failed'))
@@ -6017,7 +6072,7 @@ function copySensorLog(btn) {
   }
 }
 function saveSensorLog() {
-  const md = '# Sensor Log\n\n' + sensorLog.map((line) => '- ' + line).join('\n') + '\n'
+  const md = '# Sensor Log\n\n' + sensorLogLines().map((line) => '- ' + line).join('\n') + '\n'
   const blob = new Blob([md], { type: 'text/markdown' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
@@ -6126,12 +6181,35 @@ function clearPhoneModelLog() {
 let displaceLogEl = null
 let displaceLogTimer = null
 let displaceLog = []
-function pushDisplaceLog(text) {
+// Entries are {ts, parts:[{k, t}]} with every field captured; the "Log ..."
+// checkboxes filter at render/copy/save time (see SENSOR_LOG_FLAGS). The
+// ZUPT dwell+state text is one 'zupt' part; the 3 A/B blocks share 'ab'.
+const DISPLACE_LOG_FLAGS = {
+  procAccel: 'displaceLogProcessedAccel', velocity: 'displaceLogVelocity', position: 'displaceLogPosition',
+  stationary: 'displaceLogStationary', zupt: 'displaceLogZupt', bias: 'displaceLogBias',
+  target: 'displaceLogTargetVsRendered', boundary: 'displaceLogBoundary', ab: 'displaceLogAbCompare',
+}
+function displaceLogLines() {
+  return displaceLog.map((e) => formatLogEntry(e, DISPLACE_LOG_FLAGS, false)).filter((l) => l !== null)
+}
+function renderDisplaceLogView() {
+  if (!displaceLogEl) return
+  displaceLogEl.innerHTML = ''
+  for (const line of displaceLogLines()) {
+    const div = document.createElement('div')
+    div.textContent = line
+    displaceLogEl.appendChild(div)
+  }
+  displaceLogEl.scrollTop = displaceLogEl.scrollHeight
+}
+function pushDisplaceLog(parts) {
   if (allLogsPaused) return
-  const line = ts() + ' ' + text
-  displaceLog.push(line)
+  const entry = { ts: ts(), parts }
+  displaceLog.push(entry)
   if (displaceLog.length > 200) displaceLog.shift()
   if (!displaceLogEl) return
+  const line = formatLogEntry(entry, DISPLACE_LOG_FLAGS, false)
+  if (line === null) return
   const div = document.createElement('div')
   div.textContent = line
   displaceLogEl.appendChild(div)
@@ -6153,8 +6231,9 @@ function restartDisplaceLogTimer() {
   if (!cfg.sensorStreamEnabled) return
   displaceLogTimer = setInterval(() => {
     const parts = []
-    if (cfg.displaceLogProcessedAccel) parts.push(`ProcAccel x:${fmt(phoneDisplaceLastAx)} y:${fmt(phoneDisplaceLastAy)} z:${fmt(phoneDisplaceLastAz)}`)
-    if (cfg.displaceLogVelocity) parts.push(`Vel x:${fmt(phoneDisplaceVelX)} y:${fmt(phoneDisplaceVelY)} z:${fmt(phoneDisplaceVelZ)}`)
+    // Every field is captured; the checkboxes filter at view/copy time.
+    parts.push({ k: 'procAccel', t: `ProcAccel x:${fmt(phoneDisplaceLastAx)} y:${fmt(phoneDisplaceLastAy)} z:${fmt(phoneDisplaceLastAz)}` })
+    parts.push({ k: 'velocity', t: `Vel x:${fmt(phoneDisplaceVelX)} y:${fmt(phoneDisplaceVelY)} z:${fmt(phoneDisplaceVelZ)}` })
     // Pre-curve/range integrated position -- the raw integrator state in
     // METERS, i.e. exactly what computePhoneDisplaceAxisUnits() takes as
     // its own `rawMeters` input BEFORE the curve/range mapping runs (Tilt
@@ -6163,7 +6242,7 @@ function restartDisplaceLogTimer() {
     // now (added 2026-10-04). Mobile-tab slider values do not reach cfg for
     // these controls, so what the panel shows on the Mobile tab and what
     // the integrator runs on can differ -- this is the ground truth.
-    if (cfg.displaceLogPosition) parts.push(`PosPreCurve x:${fmt(phoneDisplacePosX)} y:${fmt(phoneDisplacePosY)} z:${fmt(phoneDisplacePosZ)} (decay vel:${fmtRate(cfg.phoneDisplaceVelDecayRate ?? PHONE_DISPLACE_VELOCITY_DECAY_RATE_DEFAULT)} pos:${fmtRate(cfg.phoneDisplacePosDecayRate ?? PHONE_DISPLACE_POSITION_DECAY_RATE_DEFAULT)})`)
+    parts.push({ k: 'position', t: `PosPreCurve x:${fmt(phoneDisplacePosX)} y:${fmt(phoneDisplacePosY)} z:${fmt(phoneDisplacePosZ)} (decay vel:${fmtRate(cfg.phoneDisplaceVelDecayRate ?? PHONE_DISPLACE_VELOCITY_DECAY_RATE_DEFAULT)} pos:${fmtRate(cfg.phoneDisplacePosDecayRate ?? PHONE_DISPLACE_POSITION_DECAY_RATE_DEFAULT)})` })
     // DELIBERATELY separate fields, not duplicates --
     // phoneDisplaceIsStationary flips true the instant the gate reads
     // quiet (gyro+accel both below threshold); phoneDisplaceZuptActive
@@ -6171,8 +6250,8 @@ function restartDisplaceLogTimer() {
     // window. The 2 can legitimately disagree for the first
     // phoneDisplaceZuptDwellMs of a stop. Order is
     // StationaryGate | ZUPTDwell | ZUPT (2026-10-04, direct request).
-    if (cfg.displaceLogStationary) parts.push(`StationaryGate:${phoneDisplaceIsStationary ? 'ACTIVE' : 'inactive'}`)
-    if (cfg.displaceLogZupt) {
+    parts.push({ k: 'stationary', t: `StationaryGate:${phoneDisplaceIsStationary ? 'ACTIVE' : 'inactive'}` })
+    {
       // Dwell = continuous quiet time as of the last evaluated tick.
       // "peak" = longest continuous run since the previous log line --
       // the log samples ~every 200ms while devicemotion ticks much
@@ -6180,11 +6259,11 @@ function restartDisplaceLogTimer() {
       // lines still reads ACTIVE on both; peak is what shows whether it
       // ever held long enough to reach the dwell threshold. Reset after
       // reading so each line reports only its own interval.
-      parts.push(`ZUPTDwell:${Math.round(phoneDisplaceZuptDwellElapsedMs)}ms (peak ${Math.round(phoneDisplaceZuptDwellPeakMs)}ms / need ${cfg.phoneDisplaceZuptDwellMs}ms)`)
+      parts.push({ k: 'zupt', t: `ZUPTDwell:${Math.round(phoneDisplaceZuptDwellElapsedMs)}ms (peak ${Math.round(phoneDisplaceZuptDwellPeakMs)}ms / need ${cfg.phoneDisplaceZuptDwellMs}ms)` })
       phoneDisplaceZuptDwellPeakMs = phoneDisplaceZuptDwellElapsedMs
-      parts.push(`ZUPT:${phoneDisplaceZuptActive ? 'ACTIVE' : 'inactive'}`)
+      parts.push({ k: 'zupt', t: `ZUPT:${phoneDisplaceZuptActive ? 'ACTIVE' : 'inactive'}` })
     }
-    if (cfg.displaceLogBias) parts.push(`Bias x:${fmt(phoneDisplaceBiasX)} y:${fmt(phoneDisplaceBiasY)} z:${fmt(phoneDisplaceBiasZ)}`)
+    parts.push({ k: 'bias', t: `Bias x:${fmt(phoneDisplaceBiasX)} y:${fmt(phoneDisplaceBiasY)} z:${fmt(phoneDisplaceBiasZ)}` })
     // Target (computePhoneResponsiveDisplacement()'s own undamped output)
     // vs. Rendered (the SAME value after cfg.phoneDisplaceDamping's lerp
     // -- what the phone model actually shows this frame) -- these ARE
@@ -6195,29 +6274,29 @@ function restartDisplaceLogTimer() {
     // deliberate additive on top of displacement, not part of it, and
     // including it in only one side would make this comparison measure
     // the wrong thing (offset magnitude, not damping lag).
-    if (cfg.displaceLogTargetVsRendered) parts.push(`Target x:${fmt(_phoneDisplaceTargetVec.x)} y:${fmt(_phoneDisplaceTargetVec.y)} z:${fmt(_phoneDisplaceTargetVec.z)}  Rendered x:${fmt(_phoneDisplaceCurrentVec.x)} y:${fmt(_phoneDisplaceCurrentVec.y)} z:${fmt(_phoneDisplaceCurrentVec.z)}`)
+    parts.push({ k: 'target', t: `Target x:${fmt(_phoneDisplaceTargetVec.x)} y:${fmt(_phoneDisplaceTargetVec.y)} z:${fmt(_phoneDisplaceTargetVec.z)}  Rendered x:${fmt(_phoneDisplaceCurrentVec.x)} y:${fmt(_phoneDisplaceCurrentVec.y)} z:${fmt(_phoneDisplaceCurrentVec.z)}` })
     // Boundary/clamp state -- added 2026-10-01, see
     // computePhoneDisplaceAxisUnits()'s own comment for exactly what this
     // means (true while that axis's idealMagnitude has run past its
     // ceiling and the final clamp is actively pinning the output).
-    if (cfg.displaceLogBoundary) parts.push(`Boundary x:${phoneDisplaceBoundaryX ? 'CLAMPED' : 'free'} y:${phoneDisplaceBoundaryY ? 'CLAMPED' : 'free'} z:${phoneDisplaceBoundaryZ ? 'CLAMPED' : 'free'}`)
+    parts.push({ k: 'boundary', t: `Boundary x:${phoneDisplaceBoundaryX ? 'CLAMPED' : 'free'} y:${phoneDisplaceBoundaryY ? 'CLAMPED' : 'free'} z:${phoneDisplaceBoundaryZ ? 'CLAMPED' : 'free'}` })
     // A/B diagnostic pipelines -- added 2026-10-02, see
     // updateDisplaceAbComparison()'s own comment for what these 2 shadow
     // states are and are not (never drives the rendered phone). "Native
     // input" is the ONE shared raw sample both shadow pipelines this tick
     // actually received -- logged once since it's the same reading either
     // way, not duplicated per pipeline.
-    if (cfg.displaceLogAbCompare) {
+    {
       const nat = (latestMotion && latestMotion.acceleration) || {}
-      parts.push(`AB NatIn x:${fmt(nat.x)} y:${fmt(nat.y)} z:${fmt(nat.z)}`)
-      parts.push(fmtDisplaceShadowLog('AB-Existing', displaceShadowExisting))
-      parts.push(fmtDisplaceShadowLog('AB-Native', displaceShadowNative))
+      parts.push({ k: 'ab', t: `AB NatIn x:${fmt(nat.x)} y:${fmt(nat.y)} z:${fmt(nat.z)}` })
+      parts.push({ k: 'ab', t: fmtDisplaceShadowLog('AB-Existing', displaceShadowExisting) })
+      parts.push({ k: 'ab', t: fmtDisplaceShadowLog('AB-Native', displaceShadowNative) })
     }
-    if (parts.length) pushDisplaceLog(parts.join('  |  '))
+    pushDisplaceLog(parts)
   }, cfg.sensorIntervalMs)
 }
 function copyDisplaceLog(btn) {
-  const text = displaceLog.join('\n')
+  const text = displaceLogLines().join('\n')
   const flash = (msg) => { const orig = btn.textContent; btn.textContent = msg; setTimeout(() => { btn.textContent = orig }, 900) }
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(text).then(() => flash('Copied!')).catch(() => flash('Copy failed'))
@@ -6226,7 +6305,7 @@ function copyDisplaceLog(btn) {
   }
 }
 function saveDisplaceLog() {
-  const md = '# Displace Log\n\n' + displaceLog.map((line) => '- ' + line).join('\n') + '\n'
+  const md = '# Displace Log\n\n' + displaceLogLines().map((line) => '- ' + line).join('\n') + '\n'
   const blob = new Blob([md], { type: 'text/markdown' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
@@ -6274,9 +6353,9 @@ function formatDeviceInfoText() {
 const LOG_COPY_ITEMS = [
   { key: 'deviceInfo', cfgKey: 'logPickDeviceInfo', label: 'Device Info', title: 'Device Info', text: formatDeviceInfoText },
   { key: 'mouse', cfgKey: 'logPickMouse', label: 'Mouse Log', title: 'Mouse Log', text: () => getMouseLogText() },
-  { key: 'sensor', cfgKey: 'logPickSensor', label: 'Sensor Log', title: 'Sensor Log', text: () => sensorLog.join('\n') },
+  { key: 'sensor', cfgKey: 'logPickSensor', label: 'Sensor Log', title: 'Sensor Log', text: () => sensorLogLines().join('\n') },
   { key: 'phoneModel', cfgKey: 'logPickPhoneModel', label: 'Phone Model Log', title: 'Phone Model Log', text: () => phoneModelLog.join('\n') },
-  { key: 'displace', cfgKey: 'logPickDisplace', label: 'Displace Log', title: 'Displace Log', text: () => displaceLog.join('\n') },
+  { key: 'displace', cfgKey: 'logPickDisplace', label: 'Displace Log', title: 'Displace Log', text: () => displaceLogLines().join('\n') },
 ]
 async function copyLogItems(items, btn) {
   const flash = (msg) => { const orig = btn.textContent; btn.textContent = msg; setTimeout(() => { btn.textContent = orig }, 900) }
@@ -7282,7 +7361,7 @@ const PHONE_MODEL_PER_MODEL_CONTROL_IDS = [
   'checkboxPhoneDisplaceAxisZEnabled', 'sliderPhoneDisplaceScaleZ', 'checkboxPhoneDisplaceInvertZ',
   'sliderPhoneDisplaceDamping', 'sliderPhoneDisplaceVelDecayRate', 'sliderPhoneDisplacePosDecayRate',
   'checkboxPhoneDisplaceStationaryGateEnabled', 'sliderPhoneDisplaceStationaryGateDegPerSec',
-  'sliderPhoneDisplaceZuptAccelThresholdMps2', 'sliderPhoneDisplaceZuptDwellMs',
+  'sliderPhoneDisplaceZuptAccelThresholdMps2', 'sliderPhoneDisplaceZuptDwellMs', 'sliderPhoneDisplaceVelSnapMps',
   // Same correction as Rotation's own, directly above: per-axis ids,
   // not the old shared pair.
   'textPhoneDisplaceRangeX', 'textPhoneDisplaceCurveX', 'sliderPhoneDisplaceXReferenceM',
@@ -7934,6 +8013,8 @@ function renderPhoneModelGroup(content) {
   wireSlider('sliderPhoneDisplaceZuptAccelThresholdMps2', (v) => { cfg.phoneDisplaceZuptAccelThresholdMps2 = v })
   displaceNonTiltRows.push(addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplaceZuptDwellMs', label: 'ZUPT Dwell Time (Ms)', type: 'slider', min: 0, max: 500, step: 10, value: cfg.phoneDisplaceZuptDwellMs }))
   wireSlider('sliderPhoneDisplaceZuptDwellMs', (v) => { cfg.phoneDisplaceZuptDwellMs = v })
+  displaceNonTiltRows.push(addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplaceVelSnapMps', label: 'Low-Speed Velocity Snap (M/S)', type: 'slider', min: 0, max: 0.2, step: 'any', value: cfg.phoneDisplaceVelSnapMps }))
+  wireSlider('sliderPhoneDisplaceVelSnapMps', (v) => { cfg.phoneDisplaceVelSnapMps = v })
   // Per-axis Min/Max Range + Curve + Reference -- added 2026-10-01,
   // replacing the single shared Range/Curve pair above (one X/Y/Z
   // magnitude run through one shared curve). Each axis now gets its own
@@ -8463,29 +8544,29 @@ function renderDebugExtras() {
   // Per-sensor log toggles -- direct request 2026-09-28.
   addRow(sensorSub, { id: 'checkboxSensorLogAccel', label: 'Log Accelerometer', type: 'checkbox' })
   document.getElementById('checkboxSensorLogAccel').checked = cfg.sensorLogAccel
-  wireCheckbox('checkboxSensorLogAccel', (v) => { cfg.sensorLogAccel = v })
+  wireCheckbox('checkboxSensorLogAccel', (v) => { cfg.sensorLogAccel = v; renderSensorLogView() })
   // Diagnostic -- added 2026-09-30, see cfg.sensorLogLinearAccel's own
   // declaration comment. Shows the EXACT gravity-subtracted value
   // Responsive Displace consumes, distinct from "Log Accelerometer"
   // above (raw accelerationIncludingGravity).
   addRow(sensorSub, { id: 'checkboxSensorLogLinearAccel', label: 'Log Linear Accel (No Gravity, Used By Displace)', type: 'checkbox' })
   document.getElementById('checkboxSensorLogLinearAccel').checked = cfg.sensorLogLinearAccel
-  wireCheckbox('checkboxSensorLogLinearAccel', (v) => { cfg.sensorLogLinearAccel = v })
+  wireCheckbox('checkboxSensorLogLinearAccel', (v) => { cfg.sensorLogLinearAccel = v; renderSensorLogView() })
   addRow(sensorSub, { id: 'checkboxSensorLogGyro', label: 'Log Gyroscope', type: 'checkbox' })
   document.getElementById('checkboxSensorLogGyro').checked = cfg.sensorLogGyro
-  wireCheckbox('checkboxSensorLogGyro', (v) => { cfg.sensorLogGyro = v })
+  wireCheckbox('checkboxSensorLogGyro', (v) => { cfg.sensorLogGyro = v; renderSensorLogView() })
   addRow(sensorSub, { id: 'checkboxSensorLogCompass', label: 'Log Compass', type: 'checkbox' })
   document.getElementById('checkboxSensorLogCompass').checked = cfg.sensorLogCompass
-  wireCheckbox('checkboxSensorLogCompass', (v) => { cfg.sensorLogCompass = v })
+  wireCheckbox('checkboxSensorLogCompass', (v) => { cfg.sensorLogCompass = v; renderSensorLogView() })
   // Absolute orientation angle (deviceorientation.beta/gamma), NOT the
   // same as Gyro's rotationRate alpha/beta/gamma above -- direct request
   // 2026-09-28, added after the user asked what the difference was.
   addRow(sensorSub, { id: 'checkboxSensorLogOrientBeta', label: 'Log Beta (Front/Back Tilt Angle)', type: 'checkbox' })
   document.getElementById('checkboxSensorLogOrientBeta').checked = cfg.sensorLogOrientBeta
-  wireCheckbox('checkboxSensorLogOrientBeta', (v) => { cfg.sensorLogOrientBeta = v })
+  wireCheckbox('checkboxSensorLogOrientBeta', (v) => { cfg.sensorLogOrientBeta = v; renderSensorLogView() })
   addRow(sensorSub, { id: 'checkboxSensorLogOrientGamma', label: 'Log Gamma (Left/Right Tilt Angle)', type: 'checkbox' })
   document.getElementById('checkboxSensorLogOrientGamma').checked = cfg.sensorLogOrientGamma
-  wireCheckbox('checkboxSensorLogOrientGamma', (v) => { cfg.sensorLogOrientGamma = v })
+  wireCheckbox('checkboxSensorLogOrientGamma', (v) => { cfg.sensorLogOrientGamma = v; renderSensorLogView() })
   const sensorBtnRow = document.createElement('div')
   sensorBtnRow.className = 'dev-buttons'
   const sensorCopyBtn = document.createElement('button')
@@ -8542,28 +8623,28 @@ function renderDebugExtras() {
   const displaceLogSub = addSubgroup(debugContent, 'Displace Log')
   addRow(displaceLogSub, { id: 'checkboxDisplaceLogProcessedAccel', label: 'Log Processed Accel (Into Integrator)', type: 'checkbox' })
   document.getElementById('checkboxDisplaceLogProcessedAccel').checked = cfg.displaceLogProcessedAccel
-  wireCheckbox('checkboxDisplaceLogProcessedAccel', (v) => { cfg.displaceLogProcessedAccel = v })
+  wireCheckbox('checkboxDisplaceLogProcessedAccel', (v) => { cfg.displaceLogProcessedAccel = v; renderDisplaceLogView() })
   addRow(displaceLogSub, { id: 'checkboxDisplaceLogVelocity', label: 'Log Velocity (XYZ)', type: 'checkbox' })
   document.getElementById('checkboxDisplaceLogVelocity').checked = cfg.displaceLogVelocity
-  wireCheckbox('checkboxDisplaceLogVelocity', (v) => { cfg.displaceLogVelocity = v })
+  wireCheckbox('checkboxDisplaceLogVelocity', (v) => { cfg.displaceLogVelocity = v; renderDisplaceLogView() })
   addRow(displaceLogSub, { id: 'checkboxDisplaceLogPosition', label: 'Log Integrated Position (XYZ, Pre-Curve)', type: 'checkbox' })
   document.getElementById('checkboxDisplaceLogPosition').checked = cfg.displaceLogPosition
-  wireCheckbox('checkboxDisplaceLogPosition', (v) => { cfg.displaceLogPosition = v })
+  wireCheckbox('checkboxDisplaceLogPosition', (v) => { cfg.displaceLogPosition = v; renderDisplaceLogView() })
   addRow(displaceLogSub, { id: 'checkboxDisplaceLogZupt', label: 'Log ZUPT Active/Inactive', type: 'checkbox' })
   document.getElementById('checkboxDisplaceLogZupt').checked = cfg.displaceLogZupt
-  wireCheckbox('checkboxDisplaceLogZupt', (v) => { cfg.displaceLogZupt = v })
+  wireCheckbox('checkboxDisplaceLogZupt', (v) => { cfg.displaceLogZupt = v; renderDisplaceLogView() })
   addRow(displaceLogSub, { id: 'checkboxDisplaceLogStationary', label: 'Log Stationary Gate Active/Inactive', type: 'checkbox' })
   document.getElementById('checkboxDisplaceLogStationary').checked = cfg.displaceLogStationary
-  wireCheckbox('checkboxDisplaceLogStationary', (v) => { cfg.displaceLogStationary = v })
+  wireCheckbox('checkboxDisplaceLogStationary', (v) => { cfg.displaceLogStationary = v; renderDisplaceLogView() })
   addRow(displaceLogSub, { id: 'checkboxDisplaceLogBias', label: 'Log Bias Being Subtracted (XYZ)', type: 'checkbox' })
   document.getElementById('checkboxDisplaceLogBias').checked = cfg.displaceLogBias
-  wireCheckbox('checkboxDisplaceLogBias', (v) => { cfg.displaceLogBias = v })
+  wireCheckbox('checkboxDisplaceLogBias', (v) => { cfg.displaceLogBias = v; renderDisplaceLogView() })
   addRow(displaceLogSub, { id: 'checkboxDisplaceLogTargetVsRendered', label: 'Log Displacement Target vs. Rendered Position', type: 'checkbox' })
   document.getElementById('checkboxDisplaceLogTargetVsRendered').checked = cfg.displaceLogTargetVsRendered
-  wireCheckbox('checkboxDisplaceLogTargetVsRendered', (v) => { cfg.displaceLogTargetVsRendered = v })
+  wireCheckbox('checkboxDisplaceLogTargetVsRendered', (v) => { cfg.displaceLogTargetVsRendered = v; renderDisplaceLogView() })
   addRow(displaceLogSub, { id: 'checkboxDisplaceLogBoundary', label: 'Log Boundary/Clamp State (XYZ)', type: 'checkbox' })
   document.getElementById('checkboxDisplaceLogBoundary').checked = cfg.displaceLogBoundary
-  wireCheckbox('checkboxDisplaceLogBoundary', (v) => { cfg.displaceLogBoundary = v })
+  wireCheckbox('checkboxDisplaceLogBoundary', (v) => { cfg.displaceLogBoundary = v; renderDisplaceLogView() })
   // A/B diagnostic pipelines -- added 2026-10-02, see
   // updateDisplaceAbComparison()'s own comment. One checkbox gates the
   // WHOLE comparison block (both shadow pipelines' Pos/Vel/Target/
@@ -8572,7 +8653,7 @@ function renderDebugExtras() {
   // concise field names so the log remains readable."
   addRow(displaceLogSub, { id: 'checkboxDisplaceLogAbCompare', label: 'Log A/B Compare: Existing vs. Native (Diagnostic Only)', type: 'checkbox' })
   document.getElementById('checkboxDisplaceLogAbCompare').checked = cfg.displaceLogAbCompare
-  wireCheckbox('checkboxDisplaceLogAbCompare', (v) => { cfg.displaceLogAbCompare = v })
+  wireCheckbox('checkboxDisplaceLogAbCompare', (v) => { cfg.displaceLogAbCompare = v; renderDisplaceLogView() })
   const displaceLogBtnRow = document.createElement('div')
   displaceLogBtnRow.className = 'dev-buttons'
   const displaceLogCopyBtn = document.createElement('button')
