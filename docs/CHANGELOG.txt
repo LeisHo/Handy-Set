@@ -1,3 +1,15 @@
+2026-10-05  -  Debug: "Export All Logs" button (main.js v=227)
+  - Request: "in the debug group provide a button to export all logs into a text file or whatever format".
+  - New EXPORT ALL LOGS button in the Debug group's all-logs row (CLEAR / COPY ALL / EXPORT ALL / PAUSE). exportAllLogsFile()
+    downloads ONE .txt (handyset-logs-<timestamp>.txt) via Blob + <a download>: Device Info, Mouse, Sensor, Phone Model and
+    Displace logs, same text and "Log ..." toggle filtering as COPY ALL LOGS. No clipboard / paste step, so nothing can be cut.
+  - Header block: export time, model file, page URL, viewport, user agent and the LIVE displace / rotation / model settings
+    (phoneDisplace*, phoneAxis*, phoneRotation*, phoneResponsive*, phoneModelFile/Scale). Unsynced tuning is not in the git
+    settings file, so this is the only place it can be read from a log.
+  - Why: a pasted Displace Log was cut at exactly 20,030 bytes mid-line by the paste/attachment step (the app's copy has no
+    size cap; the buffer holds 200 entries; each Displace line is ~1,000 chars because of the A/B blocks).
+  - Not run in a browser (project rule).
+
 2026-10-05  -  Fix: camera slider value boxes could not be clicked into / typed in (main.js v=226)
   - Report: "with lock camera pan unchecked, I still can't click into camera position slider text box to type in the value",
     then "make sure all camera side text boxes are fixed as well".
