@@ -6613,7 +6613,7 @@ function syncControlDom(id, value) {
   el.value = value
   if (el.type === 'range') {
     const valEl = document.getElementById(id.replace(/^slider/, 'value'))
-    if (valEl) valEl.textContent = value
+    if (valEl && !valEl.querySelector('input')) valEl.textContent = value // leave an open click-to-type box alone
   }
 }
 // Explicit (domId, cfgKey) pairs, matching exactly what each render*Group()
@@ -6649,7 +6649,11 @@ function syncValue(id, value, decimals = 2) {
   if (el) {
     if (document.activeElement === el) return
     const vEl = document.getElementById(id.replace(/^slider/, 'value'))
-    if (document.activeElement === vEl) return
+    // The click-to-type box is an <input> placed INSIDE the value readout (devPanel.js makeDevValuesEditable()), so focus is
+    // on that child, never on vEl itself -- the old `activeElement === vEl` test never matched, and the per-frame camera sync
+    // then rewrote vEl.textContent every frame, deleting the box the moment it was clicked (2026-10-05, direct report:
+    // "I still can't click into camera position slider text box").
+    if (vEl && (document.activeElement === vEl || vEl.contains(document.activeElement) || vEl.querySelector('input'))) return
     el.value = value
     if (vEl) vEl.textContent = (typeof value === 'number' ? value.toFixed(decimals) : value)
   }
