@@ -8438,6 +8438,15 @@ function renderCameraGroup(content) {
   wireSlider('sliderCameraFov', (v) => { cfg.cameraFov = v; camera.fov = v; camera.updateProjectionMatrix() })
   addRow(content, { id: 'sliderCameraZoom', label: 'Zoom (Distance To Pan Target) (x)', type: 'slider', min: 1, max: 500, step: 0.5, value: cfg.cameraZoom })
   wireSlider('sliderCameraZoom', (v) => { cfg.cameraZoom = v; setCameraDistance(v) })
+  // Center World Origin (direct request 2026-10-05): pans the camera so the world origin sits at the middle of the browser view (screen X and Y).
+  const centerOriginRow = document.createElement('div')
+  centerOriginRow.className = 'dev-buttons'
+  const centerOriginBtn = document.createElement('button')
+  centerOriginBtn.type = 'button'
+  centerOriginBtn.textContent = 'Center World Origin'
+  centerOriginBtn.addEventListener('click', centerWorldOriginOnScreen)
+  centerOriginRow.appendChild(centerOriginBtn)
+  content.appendChild(centerOriginRow)
   addRow(content, { id: 'checkboxLockCameraPan', label: 'Lock Camera Pan', type: 'checkbox' })
   document.getElementById('checkboxLockCameraPan').checked = cfg.lockCameraPan
   wireCheckbox('checkboxLockCameraPan', (v) => { cfg.lockCameraPan = v; applyCameraLockState() })
@@ -8460,6 +8469,20 @@ function renderCameraGroup(content) {
   // (e.g. from Sync) never actually disabled OrbitControls or the
   // sliders until the user re-toggled the checkbox.
   applyCameraLockState()
+}
+// Center World Origin: a pure pan. The camera and its orbit target both move by the same offset so the
+// target lands exactly on world (0,0,0) -- the origin then sits on the camera's optical axis, i.e. at the
+// centre of the browser view in screen X and Y. Viewing direction, distance (zoom) and FOV are unchanged.
+function centerWorldOriginOnScreen() {
+  camera.position.sub(controls.target) // camera relative to the old target
+  controls.target.set(0, 0, 0)
+  camera.position.add(controls.target) // same offset from the new target (the origin)
+  controls.update()
+  Object.assign(cfg, { cameraX: camera.position.x, cameraY: camera.position.y, cameraZ: camera.position.z, targetX: 0, targetY: 0, targetZ: 0 })
+  syncCameraPanelFromLive()
+  syncPairsFromCfg(CAMERA_SYNC_PAIRS)
+  if (typeof window.pushDevUndoState === 'function') window.pushDevUndoState()
+  requestRender()
 }
 // Moves the camera along the existing camera->target line to a new
 // distance, preserving viewing direction (ported concept from Handy
