@@ -7622,6 +7622,31 @@ async function copyLogItems(items, btn) {
 function copyAllLogsText(btn) {
   return copyLogItems(LOG_COPY_ITEMS, btn)
 }
+// EXPORT ALL LOGS (direct request 2026-10-05): downloads every log as ONE complete .txt file -- no clipboard or paste step, so nothing
+// can be cut (a pasted Displace Log was truncated at 20,030 bytes by the paste/attachment step, not by the app). Same text as COPY ALL
+// LOGS (it honours the per-log "Log ..." toggles), preceded by a short session header with the model and the displace / rotation
+// settings that are LIVE right now (unsynced tuning is not in the git settings file, so this is the only place it can be read).
+function exportAllLogsFile(btn) {
+  const flash = (msg) => { const orig = btn.textContent; btn.textContent = msg; setTimeout(() => { btn.textContent = orig }, 1200) }
+  const live = {}
+  Object.keys(cfg).filter((k) => /^(phoneDisplace|phoneAxis|phoneRotation|phoneResponsive|phoneModel(File|Scale))/.test(k)).sort().forEach((k) => { live[k] = cfg[k] })
+  const header = [
+    'HANDYSET log export', 'Exported: ' + new Date().toISOString(), 'Model: ' + cfg.phoneModelFile, 'Page: ' + location.href,
+    'Viewport: ' + window.innerWidth + 'x' + window.innerHeight + ' @' + window.devicePixelRatio + 'x', 'User agent: ' + navigator.userAgent,
+    'Live settings: ' + JSON.stringify(live)
+  ].join('\n')
+  const text = header + '\n\n' + LOG_COPY_ITEMS.map((it) => '=== ' + it.title + ' ===\n' + it.text()).join('\n\n') + '\n'
+  const blob = new Blob([text], { type: 'text/plain' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'handyset-logs-' + new Date().toISOString().replace(/[:.]/g, '-') + '.txt'
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+  flash('Saved!')
+}
 function copySelectedLogsText(btn) {
   return copyLogItems(LOG_COPY_ITEMS.filter((it) => cfg[it.cfgKey]), btn)
 }
@@ -10101,8 +10126,10 @@ function renderDebugExtras() {
   const allLogsRow = document.createElement('div'); allLogsRow.className = 'dev-buttons'
   const clearAllLogsBtn = document.createElement('button'); clearAllLogsBtn.textContent = 'CLEAR ALL LOGS'
   const copyAllLogsBtn = document.createElement('button'); copyAllLogsBtn.textContent = 'COPY ALL LOGS'
+  const exportAllLogsBtn = document.createElement('button'); exportAllLogsBtn.textContent = 'EXPORT ALL LOGS'
   const pauseAllLogsBtn = document.createElement('button'); pauseAllLogsBtn.textContent = 'PAUSE LOGS'
-  allLogsRow.append(clearAllLogsBtn, copyAllLogsBtn, pauseAllLogsBtn)
+  allLogsRow.append(clearAllLogsBtn, copyAllLogsBtn, exportAllLogsBtn, pauseAllLogsBtn)
+  exportAllLogsBtn.addEventListener('click', () => exportAllLogsFile(exportAllLogsBtn))
   debugContent.appendChild(allLogsRow)
   clearAllLogsBtn.addEventListener('click', clearAllLogs)
   copyAllLogsBtn.addEventListener('click', () => copyAllLogsText(copyAllLogsBtn))
