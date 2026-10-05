@@ -1,3 +1,12 @@
+2026-10-05  -  Camera group: "Center World Origin" button (main.js v=225)
+  - Request: "The camera controls group add a button ... to center the world origin in the browser screen space in regards
+    to X and Y axes."
+  - centerWorldOriginOnScreen(): a pure pan. The camera and its orbit target move by the same offset until the target is
+    world (0,0,0), so the origin lies on the camera's optical axis = the centre of the browser view in screen X and Y.
+    Viewing direction, zoom distance and FOV are unchanged. Updates cfg camera/target, the camera sliders, and pushes an
+    undo state. Works even if Lock Camera Pan is on (explicit button action). Button sits under the Zoom slider.
+  - Not run in a browser (project rule); the maths is a single translation, checked by reading.
+
 2026-10-04  -  IK brought up to date with HANDO's CURRENT IK system (main.js v=224)
   - Request: "look at the ik system in HANDO. then implement it in the same way". HANDO's IK had moved on a lot since the
     first port (HANDO changelog 2026-10-04 10:37 AM - 5:27 PM), so HANDO's real source (src/main.js IK HAND POSE block +
