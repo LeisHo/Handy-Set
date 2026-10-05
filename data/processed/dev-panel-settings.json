@@ -6,18 +6,23 @@
     "checkboxIkPosingEnabled": false,
     "sliderIkInfluenceMaster": 100,
     "sliderIkInfluenceFingers": 100,
-    "sliderIkInfluenceWrist": 100,
-    "sliderIkInfluenceRot": 100,
+    "textIkRangeFingers": "{\"min\":-200,\"max\":200}",
     "sliderIkInfluenceOff": 100,
-    "sliderIkInfluenceArm": 0,
-    "sliderIkInfluenceBendRot": 0,
-    "sliderIkInfluenceBendOff": 0,
-    "sliderIkInfluenceBendTailRot": 0,
-    "sliderIkInfluenceBendTailOff": 0,
-    "sliderIkInfluenceTwistRot": 0,
-    "sliderIkInfluenceTwistOff": 0,
-    "sliderIkInfluenceTwistTailRot": 0,
-    "sliderIkInfluenceTwistTailOff": 0,
+    "textIkRangeOff": "{\"min\":-100,\"max\":100}",
+    "sliderIkInfluenceRot": 100,
+    "textIkRangeRot": "{\"min\":-360,\"max\":360}",
+    "sliderIkInfluenceWristRot": 100,
+    "textIkRangeWristRot": "{\"min\":-360,\"max\":360}",
+    "sliderIkInfluenceWristSplay": 100,
+    "textIkRangeWristSplay": "{\"min\":-360,\"max\":360}",
+    "sliderIkInfluenceWristBend": 100,
+    "textIkRangeWristBend": "{\"min\":-360,\"max\":360}",
+    "sliderIkInfluenceElbowBend": 0,
+    "textIkRangeElbowBend": "{\"min\":-10,\"max\":150}",
+    "sliderIkInfluenceElbowSideBend": 0,
+    "textIkRangeElbowSideBend": "{\"min\":-90,\"max\":90}",
+    "sliderIkInfluenceForearmTwist": 0,
+    "textIkRangeForearmTwist": "{\"min\":-90,\"max\":90}",
     "hiddenIkPairs": "[{\"id\":\"pmutoogmz3ou\",\"targetId\":\"hand0|Thumb Points/Thumb - Last Segment  - Pad\",\"sourceId\":\"phone|Phone Side Points/Phone Right Side - 67\",\"axesMode\":\"source\",\"rotX\":0,\"rotY\":0,\"rotZ\":0,\"overlap\":true}]",
     "sliderFieldRows": 1,
     "sliderFieldCols": 1,
@@ -148,7 +153,7 @@
     "textPhoneRotationCurveY": "{\"points\":[{\"x\":0,\"y\":0.03041661580403643},{\"x\":1,\"y\":0.7770833333333333}],\"method\":\"catmullrom\"}",
     "textPhoneRotationRangeZ": "{\"min\":0,\"max\":180}",
     "textPhoneRotationCurveZ": "{\"points\":[{\"x\":0,\"y\":0.035416158040364576},{\"x\":1,\"y\":1}],\"method\":\"catmullrom\"}",
-    "checkboxPhoneResponsiveDisplaceEnabled": true,
+    "checkboxPhoneResponsiveDisplaceEnabled": false,
     "selectPhoneDisplaceMode": "nativeSensor",
     "checkboxPhoneDisplaceResetEnabled": true,
     "checkboxPhoneDisplaceAxisXEnabled": true,
@@ -185,7 +190,7 @@
     "textScreenLevelScaleRange": "{\"min\":1,\"max\":1}",
     "textScreenLevelScaleCurve": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"linear\"}",
     "sliderScreenTextureRotation": 180,
-    "sliderScreenTextureOffsetX": 0.0708020050125314,
+    "sliderScreenTextureOffsetX": 0.0172336815787124,
     "sliderScreenTextureOffsetY": 0,
     "sliderScreenTextureScaleX": 1.1,
     "sliderScreenTextureScaleY": 0.95,
@@ -201,10 +206,10 @@
     "textWristSplayRange": "{\"min\":5,\"max\":-71}",
     "textWristSplayCurve": "{\"points\":[{\"x\":0,\"y\":1},{\"x\":0.31833343505859374,\"y\":0.6961458841959636},{\"x\":1,\"y\":0.042812347412109375}],\"method\":\"catmullrom\"}",
     "sliderCameraX": 0,
-    "sliderCameraY": 114,
+    "sliderCameraY": 121,
     "sliderCameraZ": 0,
     "sliderCameraFov": 15,
-    "sliderCameraZoom": 114,
+    "sliderCameraZoom": 121,
     "checkboxLockCameraPan": true,
     "checkboxLockCameraZoom": true,
     "checkboxLockCameraRotate": true,
@@ -961,8 +966,15 @@
             "type": "group",
             "section": {
               "key": "desktop:Hotkeys",
-              "items": [],
-              "rowKeys": [],
+              "items": [
+                {
+                  "type": "row",
+                  "key": "sliderDevHotkeySequenceWindow"
+                }
+              ],
+              "rowKeys": [
+                "sliderDevHotkeySequenceWindow"
+              ],
               "subgroups": []
             }
           }
@@ -1491,8 +1503,15 @@
           },
           {
             "key": "desktop:Hotkeys",
-            "items": [],
-            "rowKeys": [],
+            "items": [
+              {
+                "type": "row",
+                "key": "sliderDevHotkeySequenceWindow"
+              }
+            ],
+            "rowKeys": [
+              "sliderDevHotkeySequenceWindow"
+            ],
             "subgroups": []
           }
         ]
@@ -4814,10 +4833,6 @@
                       },
                       {
                         "type": "row",
-                        "key": "sliderIkInfluenceWrist"
-                      },
-                      {
-                        "type": "row",
                         "key": "sliderIkInfluenceRot"
                       },
                       {
@@ -4825,59 +4840,104 @@
                         "key": "sliderIkInfluenceOff"
                       },
                       {
-                        "type": "row",
-                        "key": "sliderIkInfluenceArm"
+                        "type": "group",
+                        "section": {
+                          "key": "desktop:Saved IK Influence",
+                          "items": [],
+                          "rowKeys": [],
+                          "subgroups": []
+                        }
                       },
                       {
                         "type": "row",
-                        "key": "sliderIkInfluenceBendRot"
+                        "key": "textIkRangeFingers"
                       },
                       {
                         "type": "row",
-                        "key": "sliderIkInfluenceBendOff"
+                        "key": "textIkRangeOff"
                       },
                       {
                         "type": "row",
-                        "key": "sliderIkInfluenceBendTailRot"
+                        "key": "textIkRangeRot"
                       },
                       {
                         "type": "row",
-                        "key": "sliderIkInfluenceBendTailOff"
+                        "key": "sliderIkInfluenceWristRot"
                       },
                       {
                         "type": "row",
-                        "key": "sliderIkInfluenceTwistRot"
+                        "key": "textIkRangeWristRot"
                       },
                       {
                         "type": "row",
-                        "key": "sliderIkInfluenceTwistOff"
+                        "key": "sliderIkInfluenceWristSplay"
                       },
                       {
                         "type": "row",
-                        "key": "sliderIkInfluenceTwistTailRot"
+                        "key": "textIkRangeWristSplay"
                       },
                       {
                         "type": "row",
-                        "key": "sliderIkInfluenceTwistTailOff"
+                        "key": "sliderIkInfluenceWristBend"
+                      },
+                      {
+                        "type": "row",
+                        "key": "textIkRangeWristBend"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderIkInfluenceElbowBend"
+                      },
+                      {
+                        "type": "row",
+                        "key": "textIkRangeElbowBend"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderIkInfluenceElbowSideBend"
+                      },
+                      {
+                        "type": "row",
+                        "key": "textIkRangeElbowSideBend"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderIkInfluenceForearmTwist"
+                      },
+                      {
+                        "type": "row",
+                        "key": "textIkRangeForearmTwist"
                       }
                     ],
                     "rowKeys": [
                       "sliderIkInfluenceMaster",
                       "sliderIkInfluenceFingers",
-                      "sliderIkInfluenceWrist",
                       "sliderIkInfluenceRot",
                       "sliderIkInfluenceOff",
-                      "sliderIkInfluenceArm",
-                      "sliderIkInfluenceBendRot",
-                      "sliderIkInfluenceBendOff",
-                      "sliderIkInfluenceBendTailRot",
-                      "sliderIkInfluenceBendTailOff",
-                      "sliderIkInfluenceTwistRot",
-                      "sliderIkInfluenceTwistOff",
-                      "sliderIkInfluenceTwistTailRot",
-                      "sliderIkInfluenceTwistTailOff"
+                      "textIkRangeFingers",
+                      "textIkRangeOff",
+                      "textIkRangeRot",
+                      "sliderIkInfluenceWristRot",
+                      "textIkRangeWristRot",
+                      "sliderIkInfluenceWristSplay",
+                      "textIkRangeWristSplay",
+                      "sliderIkInfluenceWristBend",
+                      "textIkRangeWristBend",
+                      "sliderIkInfluenceElbowBend",
+                      "textIkRangeElbowBend",
+                      "sliderIkInfluenceElbowSideBend",
+                      "textIkRangeElbowSideBend",
+                      "sliderIkInfluenceForearmTwist",
+                      "textIkRangeForearmTwist"
                     ],
-                    "subgroups": []
+                    "subgroups": [
+                      {
+                        "key": "desktop:Saved IK Influence",
+                        "items": [],
+                        "rowKeys": [],
+                        "subgroups": []
+                      }
+                    ]
                   }
                 }
               ],
@@ -4899,10 +4959,6 @@
                     },
                     {
                       "type": "row",
-                      "key": "sliderIkInfluenceWrist"
-                    },
-                    {
-                      "type": "row",
                       "key": "sliderIkInfluenceRot"
                     },
                     {
@@ -4910,59 +4966,104 @@
                       "key": "sliderIkInfluenceOff"
                     },
                     {
-                      "type": "row",
-                      "key": "sliderIkInfluenceArm"
+                      "type": "group",
+                      "section": {
+                        "key": "desktop:Saved IK Influence",
+                        "items": [],
+                        "rowKeys": [],
+                        "subgroups": []
+                      }
                     },
                     {
                       "type": "row",
-                      "key": "sliderIkInfluenceBendRot"
+                      "key": "textIkRangeFingers"
                     },
                     {
                       "type": "row",
-                      "key": "sliderIkInfluenceBendOff"
+                      "key": "textIkRangeOff"
                     },
                     {
                       "type": "row",
-                      "key": "sliderIkInfluenceBendTailRot"
+                      "key": "textIkRangeRot"
                     },
                     {
                       "type": "row",
-                      "key": "sliderIkInfluenceBendTailOff"
+                      "key": "sliderIkInfluenceWristRot"
                     },
                     {
                       "type": "row",
-                      "key": "sliderIkInfluenceTwistRot"
+                      "key": "textIkRangeWristRot"
                     },
                     {
                       "type": "row",
-                      "key": "sliderIkInfluenceTwistOff"
+                      "key": "sliderIkInfluenceWristSplay"
                     },
                     {
                       "type": "row",
-                      "key": "sliderIkInfluenceTwistTailRot"
+                      "key": "textIkRangeWristSplay"
                     },
                     {
                       "type": "row",
-                      "key": "sliderIkInfluenceTwistTailOff"
+                      "key": "sliderIkInfluenceWristBend"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textIkRangeWristBend"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderIkInfluenceElbowBend"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textIkRangeElbowBend"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderIkInfluenceElbowSideBend"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textIkRangeElbowSideBend"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderIkInfluenceForearmTwist"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textIkRangeForearmTwist"
                     }
                   ],
                   "rowKeys": [
                     "sliderIkInfluenceMaster",
                     "sliderIkInfluenceFingers",
-                    "sliderIkInfluenceWrist",
                     "sliderIkInfluenceRot",
                     "sliderIkInfluenceOff",
-                    "sliderIkInfluenceArm",
-                    "sliderIkInfluenceBendRot",
-                    "sliderIkInfluenceBendOff",
-                    "sliderIkInfluenceBendTailRot",
-                    "sliderIkInfluenceBendTailOff",
-                    "sliderIkInfluenceTwistRot",
-                    "sliderIkInfluenceTwistOff",
-                    "sliderIkInfluenceTwistTailRot",
-                    "sliderIkInfluenceTwistTailOff"
+                    "textIkRangeFingers",
+                    "textIkRangeOff",
+                    "textIkRangeRot",
+                    "sliderIkInfluenceWristRot",
+                    "textIkRangeWristRot",
+                    "sliderIkInfluenceWristSplay",
+                    "textIkRangeWristSplay",
+                    "sliderIkInfluenceWristBend",
+                    "textIkRangeWristBend",
+                    "sliderIkInfluenceElbowBend",
+                    "textIkRangeElbowBend",
+                    "sliderIkInfluenceElbowSideBend",
+                    "textIkRangeElbowSideBend",
+                    "sliderIkInfluenceForearmTwist",
+                    "textIkRangeForearmTwist"
                   ],
-                  "subgroups": []
+                  "subgroups": [
+                    {
+                      "key": "desktop:Saved IK Influence",
+                      "items": [],
+                      "rowKeys": [],
+                      "subgroups": []
+                    }
+                  ]
                 }
               ]
             }
@@ -6330,10 +6431,6 @@
                     },
                     {
                       "type": "row",
-                      "key": "sliderIkInfluenceWrist"
-                    },
-                    {
-                      "type": "row",
                       "key": "sliderIkInfluenceRot"
                     },
                     {
@@ -6341,59 +6438,104 @@
                       "key": "sliderIkInfluenceOff"
                     },
                     {
-                      "type": "row",
-                      "key": "sliderIkInfluenceArm"
+                      "type": "group",
+                      "section": {
+                        "key": "desktop:Saved IK Influence",
+                        "items": [],
+                        "rowKeys": [],
+                        "subgroups": []
+                      }
                     },
                     {
                       "type": "row",
-                      "key": "sliderIkInfluenceBendRot"
+                      "key": "textIkRangeFingers"
                     },
                     {
                       "type": "row",
-                      "key": "sliderIkInfluenceBendOff"
+                      "key": "textIkRangeOff"
                     },
                     {
                       "type": "row",
-                      "key": "sliderIkInfluenceBendTailRot"
+                      "key": "textIkRangeRot"
                     },
                     {
                       "type": "row",
-                      "key": "sliderIkInfluenceBendTailOff"
+                      "key": "sliderIkInfluenceWristRot"
                     },
                     {
                       "type": "row",
-                      "key": "sliderIkInfluenceTwistRot"
+                      "key": "textIkRangeWristRot"
                     },
                     {
                       "type": "row",
-                      "key": "sliderIkInfluenceTwistOff"
+                      "key": "sliderIkInfluenceWristSplay"
                     },
                     {
                       "type": "row",
-                      "key": "sliderIkInfluenceTwistTailRot"
+                      "key": "textIkRangeWristSplay"
                     },
                     {
                       "type": "row",
-                      "key": "sliderIkInfluenceTwistTailOff"
+                      "key": "sliderIkInfluenceWristBend"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textIkRangeWristBend"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderIkInfluenceElbowBend"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textIkRangeElbowBend"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderIkInfluenceElbowSideBend"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textIkRangeElbowSideBend"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderIkInfluenceForearmTwist"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textIkRangeForearmTwist"
                     }
                   ],
                   "rowKeys": [
                     "sliderIkInfluenceMaster",
                     "sliderIkInfluenceFingers",
-                    "sliderIkInfluenceWrist",
                     "sliderIkInfluenceRot",
                     "sliderIkInfluenceOff",
-                    "sliderIkInfluenceArm",
-                    "sliderIkInfluenceBendRot",
-                    "sliderIkInfluenceBendOff",
-                    "sliderIkInfluenceBendTailRot",
-                    "sliderIkInfluenceBendTailOff",
-                    "sliderIkInfluenceTwistRot",
-                    "sliderIkInfluenceTwistOff",
-                    "sliderIkInfluenceTwistTailRot",
-                    "sliderIkInfluenceTwistTailOff"
+                    "textIkRangeFingers",
+                    "textIkRangeOff",
+                    "textIkRangeRot",
+                    "sliderIkInfluenceWristRot",
+                    "textIkRangeWristRot",
+                    "sliderIkInfluenceWristSplay",
+                    "textIkRangeWristSplay",
+                    "sliderIkInfluenceWristBend",
+                    "textIkRangeWristBend",
+                    "sliderIkInfluenceElbowBend",
+                    "textIkRangeElbowBend",
+                    "sliderIkInfluenceElbowSideBend",
+                    "textIkRangeElbowSideBend",
+                    "sliderIkInfluenceForearmTwist",
+                    "textIkRangeForearmTwist"
                   ],
-                  "subgroups": []
+                  "subgroups": [
+                    {
+                      "key": "desktop:Saved IK Influence",
+                      "items": [],
+                      "rowKeys": [],
+                      "subgroups": []
+                    }
+                  ]
                 }
               }
             ],
@@ -6415,10 +6557,6 @@
                   },
                   {
                     "type": "row",
-                    "key": "sliderIkInfluenceWrist"
-                  },
-                  {
-                    "type": "row",
                     "key": "sliderIkInfluenceRot"
                   },
                   {
@@ -6426,59 +6564,104 @@
                     "key": "sliderIkInfluenceOff"
                   },
                   {
-                    "type": "row",
-                    "key": "sliderIkInfluenceArm"
+                    "type": "group",
+                    "section": {
+                      "key": "desktop:Saved IK Influence",
+                      "items": [],
+                      "rowKeys": [],
+                      "subgroups": []
+                    }
                   },
                   {
                     "type": "row",
-                    "key": "sliderIkInfluenceBendRot"
+                    "key": "textIkRangeFingers"
                   },
                   {
                     "type": "row",
-                    "key": "sliderIkInfluenceBendOff"
+                    "key": "textIkRangeOff"
                   },
                   {
                     "type": "row",
-                    "key": "sliderIkInfluenceBendTailRot"
+                    "key": "textIkRangeRot"
                   },
                   {
                     "type": "row",
-                    "key": "sliderIkInfluenceBendTailOff"
+                    "key": "sliderIkInfluenceWristRot"
                   },
                   {
                     "type": "row",
-                    "key": "sliderIkInfluenceTwistRot"
+                    "key": "textIkRangeWristRot"
                   },
                   {
                     "type": "row",
-                    "key": "sliderIkInfluenceTwistOff"
+                    "key": "sliderIkInfluenceWristSplay"
                   },
                   {
                     "type": "row",
-                    "key": "sliderIkInfluenceTwistTailRot"
+                    "key": "textIkRangeWristSplay"
                   },
                   {
                     "type": "row",
-                    "key": "sliderIkInfluenceTwistTailOff"
+                    "key": "sliderIkInfluenceWristBend"
+                  },
+                  {
+                    "type": "row",
+                    "key": "textIkRangeWristBend"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderIkInfluenceElbowBend"
+                  },
+                  {
+                    "type": "row",
+                    "key": "textIkRangeElbowBend"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderIkInfluenceElbowSideBend"
+                  },
+                  {
+                    "type": "row",
+                    "key": "textIkRangeElbowSideBend"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderIkInfluenceForearmTwist"
+                  },
+                  {
+                    "type": "row",
+                    "key": "textIkRangeForearmTwist"
                   }
                 ],
                 "rowKeys": [
                   "sliderIkInfluenceMaster",
                   "sliderIkInfluenceFingers",
-                  "sliderIkInfluenceWrist",
                   "sliderIkInfluenceRot",
                   "sliderIkInfluenceOff",
-                  "sliderIkInfluenceArm",
-                  "sliderIkInfluenceBendRot",
-                  "sliderIkInfluenceBendOff",
-                  "sliderIkInfluenceBendTailRot",
-                  "sliderIkInfluenceBendTailOff",
-                  "sliderIkInfluenceTwistRot",
-                  "sliderIkInfluenceTwistOff",
-                  "sliderIkInfluenceTwistTailRot",
-                  "sliderIkInfluenceTwistTailOff"
+                  "textIkRangeFingers",
+                  "textIkRangeOff",
+                  "textIkRangeRot",
+                  "sliderIkInfluenceWristRot",
+                  "textIkRangeWristRot",
+                  "sliderIkInfluenceWristSplay",
+                  "textIkRangeWristSplay",
+                  "sliderIkInfluenceWristBend",
+                  "textIkRangeWristBend",
+                  "sliderIkInfluenceElbowBend",
+                  "textIkRangeElbowBend",
+                  "sliderIkInfluenceElbowSideBend",
+                  "textIkRangeElbowSideBend",
+                  "sliderIkInfluenceForearmTwist",
+                  "textIkRangeForearmTwist"
                 ],
-                "subgroups": []
+                "subgroups": [
+                  {
+                    "key": "desktop:Saved IK Influence",
+                    "items": [],
+                    "rowKeys": [],
+                    "subgroups": []
+                  }
+                ]
               }
             ]
           }
@@ -8400,9 +8583,72 @@
                   "type": "group",
                   "section": {
                     "key": "mobile:IK Influence",
-                    "items": [],
-                    "rowKeys": [],
-                    "subgroups": []
+                    "items": [
+                      {
+                        "type": "group",
+                        "section": {
+                          "key": "mobile:Saved IK Influence",
+                          "items": [],
+                          "rowKeys": [],
+                          "subgroups": []
+                        }
+                      },
+                      {
+                        "type": "row",
+                        "key": "textIkRangeFingers"
+                      },
+                      {
+                        "type": "row",
+                        "key": "textIkRangeOff"
+                      },
+                      {
+                        "type": "row",
+                        "key": "textIkRangeRot"
+                      },
+                      {
+                        "type": "row",
+                        "key": "textIkRangeWristRot"
+                      },
+                      {
+                        "type": "row",
+                        "key": "textIkRangeWristSplay"
+                      },
+                      {
+                        "type": "row",
+                        "key": "textIkRangeWristBend"
+                      },
+                      {
+                        "type": "row",
+                        "key": "textIkRangeElbowBend"
+                      },
+                      {
+                        "type": "row",
+                        "key": "textIkRangeElbowSideBend"
+                      },
+                      {
+                        "type": "row",
+                        "key": "textIkRangeForearmTwist"
+                      }
+                    ],
+                    "rowKeys": [
+                      "textIkRangeFingers",
+                      "textIkRangeOff",
+                      "textIkRangeRot",
+                      "textIkRangeWristRot",
+                      "textIkRangeWristSplay",
+                      "textIkRangeWristBend",
+                      "textIkRangeElbowBend",
+                      "textIkRangeElbowSideBend",
+                      "textIkRangeForearmTwist"
+                    ],
+                    "subgroups": [
+                      {
+                        "key": "mobile:Saved IK Influence",
+                        "items": [],
+                        "rowKeys": [],
+                        "subgroups": []
+                      }
+                    ]
                   }
                 }
               ],
@@ -8410,9 +8656,72 @@
               "subgroups": [
                 {
                   "key": "mobile:IK Influence",
-                  "items": [],
-                  "rowKeys": [],
-                  "subgroups": []
+                  "items": [
+                    {
+                      "type": "group",
+                      "section": {
+                        "key": "mobile:Saved IK Influence",
+                        "items": [],
+                        "rowKeys": [],
+                        "subgroups": []
+                      }
+                    },
+                    {
+                      "type": "row",
+                      "key": "textIkRangeFingers"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textIkRangeOff"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textIkRangeRot"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textIkRangeWristRot"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textIkRangeWristSplay"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textIkRangeWristBend"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textIkRangeElbowBend"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textIkRangeElbowSideBend"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textIkRangeForearmTwist"
+                    }
+                  ],
+                  "rowKeys": [
+                    "textIkRangeFingers",
+                    "textIkRangeOff",
+                    "textIkRangeRot",
+                    "textIkRangeWristRot",
+                    "textIkRangeWristSplay",
+                    "textIkRangeWristBend",
+                    "textIkRangeElbowBend",
+                    "textIkRangeElbowSideBend",
+                    "textIkRangeForearmTwist"
+                  ],
+                  "subgroups": [
+                    {
+                      "key": "mobile:Saved IK Influence",
+                      "items": [],
+                      "rowKeys": [],
+                      "subgroups": []
+                    }
+                  ]
                 }
               ]
             }
@@ -8890,9 +9199,72 @@
                 "type": "group",
                 "section": {
                   "key": "mobile:IK Influence",
-                  "items": [],
-                  "rowKeys": [],
-                  "subgroups": []
+                  "items": [
+                    {
+                      "type": "group",
+                      "section": {
+                        "key": "mobile:Saved IK Influence",
+                        "items": [],
+                        "rowKeys": [],
+                        "subgroups": []
+                      }
+                    },
+                    {
+                      "type": "row",
+                      "key": "textIkRangeFingers"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textIkRangeOff"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textIkRangeRot"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textIkRangeWristRot"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textIkRangeWristSplay"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textIkRangeWristBend"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textIkRangeElbowBend"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textIkRangeElbowSideBend"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textIkRangeForearmTwist"
+                    }
+                  ],
+                  "rowKeys": [
+                    "textIkRangeFingers",
+                    "textIkRangeOff",
+                    "textIkRangeRot",
+                    "textIkRangeWristRot",
+                    "textIkRangeWristSplay",
+                    "textIkRangeWristBend",
+                    "textIkRangeElbowBend",
+                    "textIkRangeElbowSideBend",
+                    "textIkRangeForearmTwist"
+                  ],
+                  "subgroups": [
+                    {
+                      "key": "mobile:Saved IK Influence",
+                      "items": [],
+                      "rowKeys": [],
+                      "subgroups": []
+                    }
+                  ]
                 }
               }
             ],
@@ -8900,9 +9272,72 @@
             "subgroups": [
               {
                 "key": "mobile:IK Influence",
-                "items": [],
-                "rowKeys": [],
-                "subgroups": []
+                "items": [
+                  {
+                    "type": "group",
+                    "section": {
+                      "key": "mobile:Saved IK Influence",
+                      "items": [],
+                      "rowKeys": [],
+                      "subgroups": []
+                    }
+                  },
+                  {
+                    "type": "row",
+                    "key": "textIkRangeFingers"
+                  },
+                  {
+                    "type": "row",
+                    "key": "textIkRangeOff"
+                  },
+                  {
+                    "type": "row",
+                    "key": "textIkRangeRot"
+                  },
+                  {
+                    "type": "row",
+                    "key": "textIkRangeWristRot"
+                  },
+                  {
+                    "type": "row",
+                    "key": "textIkRangeWristSplay"
+                  },
+                  {
+                    "type": "row",
+                    "key": "textIkRangeWristBend"
+                  },
+                  {
+                    "type": "row",
+                    "key": "textIkRangeElbowBend"
+                  },
+                  {
+                    "type": "row",
+                    "key": "textIkRangeElbowSideBend"
+                  },
+                  {
+                    "type": "row",
+                    "key": "textIkRangeForearmTwist"
+                  }
+                ],
+                "rowKeys": [
+                  "textIkRangeFingers",
+                  "textIkRangeOff",
+                  "textIkRangeRot",
+                  "textIkRangeWristRot",
+                  "textIkRangeWristSplay",
+                  "textIkRangeWristBend",
+                  "textIkRangeElbowBend",
+                  "textIkRangeElbowSideBend",
+                  "textIkRangeForearmTwist"
+                ],
+                "subgroups": [
+                  {
+                    "key": "mobile:Saved IK Influence",
+                    "items": [],
+                    "rowKeys": [],
+                    "subgroups": []
+                  }
+                ]
               }
             ]
           }
@@ -10620,9 +11055,72 @@
                   "type": "group",
                   "section": {
                     "key": "landscape:IK Influence",
-                    "items": [],
-                    "rowKeys": [],
-                    "subgroups": []
+                    "items": [
+                      {
+                        "type": "group",
+                        "section": {
+                          "key": "landscape:Saved IK Influence",
+                          "items": [],
+                          "rowKeys": [],
+                          "subgroups": []
+                        }
+                      },
+                      {
+                        "type": "row",
+                        "key": "textIkRangeFingers"
+                      },
+                      {
+                        "type": "row",
+                        "key": "textIkRangeOff"
+                      },
+                      {
+                        "type": "row",
+                        "key": "textIkRangeRot"
+                      },
+                      {
+                        "type": "row",
+                        "key": "textIkRangeWristRot"
+                      },
+                      {
+                        "type": "row",
+                        "key": "textIkRangeWristSplay"
+                      },
+                      {
+                        "type": "row",
+                        "key": "textIkRangeWristBend"
+                      },
+                      {
+                        "type": "row",
+                        "key": "textIkRangeElbowBend"
+                      },
+                      {
+                        "type": "row",
+                        "key": "textIkRangeElbowSideBend"
+                      },
+                      {
+                        "type": "row",
+                        "key": "textIkRangeForearmTwist"
+                      }
+                    ],
+                    "rowKeys": [
+                      "textIkRangeFingers",
+                      "textIkRangeOff",
+                      "textIkRangeRot",
+                      "textIkRangeWristRot",
+                      "textIkRangeWristSplay",
+                      "textIkRangeWristBend",
+                      "textIkRangeElbowBend",
+                      "textIkRangeElbowSideBend",
+                      "textIkRangeForearmTwist"
+                    ],
+                    "subgroups": [
+                      {
+                        "key": "landscape:Saved IK Influence",
+                        "items": [],
+                        "rowKeys": [],
+                        "subgroups": []
+                      }
+                    ]
                   }
                 }
               ],
@@ -10630,9 +11128,72 @@
               "subgroups": [
                 {
                   "key": "landscape:IK Influence",
-                  "items": [],
-                  "rowKeys": [],
-                  "subgroups": []
+                  "items": [
+                    {
+                      "type": "group",
+                      "section": {
+                        "key": "landscape:Saved IK Influence",
+                        "items": [],
+                        "rowKeys": [],
+                        "subgroups": []
+                      }
+                    },
+                    {
+                      "type": "row",
+                      "key": "textIkRangeFingers"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textIkRangeOff"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textIkRangeRot"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textIkRangeWristRot"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textIkRangeWristSplay"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textIkRangeWristBend"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textIkRangeElbowBend"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textIkRangeElbowSideBend"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textIkRangeForearmTwist"
+                    }
+                  ],
+                  "rowKeys": [
+                    "textIkRangeFingers",
+                    "textIkRangeOff",
+                    "textIkRangeRot",
+                    "textIkRangeWristRot",
+                    "textIkRangeWristSplay",
+                    "textIkRangeWristBend",
+                    "textIkRangeElbowBend",
+                    "textIkRangeElbowSideBend",
+                    "textIkRangeForearmTwist"
+                  ],
+                  "subgroups": [
+                    {
+                      "key": "landscape:Saved IK Influence",
+                      "items": [],
+                      "rowKeys": [],
+                      "subgroups": []
+                    }
+                  ]
                 }
               ]
             }
@@ -11110,9 +11671,72 @@
                 "type": "group",
                 "section": {
                   "key": "landscape:IK Influence",
-                  "items": [],
-                  "rowKeys": [],
-                  "subgroups": []
+                  "items": [
+                    {
+                      "type": "group",
+                      "section": {
+                        "key": "landscape:Saved IK Influence",
+                        "items": [],
+                        "rowKeys": [],
+                        "subgroups": []
+                      }
+                    },
+                    {
+                      "type": "row",
+                      "key": "textIkRangeFingers"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textIkRangeOff"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textIkRangeRot"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textIkRangeWristRot"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textIkRangeWristSplay"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textIkRangeWristBend"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textIkRangeElbowBend"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textIkRangeElbowSideBend"
+                    },
+                    {
+                      "type": "row",
+                      "key": "textIkRangeForearmTwist"
+                    }
+                  ],
+                  "rowKeys": [
+                    "textIkRangeFingers",
+                    "textIkRangeOff",
+                    "textIkRangeRot",
+                    "textIkRangeWristRot",
+                    "textIkRangeWristSplay",
+                    "textIkRangeWristBend",
+                    "textIkRangeElbowBend",
+                    "textIkRangeElbowSideBend",
+                    "textIkRangeForearmTwist"
+                  ],
+                  "subgroups": [
+                    {
+                      "key": "landscape:Saved IK Influence",
+                      "items": [],
+                      "rowKeys": [],
+                      "subgroups": []
+                    }
+                  ]
                 }
               }
             ],
@@ -11120,9 +11744,72 @@
             "subgroups": [
               {
                 "key": "landscape:IK Influence",
-                "items": [],
-                "rowKeys": [],
-                "subgroups": []
+                "items": [
+                  {
+                    "type": "group",
+                    "section": {
+                      "key": "landscape:Saved IK Influence",
+                      "items": [],
+                      "rowKeys": [],
+                      "subgroups": []
+                    }
+                  },
+                  {
+                    "type": "row",
+                    "key": "textIkRangeFingers"
+                  },
+                  {
+                    "type": "row",
+                    "key": "textIkRangeOff"
+                  },
+                  {
+                    "type": "row",
+                    "key": "textIkRangeRot"
+                  },
+                  {
+                    "type": "row",
+                    "key": "textIkRangeWristRot"
+                  },
+                  {
+                    "type": "row",
+                    "key": "textIkRangeWristSplay"
+                  },
+                  {
+                    "type": "row",
+                    "key": "textIkRangeWristBend"
+                  },
+                  {
+                    "type": "row",
+                    "key": "textIkRangeElbowBend"
+                  },
+                  {
+                    "type": "row",
+                    "key": "textIkRangeElbowSideBend"
+                  },
+                  {
+                    "type": "row",
+                    "key": "textIkRangeForearmTwist"
+                  }
+                ],
+                "rowKeys": [
+                  "textIkRangeFingers",
+                  "textIkRangeOff",
+                  "textIkRangeRot",
+                  "textIkRangeWristRot",
+                  "textIkRangeWristSplay",
+                  "textIkRangeWristBend",
+                  "textIkRangeElbowBend",
+                  "textIkRangeElbowSideBend",
+                  "textIkRangeForearmTwist"
+                ],
+                "subgroups": [
+                  {
+                    "key": "landscape:Saved IK Influence",
+                    "items": [],
+                    "rowKeys": [],
+                    "subgroups": []
+                  }
+                ]
               }
             ]
           }
@@ -11241,10 +11928,10 @@
     "desktop:PHONE MODEL": false,
     "desktop:OFFSET": true,
     "desktop:PHONE ROTATION": true,
-    "desktop:RECURSIVE RENDER": true,
+    "desktop:RECURSIVE RENDER": false,
     "desktop:RESPONSIVE BEHAVIOUR - PHONE": false,
     "desktop:Responsive Rotation": true,
-    "desktop:RESPONSIVE DISPLACE": false,
+    "desktop:RESPONSIVE DISPLACE": true,
     "desktop:Saved Phone Poses": false,
     "desktop:HAND MODEL": true,
     "desktop:Field Layout": true,
@@ -11272,9 +11959,10 @@
     "desktop:Palm Facing": true,
     "desktop:IK POSING": true,
     "desktop:IK Influence": false,
+    "desktop:Saved IK Influence": false,
     "desktop:Ground Plane": true,
     "desktop:Finger Gizmos": true,
-    "desktop:Camera": true,
+    "desktop:Camera": false,
     "desktop:Saved Cameras": false,
     "desktop:Lighting": true,
     "desktop:Saved Lighting": true,
@@ -11334,6 +12022,7 @@
     "mobile:Palm Facing": true,
     "mobile:IK POSING": false,
     "mobile:IK Influence": false,
+    "mobile:Saved IK Influence": false,
     "mobile:Ground Plane": false,
     "mobile:Finger Gizmos": false,
     "mobile:Camera": false,
@@ -11396,6 +12085,7 @@
     "landscape:Palm Facing": false,
     "landscape:IK POSING": false,
     "landscape:IK Influence": false,
+    "landscape:Saved IK Influence": false,
     "landscape:Ground Plane": false,
     "landscape:Finger Gizmos": false,
     "landscape:Camera": true,
@@ -11836,7 +12526,18 @@
     "sliderMobilePhoneResponsiveRotationFineTuneY": null,
     "sliderLandscapePhoneResponsiveRotationFineTuneY": null,
     "sliderMobilePhoneResponsiveRotationFineTuneZ": null,
-    "sliderLandscapePhoneResponsiveRotationFineTuneZ": null
+    "sliderLandscapePhoneResponsiveRotationFineTuneZ": null,
+    "mobile:Saved IK Influence": null,
+    "textIkRangeFingers": null,
+    "textIkRangeOff": null,
+    "textIkRangeRot": null,
+    "textIkRangeWristRot": null,
+    "textIkRangeWristSplay": null,
+    "textIkRangeWristBend": null,
+    "textIkRangeElbowBend": null,
+    "textIkRangeElbowSideBend": null,
+    "textIkRangeForearmTwist": null,
+    "landscape:Saved IK Influence": null
   },
   "devTextOverridesManual": [
     "desktop:New Group",
