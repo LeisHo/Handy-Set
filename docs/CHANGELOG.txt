@@ -1,3 +1,16 @@
+2026-10-05  -  Fix: camera slider value boxes could not be clicked into / typed in (main.js v=226)
+  - Report: "with lock camera pan unchecked, I still can't click into camera position slider text box to type in the value",
+    then "make sure all camera side text boxes are fixed as well".
+  - Cause: devPanel.js's click-to-type puts an <input> INSIDE the value readout (valueEl.textContent = ''; appendChild(input)).
+    syncValue() -- called every frame by syncCameraPanelFromLive() for Camera X/Y/Z, FOV, Zoom, Yaw and Pitch -- only skipped
+    the readout when `document.activeElement === vEl`, but focus is on the child input, so the test never matched and the sync
+    rewrote vEl.textContent every frame, deleting the box the instant it was clicked.
+  - Fix: syncValue() now also skips when the readout contains the active element or any <input>; syncControlDom() leaves an
+    open click-to-type box alone too. One change covers all 7 camera sliders (they share syncValue); no per-slider code.
+  - Note: the earlier 2026-09-27 "skip a slider that has focus" guard was written against the slider/readout themselves, never
+    the child input -- any FUTURE per-frame writer of a slider readout must check the readout's children too.
+  - Not run in a browser (project rule); checked by reading devPanel.js makeDevValuesEditable() and every writer of 'value*' readouts.
+
 2026-10-05  -  Camera group: "Center World Origin" button (main.js v=225)
   - Request: "The camera controls group add a button ... to center the world origin in the browser screen space in regards
     to X and Y axes."
