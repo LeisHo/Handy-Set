@@ -176,10 +176,10 @@
     "sliderPhoneDisplaceBiasInnovationClampMps2": 0.1,
     "textPhoneDisplaceRangeX": "{\"min\":0,\"max\":49}",
     "textPhoneDisplaceCurveX": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"monotone\"}",
-    "sliderPhoneDisplaceXReferenceM": 1.42,
-    "textPhoneDisplaceRangeY": "{\"min\":0,\"max\":69}",
+    "sliderPhoneDisplaceXReferenceM": 1.31,
+    "textPhoneDisplaceRangeY": "{\"min\":0,\"max\":50}",
     "textPhoneDisplaceCurveY": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"monotone\"}",
-    "sliderPhoneDisplaceYReferenceM": 1,
+    "sliderPhoneDisplaceYReferenceM": 1.74,
     "textPhoneDisplaceRangeZ": "{\"min\":0,\"max\":50}",
     "textPhoneDisplaceCurveZ": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"monotone\"}",
     "sliderPhoneDisplaceZReferenceM": 1.27,
@@ -288,7 +288,7 @@
     "left": 35,
     "top": 151,
     "width": 350,
-    "height": 628
+    "height": 76
   },
   "devPanelStyle": {
     "titleFontSize": 17,
