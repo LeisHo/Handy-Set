@@ -550,6 +550,7 @@ const cfg = {
   // instead of waiting for the full ZUPT dwell. Fixes slow creep (~0.01-0.02
   // m/s) when the gate flickers so the dwell rarely completes. 0 disables.
   phoneDisplaceBiasInnovationClampMps2: 0.10, // see stepDisplaceBias(); 0 = old unclamped tracker
+  phoneDisplaceOvershootLimit: 1.5, // Position Overshoot Limit, x Reference Distance (2026-10-06); 0 = off
   phoneDisplaceQuietVelBleedMs: 400, // Quiet Velocity Bleed time constant, ms (2026-10-06); 0 = off (old behaviour: a quiet gate zeroes ALL input)
   phoneDisplaceVelSnapMps: 0.15, // 0.03 -> 0.15 (2026-10-04): real stop left +0.11 m/s that 0.03 ignored
   // Per-axis Min/Max Range + Curve + X Reference -- added 2026-10-01,
@@ -4652,6 +4653,26 @@ function applyPhoneDisplaceSample(ax, ay, az, dt, holdPosition = false) {
   phoneDisplacePosX = phoneDisplacePosX * posDecay + phoneDisplaceVelX * dt
   phoneDisplacePosY = phoneDisplacePosY * posDecay + phoneDisplaceVelY * dt
   phoneDisplacePosZ = phoneDisplacePosZ * posDecay + phoneDisplaceVelZ * dt
+  const lim = cfg.phoneDisplaceOvershootLimit || 0
+  if (lim > 0) {
+    const p = [phoneDisplacePosX, phoneDisplacePosY, phoneDisplacePosZ], v = [phoneDisplaceVelX, phoneDisplaceVelY, phoneDisplaceVelZ]
+    clampDisplaceOvershoot(p, v, lim)
+    phoneDisplacePosX = p[0]; phoneDisplacePosY = p[1]; phoneDisplacePosZ = p[2]
+    phoneDisplaceVelX = v[0]; phoneDisplaceVelY = v[1]; phoneDisplaceVelZ = v[2]
+  }
+}
+// POSITION OVERSHOOT LIMIT / anti-windup (2026-10-06). The mapping saturates at the Reference Distance, so a raw position far past it has
+// no visual meaning -- but a runaway left it metres out (a real log sat at 8.04 m on X for the first 5 s, pinned at the range edge until
+// a manual reset; another ran Z to -6.45 m in 4.6 s). The raw position is clamped to +-(limit x that axis' Reference Distance) and a
+// velocity still pushing outward is zeroed, so recovering needs only (limit - 1) x Reference of reverse travel instead of metres.
+// 1.5 by default; 0 = off (the old unbounded behaviour). Shared by the real pipeline and both A/B shadows.
+function clampDisplaceOvershoot(pos, vel, lim) {
+  const refs = [cfg.phoneDisplaceXReferenceM, cfg.phoneDisplaceYReferenceM, cfg.phoneDisplaceZReferenceM]
+  for (let i = 0; i < 3; i++) {
+    const max = lim * (refs[i] || 0.35)
+    if (pos[i] > max) { pos[i] = max; if (vel[i] > 0) vel[i] = 0 }
+    else if (pos[i] < -max) { pos[i] = -max; if (vel[i] < 0) vel[i] = 0 }
+  }
 }
 
 // =======================================================================
@@ -4767,6 +4788,13 @@ function stepDisplaceShadowPipeline(state, e, linear) {
   state.posX = state.posX * posDecay + state.velX * dt
   state.posY = state.posY * posDecay + state.velY * dt
   state.posZ = state.posZ * posDecay + state.velZ * dt
+  const lim = cfg.phoneDisplaceOvershootLimit || 0
+  if (lim > 0) {
+    const p = [state.posX, state.posY, state.posZ], v = [state.velX, state.velY, state.velZ]
+    clampDisplaceOvershoot(p, v, lim)
+    state.posX = p[0]; state.posY = p[1]; state.posZ = p[2]
+    state.velX = v[0]; state.velY = v[1]; state.velZ = v[2]
+  }
 }
 // Maps a shadow state's own position through the SAME curve/range/
 // reference/boundary-clamp system the real pipeline uses
@@ -8797,7 +8825,7 @@ const PHONE_MODEL_PER_MODEL_CONTROL_IDS = [
   'checkboxPhoneDisplaceAxisZEnabled', 'sliderPhoneDisplaceScaleZ', 'checkboxPhoneDisplaceInvertZ',
   'sliderPhoneDisplaceDamping', 'sliderPhoneDisplaceVelDecayRate', 'sliderPhoneDisplacePosDecayRate',
   'checkboxPhoneDisplaceStationaryGateEnabled', 'sliderPhoneDisplaceStationaryGateDegPerSec',
-  'sliderPhoneDisplaceZuptAccelThresholdMps2', 'sliderPhoneDisplaceZuptDwellMs', 'sliderPhoneDisplaceVelSnapMps', 'sliderPhoneDisplaceQuietVelBleedMs', 'sliderPhoneDisplaceBiasInnovationClampMps2',
+  'sliderPhoneDisplaceZuptAccelThresholdMps2', 'sliderPhoneDisplaceZuptDwellMs', 'sliderPhoneDisplaceVelSnapMps', 'sliderPhoneDisplaceQuietVelBleedMs', 'sliderPhoneDisplaceOvershootLimit', 'sliderPhoneDisplaceBiasInnovationClampMps2',
   // Same correction as Rotation's own, directly above: per-axis ids,
   // not the old shared pair.
   'textPhoneDisplaceRangeX', 'textPhoneDisplaceCurveX', 'sliderPhoneDisplaceXReferenceM',
@@ -9659,6 +9687,8 @@ function renderPhoneModelGroup(content) {
   wireSlider('sliderPhoneDisplaceVelSnapMps', (v) => { cfg.phoneDisplaceVelSnapMps = v })
   displaceNonTiltRows.push(addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplaceQuietVelBleedMs', label: 'Quiet Velocity Bleed (Ms, 0 Off)', type: 'slider', min: 0, max: 2000, step: 10, value: cfg.phoneDisplaceQuietVelBleedMs }))
   wireSlider('sliderPhoneDisplaceQuietVelBleedMs', (v) => { cfg.phoneDisplaceQuietVelBleedMs = v })
+  displaceNonTiltRows.push(addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplaceOvershootLimit', label: 'Position Overshoot Limit (x Reference, 0 Off)', type: 'slider', min: 0, max: 5, step: 0.05, value: cfg.phoneDisplaceOvershootLimit }))
+  wireSlider('sliderPhoneDisplaceOvershootLimit', (v) => { cfg.phoneDisplaceOvershootLimit = v })
   displaceNonTiltRows.push(addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplaceBiasInnovationClampMps2', label: 'Bias Learning Limit (M/S²)', type: 'slider', min: 0, max: 1, step: 'any', value: cfg.phoneDisplaceBiasInnovationClampMps2 }))
   wireSlider('sliderPhoneDisplaceBiasInnovationClampMps2', (v) => { cfg.phoneDisplaceBiasInnovationClampMps2 = v })
   // Per-axis Min/Max Range + Curve + Reference -- added 2026-10-01,
