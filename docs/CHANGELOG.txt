@@ -8144,6 +8144,53 @@ working tree's own uncommitted Blender asset changes (only
 dev-panel-settings.json touched remotely), so no stash was needed.
 
 --------------------------------------------------------------------------------
+2026-10-06 -- Dev panel synced to the latest TEMPLATE_DEV_PANEL.html
+
+Three-way merge (ours = src/devpanel/devPanel.js + style.css, base = the archived
+template at the last sync, TEMPLATE_DEV_PANEL_ARCHIVE 20260928T015706, theirs = the
+current template). Template hunks mentioning the hotkey system or the Component
+Gallery were reverted to base BEFORE merging: per the user's decision HANDYSET
+keeps its own hotkey system, and the Component Gallery is demo-only. Brought in:
+nested-group cascade checkbox, undo ignoring scroll-only gestures, curve-editor
+background opacity, slider track-group layout, list-picker export/import layout,
+right-click / triple-tap point delete, and the dev-panel EXPORT button. Conflicts
+resolved by taking the template side except the curve-editor commitPoints, which
+keeps the project's on-demand requestRender hook. Versions: devPanel.js ?v=19,
+style.css ?v=12. Pre-sync copies are in data/raw/devpanel-sync-backup-20261006/
+(untracked). Commit 905dc79. Not browser-verified (project rule).
+
+--------------------------------------------------------------------------------
+2026-10-06 -- Displace: Position Overshoot Limit + Velocity Decay 0.5
+
+Cause (from the 09:07:08Z log and the matching phone export): during continuous
+vigorous motion the Stationary Gate never goes quiet, so ZUPT / Quiet Velocity Bleed
+never engage and with Velocity Decay 0 an integrated velocity wanders freely --
+8 m on X at the start of one log, Z velocity about -1.4 m/s and -6.45 m position in
+4.6 s in another. The mapping saturates at the Reference Distance, so the raw
+position far past it means nothing visually but takes metres of reverse travel to
+come back.
+
+Fix 1 (code, main.js ?v=230, commit 9d5a4f9): cfg.phoneDisplaceOvershootLimit
+(default 1.5, slider 'Position Overshoot Limit (x Reference, 0 Off)', 0 = old
+unbounded behaviour). clampDisplaceOvershoot() clamps the raw position per axis to
++-(limit x that axis' Reference Distance) and zeroes a velocity still pushing
+outward; applied at the end of applyPhoneDisplaceSample() and
+stepDisplaceShadowPipeline() so the real pipeline and both A/B shadows match.
+Included in the per-model snapshot id list.
+
+Fix 2 (settings, commit 1109e3c): Velocity Decay 0 -> 0.5 on the Desktop control and
+the iPhone 17 Max / Iphone17MaxPro per-model snapshots. Replay calibration: real
+30 cm sweep reads 0.28 m with 0.5 (the real sweep is <= 0.30 m); the runaway replay
+drops from 6.0 m to 2.6 m.
+
+Node replay (overshoot-test.mjs): runaway Z -14.98 m unprotected -> -1.49 m with the
+limit (bound 1.635 m), -1.57 m with decay 0.5 added; no velocity left pushing
+outward; a reverse push from the limit moves back off it (-1.64 -> -1.30 m) where
+the unprotected run went -7.50 -> -10.10 m; a normal 32 cm move is identical with
+the limit on or off (0.3235 m both). NOT verified on a real device. The phone must
+reload before Sync so it does not write the old 0 back over the git value.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
