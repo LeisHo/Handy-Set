@@ -1,3 +1,16 @@
+2026-10-06  -  Dev panel: EXPORT button (devPanel.js v=18)
+  - Request (pasted spec): add an EXPORT button to the preset-state row (Save / Use / Delete / Set Default) that does what Copy Settings does,
+    but downloads the JSON instead of copying it.
+  - Copy Settings = copyDevPanelSettings() (devPanel.js), which JSON-stringifies captureFullDevPanelState() with a 2-space indent. New
+    exportDevPanelSettings() (right below it) uses the SAME capture call and indent, builds an application/json Blob and downloads it as
+    dev-panel-settings.json (anchor appended, clicked, removed, object URL revoked). index.html: <button onclick="exportDevPanelSettings()">EXPORT</button>
+    added as the 5th button in the same .dev-buttons row (same styling as its siblings).
+  - TESTED (Node, the two real functions sliced from devPanel.js, stubbed DOM/Blob/URL): download contents are byte-identical to what
+    Copy Settings writes to the clipboard, pretty-printed, correct filename/blob href, anchor click+remove, URL revoked, and EXPORT is the 5th
+    button in the row. NOT clicked in a browser (project rule).
+  - Note: devPanel.js is otherwise a verbatim copy of .claude/TEMPLATE_DEV_PANEL.html; this is a small generic addition that could be folded
+    back into the template.
+
 2026-10-06  -  Displace: Quiet Velocity Bleed -- the gate no longer discards a gentle braking pulse (main.js v=229)
   - Data: Export All Logs 04:49:27Z (Native Sensor, after the decay/gate/curve fixes). Confirmed working: live decay 0/0, gate 8, curves start at 0,
     mode nativeSensor; position now HOLDS (04:49:18.4-20.0: PosPreCurve x 0.05 / y -0.18 / z -0.18 and Targets frozen, ZUPT ACTIVE, dwell up
