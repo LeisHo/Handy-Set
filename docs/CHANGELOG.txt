@@ -1,3 +1,21 @@
+2026-10-06  -  Displace: curve re-based to start at 0 (main.js v=228) + saved settings corrected
+  - Data: two Export All Logs files from the phone (04:17:18Z Native Sensor, 52 Displace lines / 10.2 s; 04:18:08Z World Position,
+    84 lines / 16.6 s). Findings (measured): (1) live Position Decay 1.06 /s and Velocity Decay 3.1 /s -- X position went
+    -0.07 -> -0.06 -> -0.04 -> -0.03 -> -0.02 m over 1.6 s with no input, i.e. it floats back to the default by configuration;
+    (2) Stationary Gate 0.8 deg/s: gate ACTIVE in only 2 of 52 and 3 of 84 lines, ZUPT 0 of both, so the hold never engages;
+    (3) real position stayed <= 7 cm on every axis, yet Targets reached 5.4 / 5.29 / -6.49 u (native) and -5.04 / 4.18 / -7.85 u
+    (world); the saved Y and Z curves started at 0.1116 / 0.1151 instead of 0, so ~1 cm past the dead zone popped 2-5+ units (e.g.
+    04:17:09.271: Y 0.04 m + Z 0.01 m -> targets 4.24 and 5.14), and snapped back when decay dropped it under the dead zone.
+  - CODE: computePhoneDisplaceAxisUnits() re-bases the curve: curveY = (curve(t) - curve(0)) / (1 - curve(0)), so the output is 0 at
+    the dead-zone edge and still 1 at the Reference Distance; a curve that already starts at 0 is unchanged (Node test: 1.26 cm ->
+    0.015 u, 3 cm -> 1.332 u (was ~5-7), Reference -> 46.000 u, monotonic, linear curve identical). A deliberate floor now comes only
+    from the Range "min". Shadow A/B pipelines share the function, so they get it too.
+  - SETTINGS (data/processed/dev-panel-settings.json, 6 diff lines, exact CRLF round-trip): Desktop controls AND the iPhone 17 Max and
+    iPhone 17 Max Pro per-model snapshots -- Position Decay 1.06 -> 0, Velocity Decay 3.1 -> 0, Stationary Gate 0.8 -> 8 deg/s, Y and Z
+    curve first point -> 0. NOT changed: displace mode, damping 0.05, Reference Distances, ranges, scales, Mobile overrides.
+  - Phone caveat: a phone Sync overwrites these -- reload the phone page first, do not press Sync until it shows the new values.
+  - Not device-tested (no phone here). World Position's Y/Z-before-rotation ordering issue is NOT fixed yet (separate, offered).
+
 2026-10-05  -  Debug: "Export All Logs" button (main.js v=227)
   - Request: "in the debug group provide a button to export all logs into a text file or whatever format".
   - New EXPORT ALL LOGS button in the Debug group's all-logs row (CLEAR / COPY ALL / EXPORT ALL / PAUSE). exportAllLogsFile()
