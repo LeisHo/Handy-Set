@@ -550,6 +550,7 @@ const cfg = {
   // instead of waiting for the full ZUPT dwell. Fixes slow creep (~0.01-0.02
   // m/s) when the gate flickers so the dwell rarely completes. 0 disables.
   phoneDisplaceBiasInnovationClampMps2: 0.10, // see stepDisplaceBias(); 0 = old unclamped tracker
+  phoneDisplaceQuietVelBleedMs: 400, // Quiet Velocity Bleed time constant, ms (2026-10-06); 0 = off (old behaviour: a quiet gate zeroes ALL input)
   phoneDisplaceVelSnapMps: 0.15, // 0.03 -> 0.15 (2026-10-04): real stop left +0.11 m/s that 0.03 ignored
   // Per-axis Min/Max Range + Curve + X Reference -- added 2026-10-01,
   // direct request ("Make me a displacement min max slider and a curved
@@ -4732,7 +4733,14 @@ function stepDisplaceShadowPipeline(state, e, linear) {
       const accelMag = Math.hypot(ax, ay, az)
       state.isStationary = gyroMag < cfg.phoneDisplaceStationaryGateDegPerSec && accelMag < cfg.phoneDisplaceZuptAccelThresholdMps2
       if (state.isStationary) {
-        ax = 0; ay = 0; az = 0
+        // Quiet-but-still-moving rule -- same as the real pipeline (2026-10-06).
+        const quietBleedMs = cfg.phoneDisplaceQuietVelBleedMs || 0
+        if (quietBleedMs > 0 && Math.hypot(state.velX, state.velY, state.velZ) >= (cfg.phoneDisplaceVelSnapMps || 0)) {
+          const k = Math.exp(-dt / (quietBleedMs / 1000))
+          state.velX *= k; state.velY *= k; state.velZ *= k
+        } else {
+          ax = 0; ay = 0; az = 0
+        }
         holdPos = true
         if (state.zuptDwellStart === null) state.zuptDwellStart = now
         state.zuptActive = (now - state.zuptDwellStart) >= cfg.phoneDisplaceZuptDwellMs
@@ -5064,7 +5072,19 @@ function integratePhoneDisplacement(e) {
         const accelMag = Math.hypot(ax, ay, az)
         isStationary = gyroMag < cfg.phoneDisplaceStationaryGateDegPerSec && accelMag < cfg.phoneDisplaceZuptAccelThresholdMps2
         if (isStationary) {
-          ax = 0; ay = 0; az = 0
+          // QUIET BUT STILL MOVING (2026-10-06, from a real log): this branch used to zero ALL input whenever the gyro was quiet and
+          // |a| < 0.6 m/s^2 -- including a GENTLE BRAKING pulse. A 0.9 m/s^2 push integrates, a 0.4 m/s^2 stop is thrown away, and
+          // the leftover ~0.5 m/s ran the position 0.74 m off (log 04:49:27Z: Vel X -0.55 m/s with ProcAccel 0 and the ZUPT dwell
+          // never completing because wrist wobble kept resetting it). While the phone still has real speed (>= the low-speed snap),
+          // keep integrating the input so the stop can cancel it, and bleed the velocity with time constant QuietVelBleed; the
+          // velocity snap / ZUPT then finish the job. Speed below the snap behaves exactly as before. Bleed 0 = old behaviour.
+          const quietBleedMs = cfg.phoneDisplaceQuietVelBleedMs || 0
+          if (quietBleedMs > 0 && Math.hypot(phoneDisplaceVelX, phoneDisplaceVelY, phoneDisplaceVelZ) >= (cfg.phoneDisplaceVelSnapMps || 0)) {
+            const k = Math.exp(-dt / (quietBleedMs / 1000))
+            phoneDisplaceVelX *= k; phoneDisplaceVelY *= k; phoneDisplaceVelZ *= k
+          } else {
+            ax = 0; ay = 0; az = 0
+          }
           if (phoneDisplaceZuptDwellStart === null) phoneDisplaceZuptDwellStart = now
           // CONFIDENT stationary -- held below BOTH thresholds for the
           // full dwell window. Force velocity to EXACTLY 0 here (not
@@ -8777,7 +8797,7 @@ const PHONE_MODEL_PER_MODEL_CONTROL_IDS = [
   'checkboxPhoneDisplaceAxisZEnabled', 'sliderPhoneDisplaceScaleZ', 'checkboxPhoneDisplaceInvertZ',
   'sliderPhoneDisplaceDamping', 'sliderPhoneDisplaceVelDecayRate', 'sliderPhoneDisplacePosDecayRate',
   'checkboxPhoneDisplaceStationaryGateEnabled', 'sliderPhoneDisplaceStationaryGateDegPerSec',
-  'sliderPhoneDisplaceZuptAccelThresholdMps2', 'sliderPhoneDisplaceZuptDwellMs', 'sliderPhoneDisplaceVelSnapMps', 'sliderPhoneDisplaceBiasInnovationClampMps2',
+  'sliderPhoneDisplaceZuptAccelThresholdMps2', 'sliderPhoneDisplaceZuptDwellMs', 'sliderPhoneDisplaceVelSnapMps', 'sliderPhoneDisplaceQuietVelBleedMs', 'sliderPhoneDisplaceBiasInnovationClampMps2',
   // Same correction as Rotation's own, directly above: per-axis ids,
   // not the old shared pair.
   'textPhoneDisplaceRangeX', 'textPhoneDisplaceCurveX', 'sliderPhoneDisplaceXReferenceM',
@@ -9637,6 +9657,8 @@ function renderPhoneModelGroup(content) {
   wireSlider('sliderPhoneDisplaceZuptDwellMs', (v) => { cfg.phoneDisplaceZuptDwellMs = v })
   displaceNonTiltRows.push(addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplaceVelSnapMps', label: 'Low-Speed Velocity Snap (M/S)', type: 'slider', min: 0, max: 0.5, step: 'any', value: cfg.phoneDisplaceVelSnapMps }))
   wireSlider('sliderPhoneDisplaceVelSnapMps', (v) => { cfg.phoneDisplaceVelSnapMps = v })
+  displaceNonTiltRows.push(addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplaceQuietVelBleedMs', label: 'Quiet Velocity Bleed (Ms, 0 Off)', type: 'slider', min: 0, max: 2000, step: 10, value: cfg.phoneDisplaceQuietVelBleedMs }))
+  wireSlider('sliderPhoneDisplaceQuietVelBleedMs', (v) => { cfg.phoneDisplaceQuietVelBleedMs = v })
   displaceNonTiltRows.push(addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplaceBiasInnovationClampMps2', label: 'Bias Learning Limit (M/S²)', type: 'slider', min: 0, max: 1, step: 'any', value: cfg.phoneDisplaceBiasInnovationClampMps2 }))
   wireSlider('sliderPhoneDisplaceBiasInnovationClampMps2', (v) => { cfg.phoneDisplaceBiasInnovationClampMps2 = v })
   // Per-axis Min/Max Range + Curve + Reference -- added 2026-10-01,
