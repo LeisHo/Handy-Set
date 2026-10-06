@@ -3919,7 +3919,14 @@ function computePhoneDisplaceAxisUnits(rawMeters, axisEnabled, axisScale, axisIn
   // exactly 0 inside the deadzone and jumped by curve(0.02)*range (~1 unit
   // at Y's 1.15 m / 52 range) the instant |raw| crossed it.
   const tCurve = (Math.min(tRaw, 1) - PHONE_DISPLACE_DEADZONE) / (1 - PHONE_DISPLACE_DEADZONE)
-  const curveY = THREE.MathUtils.clamp(window.evaluateCurveEditorPoints(slot.curve, tCurve, slot.method), 0, 1)
+  // CURVE STARTS AT ZERO (2026-10-06, direct request after a real log: a curve whose first point sits above 0 -- the saved Y curve
+  // began at 0.1116, Z at 0.1151 -- made a 1 cm position (just past the dead zone) jump by 2-5+ units, and snap back when position
+  // decayed under the dead zone: 4.7-7.85 unit steps between consecutive log lines from <= 5 cm of real movement). The curve is
+  // re-based so its value at the dead-zone edge is 0 and its value at the Reference Distance is still 1, keeping its shape. A curve
+  // that already starts at 0 (c0 = 0) is unchanged. A deliberate floor still comes from the Range "min", not from the curve.
+  const curveRaw = THREE.MathUtils.clamp(window.evaluateCurveEditorPoints(slot.curve, tCurve, slot.method), 0, 1)
+  const curveStart = THREE.MathUtils.clamp(window.evaluateCurveEditorPoints(slot.curve, 0, slot.method), 0, 1)
+  const curveY = curveStart >= 1 ? curveRaw : THREE.MathUtils.clamp((curveRaw - curveStart) / (1 - curveStart), 0, 1)
   const { min, max } = slot.range
   // Linear extension past the curve's own ceiling -- added 2026-10-01,
   // same fix. Once tRaw exceeds 1 (rawMeters past the Reference
