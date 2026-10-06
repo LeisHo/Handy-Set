@@ -5977,6 +5977,20 @@
             window.prompt('Copy:', text);
         }
     }
+    // EXPORT (2026-10-06, direct request): the same JSON Copy Settings puts on the clipboard, downloaded as a file instead
+    // (captureFullDevPanelState() is the one shared capture call).
+    function exportDevPanelSettings() {
+        const text = JSON.stringify(captureFullDevPanelState(), null, 2);
+        const blob = new Blob([text], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'dev-panel-settings.json';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+    }
     // Flashes the HEADER Sync button itself (devHeaderSyncBtn) with a
     // temporary checkmark/X and tooltip - ported from Clicko (2026-09-19,
     // "for the save button on the top panel, shwo some sort of indication
