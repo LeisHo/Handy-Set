@@ -173,6 +173,7 @@
     "sliderPhoneDisplaceZuptAccelThresholdMps2": 0.6,
     "sliderPhoneDisplaceZuptDwellMs": 150,
     "sliderPhoneDisplaceVelSnapMps": 0.15,
+    "sliderPhoneDisplaceQuietVelBleedMs": 400,
     "sliderPhoneDisplaceBiasInnovationClampMps2": 0.1,
     "textPhoneDisplaceRangeX": "{\"min\":0,\"max\":29}",
     "textPhoneDisplaceCurveX": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"monotone\"}",
@@ -286,7 +287,7 @@
   },
   "layout": {
     "left": 35,
-    "top": 41,
+    "top": 30,
     "width": 350,
     "height": 575
   },
@@ -2443,6 +2444,10 @@
                       {
                         "type": "row",
                         "key": "sliderPhoneDisplaceBiasInnovationClampMps2"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderPhoneDisplaceQuietVelBleedMs"
                       }
                     ],
                     "rowKeys": [
@@ -2475,7 +2480,8 @@
                       "sliderPhoneDisplaceZuptAccelThresholdMps2",
                       "sliderPhoneDisplaceZuptDwellMs",
                       "sliderPhoneDisplaceVelSnapMps",
-                      "sliderPhoneDisplaceBiasInnovationClampMps2"
+                      "sliderPhoneDisplaceBiasInnovationClampMps2",
+                      "sliderPhoneDisplaceQuietVelBleedMs"
                     ],
                     "subgroups": []
                   }
@@ -2708,6 +2714,10 @@
                     {
                       "type": "row",
                       "key": "sliderPhoneDisplaceBiasInnovationClampMps2"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderPhoneDisplaceQuietVelBleedMs"
                     }
                   ],
                   "rowKeys": [
@@ -2740,7 +2750,8 @@
                     "sliderPhoneDisplaceZuptAccelThresholdMps2",
                     "sliderPhoneDisplaceZuptDwellMs",
                     "sliderPhoneDisplaceVelSnapMps",
-                    "sliderPhoneDisplaceBiasInnovationClampMps2"
+                    "sliderPhoneDisplaceBiasInnovationClampMps2",
+                    "sliderPhoneDisplaceQuietVelBleedMs"
                   ],
                   "subgroups": []
                 }
@@ -3129,6 +3140,10 @@
                     {
                       "type": "row",
                       "key": "sliderPhoneDisplaceBiasInnovationClampMps2"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderPhoneDisplaceQuietVelBleedMs"
                     }
                   ],
                   "rowKeys": [
@@ -3161,7 +3176,8 @@
                     "sliderPhoneDisplaceZuptAccelThresholdMps2",
                     "sliderPhoneDisplaceZuptDwellMs",
                     "sliderPhoneDisplaceVelSnapMps",
-                    "sliderPhoneDisplaceBiasInnovationClampMps2"
+                    "sliderPhoneDisplaceBiasInnovationClampMps2",
+                    "sliderPhoneDisplaceQuietVelBleedMs"
                   ],
                   "subgroups": []
                 }
@@ -3394,6 +3410,10 @@
                   {
                     "type": "row",
                     "key": "sliderPhoneDisplaceBiasInnovationClampMps2"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderPhoneDisplaceQuietVelBleedMs"
                   }
                 ],
                 "rowKeys": [
@@ -3426,7 +3446,8 @@
                   "sliderPhoneDisplaceZuptAccelThresholdMps2",
                   "sliderPhoneDisplaceZuptDwellMs",
                   "sliderPhoneDisplaceVelSnapMps",
-                  "sliderPhoneDisplaceBiasInnovationClampMps2"
+                  "sliderPhoneDisplaceBiasInnovationClampMps2",
+                  "sliderPhoneDisplaceQuietVelBleedMs"
                 ],
                 "subgroups": []
               }
@@ -11902,7 +11923,7 @@
     "desktop:TABS": true,
     "desktop:BUTTONS": true,
     "desktop:Hotkeys": true,
-    "desktop:Debug": false,
+    "desktop:Debug": true,
     "desktop:Object Axes": true,
     "desktop:Settings": true,
     "desktop:Mouse Log": true,
