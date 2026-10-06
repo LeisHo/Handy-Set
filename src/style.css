@@ -939,10 +939,17 @@ html, body {
        attachment changes needed. */
     .dev-group-cascade-checkbox {
         position: absolute;
-        top: 50%;
+        /* Was top:50% + translateY(-50%) — relative to .dev-section's
+           OWN total height (title + full expanded body, its real
+           positioned ancestor), which only happened to look centered
+           for a COLLAPSED group; expanded, or with a wrapped multi-line
+           title, it drifted away from the title bar entirely. Fixed
+           2026-09-28 (direct report: "keep the 'Show in Mobile'
+           checkbox in line with the dock button and lock icon") to use
+           the same small fixed top-offset those 2 already use instead. */
+        top: 5px;
         right: 52px;
-        transform: translateY(-50%);
-        accent-color: var(--dev-accent-color-3, #7ec8e3);
+        accent-color: var(--dev-accent-color, #0ff);
         cursor: pointer;
         z-index: 1;
     }
@@ -1033,13 +1040,39 @@ html, body {
         font-family: var(--dev-panel-font-family, monospace);
         font-size: calc(var(--dev-value-font-size-px, 10) * 1px); text-align: right; padding: 0;
     }
-    /* Slider min/max bound labels — click-to-type (re-synced 2026-09-28),
-       same interaction language as .dev-value-editable above but visually
-       dimmer (opacity 0.6) since these are the track's own bounds, not
-       the live value. */
-    .dev-slider-bound { font-size: 9px; opacity: 0.6; flex-shrink: 0; }
+    /* Slider min/max bound labels — click-to-type per direct request
+       2026-09-28, same interaction language as .dev-value-editable
+       above but visually dimmer (opacity 0.6) since these are the
+       track's own bounds, not the live value. */
+    /* The min label, slider, and max label are one non-splitting unit
+       (see .dev-slider-track-group) — direct report 2026-09-28: on a
+       narrow panel, the min label used to stay on the label's own line
+       while the slider (and max label) wrapped to the next, since each
+       was its own separate flex item free to wrap independently. */
+    .dev-slider-track-group { display: flex; align-items: center; gap: 4px; flex: 1; min-width: 150px; }
+    .dev-slider-bound { font-size: calc(var(--dev-value-font-size-px, 10) * 1px); opacity: 0.6; flex-shrink: 0; }
     .dev-slider-bound-editable { cursor: text; }
     .dev-slider-bound-editable:hover { outline: 1px solid var(--dev-accent-color, #0ff); opacity: 1; }
+    /* Standalone action buttons (CLAUDE.md §12n) previously had NO
+       styling at all — plain unstyled browser buttons. Matches the
+       template's own established button visual language (same as
+       .dev-buttons/.dev-list-picker-actions buttons and the header icon
+       buttons) per direct report 2026-09-28 ("Action buttons are ugly"),
+       but sized to its own content rather than stretched/fixed-width
+       like those. */
+    .dev-action-button {
+        background: var(--dev-button-color, #3a3a4a);
+        color: var(--dev-panel-button-text-color, #fff);
+        border: none;
+        border-radius: 3px;
+        min-height: calc(var(--dev-button-height-px, 22) * 1px);
+        padding: 2px 12px;
+        font-family: var(--dev-panel-font-family, monospace);
+        font-size: calc(var(--dev-button-text-font-size-px, 10) * 1px);
+        letter-spacing: calc(var(--dev-button-text-letter-spacing-px, 0) * 1px);
+        cursor: pointer;
+    }
+    .dev-action-button:hover { filter: brightness(1.3); }
     .dev-text-input {
         width: 52px; background: #000; color: var(--dev-accent-color, #0ff);
         border: 1px solid var(--dev-accent-color, #0ff);
@@ -1090,6 +1123,15 @@ html, body {
        dev-row/dev-section visual language (not a separately-themed
        widget) — see [JS-15] for the control type itself. */
     .dev-list-picker-row-container { width: 100%; }
+    /* Forces this block onto its own line below the label, same
+       reasoning as .dev-curve-editor-body/.dev-range-bar-body — direct
+       report 2026-09-28. */
+    .dev-list-picker-body { flex-basis: 100%; width: 100%; display: flex; flex-direction: column; align-items: stretch; }
+    /* Export Selected + Import never split across a line wrap — as ONE
+       flex item of .dev-list-picker-actions, this whole group wraps
+       together or not at all. */
+    .dev-list-picker-io-group { display: flex; gap: 4px; flex: 1 1 auto; }
+    .dev-list-picker-io-group button { flex: 1 1 auto; }
     .dev-list-picker {
         display: flex;
         flex-direction: column;
@@ -1180,8 +1222,17 @@ html, body {
         margin-top: 6px;
         touch-action: none;
         cursor: crosshair;
+        /* Stretches to the panel's own full width, direct request
+           2026-09-28 ("make the curve editor reach the right edge of
+           the dev panel... it sizes with the panel") — height stays a
+           fixed, readable graph height regardless of panel width. */
+        width: 100%;
+        height: 120px;
+        display: block;
     }
     .dev-curve-editor-caption { font-size: 10px; opacity: 0.7; margin-top: 3px; text-align: center; }
+    .dev-curve-editor-opacity-row { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: 10px; }
+    .dev-curve-editor-opacity-row .dev-slider { flex: 1; height: 14px; }
 
     /* ============================================================
        [CSS-13] RANGE BAR (MIN/MAX SLIDER) CONTROL TYPE

@@ -234,6 +234,19 @@
     function setupDevGroupSelection() {
         devPanel.addEventListener('click', (e) => {
             if (!e.shiftKey && !devGroupSelectionArmed) return;
+            // A shift-click INSIDE a list-picker's own items (.dev-lp-row)
+            // is that list-picker's OWN internal multi-select (range-
+            // select across its saved items, entry.multiSelected) — a
+            // different, more specific meaning than "select this whole
+            // control to fold into a new group." Bail out here so the
+            // click reaches the list-picker's own row listener instead of
+            // being hijacked by this outer, panel-wide selection system —
+            // confirmed live 2026-09-28 as a real, pre-existing bug: this
+            // capture-phase listener always intercepted a list-picker's
+            // own shift-click range-select first, since the list-picker's
+            // own outer container carries .dev-row too (closest('.dev-row')
+            // matched the WHOLE control, not the individual item).
+            if (e.target.closest('.dev-lp-row')) return;
             const titleEl = e.target.closest('.dev-section-title');
             const target = titleEl ? titleEl.closest('.dev-section') : e.target.closest('.dev-row');
             if (!target) return;
@@ -1274,9 +1287,33 @@
         devUndoGestureActive = false;
         if (devUndoGestureTimer) { clearTimeout(devUndoGestureTimer); devUndoGestureTimer = null; }
     }
+    // Direct request 2026-10-06 ("Scrolling doesnt count"): a pointerdown
+    // whose target is EXACTLY one of these generic wrapper elements (not
+    // a more specific descendant) is "the empty space you'd grab to
+    // scroll the panel by dragging" — never a real interaction. Checking
+    // for an EXACT match (not .closest()) is what makes this robust
+    // against every current and future control type without having to
+    // enumerate them: a button, input, drag handle, lock icon, curve-
+    // editor SVG, etc. is always a MORE SPECIFIC target than its own
+    // containing row/section/scroll-area, so it never matches this list
+    // and always still triggers a snapshot as before.
+    function isDevUndoScrollOnlyTarget(el) {
+        if (el === devPanel) return true;
+        if (!el.classList) return false;
+        return el.classList.contains('dev-panel-scroll-content')
+            || el.classList.contains('dev-section-content')
+            || el.classList.contains('dev-row')
+            || el.classList.contains('dev-section')
+            || el.classList.contains('dev-header-buttons')
+            || el.classList.contains('dev-buttons')
+            || el.classList.contains('dev-list-picker')
+            || el.classList.contains('dev-lp-group-body')
+            || el.classList.contains('dev-lp-ungrouped-body');
+    }
     function setupDevPanelUndo() {
         devPanel.addEventListener('pointerdown', (e) => {
             if (devUndoGestureActive) return;
+            if (isDevUndoScrollOnlyTarget(e.target)) return;
             // While Delete Group/Setting is armed, the very next click
             // either deletes something (which pushes its own precise
             // pushDevDeleteUndoEntry() instead) or is refused/disarms with
@@ -2457,8 +2494,27 @@
         icon.addEventListener('click', (e) => {
             e.stopPropagation();
             const k = getSectionKey(titleEl);
-            if (lockedGroups.has(k)) { lockedGroups.delete(k); icon.textContent = '🔓'; icon.title = 'Unlocked - click to lock'; icon.classList.remove('locked'); }
-            else { lockedGroups.add(k); icon.textContent = '🔒'; icon.title = 'Locked - click to unlock'; icon.classList.add('locked'); }
+            const nowLocked = !lockedGroups.has(k);
+            // Cascades to every nested subgroup, direct request 2026-10-06
+            // ("when i lock a group, all subgroups gets locked as well.
+            // And vice versa to unlock") — walks every descendant
+            // .dev-section (any depth) and applies the SAME lock state to
+            // each, keeping lockedGroups and every icon's own display in
+            // sync, not just the group that was actually clicked.
+            section.querySelectorAll('.dev-section').forEach(subSection => {
+                const subTitle = subSection.querySelector(':scope > .dev-section-title');
+                if (!subTitle) return;
+                const subKey = getSectionKey(subTitle);
+                const subIcon = subSection.querySelector(':scope > .dev-group-lock-icon');
+                if (nowLocked) lockedGroups.add(subKey); else lockedGroups.delete(subKey);
+                if (subIcon) {
+                    subIcon.textContent = nowLocked ? '🔒' : '🔓';
+                    subIcon.title = nowLocked ? 'Locked - click to unlock' : 'Unlocked - click to lock';
+                    subIcon.classList.toggle('locked', nowLocked);
+                }
+            });
+            if (nowLocked) { lockedGroups.add(k); icon.textContent = '🔒'; icon.title = 'Locked - click to unlock'; icon.classList.add('locked'); }
+            else { lockedGroups.delete(k); icon.textContent = '🔓'; icon.title = 'Unlocked - click to lock'; icon.classList.remove('locked'); }
         });
         // pointerdown also needs stopping - setupDragReorder() listens at
         // the document level, and the icon visually overlaps the title bar
@@ -3092,16 +3148,26 @@
         label.className = 'dev-label';
         label.textContent = ctrl.label;
         row.appendChild(label);
-        // Editable min/max bound labels at each end of the track
-        // (re-synced 2026-09-28) — same click-to-type interaction as the
-        // value readout below (makeDevSliderBoundsEditable()), but
-        // targets the slider's own min/max instead of its current value.
+        // Editable min/max bound labels at each end of the track, per
+        // direct request 2026-09-28 ("provide the min max numbers at
+        // their respective ends, and allow me to click to edit these 2
+        // values") — same click-to-type interaction as the value readout
+        // below (makeDevSliderBoundsEditable()), but targets the
+        // slider's own min/max instead of its current value. Wrapped
+        // together with the slider itself in one non-splitting flex
+        // group (.dev-slider-track-group) — direct report 2026-09-28: on
+        // a narrow panel, the min label used to be its own separate flex
+        // item, free to stay on the label's line while the slider (and
+        // max label) wrapped to the next line on their own.
+        const trackGroup = document.createElement('span');
+        trackGroup.className = 'dev-slider-track-group';
+        row.appendChild(trackGroup);
         const minLabel = document.createElement('span');
         minLabel.className = 'dev-slider-bound dev-slider-bound-editable';
         minLabel.dataset.sliderId = ctrl.id;
         minLabel.dataset.bound = 'min';
         minLabel.textContent = ctrl.min;
-        row.appendChild(minLabel);
+        trackGroup.appendChild(minLabel);
         const input = document.createElement('input');
         input.type = 'range';
         input.className = 'dev-slider';
@@ -3110,13 +3176,13 @@
         input.max = ctrl.max;
         input.step = ctrl.step;
         input.value = ctrl.value;
-        row.appendChild(input);
+        trackGroup.appendChild(input);
         const maxLabel = document.createElement('span');
         maxLabel.className = 'dev-slider-bound dev-slider-bound-editable';
         maxLabel.dataset.sliderId = ctrl.id;
         maxLabel.dataset.bound = 'max';
         maxLabel.textContent = ctrl.max;
-        row.appendChild(maxLabel);
+        trackGroup.appendChild(maxLabel);
         const value = document.createElement('span');
         // CORRECTED 2026-09-27 -- re-synced from the canonical
         // .claude/TEMPLATE_DEV_PANEL.html (this project's own copy had
@@ -3195,15 +3261,20 @@
         row.className = 'dev-row';
         const wrapLabel = document.createElement('label');
         wrapLabel.style.cssText = 'display:flex; align-items:center; gap:6px; cursor:pointer;';
-        const input = document.createElement('input');
-        input.type = 'checkbox';
-        input.id = ctrl.id;
-        wrapLabel.appendChild(input);
+        // Label BEFORE the input — direct report 2026-09-28 ("you have
+        // the checkbox left of the word 'Checkbox:' which doesnt match
+        // the rest of the settings"): every other control type renders
+        // "Label: <input>" (slider/color/select all put the descriptive
+        // label first); this used to be the one exception.
         const span = document.createElement('span');
         span.className = 'dev-label';
         span.style.minWidth = 'auto';
         span.textContent = ctrl.label;
         wrapLabel.appendChild(span);
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        input.id = ctrl.id;
+        wrapLabel.appendChild(input);
         row.appendChild(wrapLabel);
         return row;
     }
@@ -3574,12 +3645,21 @@
         ctrl.skipDeviceCheckbox = true; // a saved-preset list is never per-device
         const row = document.createElement('div');
         row.className = 'dev-row dev-list-picker-row-container';
-        row.style.flexDirection = 'column';
-        row.style.alignItems = 'stretch';
         const label = document.createElement('span');
         label.className = 'dev-label';
         label.textContent = ctrl.label;
         row.appendChild(label);
+
+        // Everything below lives in its own full-width block that wraps
+        // onto its own line beneath the label — same fix as the curve
+        // editor/range-bar's own bodyWrap, direct report 2026-09-28
+        // ("List Picker title should be in-line with the drag handle,
+        // matching regular slider or checkbox settings"): the old
+        // column-direction `row` itself pushed the auto-injected row-
+        // drag-handle above the label instead of beside it.
+        const bodyWrap = document.createElement('div');
+        bodyWrap.className = 'dev-list-picker-body';
+        row.appendChild(bodyWrap);
 
         const listEl = document.createElement('div');
         listEl.className = 'dev-list-picker';
@@ -3594,11 +3674,20 @@
         const addGroupBtn = mkBtn('+ Group');
         btnRow.append(saveBtn, overwriteBtn, useBtn, renameBtn, deleteBtn, addGroupBtn);
         let exportBtn = null, importBtn = null;
-        if (ctrl.exportable) { exportBtn = mkBtn('Export Selected'); btnRow.appendChild(exportBtn); }
-        if (ctrl.importable) { importBtn = mkBtn('Import'); btnRow.appendChild(importBtn); }
+        // Export/Import wrapped together in their own non-splitting
+        // group (as ONE flex item of btnRow) — direct report 2026-09-28
+        // ("when you flow to the next line, always keep import and
+        // export together").
+        if (ctrl.exportable || ctrl.importable) {
+            const ioGroup = document.createElement('span');
+            ioGroup.className = 'dev-list-picker-io-group';
+            if (ctrl.exportable) { exportBtn = mkBtn('Export Selected'); ioGroup.appendChild(exportBtn); }
+            if (ctrl.importable) { importBtn = mkBtn('Import'); ioGroup.appendChild(importBtn); }
+            btnRow.appendChild(ioGroup);
+        }
 
-        row.appendChild(listEl);
-        row.appendChild(btnRow);
+        bodyWrap.appendChild(listEl);
+        bodyWrap.appendChild(btnRow);
 
         // Hidden input carries this control's serialized state so it
         // rides the generic el.value-based Copy/Save/Reset/Undo pipeline
@@ -3774,6 +3863,15 @@
     const CURVE_MAX_POINTS_DEFAULT = 5;
     const CURVE_HIT_RADIUS_PX_DEFAULT = 16; // vs. the 5px visual dot
     const CURVE_HANDLE_REMOVE_THRESHOLD_PX = 6;
+    // Add/delete gestures, direct request 2026-09-28: desktop uses
+    // double-click (background) to add and right-click (a point) to
+    // delete; touch has no right-click, so mobile uses double-tap to add
+    // and triple-tap (a point) to delete instead. CURVE_TAP_WINDOW_MS is
+    // the max gap between taps to still count as the same sequence —
+    // matches typical OS double-tap timing, a judgment call, not a
+    // measurement.
+    const CURVE_TAP_WINDOW_MS = 350;
+    const CURVE_BG_OPACITY_DEFAULT = 0.15;
     function curveCatmullRomY(y0, y1, y2, y3, t) {
         const t2 = t * t, t3 = t2 * t;
         return 0.5 * ((2 * y1) + (-y0 + y2) * t + (2 * y0 - 5 * y1 + 4 * y2 - y3) * t2 + (-y0 + 3 * y1 - 3 * y2 + y3) * t3);
@@ -4010,11 +4108,33 @@
         });
         bodyWrap.appendChild(methodSelect);
 
+        // Graph background opacity — direct request 2026-09-28 ("give me
+        // a slider to control the opacity of the curve editor, it looks
+        // a bit transparent right now, I want it to be clear"). Wired
+        // below, once `bgOpacity` state exists.
+        const opacityRow = document.createElement('div');
+        opacityRow.className = 'dev-curve-editor-opacity-row';
+        const opacityLabel = document.createElement('span');
+        opacityLabel.textContent = 'Graph Opacity:';
+        const opacitySlider = document.createElement('input');
+        opacitySlider.type = 'range';
+        opacitySlider.className = 'dev-slider';
+        opacitySlider.min = '0'; opacitySlider.max = '1'; opacitySlider.step = '0.01';
+        opacityRow.append(opacityLabel, opacitySlider);
+        bodyWrap.appendChild(opacityRow);
+
+        // W/H are the internal coordinate-space units (viewBox), not the
+        // rendered size — the SVG itself stretches to the panel's full
+        // width via CSS (see .dev-curve-editor-svg), direct request
+        // 2026-09-28 ("make the curve editor reach the right edge of the
+        // dev panel... it sizes with the panel"). preserveAspectRatio
+        // 'none' makes the viewBox truly stretch to fill that box rather
+        // than letterboxing to preserve the original 240:120 ratio.
         const W = 240, H = 120;
         const svgNS = 'http://www.w3.org/2000/svg';
         const svg = document.createElementNS(svgNS, 'svg');
-        svg.setAttribute('width', W); svg.setAttribute('height', H);
         svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+        svg.setAttribute('preserveAspectRatio', 'none');
         svg.classList.add('dev-curve-editor-svg');
         const axisX = document.createElementNS(svgNS, 'line');
         axisX.setAttribute('x1', 0); axisX.setAttribute('y1', H - 1); axisX.setAttribute('x2', W); axisX.setAttribute('y2', H - 1);
@@ -4056,7 +4176,10 @@
         let points = (ctrl.defaultPoints || [{ x: 0, y: 0 }, { x: 1, y: 1 }]).map(p => ({ ...p }));
         let method = ctrl.defaultMethod || 'monotone';
         methodSelect.value = method;
-        hidden.value = JSON.stringify({ points, method });
+        let bgOpacity = ctrl.defaultBgOpacity != null ? ctrl.defaultBgOpacity : CURVE_BG_OPACITY_DEFAULT;
+        opacitySlider.value = String(bgOpacity);
+        svg.style.background = 'rgba(255,255,255,' + bgOpacity + ')';
+        hidden.value = JSON.stringify({ points, method, bgOpacity });
         row.appendChild(hidden);
 
         const maxPoints = ctrl.maxPoints || CURVE_MAX_POINTS_DEFAULT;
@@ -4064,13 +4187,23 @@
 
         const toPx = (p) => ({ x: p.x * W, y: (1 - p.y) * H });
         const clamp01 = (v) => Math.min(1, Math.max(0, v));
-        const fromPx = (px, py) => ({ x: clamp01(px / W), y: clamp01(1 - py / H) });
+        // Divides by the SVG's REAL rendered size (getBoundingClientRect()),
+        // not the fixed W/H viewBox constants — required once the SVG
+        // itself became width-responsive (see its own creation comment
+        // above); every call site already passes CSS-pixel offsets
+        // relative to that same rect, so this makes the conversion
+        // resolution-independent instead of assuming a fixed 240x120
+        // render size.
+        const fromPx = (px, py) => {
+            const rect = svg.getBoundingClientRect();
+            return { x: clamp01(px / (rect.width || W)), y: clamp01(1 - py / (rect.height || H)) };
+        };
         let circles = [];
         let handleEls = [];
 
         function commitPoints() {
             points.sort((a, b) => a.x - b.x);
-            hidden.value = JSON.stringify({ points, method });
+            hidden.value = JSON.stringify({ points, method, bgOpacity });
             // On-demand rendering (2026-09-29) -- this hidden input carries
             // its value via direct polling (curveWidgetResyncs in a host's
             // own main.js), never a dispatched input/change event, so a
@@ -4162,12 +4295,21 @@
                 hit.setAttribute('fill', 'transparent');
                 hit.style.cursor = 'grab';
                 let dragged = false;
+                // Delete via right-click (desktop) or triple-tap (touch —
+                // no right-click gesture exists), per direct request
+                // 2026-09-28. dblclick-to-delete REMOVED — double-click
+                // is now reserved for ADDING a point (see svg's own
+                // dblclick listener below); keeping both would make
+                // double-clicking a point ambiguous between add and
+                // delete.
+                let pointTapCount = 0, pointTapTimer = null;
                 hit.addEventListener('pointerdown', downEv => {
                     if (downEv.altKey) { startHandleDrag(p, i, 'h1', downEv); return; }
                     if (downEv.shiftKey) { startHandleDrag(p, i, 'h2', downEv); return; }
                     downEv.stopPropagation();
                     dragged = false;
                     const isEndpoint = i === 0 || i === points.length - 1;
+                    const pointerType = downEv.pointerType;
                     function onMove(moveEv) {
                         const rect = svg.getBoundingClientRect();
                         if (rect.width <= 0 || rect.height <= 0) return;
@@ -4179,7 +4321,17 @@
                     function onUp() {
                         window.removeEventListener('pointermove', onMove);
                         window.removeEventListener('pointerup', onUp);
-                        if (dragged) commitPoints();
+                        if (dragged) { commitPoints(); return; }
+                        if (pointerType === 'touch') {
+                            pointTapCount++;
+                            clearTimeout(pointTapTimer);
+                            if (pointTapCount >= 3) {
+                                pointTapCount = 0;
+                                deletePointIfRemovable();
+                            } else {
+                                pointTapTimer = setTimeout(() => { pointTapCount = 0; }, CURVE_TAP_WINDOW_MS);
+                            }
+                        }
                     }
                     window.addEventListener('pointermove', onMove);
                     window.addEventListener('pointerup', onUp);
@@ -4191,26 +4343,51 @@
                         commitPoints();
                     }
                 }
-                hit.addEventListener('dblclick', dblEv => { dblEv.stopPropagation(); deletePointIfRemovable(); });
                 hit.addEventListener('contextmenu', ctxEv => { ctxEv.preventDefault(); ctxEv.stopPropagation(); deletePointIfRemovable(); });
                 svg.appendChild(hit);
                 circles.push(hit);
                 const dot = document.createElementNS(svgNS, 'circle');
                 dot.setAttribute('cx', px.x); dot.setAttribute('cy', px.y); dot.setAttribute('r', 5);
-                dot.setAttribute('fill', 'var(--dev-accent-color, #0ff)');
+                // Red, per direct request 2026-09-28 (was the accent
+                // color, blending in with the curve's own line/handles).
+                dot.setAttribute('fill', '#ff3b3b');
                 dot.style.pointerEvents = 'none';
                 svg.appendChild(dot);
                 circles.push(dot);
             });
         }
-        svg.addEventListener('click', clickEv => {
-            if (clickEv.target.tagName === 'circle') return;
+        function tryAddPointAt(clientX, clientY) {
             if (points.length >= maxPoints) return;
             const rect = svg.getBoundingClientRect();
-            const np = fromPx(clickEv.clientX - rect.left, clickEv.clientY - rect.top);
+            const np = fromPx(clientX - rect.left, clientY - rect.top);
             if (np.x <= 0 || np.x >= 1) return;
             points.push(np);
             redraw();
+            commitPoints();
+        }
+        // Add a point: double-click (desktop) or double-tap (touch — the
+        // same reasoning as the point-delete gestures above), per direct
+        // request 2026-09-28. A single click/tap on empty space no
+        // longer adds anything.
+        svg.addEventListener('dblclick', clickEv => {
+            if (clickEv.target.tagName === 'circle') return;
+            tryAddPointAt(clickEv.clientX, clickEv.clientY);
+        });
+        let bgTapCount = 0, bgTapTimer = null;
+        svg.addEventListener('pointerup', upEv => {
+            if (upEv.pointerType !== 'touch' || upEv.target.tagName === 'circle') return;
+            bgTapCount++;
+            clearTimeout(bgTapTimer);
+            if (bgTapCount >= 2) {
+                bgTapCount = 0;
+                tryAddPointAt(upEv.clientX, upEv.clientY);
+            } else {
+                bgTapTimer = setTimeout(() => { bgTapCount = 0; }, CURVE_TAP_WINDOW_MS);
+            }
+        });
+        opacitySlider.addEventListener('input', () => {
+            bgOpacity = parseFloat(opacitySlider.value);
+            svg.style.background = 'rgba(255,255,255,' + bgOpacity + ')';
             commitPoints();
         });
         methodSelect.addEventListener('change', () => {
@@ -4238,6 +4415,11 @@
                     points = parsed.points;
                     method = parsed.method || 'monotone';
                     methodSelect.value = method;
+                    if (typeof parsed.bgOpacity === 'number') {
+                        bgOpacity = parsed.bgOpacity;
+                        opacitySlider.value = String(bgOpacity);
+                        svg.style.background = 'rgba(255,255,255,' + bgOpacity + ')';
+                    }
                     redraw();
                 }
             } catch (e) { /* leave displayed state as-is */ }
@@ -5977,8 +6159,12 @@
             window.prompt('Copy:', text);
         }
     }
-    // EXPORT (2026-10-06, direct request): the same JSON Copy Settings puts on the clipboard, downloaded as a file instead
-    // (captureFullDevPanelState() is the one shared capture call).
+    // Same data as copyDevPanelSettings() (the whole panel's own captured
+    // state) but downloaded as a .json file instead of put on the
+    // clipboard — direct request 2026-10-06, for the Saved Dev Settings
+    // group's own Save/Use/Delete/Set Default row ("provide a new button
+    // export button which is the same as the copy button, but it exports
+    // the settings in a text or json or whatever file").
     function exportDevPanelSettings() {
         const text = JSON.stringify(captureFullDevPanelState(), null, 2);
         const blob = new Blob([text], { type: 'application/json' });
@@ -6841,11 +7027,14 @@
         // triggers the lazy build on its own first press, same as the
         // DEV button's onclick does (see the HTML above).
         document.addEventListener('keydown', (e) => {
+            const activeTag = document.activeElement && document.activeElement.tagName;
+            if (activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT') return;
             if (e.key === 'd' || e.key === 'D') {
-                const activeTag = document.activeElement && document.activeElement.tagName;
-                if (activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT') return;
                 ensureDevPanelBuilt();
                 devPanel.classList.toggle('hidden');
+            }
+            else if (e.key === 'r' || e.key === 'R') {
+                resetDevPanelSettings();
             }
         });
 
