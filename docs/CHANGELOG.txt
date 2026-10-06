@@ -1,3 +1,22 @@
+2026-10-06  -  Displace: Quiet Velocity Bleed -- the gate no longer discards a gentle braking pulse (main.js v=229)
+  - Data: Export All Logs 04:49:27Z (Native Sensor, after the decay/gate/curve fixes). Confirmed working: live decay 0/0, gate 8, curves start at 0,
+    mode nativeSensor; position now HOLDS (04:49:18.4-20.0: PosPreCurve x 0.05 / y -0.18 / z -0.18 and Targets frozen, ZUPT ACTIVE, dwell up
+    to 1333 ms), and the double-tap Displace Reset zeroed position at 04:49:15.6.
+  - Remaining problem (measured): 04:49:22.6-23.4 a ~0.9 m/s^2 X push (ProcAccel x -0.79 -0.99 -0.98 -0.87 -0.86) built Vel X -0.55 m/s; the
+    stop never cancelled it -- Vel X stayed -0.57 .. -0.50 .. -0.37 .. -0.33 with ProcAccel 0.00 while StationaryGate flickered (dwell 67 / 17 /
+    67 ms, never the 150 ms needed), so PosPreCurve X ran 0.05 -> -0.74 m in ~1.6 s and the Target clamped at 29 u (Boundary X CLAMPED).
+  - CAUSE (code, found by reading): the gate (gyro < 8 deg/s AND |a| < 0.6 m/s^2) zeroed ALL input while "quiet" -- including a gentle braking
+    pulse below 0.6 m/s^2. A strong push integrates, a soft stop is discarded, the leftover velocity is never cancelled; the low-speed snap
+    only catches < 0.15 m/s and the ZUPT dwell is reset by wrist wobble.
+  - FIX: while quiet AND the speed is still >= the Low-Speed Velocity Snap, the input is kept (so the stop can cancel the velocity) and the
+    velocity is bled with time constant "Quiet Velocity Bleed" (new slider, default 400 ms, 0 = old behaviour); below the snap speed nothing
+    changes. Same rule in both A/B shadow pipelines. Position is never touched (hold rule unchanged).
+  - TEST (Node, real three, mocked clock): a 0.9 m/s^2 push then a 0.45 m/s^2 stop with the gyro flickering 3 quiet : 1 noisy -- OLD leaves
+    -0.527 m/s and -2.332 m of drift over the 3.5 s replay (reproduces the log); NEW ends at 0.000 m/s and -0.460 m (the real push+stop);
+    a symmetric moving-gyro push/brake and a still phone are unchanged (0.5551 m both; 0.0000 m).
+  - Not device-tested. Other observation, NOT changed: Y/Z gain is ~56-74 u/m (22 cm = 12.8 u), so any real centimetres read large; raise the
+    Reference Distances if wanted.
+
 2026-10-06  -  Displace: curve re-based to start at 0 (main.js v=228) + saved settings corrected
   - Data: two Export All Logs files from the phone (04:17:18Z Native Sensor, 52 Displace lines / 10.2 s; 04:18:08Z World Position,
     84 lines / 16.6 s). Findings (measured): (1) live Position Decay 1.06 /s and Velocity Decay 3.1 /s -- X position went
