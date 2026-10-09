@@ -8412,6 +8412,7 @@ devPanel.js ?v=20, main.js ?v=234. This devPanel.js fix is generic and belongs i
   - Consequence worth knowing: until the live page is RELOADED, its next Sync will write the old scales back again. Same mechanism as every settings edit made outside the page.
 
 --------------------------------------------------------------------------------
+<<<<<<< HEAD
 2026-10-09 -- Rotation / Displace Reset is independent of the Responsive On/Off
 
 Request: "when I turn off responsive rotation or responsive displacement, I want the double tap to reset to still work if turned on."
@@ -8426,6 +8427,76 @@ Responsive Rotation / Displace, so the logic itself was already independent. Thr
     Rotation is off, and onPhoneResponsiveRotationEnabled() keeps that baseline instead of re-baselining (cleared when it is consumed or
     when the checkbox is turned off).
 Not browser-verified (project rule; the gesture needs a real phone).
+=======
+2026-10-09 -- Absolute rotation mode rewritten around the phone's physical axes (ccd8266); IK Rotation Weight slider (af89681) [written by a HANDO session at the user's request]
+  - ABSOLUTE MODE. Report (real phone; X left-right, Y charging port -> camera, Z face -> back): with only Z on, a real Z turn rotated the model about Y; with only Y on, a real Z turn
+    rotated the model about Z; a real Y turn never changed anything; Gyro mode was right. Cause: computePhoneAbsoluteOrientationRawQuat() gated/scaled the three W3C Euler ANGLES (alpha, beta,
+    gamma), which are an intrinsic Z-X'-Y'' chain, not rotations about the phone's own X/Y/Z (and alpha/gamma collapse onto one axis as the phone is held upright: measured axes 0 / 0.71 / 0.98 / 1.00
+    parallel at beta 0 / 45 / 80 / 89.9). Fix: the raw quaternion is now the full ungated orientation; computePhoneAbsoluteOrientationQuat() takes rel = baselineInverse * current (the turn since
+    the baseline, about the baseline's own body axes), splits it into degrees about the phone's X / Y / Z, applies each axis's On/Off and Scale, and feeds the result through GYRO's axis mapping
+    (physical X and Z = the 'tilt' axis x / y components, physical Y = spin about PHONE_GYRO_SPIN_LOCAL_AXIS, Y negated) -- Gyro's mapping was verified on the real phone over many rounds.
+    Still memoryless / drift-free; the baseline is now the unscaled orientation (it used to depend on which axes were on at the moment of reset).
+    MEASURED (the real functions from main.js run in the page with its THREE, simulated real turns about each phone axis, starting flat / upright / tilted, all On/Off combinations = 36 cases):
+    real X +20 -> model 20 deg about local X, real Z +20 -> 20 deg about local Y (the model's visual Z), real Y +20 -> 20 deg about local -Z (visual Y); an axis switched off does nothing;
+    Scale 0.8 -> 16 deg; a negative Scale reverses that axis. NOT tested on a real phone. If an axis moves the wrong way on a given phone, make its Scale negative.
+  - IK POSING TWISTING THE HAND. Report: hand right under the phone, fingers spread, targets should be easy, but turning IK on twists hand and arm into an unnatural pose; "maybe the IK is factoring in
+    some rotation we aren't". Checked: (1) not a regression of today's work -- the same state on the code from before my HANDYSET changes (2f51703) gives pair 1 rot 128.9 deg, wrist rotation -42,
+    splay -63, elbow side bend 27; (2) with the newest saved settings and the current code: pos 1.15 / 2.19 / 5.54 u but rot 117.8 / 3.3 / 21.4 deg (pair 1 thumb pad vs phone node), wrist splay -30 -> -63,
+    wrist bend -16 (its limit), wrist rotation -16, forearm twist -18, elbow bend 19; (3) with the orientation term switched off the three pairs all reach 0.00 u and the pose barely moves
+    (wrist bend -15, splay -39, elbow bend -3). So the "rotation" IK is factoring in is each pair's ORIENTATION target (the source node's axes x the pair's local rotation), weighted by the constant
+    IK_ROT_WEIGHT = 8 (position units per radian). The hand-pad node axes and the phone-node axes have no common convention, so one pair can ask for 120-170 deg of twist.
+    Fix: the constant is now cfg.ikRotationWeight, a slider "IK Rotation Weight (x)" (0..20, step 0.5, default 8 = unchanged behaviour) at the top of the IK POSING group; 0 = position only. Included in
+    ikSignature so moving it re-solves. MEASURED with the slider on the same state: 8 -> as before; 1 -> pos 0.72 / 1.10 / 0.61 u, rot 137 / 72 / 52, splay -63; 0 -> pos 0.00 / 0.00 / 0.00 u, rot not matched, natural pose.
+    Not done: a per-pair "match rotation" switch; changing the default (the saved settings have no value for the new slider, so it starts at 8 until it is moved and Synced).
+  - Both pushed from a temporary clean checkout of origin/main (the working tree holds uncommitted glb/blend changes that the user's own re-imports at 05:13-05:14 overwrote upstream).
+
+--------------------------------------------------------------------------------
+2026-10-09 -- IK Influence: HANDO's per-axis / per-finger-set granularity ported (a6af4e6) [written by a HANDO session at the user's request: "port over our IK influence system with the finger granularity etc"]
+  - Source read directly: HANDO src/main.js (IK_INFLUENCE_ROW_KEYS, ikPartsOfKey(), IK_FINGER_DOFS + the twist loop, groupIkInfluencePercentRows(), the legacyKey migration) and its CHANGELOG entries
+    of 2026-10-06. Feature inventory vs this project BEFORE the port: already here -- hierarchical solver, Min / Max "From Base" bars, per-pair Priority, overlap highlight, Saved IK Influence picker,
+    Rotation-at-Base joints. MISSING and now ported: (1) Finger Curl / Finger Twist / Finger Splay as three separate % + Min/Max sets (the old single "Fingers" row now means SPLAY and keeps its key);
+    (2) Pose Offset X / Y / Z, each with its own % + Min/Max (was one row for all three); (3) Whole-Hand Rotation at Base X / Y / Z, each with its own % + Min/Max (was one row);
+    (4) the layout: picker, then every % slider together, then every Min/Max bar, restored after a saved panel order is applied (groupIkInfluenceRows(), only when not already grouped);
+    (5) migration: values saved under the old single ids seed the split rows (migrateIkInfluenceLegacyControls() runs on the loaded controls before they are applied; Offset / Rotation -> X/Y/Z,
+    Fingers -> Finger Curl), and a preset saved before the split seeds the same way in useIkInfluencePreset().
+  - Changes (src/main.js): IK_INFLUENCE_PARTS is now the 15-row table in HANDO's order (Finger Curl, Finger Twist, Finger Splay, Pose Offset X/Y/Z, Rotation at Base X/Y/Z, Wrist Rotation/Splay/Bend,
+    Elbow Bend, Elbow Side Bend, Forearm Twist) with HANDO's defaults (curl 100 %, twist 0 %, splay 100 %, offsets / rotations 0 %, ranges +-200 % / +-100 % / +-100 u / +-360 deg ...); the rows are rendered
+    in two passes (all sliders, then all bars); cfg defaults for the 11 new keys; ikPartsOfKey() maps baseRotation[XYZ] -> Rot<axis>, poseOffset[XYZ] -> Off<axis>, curl keys -> FingerCurl, tip-twist keys ->
+    FingerTwist, everything else (splay) -> Fingers; IK_FINGER_DOFS gained the tip-twist joint per finger.
+  - GAP, deliberately NOT papered over: HANDO twists THREE segments per finger (base / mid / tip = 15 joints). This hand only has the TIP twist slider (FINGER_TIP_TWIST_KEY, 5 joints) and no thumb "base splay"
+    (thumbBaseSplay), so Finger Twist here drives those 5 tip joints only. Adding the base / mid twist sliders is a pose-system port (new pose keys + the bone maths), not an influence-system one -- not done.
+  - MEASURED (preview, the latest saved settings + the models as uploaded 05:13): 15 % sliders in table order, all before the 15 bars, picker first, even though the saved panel order lists the old rows first; the
+    saved legacy values seeded the new rows (Pose Offset X/Y 6 % with range -24..21 from the old Pose Offset row, Rotation Z 0 % / 7..-53 from the old Rotation row, Finger Curl 100 % / -74..49 from the old Fingers row,
+    Splay kept the old key, Twist at its 0 % default); solver isolation with every window widened to +-200 and only ONE row at 100 %: Offset Y moved only poseOffsetY, Offset X only poseOffsetX, Rotation X only
+    baseRotationX, Finger Twist only the 5 tipTwist joints, Finger Curl only the curl joints, Finger Splay only the splay joints, and with Twist at 0 % no twist joint moved; a legacy-style preset (Off 81 / Rot 35 /
+    Fingers with ranges) run through the real useIkInfluencePreset() filled Offset X/Y/Z = 81, Rotation X/Y/Z = 35, Finger Curl from Fingers, Twist at default. No console errors.
+  - Not tested: a real phone / the live site (the migration runs when the remote settings load); Reset / Undo restores (the regroup step only runs after the startup restore); ranges of the saved settings were
+    reseeded as-is (they now govern each axis separately, so check the Pose Offset and Rotation bars after the first load).
+  - Pushed from a temporary clean checkout of origin/main (the working tree still holds uncommitted glb / blend changes).
+
+--------------------------------------------------------------------------------
+2026-10-09 -- Mobile / Landscape "Independent from Desktop" now actually drives the model on a phone, for every wired setting (f698309) [written by a HANDO session at the user's request: "when i select the checkbox next to settings in Desktop, and then make sure the same in Mobile, the model is still dictated by the desktop sliders. I was seeing this in recursive render scale, and phone model offset. make sure all settings work correctly"]
+  - Cause: every control wired through wireSlider / wireCheckbox / wireSelect / wireColor listened only to its DESKTOP element. A Mobile / Landscape row marked independent keeps its value in
+    devPanel.js's own store and its own cloned element (ids like sliderMobilePhoneModelOffsetX), which nothing in main.js read -- so on a phone the app ran on the Desktop value whatever the Mobile tab
+    said. Earlier fixes covered single families only (texture offset / scale via cfg.<key>Mobile, the Phone Displace / Rotation family via PHONE_DEVICE_AWARE_ID).
+  - Fix (src/main.js): the four wire* helpers register their own apply callback in deviceAwareApply (desktop id -> callback taking a plain value). A generic bridge (applyDeviceAwareControl /
+    applyAllDeviceAwareControls) runs that SAME callback (cfg write + side effects such as applyPhoneModelTransform or a render-target rebuild) with the runtime device row's value
+    (getRuntimeDeviceSuffix(): Mobile in portrait, Landscape sideways). The row mirrors Desktop unless independent, so non-independent controls behave as before; nothing is written to the Desktop
+    element, so Sync still saves the Desktop value as the Desktop value. PHONE_DEVICE_AWARE_ID controls are skipped (own bridge). Desktop (non-touch) runtime is unchanged; going back to a desktop
+    runtime / orientation puts the Desktop (or other device) value back.
+  - When it re-applies: after the startup settings restore (700 ms and 3 s), delegated on every input / change of a Desktop or device row, after clicks inside the dev panel (Sync / Reset / Undo /
+    checkbox clicks, 150 ms), on resize / orientationchange (300 ms), and FORCED after anything that rewrites cfg without events -- syncPairsFromCfg() (Set-as-Default pose / camera / lighting /
+    toon presets and preset Use) and runHandFirstLoadTail() -- since those silently put the Desktop value back.
+  - Texture offset / scale (wireDeviceSliderMirror): syncDeviceMirrorSlots() now sets cfg.<key>Mobile / <key>Landscape from the device row if it exists, else from Desktop. Before, a value restored
+    from the saved settings never reached cfg (row said -0.01, cfg stayed 0) and a phone with no row kept a hard-coded default instead of following Desktop.
+  - MEASURED (preview, mobile emulation, scratch settings): the generic bridge covered 249 of 302 wired controls (the rest have their own bridge or are dev-panel chrome / debug); startup restore,
+    live edit of a Mobile row, Desktop edit while independent, Landscape revert (resize event dispatched by hand -- the emulator does not fire it) and portrait return all gave the expected values;
+    after the mirror-slot change cfg.screenTextureOffsetXMobile = -0.01 (the saved Mobile row) at startup, Landscape followed Desktop, scale slots with no row followed Desktop. No console errors.
+  - Not covered / caveats: group-title toggles (e.g. RECURSIVE RENDER On / Off, makeDevGroupToggleable) have no Mobile row, so they cannot be device-independent through this mechanism; the Mouse Log
+    debug controls are not bridged; Reset / Undo restores rely on the click-scheduled (150 ms) re-apply; NOT tested on a real phone / the live site. Reload the live page before Syncing so a stale
+    open page does not overwrite the saved settings.
+  - Pushed from a temporary clean checkout of origin/main (the working tree still holds uncommitted glb / blend changes).
+>>>>>>> origin/main
 
 --------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>

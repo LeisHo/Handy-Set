@@ -193,10 +193,16 @@ const cfg = {
   // IK Influence (HANDO's CURRENT system, 2026-10-04 rewrite: one priority slider per existing pose slider + All, each with a hard
   // Min / Max window as a range bar -- see ikInfluence() / solveIkHandPose()). Defaults as in HANDO: whole-hand offset/rotation and the
   // arm start at 0 (locked), fingers and wrist at 100. Range values are JSON strings like every other range-bar in this file.
-  ikInfluenceMaster: 100, ikInfluenceFingers: 100, ikInfluenceOff: 0, ikInfluenceRot: 0,
+  ikRotationWeight: 8, // IK Rotation Weight (x): how strongly the solver matches each pair's ORIENTATION vs its position (0 = position only) -- see solveIkHandPose()
+  // Ported from HANDO 2026-10-09 with its per-axis / per-finger-set granularity: Finger Curl / Finger Twist / Finger Splay (ikInfluenceFingers/ikRangeFingers
+  // keep their keys and now mean SPLAY), Pose Offset X/Y/Z and Whole-Hand Rotation at Base X/Y/Z each have their own % + Min/Max. Table: IK_INFLUENCE_PARTS.
+  ikInfluenceMaster: 100, ikInfluenceFingerCurl: 100, ikInfluenceFingerTwist: 0, ikInfluenceFingers: 100,
+  ikInfluenceOffX: 0, ikInfluenceOffY: 0, ikInfluenceOffZ: 0, ikInfluenceRotX: 0, ikInfluenceRotY: 0, ikInfluenceRotZ: 0,
   ikInfluenceWristRot: 100, ikInfluenceWristSplay: 100, ikInfluenceWristBend: 100,
   ikInfluenceElbowBend: 0, ikInfluenceElbowSideBend: 0, ikInfluenceForearmTwist: 0,
-  ikRangeFingers: '{"min":-200,"max":200}', ikRangeOff: '{"min":-100,"max":100}', ikRangeRot: '{"min":-360,"max":360}',
+  ikRangeFingerCurl: '{"min":-200,"max":200}', ikRangeFingerTwist: '{"min":-100,"max":100}', ikRangeFingers: '{"min":-200,"max":200}',
+  ikRangeOffX: '{"min":-100,"max":100}', ikRangeOffY: '{"min":-100,"max":100}', ikRangeOffZ: '{"min":-100,"max":100}',
+  ikRangeRotX: '{"min":-360,"max":360}', ikRangeRotY: '{"min":-360,"max":360}', ikRangeRotZ: '{"min":-360,"max":360}',
   ikRangeWristRot: '{"min":-360,"max":360}', ikRangeWristSplay: '{"min":-360,"max":360}', ikRangeWristBend: '{"min":-360,"max":360}',
   ikRangeElbowBend: '{"min":-10,"max":150}', ikRangeElbowSideBend: '{"min":-90,"max":90}', ikRangeForearmTwist: '{"min":-90,"max":90}',
   // Field Layout — defaults to a single centered hand (1 row x 1 col);
@@ -3078,11 +3084,15 @@ function onIkNodeRegistryChanged() {
 //     away from the baseline (0 = frozen).
 // The solve is re-run only when a pair, a source node's pose or an influence value changed.
 const IK_PAIR_MAX = 8
+// Curl, splay and TWIST per finger (HANDO's finger granularity, 2026-10-09). HANDO twists three segments per finger (base / mid / tip); this hand only has the TIP twist slider
+// (FINGER_TIP_TWIST_KEY), so 'Finger Twist' here drives those 5 joints. Twist defaults to 0 % influence = frozen at the baseline, i.e. no change until it is raised.
 const IK_FINGER_DOFS = {
-  thumb: [FINGER_CURL_KEY.thumb, FINGER_SPLAY_KEY.thumb], index: [FINGER_CURL_KEY.index, FINGER_SPLAY_KEY.index],
-  middle: [FINGER_CURL_KEY.middle, FINGER_SPLAY_KEY.middle], ring: [FINGER_CURL_KEY.ring, FINGER_SPLAY_KEY.ring],
-  pinky: [FINGER_CURL_KEY.pinky, FINGER_SPLAY_KEY.pinky]
+  thumb: [FINGER_CURL_KEY.thumb, FINGER_SPLAY_KEY.thumb, FINGER_TIP_TWIST_KEY.thumb], index: [FINGER_CURL_KEY.index, FINGER_SPLAY_KEY.index, FINGER_TIP_TWIST_KEY.index],
+  middle: [FINGER_CURL_KEY.middle, FINGER_SPLAY_KEY.middle, FINGER_TIP_TWIST_KEY.middle], ring: [FINGER_CURL_KEY.ring, FINGER_SPLAY_KEY.ring, FINGER_TIP_TWIST_KEY.ring],
+  pinky: [FINGER_CURL_KEY.pinky, FINGER_SPLAY_KEY.pinky, FINGER_TIP_TWIST_KEY.pinky]
 }
+const IK_CURL_KEYS = new Set(Object.values(FINGER_CURL_KEY))
+const IK_TWIST_KEYS = new Set(Object.values(FINGER_TIP_TWIST_KEY))
 // 2026-10-09 (user request, as in HANDO): the solver drives Whole-Hand Rotation AT BASE (baseRotationX/Y/Z, pivot = the arm-base bone, about the hand
 // mesh's own axes) instead of Whole-Hand Rotation (modelRotX/Y/Z). The 'Rot' influence row keeps its keys and now controls these three.
 const IK_GLOBAL_DOFS = ['baseRotationX', 'baseRotationY', 'baseRotationZ', 'poseOffsetX', 'poseOffsetY', 'poseOffsetZ', 'wristBend', 'wristSplay', 'wristRotation']
@@ -3090,9 +3100,15 @@ const IK_GLOBAL_DOFS = ['baseRotationX', 'baseRotationY', 'baseRotationZ', 'pose
 const IK_ARM_DOFS = ['elbowBend', 'elbowSideBend', 'forearmTwist']
 // One entry per influence slider (id = 'slider' + Key) and per Min / Max range bar (cfg key ikRange<Part>).
 const IK_INFLUENCE_PARTS = [
-  ['Fingers', 'Fingers (%)', 'Fingers Min / Max From Base (%)', -200, 200, 1, 100],
-  ['Off', 'Pose Offset (%)', 'Pose Offset Min / Max From Base (Units)', -100, 100, 0.5, 0],
-  ['Rot', 'Whole-Hand Rotation at Base (%)', 'Whole-Hand Rotation at Base Min / Max From Base (Deg)', -360, 360, 1, 0],
+  ['FingerCurl', 'Finger Curl (%)', 'Finger Curl Min / Max From Base (%)', -200, 200, 1, 100],
+  ['FingerTwist', 'Finger Twist (%)', 'Finger Twist Min / Max From Base (%)', -100, 100, 1, 0],
+  ['Fingers', 'Finger Splay (%)', 'Finger Splay Min / Max From Base (%)', -200, 200, 1, 100],
+  ['OffX', 'Pose Offset X (%)', 'Pose Offset X Min / Max From Base (Units)', -100, 100, 0.5, 0],
+  ['OffY', 'Pose Offset Y (%)', 'Pose Offset Y Min / Max From Base (Units)', -100, 100, 0.5, 0],
+  ['OffZ', 'Pose Offset Z (%)', 'Pose Offset Z Min / Max From Base (Units)', -100, 100, 0.5, 0],
+  ['RotX', 'Whole-Hand Rotation at Base X (%)', 'Whole-Hand Rotation at Base X Min / Max From Base (Deg)', -360, 360, 1, 0],
+  ['RotY', 'Whole-Hand Rotation at Base Y (%)', 'Whole-Hand Rotation at Base Y Min / Max From Base (Deg)', -360, 360, 1, 0],
+  ['RotZ', 'Whole-Hand Rotation at Base Z (%)', 'Whole-Hand Rotation at Base Z Min / Max From Base (Deg)', -360, 360, 1, 0],
   ['WristRot', 'Wrist Rotation (%)', 'Wrist Rotation Min / Max From Base (Deg)', -360, 360, 1, 100],
   ['WristSplay', 'Wrist Splay (%)', 'Wrist Splay Min / Max From Base (Deg)', -360, 360, 1, 100],
   ['WristBend', 'Wrist Bend (%)', 'Wrist Bend Min / Max From Base (Deg)', -360, 360, 1, 100],
@@ -3102,7 +3118,10 @@ const IK_INFLUENCE_PARTS = [
 ]
 const IK_INFLUENCE_ROW_KEYS = ['ikInfluenceMaster'].concat(...IK_INFLUENCE_PARTS.map(([part]) => ['ikInfluence' + part, 'ikRange' + part]))
 const IK_POS_WEIGHT = 1
-const IK_ROT_WEIGHT = 8 // position-units of error per radian of orientation error
+// Position-units of error per radian of orientation error: now cfg.ikRotationWeight (default 8, the previous constant) -- 2026-10-09, direct report: with the hand
+// right under the phone and every target a few units away, IK Posing twisted the hand/arm out of shape because it was also matching each pair's ORIENTATION (a
+// 118-129 deg error on one pair at weight 8). MEASURED on the user's saved state: weight 8 -> pos 1.2 / 2.2 / 5.5 u but rot 118 / 3 / 21 deg with wrist splay -63, wrist
+// rotation -16..-42, forearm twist -18; weight 0 -> pos 0.00 u on all three pairs with wrist bend -15, splay -39, elbow bend -3. Slider in the IK POSING group.
 let ikBasePose = null
 let ikLastSignature = null
 let ikLastSolved = null // key -> value from the previous solve (warm start)
@@ -3127,11 +3146,13 @@ function toggleIkSolverPause(btn) {
 // fraction of its slider range: 0 = frozen at the baseline, 1 = the whole slider range.
 const IK_INFLUENCE_PART = { wristRotation: 'WristRot', wristSplay: 'WristSplay', wristBend: 'WristBend', elbowBend: 'ElbowBend', elbowSideBend: 'ElbowSideBend', forearmTwist: 'ForearmTwist' }
 function ikPartsOfKey(k) {
-  if (/^baseRotation[XYZ]$/.test(k)) return ['Rot']
-  if (k.startsWith('poseOffset')) return ['Off']
+  if (/^baseRotation[XYZ]$/.test(k)) return ['Rot' + k.slice(-1)] // each rotation axis has its own influence + Min / Max (HANDO, 2026-10-06)
+  if (/^poseOffset[XYZ]$/.test(k)) return ['Off' + k.slice(-1)] // each offset axis has its own influence + Min / Max (HANDO, 2026-10-06)
   if (IK_INFLUENCE_PART[k]) return [IK_INFLUENCE_PART[k]]
   if (IK_ARM_DOFS.includes(k)) return [] // no slider: never driven
-  return ['Fingers']
+  if (IK_CURL_KEYS.has(k)) return ['FingerCurl']
+  if (IK_TWIST_KEYS.has(k)) return ['FingerTwist']
+  return ['Fingers'] // finger splay
 }
 function ikInfluence(k) {
   const pct = (v) => Math.min(1, Math.max(0, (Number(v) || 0) / 100))
@@ -3220,7 +3241,7 @@ function getActiveIkPairs() {
   return out
 }
 function ikSignature(pairs) {
-  return IK_PAIR_MAX + '#' + IK_INFLUENCE_ROW_KEYS.map((k) => cfg[k]).join(',') + '#' + pairs.map((p) => {
+  return IK_PAIR_MAX + '#' + cfg.ikRotationWeight + '#' + IK_INFLUENCE_ROW_KEYS.map((k) => cfg[k]).join(',') + '#' + pairs.map((p) => {
     p.src.object3d.updateWorldMatrix(true, false)
     return [p.i, p.tgt.id, p.src.id, p.displace, p.priority, p.world, p.qOff.x.toFixed(4), p.qOff.y.toFixed(4), p.qOff.z.toFixed(4),
       p.src.object3d.matrixWorld.elements.map((e) => Math.round(e * 1000)).join(',')].join(':')
@@ -3288,7 +3309,8 @@ function solveIkHandPose(pairs) {
       const ang = 2 * Math.acos(Math.min(1, qErr.w))
       const s = Math.sqrt(1 - qErr.w * qErr.w)
       const k = s < 1e-6 ? 2 : ang / s
-      r.push(qErr.x * k * IK_ROT_WEIGHT, qErr.y * k * IK_ROT_WEIGHT, qErr.z * k * IK_ROT_WEIGHT)
+      const rotW = cfg.ikRotationWeight
+      r.push(qErr.x * k * rotW, qErr.y * k * rotW, qErr.z * k * rotW)
       // Pair Priority: this pair's share of the total error (the REPORTED errors in the status stay unweighted).
       if (p.priority !== 1) for (let j = first; j < r.length; j++) r[j] *= p.priority
     })
@@ -3604,6 +3626,42 @@ const IK_INFLUENCE_DEFAULTS = (() => {
   IK_INFLUENCE_PARTS.forEach(([part, , , tMin, tMax, , def]) => { d['ikInfluence' + part] = def; d['ikRange' + part] = JSON.stringify({ min: tMin, max: tMax }) })
   return d
 })()
+// Values saved before the split live under the old single keys: Pose Offset / Whole-Hand Rotation (one % + one Min/Max for all 3 axes) and Fingers (one set for curl +
+// splay). Each new key seeds from its old one when nothing is saved for it yet, so no tuned value is lost; Finger Splay keeps the old 'Fingers' key itself.
+const IK_INFLUENCE_LEGACY = {
+  ikInfluenceOffX: 'ikInfluenceOff', ikInfluenceOffY: 'ikInfluenceOff', ikInfluenceOffZ: 'ikInfluenceOff',
+  ikRangeOffX: 'ikRangeOff', ikRangeOffY: 'ikRangeOff', ikRangeOffZ: 'ikRangeOff',
+  ikInfluenceRotX: 'ikInfluenceRot', ikInfluenceRotY: 'ikInfluenceRot', ikInfluenceRotZ: 'ikInfluenceRot',
+  ikRangeRotX: 'ikRangeRot', ikRangeRotY: 'ikRangeRot', ikRangeRotZ: 'ikRangeRot',
+  ikInfluenceFingerCurl: 'ikInfluenceFingers', ikRangeFingerCurl: 'ikRangeFingers'
+}
+const ikControlId = (k) => (k.startsWith('ikRange') ? 'text' : 'slider') + ikCap(k)
+// Mutates a loaded settings `controls` map (by control id) BEFORE it is applied to the panel.
+function migrateIkInfluenceLegacyControls(controls) {
+  if (!controls || typeof controls !== 'object') return
+  Object.entries(IK_INFLUENCE_LEGACY).forEach(([k, old]) => {
+    const id = ikControlId(k), oldId = ikControlId(old)
+    if (!(id in controls) && (oldId in controls)) controls[id] = controls[oldId]
+  })
+}
+// Layout as in HANDO's groupIkInfluencePercentRows(): the picker, then every % slider together, then every Min / Max bar. A saved panel order (applySectionOrder() on a
+// restore) keeps rows that existed before in their old places and parks the new ones at the end, so after a restore this puts them in order -- ONLY when they are not already
+// all-sliders-then-all-bars, so a layout the user dragged into that shape stays as they left it.
+function groupIkInfluenceRows() {
+  const sliderIds = ['sliderIkInfluenceMaster'].concat(IK_INFLUENCE_PARTS.map(([part]) => 'slider' + ikCap('ikInfluence' + part)))
+  const barIds = IK_INFLUENCE_PARTS.map(([part]) => 'text' + ikCap('ikRange' + part))
+  const rowOf = (id) => { const e = document.getElementById(id); return e && e.closest('.dev-row') }
+  const first = rowOf('sliderIkInfluenceMaster')
+  const body = first && first.parentElement
+  if (!body) return
+  const sliderRows = sliderIds.map(rowOf), barRows = barIds.map(rowOf)
+  if (sliderRows.some((r) => !r || r.parentElement !== body) || barRows.some((r) => !r || r.parentElement !== body)) return
+  const kids = Array.from(body.children)
+  const lastSlider = Math.max(...sliderRows.map((r) => kids.indexOf(r)))
+  const firstBar = Math.min(...barRows.map((r) => kids.indexOf(r)))
+  if (lastSlider < firstBar) return // already grouped
+  sliderRows.concat(barRows).forEach((r) => body.appendChild(r))
+}
 function captureIkInfluencePreset() {
   const item = {}
   IK_INFLUENCE_ROW_KEYS.forEach((k) => { item[k] = cfg[k] })
@@ -3612,9 +3670,10 @@ function captureIkInfluencePreset() {
 function useIkInfluencePreset(item) {
   IK_INFLUENCE_ROW_KEYS.forEach((k) => {
     // a key the preset predates falls back to the control's own default rather than whatever was left over
-    const v = item[k] !== undefined ? item[k] : IK_INFLUENCE_DEFAULTS[k]
+    const legacy = IK_INFLUENCE_LEGACY[k]
+    const v = item[k] !== undefined ? item[k] : (legacy && item[legacy] !== undefined ? item[legacy] : IK_INFLUENCE_DEFAULTS[k]) // a preset from before the split seeds from the old single key
     cfg[k] = v
-    syncControlDom((k.startsWith('ikRange') ? 'text' : 'slider') + ikCap(k), v)
+    syncControlDom(ikControlId(k), v)
   })
   ikLastSignature = null // re-solve with the new influences
   requestRender()
@@ -3624,6 +3683,9 @@ function renderIkPosingGroup(handModelContent) {
   addRow(content, { id: 'checkboxIkPosingEnabled', label: 'IK Posing On/Off', type: 'checkbox' })
   document.getElementById('checkboxIkPosingEnabled').checked = cfg.ikPosingEnabled
   wireCheckbox('checkboxIkPosingEnabled', (v) => setIkPosingEnabled(v))
+  // IK Rotation Weight (2026-10-09): 0 = each pair only matches POSITION; higher = the hand pad is also turned to match the source node's orientation.
+  addRow(content, { id: 'sliderIkRotationWeight', label: 'IK Rotation Weight (x)', type: 'slider', min: 0, max: 20, step: 0.5, value: cfg.ikRotationWeight })
+  wireSlider('sliderIkRotationWeight', (v) => { cfg.ikRotationWeight = v; ikLastSignature = null; requestRender() })
   ikStatusEl = document.createElement('div')
   ikStatusEl.style.cssText = 'font-size:11px; opacity:0.85; margin:2px 0 6px;'
   content.appendChild(ikStatusEl)
@@ -3635,11 +3697,16 @@ function renderIkPosingGroup(handModelContent) {
   addRow(subInfluence, { id: 'sliderIkInfluenceMaster', label: 'IK Influence - All (%)', type: 'slider', min: 0, max: 100, step: 1, value: cfg.ikInfluenceMaster })
   wireSlider('sliderIkInfluenceMaster', (v) => { cfg.ikInfluenceMaster = v; ikLastSignature = null; requestRender() })
   const ikRangeWatch = []
-  IK_INFLUENCE_PARTS.forEach(([part, label, rangeLabel, tMin, tMax, , def]) => {
-    const k = 'ikInfluence' + part, rk = 'ikRange' + part
-    const id = 'slider' + ikCap(k), rid = 'text' + ikCap(rk)
+  // Layout (as in HANDO): the picker, then EVERY % slider together, then every Min / Max bar -- two passes over the table.
+  IK_INFLUENCE_PARTS.forEach(([part, label]) => {
+    const k = 'ikInfluence' + part
+    const id = 'slider' + ikCap(k)
     addRow(subInfluence, { id, label, type: 'slider', min: 0, max: 100, step: 1, value: cfg[k] })
     wireSlider(id, (v) => { cfg[k] = v; ikLastSignature = null; requestRender() })
+  })
+  IK_INFLUENCE_PARTS.forEach(([part, label, rangeLabel, tMin, tMax]) => {
+    const rk = 'ikRange' + part
+    const rid = 'text' + ikCap(rk)
     let rangeDefault = { min: tMin, max: tMax }
     try { rangeDefault = JSON.parse(cfg[rk]) } catch (e) { /* keep fallback */ }
     addRow(subInfluence, { id: rid, label: rangeLabel, type: 'range-bar', trackMin: tMin, trackMax: tMax, unit: '', defaultValue: rangeDefault })
@@ -6725,6 +6792,7 @@ async function runHandFirstLoadTail() {
     loadFieldDefaultIfSaved('defaultLighting', applyLightingPreset),
     loadFieldDefaultIfSaved('defaultToon', applyToonPreset)
   ])
+  scheduleDeviceAwareApply(300, true) // the Set-as-Default presets above overwrite cfg: a phone's own Mobile / Landscape values win again
   loadingEl.classList.add('hidden')
   initMotionInput()
   setupPhoneRotationResetGesture()
@@ -6807,7 +6875,10 @@ const POSE_SYNC_PAIRS = POSE_PRESET_KEYS.map((k) => [POSE_ID_CASE_EXCEPTIONS[k] 
 const CAMERA_SYNC_PAIRS = [['sliderCameraX', 'cameraX'], ['sliderCameraY', 'cameraY'], ['sliderCameraZ', 'cameraZ'], ['sliderCameraFov', 'cameraFov'], ['sliderCameraZoom', 'cameraZoom'], ['sliderCameraYaw', 'cameraYaw'], ['sliderCameraPitch', 'cameraPitch']]
 const LIGHTING_SYNC_PAIRS = [['sliderKeyAzimuth', 'keyAzimuth'], ['sliderKeyElevation', 'keyElevation'], ['sliderKeyTargetHeight', 'keyTargetHeight'], ['sliderKeyIntensity', 'keyIntensity'], ['colorKeyColor', 'keyColor'], ['sliderAmbientIntensity', 'ambientIntensity'], ['colorAmbientSkyColor', 'ambientSkyColor'], ['colorAmbientGroundColor', 'ambientGroundColor']]
 const TOON_SYNC_PAIRS = [['sliderToonSteps', 'toonSteps'], ['sliderToonStepThreshold', 'toonStepThreshold'], ['sliderToonShadowFloor', 'toonShadowFloor'], ['sliderToonLightCeiling', 'toonLightCeiling'], ['colorToonBaseTint', 'toonBaseTint'], ['sliderTextureInfluence', 'textureInfluence'], ['colorToonTint', 'toonTint'], ['sliderRimIntensity', 'rimIntensity'], ['sliderRimPower', 'rimPower'], ['colorRimColor', 'rimColor']]
-function syncPairsFromCfg(pairs) { pairs.forEach(([id, key]) => syncControlDom(id, cfg[key])) }
+function syncPairsFromCfg(pairs) {
+  pairs.forEach(([id, key]) => syncControlDom(id, cfg[key]))
+  try { if (!deviceAwareApplying) scheduleDeviceAwareApply(200, true) } catch (err) { /* bridge not initialised yet (early boot) */ } // a preset / restore just rewrote cfg: let a phone's Mobile / Landscape values win again (see DEVICE-AWARE controls, GENERAL)
+}
 // `decimals` (default 2) -- direct report 2026-09-27 on the Camera
 // group's sliders specifically: "why is it showing like 10 decimal
 // points? ... it is jittery." Root cause of both: this function is
@@ -7059,6 +7130,7 @@ window.__debug = {
   get phoneGyroQuat() { return phoneGyroQuat }, get lastInputSource() { return lastInputSource },
   get sensorLog() { return sensorLogLines() },
   get ikNodes() { return ikNodes },
+  get deviceAwareControlIds() { return Array.from(deviceAwareApply.keys()) },
   get ikPairs() { return ikPairs },
   get ikBasePose() { return ikBasePose },
   get ikSolverPaused() { return ikSolverPaused },
@@ -7918,9 +7990,13 @@ function roundSliderValue(raw) {
   if (window.formatDevNumericValue) return Number(window.formatDevNumericValue(raw))
   return parseFloat(raw)
 }
+// Desktop control id -> the control's own apply callback taking a plain value (2026-10-09, see the DEVICE-AWARE bridge below). wireSlider / wireCheckbox / wireSelect /
+// wireColor register theirs here so the bridge can run the SAME callback (cfg write + side effects) with the Mobile / Landscape row's value.
+const deviceAwareApply = new Map()
 function wireSlider(id, onInput) {
   const el = document.getElementById(id)
   if (!el) return
+  deviceAwareApply.set(id, (v) => { onInput(v); requestRender() })
   el.addEventListener('input', (e) => {
     const v = roundSliderValue(e.target.value)
     onInput(v)
@@ -7999,7 +8075,9 @@ function wireDeviceSlider(id, cfgKey) {
 // are covered by the same listener). Critically, this ALSO calls
 // requestRender() directly in the handler, which a poll can never do
 // for itself once the loop it depends on has already stopped.
+const deviceMirrorSlots = [] // [desktopId, cfgKey] of every wireDeviceSliderMirror() control (texture offsets / scales, ...): see syncDeviceMirrorSlots()
 function wireDeviceSliderMirror(desktopId, cfgKey) {
+  deviceMirrorSlots.push([desktopId, cfgKey])
   ;['Mobile', 'Landscape'].forEach((device) => {
     const id = desktopId.replace(/^(slider|color|select|checkbox)/, '$1' + device)
     const fullCfgKey = cfgKey + device
@@ -8074,10 +8152,96 @@ document.addEventListener('click', (e) => { if (e.target && e.target.closest && 
 window.addEventListener('resize', () => schedulePhoneDeviceAwareApply(250))
 window.addEventListener('orientationchange', () => schedulePhoneDeviceAwareApply(250))
 
-function wireCheckbox(id, onChange) { const el = document.getElementById(id); if (el) el.addEventListener('change', (e) => { onChange(e.target.checked); requestRender() }) }
-function wireColor(id, onChange) { const el = document.getElementById(id); if (el) el.addEventListener('input', (e) => { onChange(e.target.value); requestRender() }) }
+function wireCheckbox(id, onChange) { const el = document.getElementById(id); if (el) { deviceAwareApply.set(id, (v) => { onChange(!!v); requestRender() }); el.addEventListener('change', (e) => { onChange(e.target.checked); requestRender() }) } }
+function wireColor(id, onChange) { const el = document.getElementById(id); if (el) { deviceAwareApply.set(id, (v) => { onChange(v); requestRender() }); el.addEventListener('input', (e) => { onChange(e.target.value); requestRender() }) } }
 function wireTextInput(id, onChange) { const el = document.getElementById(id); if (el) el.addEventListener('input', (e) => { onChange(e.target.value); requestRender() }) }
-function wireSelect(id, onChange) { const el = document.getElementById(id); if (el) el.addEventListener('change', (e) => { onChange(e.target.value); requestRender() }) }
+function wireSelect(id, onChange) { const el = document.getElementById(id); if (el) { deviceAwareApply.set(id, (v) => { onChange(v); requestRender() }); el.addEventListener('change', (e) => { onChange(e.target.value); requestRender() }) } }
+
+// ---------------------------------------------------------------------
+// DEVICE-AWARE controls, GENERAL (2026-10-09, direct report: "when i select the checkbox next to settings in Desktop, and then make sure the same in Mobile, the model is still
+// dictated by the desktop sliders ... recursive render scale, and phone model offset ... make sure all settings work correctly"). Every wired control only ever listens to its
+// DESKTOP element, while a Mobile / Landscape row that is marked "Independent from Desktop" keeps its value in devPanel.js's own store and its own cloned element (see
+// wireDeviceSliderMirror()'s comment) -- so on a phone the app ran on the Desktop value no matter what the Mobile tab said. This was fixed one family at a time (texture offsets via
+// cfg.<key>Mobile, the Phone Displace / Rotation family via PHONE_DEVICE_AWARE_ID); this does it for every control wired through wireSlider / wireCheckbox / wireSelect /
+// wireColor: on a touch device, the effective value is the runtime device's row (Mobile in portrait, Landscape sideways) -- that row mirrors Desktop unless it is marked
+// independent, so non-independent controls keep following Desktop exactly as before -- and the control's OWN registered callback is run with it (so cfg AND the side effects,
+// e.g. applyPhoneModelTransform(), a render-target rebuild, happen). Nothing is written to the Desktop element, so Sync still saves the Desktop value as the Desktop value.
+// Controls already covered by their own bridge (PHONE_DEVICE_AWARE_ID) are skipped. A desktop browser (no touch) is unchanged.
+// ---------------------------------------------------------------------
+const deviceAwareLast = new Map() // desktop id -> the device value last applied through the bridge (cleared again when the desktop value takes over)
+const deviceRowId = (desktopId, suffix) => desktopId.replace(/^(slider|color|select|checkbox)/, '$1' + suffix)
+function readDeviceAwareEl(el) {
+  if (el.type === 'checkbox') return !!el.checked
+  if (el.type === 'range') return roundSliderValue(el.value)
+  return el.value
+}
+function applyDeviceAwareControl(desktopId, force) {
+  const apply = deviceAwareApply.get(desktopId)
+  if (!apply || PHONE_DEVICE_AWARE_ID.test(desktopId)) return
+  const desktopEl = document.getElementById(desktopId)
+  if (!desktopEl) return
+  const suffix = getRuntimeDeviceSuffix()
+  const rowEl = suffix ? document.getElementById(deviceRowId(desktopId, suffix)) : null
+  const dv = readDeviceAwareEl(desktopEl)
+  if (!rowEl) { // desktop runtime / no device row: the Desktop control governs (undo a device value applied earlier, e.g. after an orientation change)
+    if (deviceAwareLast.has(desktopId)) { deviceAwareLast.delete(desktopId); apply(dv) }
+    return
+  }
+  const v = readDeviceAwareEl(rowEl)
+  if (typeof v === 'number' && Number.isNaN(v)) return
+  if (v === dv) { // the row mirrors Desktop (not independent): nothing to apply unless a device value is still in effect
+    if (deviceAwareLast.has(desktopId)) { deviceAwareLast.delete(desktopId); apply(dv) }
+    return
+  }
+  if (!force && deviceAwareLast.get(desktopId) === v) return
+  deviceAwareLast.set(desktopId, v)
+  apply(v)
+}
+// force = re-run even when the same device value was applied before: a "Set as Default" pose / camera / lighting / toon preset (applied at boot after the Sync restore, and
+// by every preset Use) writes straight into cfg and the Desktop elements without any event, silently putting the Desktop value back on a phone -- the forced pass puts
+// the device value back on top (only controls whose device row differs from Desktop are touched).
+let deviceAwareApplying = false // set while the bridge itself runs, so a callback that syncs the DOM cannot re-schedule it forever
+// The cfg.<key>Mobile / <key>Landscape values read at render time by the wireDeviceSlider / wireDeviceSliderMirror controls (texture offsets and scales). Their own mirror only
+// updates when the Mobile / Landscape row is EDITED, so a value restored from the saved settings (the row says -0.01, cfg stayed 0) and a control with no row at all (the phone kept a
+// hard-coded default instead of following Desktop) were never picked up. Row exists -> its value (it mirrors Desktop unless independent); no row -> the Desktop value.
+function syncDeviceMirrorSlots() {
+  deviceMirrorSlots.forEach(([desktopId, cfgKey]) => {
+    ;['Mobile', 'Landscape'].forEach((device) => {
+      const row = document.getElementById(deviceRowId(desktopId, device))
+      const v = row ? roundSliderValue(row.value) : cfg[cfgKey]
+      if (typeof v === 'number' && !Number.isNaN(v)) cfg[cfgKey + device] = v
+    })
+  })
+}
+function applyAllDeviceAwareControls(force) {
+  deviceAwareApplying = true
+  try {
+    syncDeviceMirrorSlots()
+    deviceAwareApply.forEach((_, id) => applyDeviceAwareControl(id, force === true))
+  } finally { deviceAwareApplying = false }
+  requestRender()
+}
+let deviceAwareTimer = null
+let deviceAwarePendingForce = false
+function scheduleDeviceAwareApply(ms, force) {
+  clearTimeout(deviceAwareTimer)
+  if (force) deviceAwarePendingForce = true
+  deviceAwareTimer = setTimeout(() => { const f = deviceAwarePendingForce; deviceAwarePendingForce = false; applyAllDeviceAwareControls(f) }, ms)
+}
+function onDeviceAwareEdit(e) {
+  const id = e.target && e.target.id
+  if (!id) return
+  const m = id.match(/^(slider|color|select|checkbox)(?:Mobile|Landscape)?(.+)$/)
+  if (!m) return
+  const desktopId = m[1] + m[2]
+  if (deviceAwareApply.has(desktopId)) applyDeviceAwareControl(desktopId, true) // delegated: runs after the element's own handler, so the device value wins again
+  if (deviceMirrorSlots.some(([dId]) => dId === desktopId)) { syncDeviceMirrorSlots(); requestRender() } // a Desktop edit must reach a phone that has no own value for it
+}
+document.addEventListener('input', onDeviceAwareEdit)
+document.addEventListener('change', onDeviceAwareEdit)
+document.addEventListener('click', (e) => { if (e.target && e.target.closest && e.target.closest('#devPanel')) scheduleDeviceAwareApply(150) }) // Sync / Reset / Undo / tab and checkbox clicks
+window.addEventListener('resize', () => scheduleDeviceAwareApply(300))
+window.addEventListener('orientationchange', () => scheduleDeviceAwareApply(300))
 
 // Global undo state capture when sliders finish being dragged (pointerup
 // after any slider interaction) -- pushDevUndoState() is called from
@@ -10887,10 +11051,13 @@ async function loadRemoteSettingsOnStartup() {
     if (data.settings.listPicker_phonePoses) loadListPickerItemsFromRemoteData(data.settings.listPicker_phonePoses, SAVED_PHONE_POSES)
     if (data.settings.listPicker_ikInfluence) loadListPickerItemsFromRemoteData(data.settings.listPicker_ikInfluence, SAVED_IK_INFLUENCE)
     if (data.settings.listPicker_tweenSequences) loadListPickerItemsFromRemoteData(data.settings.listPicker_tweenSequences, SAVED_TWEEN_SEQUENCES)
+    migrateIkInfluenceLegacyControls(data.settings.controls) // 2026-10-09: old single Offset / Rotation / Fingers influence values seed the split rows
     if (typeof window.ensureDevPanelBuilt === 'function') window.ensureDevPanelBuilt()
     phoneModelRestoreInProgress = true
     try { apply(data.settings) } finally { setTimeout(() => { phoneModelRestoreInProgress = false }, 1500) }
+    try { groupIkInfluenceRows() } catch (err) { /* IK Influence rows not built yet */ }
     schedulePhoneDeviceAwareApply(500); setTimeout(applyAllPhoneDeviceAwareValues, 2500) // device-aware Phone Displace/Rotation values (see PHONE_DEVICE_AWARE_ID)
+    scheduleDeviceAwareApply(700); setTimeout(applyAllDeviceAwareControls, 3000) // every other control's Mobile / Landscape value (see DEVICE-AWARE controls, GENERAL)
     // "Set as Default" for the 2 model selectors and the phone pose -- applied
     // AFTER the normal Sync restore so a deliberate default wins (same
     // precedence the other defaultX fields get at boot), from this one shared
