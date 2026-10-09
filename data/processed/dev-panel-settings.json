@@ -52,10 +52,10 @@
     "checkboxhandMirrorX": false,
     "checkboxhandMirrorY": false,
     "checkboxhandMirrorZ": false,
-    "sliderbaseRotationX": 30,
-    "sliderbaseRotationY": 34,
-    "sliderbaseRotationZ": -1,
-    "sliderthumbCurl": 51,
+    "sliderbaseRotationX": 28,
+    "sliderbaseRotationY": 35,
+    "sliderbaseRotationZ": -2,
+    "sliderthumbCurl": 50,
     "sliderthumbSplay": -87,
     "sliderthumbSplay2": -8,
     "slidercurlBiasThumb": 0,
@@ -63,9 +63,9 @@
     "slidermidOnlyCurlThumb": 0,
     "slidertipOnlyCurlThumb": 0,
     "slidertipTwistThumb": 0,
-    "sliderelbowBend": -6.78105508367686,
-    "sliderelbowSideBend": 7,
-    "sliderforearmTwist": 15,
+    "sliderelbowBend": 1.21894491632314,
+    "sliderelbowSideBend": 12,
+    "sliderforearmTwist": 22,
     "sliderforearmBendOffX": 0,
     "sliderforearmBendOffY": 0,
     "sliderforearmBendOffZ": 0,
@@ -75,8 +75,8 @@
     "sliderwristOffX": 0,
     "sliderwristOffY": 0,
     "sliderwristOffZ": 0,
-    "sliderwristRotation": 12,
-    "sliderwristBend": -5,
+    "sliderwristRotation": 14,
+    "sliderwristBend": -12,
     "sliderwristSplay": -26.2673349209901,
     "textwristRotationClampRange": "{\"min\":-360,\"max\":360}",
     "textwristBendClampRange": "{\"min\":-90,\"max\":90}",
@@ -118,9 +118,9 @@
     "slidermidOnlyCurlPinky": -5,
     "slidertipOnlyCurlPinky": 0,
     "slidertipTwistPinky": 0,
-    "sliderposeOffsetX": 19.1,
-    "sliderposeOffsetY": -16.1121369275774,
-    "sliderposeOffsetZ": -9.45149168235978,
+    "sliderposeOffsetX": 22.6100173678894,
+    "sliderposeOffsetY": -10.5506409971401,
+    "sliderposeOffsetZ": -9.08684075485126,
     "sliderPoseScale": 1,
     "sliderTweenT": 0,
     "sliderTweenFrameCount": 10,
@@ -303,9 +303,9 @@
   },
   "layout": {
     "left": 35,
-    "top": 153,
+    "top": 223,
     "width": 350,
-    "height": 461
+    "height": 391
   },
   "devPanelStyle": {
     "titleFontSize": 17,
@@ -10725,10 +10725,15 @@
                       }
                     ]
                   }
+                },
+                {
+                  "type": "row",
+                  "key": "sliderMobileIkRotationWeight"
                 }
               ],
               "rowKeys": [
-                "checkboxMobileIkPosingEnabled"
+                "checkboxMobileIkPosingEnabled",
+                "sliderMobileIkRotationWeight"
               ],
               "subgroups": [
                 {
@@ -11487,10 +11492,15 @@
                     }
                   ]
                 }
+              },
+              {
+                "type": "row",
+                "key": "sliderMobileIkRotationWeight"
               }
             ],
             "rowKeys": [
-              "checkboxMobileIkPosingEnabled"
+              "checkboxMobileIkPosingEnabled",
+              "sliderMobileIkRotationWeight"
             ],
             "subgroups": [
               {
@@ -14329,10 +14339,15 @@
                       }
                     ]
                   }
+                },
+                {
+                  "type": "row",
+                  "key": "sliderLandscapeIkRotationWeight"
                 }
               ],
               "rowKeys": [
-                "checkboxLandscapeIkPosingEnabled"
+                "checkboxLandscapeIkPosingEnabled",
+                "sliderLandscapeIkRotationWeight"
               ],
               "subgroups": [
                 {
@@ -15091,10 +15106,15 @@
                     }
                   ]
                 }
+              },
+              {
+                "type": "row",
+                "key": "sliderLandscapeIkRotationWeight"
               }
             ],
             "rowKeys": [
-              "checkboxLandscapeIkPosingEnabled"
+              "checkboxLandscapeIkPosingEnabled",
+              "sliderLandscapeIkRotationWeight"
             ],
             "subgroups": [
               {
@@ -15406,7 +15426,7 @@
     "desktop:Displace Log": true,
     "desktop:Select Logs To Copy": true,
     "desktop:IK Nodes": true,
-    "desktop:PHONE MODEL": false,
+    "desktop:PHONE MODEL": true,
     "desktop:OFFSET": true,
     "desktop:PHONE ROTATION": true,
     "desktop:RECURSIVE RENDER": true,
@@ -15420,7 +15440,7 @@
     "desktop:DISPLACE - Y AXIS": true,
     "desktop:DISPLACE - Z AXIS": true,
     "desktop:Saved Phone Poses": true,
-    "desktop:HAND MODEL": true,
+    "desktop:HAND MODEL": false,
     "desktop:Field Layout": true,
     "desktop:Pose": true,
     "desktop:ROTATION": true,
@@ -15488,7 +15508,7 @@
     "mobile:DISPLACE - Y AXIS": false,
     "mobile:DISPLACE - Z AXIS": false,
     "mobile:Saved Phone Poses": false,
-    "mobile:HAND MODEL": false,
+    "mobile:HAND MODEL": true,
     "mobile:Field Layout": false,
     "mobile:Pose": true,
     "mobile:ROTATION": false,
@@ -15518,7 +15538,7 @@
     "mobile:Saved IK Influence": false,
     "mobile:Ground Plane": false,
     "mobile:Finger Gizmos": false,
-    "mobile:Camera": false,
+    "mobile:Camera": true,
     "mobile:Saved Cameras": false,
     "mobile:Lighting": false,
     "mobile:Saved Lighting": false,
@@ -16160,7 +16180,9 @@
     "textIkRangeRotY": null,
     "textIkRangeRotZ": null,
     "sliderMobileScreenTextureScale": null,
-    "sliderLandscapeScreenTextureScale": null
+    "sliderLandscapeScreenTextureScale": null,
+    "sliderMobileIkRotationWeight": null,
+    "sliderLandscapeIkRotationWeight": null
   },
   "devTextOverridesManual": [
     "desktop:New Group",
@@ -16351,7 +16373,8 @@
     "sliderCameraZ": true,
     "sliderCameraFov": true,
     "sliderCameraZoom": true,
-    "sliderScreenTextureScale": true
+    "sliderScreenTextureScale": true,
+    "sliderIkRotationWeight": true
   },
   "devIndependence": {
     "mobile": {
