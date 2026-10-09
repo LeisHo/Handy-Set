@@ -17725,6 +17725,19 @@
       "rimIntensity": 0,
       "rimPower": 0.5,
       "rimColor": "#ffffff"
+    },
+    {
+      "name": "skin 2",
+      "toonSteps": 8,
+      "toonStepThreshold": 4,
+      "toonShadowFloor": 0,
+      "toonLightCeiling": 71,
+      "toonBaseTint": "#ff8c00",
+      "textureInfluence": 23,
+      "toonTint": "#ffae6b",
+      "rimIntensity": 0,
+      "rimPower": 0.5,
+      "rimColor": "#ffffff"
     }
   ]
 }
