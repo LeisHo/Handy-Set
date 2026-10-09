@@ -8459,6 +8459,29 @@ devPanel.js ?v=20, main.js ?v=234. This devPanel.js fix is generic and belongs i
   - Pushed from a temporary clean checkout of origin/main (the working tree still holds uncommitted glb / blend changes).
 
 --------------------------------------------------------------------------------
+2026-10-09 -- Mobile / Landscape "Independent from Desktop" now actually drives the model on a phone, for every wired setting (f698309) [written by a HANDO session at the user's request: "when i select the checkbox next to settings in Desktop, and then make sure the same in Mobile, the model is still dictated by the desktop sliders. I was seeing this in recursive render scale, and phone model offset. make sure all settings work correctly"]
+  - Cause: every control wired through wireSlider / wireCheckbox / wireSelect / wireColor listened only to its DESKTOP element. A Mobile / Landscape row marked independent keeps its value in
+    devPanel.js's own store and its own cloned element (ids like sliderMobilePhoneModelOffsetX), which nothing in main.js read -- so on a phone the app ran on the Desktop value whatever the Mobile tab
+    said. Earlier fixes covered single families only (texture offset / scale via cfg.<key>Mobile, the Phone Displace / Rotation family via PHONE_DEVICE_AWARE_ID).
+  - Fix (src/main.js): the four wire* helpers register their own apply callback in deviceAwareApply (desktop id -> callback taking a plain value). A generic bridge (applyDeviceAwareControl /
+    applyAllDeviceAwareControls) runs that SAME callback (cfg write + side effects such as applyPhoneModelTransform or a render-target rebuild) with the runtime device row's value
+    (getRuntimeDeviceSuffix(): Mobile in portrait, Landscape sideways). The row mirrors Desktop unless independent, so non-independent controls behave as before; nothing is written to the Desktop
+    element, so Sync still saves the Desktop value as the Desktop value. PHONE_DEVICE_AWARE_ID controls are skipped (own bridge). Desktop (non-touch) runtime is unchanged; going back to a desktop
+    runtime / orientation puts the Desktop (or other device) value back.
+  - When it re-applies: after the startup settings restore (700 ms and 3 s), delegated on every input / change of a Desktop or device row, after clicks inside the dev panel (Sync / Reset / Undo /
+    checkbox clicks, 150 ms), on resize / orientationchange (300 ms), and FORCED after anything that rewrites cfg without events -- syncPairsFromCfg() (Set-as-Default pose / camera / lighting /
+    toon presets and preset Use) and runHandFirstLoadTail() -- since those silently put the Desktop value back.
+  - Texture offset / scale (wireDeviceSliderMirror): syncDeviceMirrorSlots() now sets cfg.<key>Mobile / <key>Landscape from the device row if it exists, else from Desktop. Before, a value restored
+    from the saved settings never reached cfg (row said -0.01, cfg stayed 0) and a phone with no row kept a hard-coded default instead of following Desktop.
+  - MEASURED (preview, mobile emulation, scratch settings): the generic bridge covered 249 of 302 wired controls (the rest have their own bridge or are dev-panel chrome / debug); startup restore,
+    live edit of a Mobile row, Desktop edit while independent, Landscape revert (resize event dispatched by hand -- the emulator does not fire it) and portrait return all gave the expected values;
+    after the mirror-slot change cfg.screenTextureOffsetXMobile = -0.01 (the saved Mobile row) at startup, Landscape followed Desktop, scale slots with no row followed Desktop. No console errors.
+  - Not covered / caveats: group-title toggles (e.g. RECURSIVE RENDER On / Off, makeDevGroupToggleable) have no Mobile row, so they cannot be device-independent through this mechanism; the Mouse Log
+    debug controls are not bridged; Reset / Undo restores rely on the click-scheduled (150 ms) re-apply; NOT tested on a real phone / the live site. Reload the live page before Syncing so a stale
+    open page does not overwrite the saved settings.
+  - Pushed from a temporary clean checkout of origin/main (the working tree still holds uncommitted glb / blend changes).
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
