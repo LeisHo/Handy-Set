@@ -17711,5 +17711,20 @@
     "phoneModelRotX": 0,
     "phoneModelRotY": 0,
     "phoneModelRotZ": 0
-  }
+  },
+  "listPicker_toon": [
+    {
+      "name": "skin 1",
+      "toonSteps": 8,
+      "toonStepThreshold": 2.6,
+      "toonShadowFloor": 0,
+      "toonLightCeiling": 69,
+      "toonBaseTint": "#ffb070",
+      "textureInfluence": 54,
+      "toonTint": "#ffc18f",
+      "rimIntensity": 0,
+      "rimPower": 0.5,
+      "rimColor": "#ffffff"
+    }
+  ]
 }
