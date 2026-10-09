@@ -8518,6 +8518,17 @@ one string changed). The existing 'iPhone 17 Max' was not touched (the request w
 Not browser-verified (project rule).
 
 --------------------------------------------------------------------------------
+2026-10-09 -- Accidental Sync from a stale page dropped the 3 copied per-model snapshots; restored
+
+The page that was open on the phone/browser had loaded BEFORE the previous entry's copy of the Iphone17MaxPro / Pixel 9A snapshots, so its two
+Syncs (19:31:09 and 19:32:32) wrote its in-memory hiddenPhoneModelPerModelSettings, which had no Iphone17MaxProFlip / Iphone17MaxProFlip2 / Pixel 9AF
+keys -- a Sync replaces the whole string. Diffed the commit before the Syncs against the result: those 3 keys were the ONLY per-model loss;
+the other changes in those Syncs (toon colors/steps, pose sliders) are the user's own live tuning and were kept. Fix: re-added the three snapshots
+as copies of the CURRENT Iphone17MaxPro (x2) and Pixel 9A snapshots (settings file round-tripped exactly before and after). The page that synced is
+still stale: it must be reloaded before the next Sync or it will drop them again. (Same class as the earlier "reload before you Sync" warnings:
+any settings written to git by something other than a page Sync are lost by a Sync from a page that loaded before them.)
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
