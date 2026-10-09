@@ -6769,6 +6769,7 @@ async function runHandFirstLoadTail() {
     loadFieldDefaultIfSaved('defaultLighting', applyLightingPreset),
     loadFieldDefaultIfSaved('defaultToon', applyToonPreset)
   ])
+  scheduleDeviceAwareApply(300, true) // the Set-as-Default presets above overwrite cfg: a phone's own Mobile / Landscape values win again
   loadingEl.classList.add('hidden')
   initMotionInput()
   setupPhoneRotationResetGesture()
@@ -6851,7 +6852,10 @@ const POSE_SYNC_PAIRS = POSE_PRESET_KEYS.map((k) => [POSE_ID_CASE_EXCEPTIONS[k] 
 const CAMERA_SYNC_PAIRS = [['sliderCameraX', 'cameraX'], ['sliderCameraY', 'cameraY'], ['sliderCameraZ', 'cameraZ'], ['sliderCameraFov', 'cameraFov'], ['sliderCameraZoom', 'cameraZoom'], ['sliderCameraYaw', 'cameraYaw'], ['sliderCameraPitch', 'cameraPitch']]
 const LIGHTING_SYNC_PAIRS = [['sliderKeyAzimuth', 'keyAzimuth'], ['sliderKeyElevation', 'keyElevation'], ['sliderKeyTargetHeight', 'keyTargetHeight'], ['sliderKeyIntensity', 'keyIntensity'], ['colorKeyColor', 'keyColor'], ['sliderAmbientIntensity', 'ambientIntensity'], ['colorAmbientSkyColor', 'ambientSkyColor'], ['colorAmbientGroundColor', 'ambientGroundColor']]
 const TOON_SYNC_PAIRS = [['sliderToonSteps', 'toonSteps'], ['sliderToonStepThreshold', 'toonStepThreshold'], ['sliderToonShadowFloor', 'toonShadowFloor'], ['sliderToonLightCeiling', 'toonLightCeiling'], ['colorToonBaseTint', 'toonBaseTint'], ['sliderTextureInfluence', 'textureInfluence'], ['colorToonTint', 'toonTint'], ['sliderRimIntensity', 'rimIntensity'], ['sliderRimPower', 'rimPower'], ['colorRimColor', 'rimColor']]
-function syncPairsFromCfg(pairs) { pairs.forEach(([id, key]) => syncControlDom(id, cfg[key])) }
+function syncPairsFromCfg(pairs) {
+  pairs.forEach(([id, key]) => syncControlDom(id, cfg[key]))
+  try { if (!deviceAwareApplying) scheduleDeviceAwareApply(200, true) } catch (err) { /* bridge not initialised yet (early boot) */ } // a preset / restore just rewrote cfg: let a phone's Mobile / Landscape values win again (see DEVICE-AWARE controls, GENERAL)
+}
 // `decimals` (default 2) -- direct report 2026-09-27 on the Camera
 // group's sliders specifically: "why is it showing like 10 decimal
 // points? ... it is jittery." Root cause of both: this function is
@@ -7103,6 +7107,7 @@ window.__debug = {
   get phoneGyroQuat() { return phoneGyroQuat }, get lastInputSource() { return lastInputSource },
   get sensorLog() { return sensorLogLines() },
   get ikNodes() { return ikNodes },
+  get deviceAwareControlIds() { return Array.from(deviceAwareApply.keys()) },
   get ikPairs() { return ikPairs },
   get ikBasePose() { return ikBasePose },
   get ikSolverPaused() { return ikSolverPaused },
@@ -7962,9 +7967,13 @@ function roundSliderValue(raw) {
   if (window.formatDevNumericValue) return Number(window.formatDevNumericValue(raw))
   return parseFloat(raw)
 }
+// Desktop control id -> the control's own apply callback taking a plain value (2026-10-09, see the DEVICE-AWARE bridge below). wireSlider / wireCheckbox / wireSelect /
+// wireColor register theirs here so the bridge can run the SAME callback (cfg write + side effects) with the Mobile / Landscape row's value.
+const deviceAwareApply = new Map()
 function wireSlider(id, onInput) {
   const el = document.getElementById(id)
   if (!el) return
+  deviceAwareApply.set(id, (v) => { onInput(v); requestRender() })
   el.addEventListener('input', (e) => {
     const v = roundSliderValue(e.target.value)
     onInput(v)
@@ -8043,7 +8052,9 @@ function wireDeviceSlider(id, cfgKey) {
 // are covered by the same listener). Critically, this ALSO calls
 // requestRender() directly in the handler, which a poll can never do
 // for itself once the loop it depends on has already stopped.
+const deviceMirrorSlots = [] // [desktopId, cfgKey] of every wireDeviceSliderMirror() control (texture offsets / scales, ...): see syncDeviceMirrorSlots()
 function wireDeviceSliderMirror(desktopId, cfgKey) {
+  deviceMirrorSlots.push([desktopId, cfgKey])
   ;['Mobile', 'Landscape'].forEach((device) => {
     const id = desktopId.replace(/^(slider|color|select|checkbox)/, '$1' + device)
     const fullCfgKey = cfgKey + device
@@ -8118,10 +8129,96 @@ document.addEventListener('click', (e) => { if (e.target && e.target.closest && 
 window.addEventListener('resize', () => schedulePhoneDeviceAwareApply(250))
 window.addEventListener('orientationchange', () => schedulePhoneDeviceAwareApply(250))
 
-function wireCheckbox(id, onChange) { const el = document.getElementById(id); if (el) el.addEventListener('change', (e) => { onChange(e.target.checked); requestRender() }) }
-function wireColor(id, onChange) { const el = document.getElementById(id); if (el) el.addEventListener('input', (e) => { onChange(e.target.value); requestRender() }) }
+function wireCheckbox(id, onChange) { const el = document.getElementById(id); if (el) { deviceAwareApply.set(id, (v) => { onChange(!!v); requestRender() }); el.addEventListener('change', (e) => { onChange(e.target.checked); requestRender() }) } }
+function wireColor(id, onChange) { const el = document.getElementById(id); if (el) { deviceAwareApply.set(id, (v) => { onChange(v); requestRender() }); el.addEventListener('input', (e) => { onChange(e.target.value); requestRender() }) } }
 function wireTextInput(id, onChange) { const el = document.getElementById(id); if (el) el.addEventListener('input', (e) => { onChange(e.target.value); requestRender() }) }
-function wireSelect(id, onChange) { const el = document.getElementById(id); if (el) el.addEventListener('change', (e) => { onChange(e.target.value); requestRender() }) }
+function wireSelect(id, onChange) { const el = document.getElementById(id); if (el) { deviceAwareApply.set(id, (v) => { onChange(v); requestRender() }); el.addEventListener('change', (e) => { onChange(e.target.value); requestRender() }) } }
+
+// ---------------------------------------------------------------------
+// DEVICE-AWARE controls, GENERAL (2026-10-09, direct report: "when i select the checkbox next to settings in Desktop, and then make sure the same in Mobile, the model is still
+// dictated by the desktop sliders ... recursive render scale, and phone model offset ... make sure all settings work correctly"). Every wired control only ever listens to its
+// DESKTOP element, while a Mobile / Landscape row that is marked "Independent from Desktop" keeps its value in devPanel.js's own store and its own cloned element (see
+// wireDeviceSliderMirror()'s comment) -- so on a phone the app ran on the Desktop value no matter what the Mobile tab said. This was fixed one family at a time (texture offsets via
+// cfg.<key>Mobile, the Phone Displace / Rotation family via PHONE_DEVICE_AWARE_ID); this does it for every control wired through wireSlider / wireCheckbox / wireSelect /
+// wireColor: on a touch device, the effective value is the runtime device's row (Mobile in portrait, Landscape sideways) -- that row mirrors Desktop unless it is marked
+// independent, so non-independent controls keep following Desktop exactly as before -- and the control's OWN registered callback is run with it (so cfg AND the side effects,
+// e.g. applyPhoneModelTransform(), a render-target rebuild, happen). Nothing is written to the Desktop element, so Sync still saves the Desktop value as the Desktop value.
+// Controls already covered by their own bridge (PHONE_DEVICE_AWARE_ID) are skipped. A desktop browser (no touch) is unchanged.
+// ---------------------------------------------------------------------
+const deviceAwareLast = new Map() // desktop id -> the device value last applied through the bridge (cleared again when the desktop value takes over)
+const deviceRowId = (desktopId, suffix) => desktopId.replace(/^(slider|color|select|checkbox)/, '$1' + suffix)
+function readDeviceAwareEl(el) {
+  if (el.type === 'checkbox') return !!el.checked
+  if (el.type === 'range') return roundSliderValue(el.value)
+  return el.value
+}
+function applyDeviceAwareControl(desktopId, force) {
+  const apply = deviceAwareApply.get(desktopId)
+  if (!apply || PHONE_DEVICE_AWARE_ID.test(desktopId)) return
+  const desktopEl = document.getElementById(desktopId)
+  if (!desktopEl) return
+  const suffix = getRuntimeDeviceSuffix()
+  const rowEl = suffix ? document.getElementById(deviceRowId(desktopId, suffix)) : null
+  const dv = readDeviceAwareEl(desktopEl)
+  if (!rowEl) { // desktop runtime / no device row: the Desktop control governs (undo a device value applied earlier, e.g. after an orientation change)
+    if (deviceAwareLast.has(desktopId)) { deviceAwareLast.delete(desktopId); apply(dv) }
+    return
+  }
+  const v = readDeviceAwareEl(rowEl)
+  if (typeof v === 'number' && Number.isNaN(v)) return
+  if (v === dv) { // the row mirrors Desktop (not independent): nothing to apply unless a device value is still in effect
+    if (deviceAwareLast.has(desktopId)) { deviceAwareLast.delete(desktopId); apply(dv) }
+    return
+  }
+  if (!force && deviceAwareLast.get(desktopId) === v) return
+  deviceAwareLast.set(desktopId, v)
+  apply(v)
+}
+// force = re-run even when the same device value was applied before: a "Set as Default" pose / camera / lighting / toon preset (applied at boot after the Sync restore, and
+// by every preset Use) writes straight into cfg and the Desktop elements without any event, silently putting the Desktop value back on a phone -- the forced pass puts
+// the device value back on top (only controls whose device row differs from Desktop are touched).
+let deviceAwareApplying = false // set while the bridge itself runs, so a callback that syncs the DOM cannot re-schedule it forever
+// The cfg.<key>Mobile / <key>Landscape values read at render time by the wireDeviceSlider / wireDeviceSliderMirror controls (texture offsets and scales). Their own mirror only
+// updates when the Mobile / Landscape row is EDITED, so a value restored from the saved settings (the row says -0.01, cfg stayed 0) and a control with no row at all (the phone kept a
+// hard-coded default instead of following Desktop) were never picked up. Row exists -> its value (it mirrors Desktop unless independent); no row -> the Desktop value.
+function syncDeviceMirrorSlots() {
+  deviceMirrorSlots.forEach(([desktopId, cfgKey]) => {
+    ;['Mobile', 'Landscape'].forEach((device) => {
+      const row = document.getElementById(deviceRowId(desktopId, device))
+      const v = row ? roundSliderValue(row.value) : cfg[cfgKey]
+      if (typeof v === 'number' && !Number.isNaN(v)) cfg[cfgKey + device] = v
+    })
+  })
+}
+function applyAllDeviceAwareControls(force) {
+  deviceAwareApplying = true
+  try {
+    syncDeviceMirrorSlots()
+    deviceAwareApply.forEach((_, id) => applyDeviceAwareControl(id, force === true))
+  } finally { deviceAwareApplying = false }
+  requestRender()
+}
+let deviceAwareTimer = null
+let deviceAwarePendingForce = false
+function scheduleDeviceAwareApply(ms, force) {
+  clearTimeout(deviceAwareTimer)
+  if (force) deviceAwarePendingForce = true
+  deviceAwareTimer = setTimeout(() => { const f = deviceAwarePendingForce; deviceAwarePendingForce = false; applyAllDeviceAwareControls(f) }, ms)
+}
+function onDeviceAwareEdit(e) {
+  const id = e.target && e.target.id
+  if (!id) return
+  const m = id.match(/^(slider|color|select|checkbox)(?:Mobile|Landscape)?(.+)$/)
+  if (!m) return
+  const desktopId = m[1] + m[2]
+  if (deviceAwareApply.has(desktopId)) applyDeviceAwareControl(desktopId, true) // delegated: runs after the element's own handler, so the device value wins again
+  if (deviceMirrorSlots.some(([dId]) => dId === desktopId)) { syncDeviceMirrorSlots(); requestRender() } // a Desktop edit must reach a phone that has no own value for it
+}
+document.addEventListener('input', onDeviceAwareEdit)
+document.addEventListener('change', onDeviceAwareEdit)
+document.addEventListener('click', (e) => { if (e.target && e.target.closest && e.target.closest('#devPanel')) scheduleDeviceAwareApply(150) }) // Sync / Reset / Undo / tab and checkbox clicks
+window.addEventListener('resize', () => scheduleDeviceAwareApply(300))
+window.addEventListener('orientationchange', () => scheduleDeviceAwareApply(300))
 
 // Global undo state capture when sliders finish being dragged (pointerup
 // after any slider interaction) -- pushDevUndoState() is called from
@@ -10937,6 +11034,7 @@ async function loadRemoteSettingsOnStartup() {
     try { apply(data.settings) } finally { setTimeout(() => { phoneModelRestoreInProgress = false }, 1500) }
     try { groupIkInfluenceRows() } catch (err) { /* IK Influence rows not built yet */ }
     schedulePhoneDeviceAwareApply(500); setTimeout(applyAllPhoneDeviceAwareValues, 2500) // device-aware Phone Displace/Rotation values (see PHONE_DEVICE_AWARE_ID)
+    scheduleDeviceAwareApply(700); setTimeout(applyAllDeviceAwareControls, 3000) // every other control's Mobile / Landscape value (see DEVICE-AWARE controls, GENERAL)
     // "Set as Default" for the 2 model selectors and the phone pose -- applied
     // AFTER the normal Sync restore so a deliberate default wins (same
     // precedence the other defaultX fields get at boot), from this one shared
