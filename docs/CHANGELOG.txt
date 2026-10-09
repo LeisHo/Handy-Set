@@ -8435,6 +8435,30 @@ devPanel.js ?v=20, main.js ?v=234. This devPanel.js fix is generic and belongs i
   - Both pushed from a temporary clean checkout of origin/main (the working tree holds uncommitted glb/blend changes that the user's own re-imports at 05:13-05:14 overwrote upstream).
 
 --------------------------------------------------------------------------------
+2026-10-09 -- IK Influence: HANDO's per-axis / per-finger-set granularity ported (a6af4e6) [written by a HANDO session at the user's request: "port over our IK influence system with the finger granularity etc"]
+  - Source read directly: HANDO src/main.js (IK_INFLUENCE_ROW_KEYS, ikPartsOfKey(), IK_FINGER_DOFS + the twist loop, groupIkInfluencePercentRows(), the legacyKey migration) and its CHANGELOG entries
+    of 2026-10-06. Feature inventory vs this project BEFORE the port: already here -- hierarchical solver, Min / Max "From Base" bars, per-pair Priority, overlap highlight, Saved IK Influence picker,
+    Rotation-at-Base joints. MISSING and now ported: (1) Finger Curl / Finger Twist / Finger Splay as three separate % + Min/Max sets (the old single "Fingers" row now means SPLAY and keeps its key);
+    (2) Pose Offset X / Y / Z, each with its own % + Min/Max (was one row for all three); (3) Whole-Hand Rotation at Base X / Y / Z, each with its own % + Min/Max (was one row);
+    (4) the layout: picker, then every % slider together, then every Min/Max bar, restored after a saved panel order is applied (groupIkInfluenceRows(), only when not already grouped);
+    (5) migration: values saved under the old single ids seed the split rows (migrateIkInfluenceLegacyControls() runs on the loaded controls before they are applied; Offset / Rotation -> X/Y/Z,
+    Fingers -> Finger Curl), and a preset saved before the split seeds the same way in useIkInfluencePreset().
+  - Changes (src/main.js): IK_INFLUENCE_PARTS is now the 15-row table in HANDO's order (Finger Curl, Finger Twist, Finger Splay, Pose Offset X/Y/Z, Rotation at Base X/Y/Z, Wrist Rotation/Splay/Bend,
+    Elbow Bend, Elbow Side Bend, Forearm Twist) with HANDO's defaults (curl 100 %, twist 0 %, splay 100 %, offsets / rotations 0 %, ranges +-200 % / +-100 % / +-100 u / +-360 deg ...); the rows are rendered
+    in two passes (all sliders, then all bars); cfg defaults for the 11 new keys; ikPartsOfKey() maps baseRotation[XYZ] -> Rot<axis>, poseOffset[XYZ] -> Off<axis>, curl keys -> FingerCurl, tip-twist keys ->
+    FingerTwist, everything else (splay) -> Fingers; IK_FINGER_DOFS gained the tip-twist joint per finger.
+  - GAP, deliberately NOT papered over: HANDO twists THREE segments per finger (base / mid / tip = 15 joints). This hand only has the TIP twist slider (FINGER_TIP_TWIST_KEY, 5 joints) and no thumb "base splay"
+    (thumbBaseSplay), so Finger Twist here drives those 5 tip joints only. Adding the base / mid twist sliders is a pose-system port (new pose keys + the bone maths), not an influence-system one -- not done.
+  - MEASURED (preview, the latest saved settings + the models as uploaded 05:13): 15 % sliders in table order, all before the 15 bars, picker first, even though the saved panel order lists the old rows first; the
+    saved legacy values seeded the new rows (Pose Offset X/Y 6 % with range -24..21 from the old Pose Offset row, Rotation Z 0 % / 7..-53 from the old Rotation row, Finger Curl 100 % / -74..49 from the old Fingers row,
+    Splay kept the old key, Twist at its 0 % default); solver isolation with every window widened to +-200 and only ONE row at 100 %: Offset Y moved only poseOffsetY, Offset X only poseOffsetX, Rotation X only
+    baseRotationX, Finger Twist only the 5 tipTwist joints, Finger Curl only the curl joints, Finger Splay only the splay joints, and with Twist at 0 % no twist joint moved; a legacy-style preset (Off 81 / Rot 35 /
+    Fingers with ranges) run through the real useIkInfluencePreset() filled Offset X/Y/Z = 81, Rotation X/Y/Z = 35, Finger Curl from Fingers, Twist at default. No console errors.
+  - Not tested: a real phone / the live site (the migration runs when the remote settings load); Reset / Undo restores (the regroup step only runs after the startup restore); ranges of the saved settings were
+    reseeded as-is (they now govern each axis separately, so check the Pose Offset and Rotation bars after the first load).
+  - Pushed from a temporary clean checkout of origin/main (the working tree still holds uncommitted glb / blend changes).
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
