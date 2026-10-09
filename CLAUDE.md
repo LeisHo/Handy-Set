@@ -160,6 +160,13 @@ wiring, and are still open:
 
 ## Gotchas
 
+- **A restored slider value must not be clamped by the slider's range (fixed 2026-10-09).** A range input silently clamps an
+  assigned `.value` to its min/max and snaps it to its step, so a value saved after click-to-type auto-expanded the range
+  (Recursion Levels 15 on a max-10 slider; Key Azimuth 439 on max 360) came back clamped on every reload -- the synced file was
+  right, the restore lost it. Any code that restores/applies a slider value must go through `window.setDevControlValue()` (devPanel.js;
+  `setControlValueFitted()` in main.js), never `el.value = ...`. Audit recipe that found it: on the live site, fetch
+  `data/processed/dev-panel-settings.json` and compare every `controls` entry to the DOM element's value (and to `window.__debug.cfg`).
+
 - **Base Rotation X/Y/Z turn about the hand MESH's axes, not the clone's (fixed 2026-10-09, ported from HANDO).**
   `applyBaseArmRotation()` composes `desired = G * (Rx*Ry*Rz) * G^-1`, `G = q0 * F`, where `F` is
   `getHandMeshFrameQuat(h)` (local quaternions mesh -> h.clone; +90 deg about X for HandiBonesB-IK, identity for Hand2.glb) and

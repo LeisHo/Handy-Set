@@ -2223,11 +2223,41 @@
     // an event - this is a display/state sync, not a simulated user
     // edit, so it must never itself trigger the mirroring/independence
     // listeners below - that would recurse).
+    // Assigns a value to a control the way a restore must (HANDYSET fix 2026-10-09, direct report "some settings don't seem to be
+    // saving, such as Recursive Render settings"). Root cause: a range input silently CLAMPS an assigned value to its min/max and
+    // snaps it to its step, so a value saved after click-to-type auto-expanded the slider's range (e.g. Recursion Levels 15 on a
+    // slider built with max 10) came back clamped (10) on every reload -- the saved file was right, the restore lost it. Click-to-type
+    // widens the crossed bound to typed value +-20% and assigns with step 'any'; a restore now does exactly the same, including the
+    // two small bound labels. Exposed as window.setDevControlValue() so project restore code (per-model / per-mode snapshots,
+    // presets) can use it too. Checkboxes and every non-range control are a plain assignment, as before.
+    function setDevControlValue(el, value) {
+        if (!el) return;
+        if (el.type === 'checkbox') { el.checked = !!value; return; }
+        if (el.type !== 'range') { el.value = value; return; }
+        const v = parseFloat(value);
+        if (Number.isFinite(v)) {
+            const min = parseFloat(el.min), max = parseFloat(el.max);
+            if (!isNaN(max) && v > max) {
+                el.max = String(v + Math.abs(v) * 0.2);
+                const maxLabelEl = document.querySelector('.dev-slider-bound-editable[data-slider-id="' + el.id + '"][data-bound="max"]');
+                if (maxLabelEl) maxLabelEl.textContent = el.max;
+            }
+            if (!isNaN(min) && v < min) {
+                el.min = String(v - Math.abs(v) * 0.2);
+                const minLabelEl = document.querySelector('.dev-slider-bound-editable[data-slider-id="' + el.id + '"][data-bound="min"]');
+                if (minLabelEl) minLabelEl.textContent = el.min;
+            }
+        }
+        const realStep = el.step;
+        el.step = 'any'; // a range input snaps an assigned value to its step; keep the exact saved value (same as click-to-type)
+        el.value = value;
+        el.step = realStep;
+    }
+    window.setDevControlValue = setDevControlValue;
     function writeDevControlValue(id, value) {
         const el = document.getElementById(id);
         if (!el || value === undefined) return;
-        if (el.type === 'checkbox') el.checked = !!value;
-        else el.value = value;
+        setDevControlValue(el, value);
         if (el.type === 'range') {
             const valEl = document.getElementById(id.replace(/^slider/, 'value'));
             if (valEl && !valEl.querySelector('input')) valEl.textContent = value;
@@ -6046,7 +6076,7 @@
         Object.entries(values).forEach(([id, value]) => {
             const el = document.getElementById(id);
             if (!el) return;
-            if (el.type === 'checkbox') el.checked = !!value; else el.value = value;
+            setDevControlValue(el, value); // widens a range that the saved value lies outside of (see setDevControlValue)
             el.dispatchEvent(new Event(el.tagName === 'SELECT' || el.type === 'checkbox' ? 'change' : 'input', { bubbles: true }));
         });
     }

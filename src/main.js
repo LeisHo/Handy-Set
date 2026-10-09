@@ -6700,11 +6700,18 @@ loadHandModel(cfg.handModelFile || MODEL_URL) // the app's first hand load
 // hand and cfg.thumbCurl/wristSplay/etc, but every Pose slider kept
 // showing its PRE-click value and position — indistinguishable from "the
 // saved pose didn't apply" even though it fully had.
+// Assigns a restored value to a control; a range input is widened to hold it instead of silently clamping (devPanel.js
+// setDevControlValue(), 2026-10-09). Falls back to a plain assignment if the engine global is not loaded yet.
+function setControlValueFitted(el, value) {
+  if (window.setDevControlValue) { window.setDevControlValue(el, value); return }
+  if (el.type === 'checkbox') el.checked = !!value
+  else el.value = value
+}
 function syncControlDom(id, value) {
   const el = document.getElementById(id)
   if (!el) return
   if (el.type === 'checkbox') { el.checked = !!value; return }
-  el.value = value
+  setControlValueFitted(el, value)
   if (el.type === 'range') {
     const valEl = document.getElementById(id.replace(/^slider/, 'value'))
     if (valEl && !valEl.querySelector('input')) valEl.textContent = value // leave an open click-to-type box alone
@@ -8910,8 +8917,7 @@ function createPerModeStore(hiddenId, ids) {
     ids.forEach((id) => {
       const el = document.getElementById(id)
       if (!el || !(id in snapshot)) return
-      if (el.type === 'checkbox') el.checked = snapshot[id]
-      else el.value = snapshot[id]
+      setControlValueFitted(el, snapshot[id])
       // Both events, same reasoning as applyPhoneModelPerModelSettings(): wireSlider/wireTextInput listen for 'input', wireCheckbox
       // for 'change'. Range-bar / curve-editor widgets are polled and pick up the new .value on their own.
       el.dispatchEvent(new Event('input', { bubbles: true }))
@@ -8987,8 +8993,7 @@ function applyPhoneModelPerModelSettings(modelFile) {
   PHONE_MODEL_PER_MODEL_CONTROL_IDS.forEach((id) => {
     const el = document.getElementById(id)
     if (!el || !(id in snapshot)) return
-    if (el.type === 'checkbox') el.checked = snapshot[id]
-    else el.value = snapshot[id]
+    setControlValueFitted(el, snapshot[id])
     // CORRECTED 2026-09-29: this used to dispatch only 'input', on the
     // (wrong) assumption that it drives every wireSlider()/
     // wireCheckbox() callback alike. wireCheckbox() (main.js) actually
@@ -9901,7 +9906,7 @@ function renderRecursiveRenderGroup(content) {
   addRow(content, { id: 'checkboxScreenRenderEnabled', label: 'Recursive Render On/Off', type: 'checkbox' })
   document.getElementById('checkboxScreenRenderEnabled').checked = cfg.screenRenderEnabled
   wireCheckbox('checkboxScreenRenderEnabled', (v) => { setScreenRenderEnabled(v) })
-  addRow(content, { id: 'sliderScreenRecursionLevels', label: 'Recursion Levels', type: 'slider', min: 1, max: 10, step: 1, value: cfg.screenRecursionLevels })
+  addRow(content, { id: 'sliderScreenRecursionLevels', label: 'Recursion Levels', type: 'slider', min: 1, max: 20, step: 1, value: cfg.screenRecursionLevels })
   wireSlider('sliderScreenRecursionLevels', (v) => { cfg.screenRecursionLevels = v })
   addRow(content, { id: 'sliderScreenRenderResolution', label: 'Render Resolution (%)', type: 'slider', min: 10, max: 200, step: 5, value: cfg.screenRenderResolution })
   wireSlider('sliderScreenRenderResolution', (v) => { cfg.screenRenderResolution = v })

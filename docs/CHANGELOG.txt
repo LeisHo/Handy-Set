@@ -8287,6 +8287,29 @@ solveIkHandPose() (its changelog entries 2026-10-09 01:59 AM and 02:09 AM).
    main.js ?v=233.
 
 --------------------------------------------------------------------------------
+2026-10-09 -- Settings audit: restored values were being clamped by the slider's range (Recursive Render and others)
+
+Report: "some more settings don't seem to be saving, such as Recursive Render settings. Check all settings."
+Method: loaded the LIVE site and compared every one of the 287 controls in the synced dev-panel-settings.json
+against the DOM element after load (287/287 present), then the cfg-derivable ones against window.__debug.cfg.
+Findings -- the saved file was correct everywhere; the loss was on RESTORE:
+ * sliderScreenRecursionLevels: file 15, DOM and cfg 10. The slider was built with max 10; click-to-type had auto-expanded
+   its range, but a restore assigns el.value directly and a range input silently CLAMPS to min/max (and snaps to step).
+   The same happened to cfg.keyAzimuth (default lighting 439 vs slider max 360: cfg 439, DOM 360 -- so the next Sync would
+   have written the clamped 360 back). Every other control matched exactly.
+Fix: devPanel.js setDevControlValue(el, value) (also window.setDevControlValue) does what click-to-type does -- widens the
+crossed bound to value +-20% (and its bound label) and assigns with step 'any' -- and is now used by applyControlValues()
+(Sync/Reset/Undo/Load), writeDevControlValue() (Mobile/Landscape mirror rows), and in main.js by syncControlDom() (preset
+applies) and the per-model and per-mode snapshot restores (setControlValueFitted()). Recursion Levels' default max also
+raised 10 -> 20. Node test (range-test.mjs, a range input that clamps/snaps like a browser): 15 on a 1..10 slider is
+clamped to 10 with a plain assignment and kept (max widened to 18) with the helper; off-step 0.001 and below-min values kept;
+in-range values leave the bounds alone.
+Not bugs (by design): Camera Zoom (default camera applied after the Sync restore) and Camera Z (live).
+Other Mobile/Landscape-only (Independent) rows still do not drive cfg unless bridged (see the earlier Gotchas).
+devPanel.js ?v=20, main.js ?v=234. This devPanel.js fix is generic and belongs in .claude/TEMPLATE_DEV_PANEL.html too
+(not folded back yet -- a deliberate separate step).
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
