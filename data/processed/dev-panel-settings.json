@@ -144,7 +144,7 @@
     "sliderPhoneRotationScaleX": 0.8,
     "sliderPhoneResponsiveRotationFineTuneX": 0,
     "checkboxPhoneAxisYEnabled": true,
-    "sliderPhoneRotationScaleY": 0.8,
+    "sliderPhoneRotationScaleY": 0.6,
     "sliderPhoneResponsiveRotationFineTuneY": 0,
     "checkboxPhoneAxisZEnabled": true,
     "sliderPhoneRotationScaleZ": 0.6,
@@ -291,9 +291,9 @@
   },
   "layout": {
     "left": 26,
-    "top": 372,
+    "top": 87,
     "width": 350,
-    "height": 407
+    "height": 673
   },
   "devPanelStyle": {
     "titleFontSize": 17,
@@ -14873,7 +14873,7 @@
     "desktop:RESPONSIVE BEHAVIOUR - PHONE": false,
     "desktop:Responsive Rotation": false,
     "desktop:ROTATION - X AXIS": true,
-    "desktop:ROTATION - Y AXIS": true,
+    "desktop:ROTATION - Y AXIS": false,
     "desktop:ROTATION - Z AXIS": false,
     "desktop:RESPONSIVE DISPLACE": true,
     "desktop:DISPLACE - X AXIS": true,
