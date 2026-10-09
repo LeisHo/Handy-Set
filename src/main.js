@@ -1588,7 +1588,12 @@ function applyModelRootTransform(h, poseValues) {
 // the field. Used directly by Pose-group sliders, saved-pose "Use", and
 // Tween — same cfg applied uniformly to all hands (matching HANDY
 // DANDIES' own design: one shared pose, N independent field positions).
-function applyPoseValuesToHand(poseValues) {
+// `skipBaseReapply` (2026-10-09): applyModelRootTransform() below rebuilds h.clone's rotation from the plain pose values and resets
+// applyBaseArmRotation()'s delta-tracker, which silently DROPPED a set Base Rotation X/Y/Z from the hand whenever any pose value
+// (Whole-Hand Rotation, Pose Scale, a saved-pose Use, ...) was re-applied -- the sliders still read e.g. 50 deg but the hand had none
+// of it until a base slider was touched again (measured: 50 deg off). So Base Rotation is re-applied at the end of this function. The
+// Responsive Pose Tween frame passes true: it re-applies Base Rotation itself right after, with its own blended pose values.
+function applyPoseValuesToHand(poseValues, skipBaseReapply = false) {
   // armBaseDistanceT, not tiltMagnitude -- direct request 2026-09-27 to
   // unify Responsive Wrist Splay's own distance input with the new
   // Responsive Arm Rotation at Base feature (cursor-to-arm-base
@@ -1605,6 +1610,7 @@ function applyPoseValuesToHand(poseValues) {
     // own comment (2026-09-26, 3rd round) for why alignQuat was wrong here.
     FINGER_NAMES.forEach((name) => applyCurlToSkeleton(name, h.skinnedMesh.skeleton, h.currentBaseQuat, curlExcludeQuatForHand(h), poseValues))
   })
+  if (!skipBaseReapply) applyBaseArmRotation(computeResponsiveBaseArmRotationDeg(armBaseDistanceT), poseValues) // 0 unless tracking + responsive are on
   cfg.hideWrist = poseValues.hideWrist || 0
   updateWristCrop()
 }
@@ -1677,7 +1683,7 @@ function applyResponsivePoseTweenFrame() {
   blended.modelRotX = cfg.modelRotX
   blended.modelRotY = cfg.modelRotY
   blended.modelRotZ = cfg.modelRotZ
-  applyPoseValuesToHand(blended)
+  applyPoseValuesToHand(blended, true) // true: the Base Rotation re-apply just below uses `blended` itself
   // Base Rotation X/Y/Z (applied via a SEPARATE function/pivot --
   // rForearmBend, not modelRotationPivot -- so it can't just be folded
   // into `blended` above the way modelRotX/Y/Z was). The call just
@@ -1769,13 +1775,19 @@ function getHandMeshFrameQuat(h) {
   }
   return h.meshFrameQ
 }
-function applyBaseArmRotation(extraX = 0, poseValues = cfg) {
+function applyBaseArmRotation(extraX = 0, poseValues = cfg, skipFingerBake = false) {
   hands.forEach((h) => {
     const baseBone = h.skinnedMesh.skeleton.getBoneByName('rForearmBend')
     if (!baseBone) return
 
     const baseWorldPos = new THREE.Vector3()
     baseBone.getWorldPosition(baseWorldPos)
+    // The pivot must be expressed in h.clone's PARENT space (h.wrapper) because h.clone.position / quaternion live there. It was used as a
+    // WORLD position, which is only the same thing while h.wrapper sits at the world origin untransformed: for any hand placed away from the origin
+    // (a hand in the field grid, Phone Tilt / Displace offsets) Base Rotation did not pivot on the arm-base bone at all -- the whole hand jumped toward
+    // the origin (measured, wrapper at (30,0,-20): the base bone moved (-2.1,-14.7,-12.6) units for a 60 deg slide and did not come back at 0).
+    h.wrapper.updateWorldMatrix(true, false)
+    const baseLocalPos = h.wrapper.worldToLocal(baseWorldPos.clone())
 
     // Desired rotation from current slider values, in the bone's LOCAL axes
     const rotX = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), (cfg.baseRotationX + extraX) * Math.PI / 180)
@@ -1788,22 +1800,27 @@ function applyBaseArmRotation(extraX = 0, poseValues = cfg) {
     // cumulative rotation as a LEFT-multiplied delta (clone.q = desired * q0), so the equivalent is desired = G R G^-1 with
     // G = q0 * F, the mesh frame expressed in the clone's parent space, and q0 = lastBase^-1 * clone.q (the zero-base orientation;
     // applyModelRootTransform() invalidates lastBaseArmQuat whenever it rewrites clone.q, so this stays consistent).
-    _baseMeshFrameQ.copy(h.clone.quaternion)
-    if (h.lastBaseArmQuat) _baseMeshFrameQ.premultiply(h.lastBaseArmQuat.clone().invert())
-    _baseMeshFrameQ.multiply(getHandMeshFrameQuat(h))
-    desiredQuat.premultiply(_baseMeshFrameQ).multiply(_baseMeshFrameQ.clone().invert())
+    // KEEP EVERYTHING UNIT-LENGTH (2026-10-09): THREE's Quaternion.invert() is only the CONJUGATE, which is the inverse only for a
+    // unit quaternion. These products are stored back (clone.q, currentBaseQuat, lastBaseArmQuat) and never re-normalised, so a
+    // 1e-7 length error made G non-unit, G * R * conj(G) then scaled `desired` by |G|^2, and that went into lastBaseArmQuat and the
+    // next call's q0 -- the error multiplied each call (measured norms 1, 0.99999, 0.99997, 0.99984, 0.9992 over four slider moves,
+    // and the hand's quaternion eventually collapsed to 0,0,0,0). Normalising G and the stored results breaks the feedback loop.
+    _baseMeshFrameQ.copy(h.clone.quaternion).normalize()
+    if (h.lastBaseArmQuat) _baseMeshFrameQ.premultiply(h.lastBaseArmQuat.clone().normalize().invert())
+    _baseMeshFrameQ.multiply(getHandMeshFrameQuat(h)).normalize()
+    desiredQuat.premultiply(_baseMeshFrameQ).multiply(_baseMeshFrameQ.clone().invert()).normalize()
 
     // Only apply the DELTA: desired / lastApplied (so we don't compound)
     if (!h.lastBaseArmQuat) h.lastBaseArmQuat = new THREE.Quaternion()
-    const deltaQuat = desiredQuat.clone().multiply(h.lastBaseArmQuat.clone().invert())
+    const deltaQuat = desiredQuat.clone().multiply(h.lastBaseArmQuat.clone().normalize().invert()).normalize()
 
     // Apply delta to position and quaternion
-    const offset = h.clone.position.clone().sub(baseWorldPos)
+    const offset = h.clone.position.clone().sub(baseLocalPos)
     offset.applyQuaternion(deltaQuat)
-    h.clone.position.copy(baseWorldPos).add(offset)
+    h.clone.position.copy(baseLocalPos).add(offset)
 
-    h.clone.quaternion.multiplyQuaternions(deltaQuat, h.clone.quaternion)
-    h.currentBaseQuat.multiplyQuaternions(deltaQuat, h.currentBaseQuat) // keep the curl-axis reference in sync -- see this function's own comment above
+    h.clone.quaternion.multiplyQuaternions(deltaQuat, h.clone.quaternion).normalize()
+    h.currentBaseQuat.multiplyQuaternions(deltaQuat, h.currentBaseQuat).normalize() // keep the curl-axis reference in sync -- see this function's own comment above
     h.lastBaseArmQuat.copy(desiredQuat)
     // Re-bake finger curl/splay immediately using the now-updated
     // baseQuat -- otherwise the actual bone quaternions stay stale
@@ -1812,7 +1829,7 @@ function applyBaseArmRotation(extraX = 0, poseValues = cfg) {
     // splay frame, or the next finger-curl slider touch), leaving a
     // visibly wrong pose in the meantime. Matches the exact call
     // pattern applyReactiveWristSplayFrame() already uses.
-    FINGER_NAMES.forEach((name) => applyCurlToSkeleton(name, h.skinnedMesh.skeleton, h.currentBaseQuat, curlExcludeQuatForHand(h), poseValues))
+    if (!skipFingerBake) FINGER_NAMES.forEach((name) => applyCurlToSkeleton(name, h.skinnedMesh.skeleton, h.currentBaseQuat, curlExcludeQuatForHand(h), poseValues))
   })
 }
 
@@ -3043,14 +3060,16 @@ const IK_FINGER_DOFS = {
   middle: [FINGER_CURL_KEY.middle, FINGER_SPLAY_KEY.middle], ring: [FINGER_CURL_KEY.ring, FINGER_SPLAY_KEY.ring],
   pinky: [FINGER_CURL_KEY.pinky, FINGER_SPLAY_KEY.pinky]
 }
-const IK_GLOBAL_DOFS = ['modelRotX', 'modelRotY', 'modelRotZ', 'poseOffsetX', 'poseOffsetY', 'poseOffsetZ', 'wristBend', 'wristSplay', 'wristRotation']
+// 2026-10-09 (user request, as in HANDO): the solver drives Whole-Hand Rotation AT BASE (baseRotationX/Y/Z, pivot = the arm-base bone, about the hand
+// mesh's own axes) instead of Whole-Hand Rotation (modelRotX/Y/Z). The 'Rot' influence row keeps its keys and now controls these three.
+const IK_GLOBAL_DOFS = ['baseRotationX', 'baseRotationY', 'baseRotationZ', 'poseOffsetX', 'poseOffsetY', 'poseOffsetZ', 'wristBend', 'wristSplay', 'wristRotation']
 // HANDO removed the 9 bone-offset DOFs (Forearm Bend / Twist / Wrist offsets) from the solver; this hand has no shoulder bone either.
 const IK_ARM_DOFS = ['elbowBend', 'elbowSideBend', 'forearmTwist']
 // One entry per influence slider (id = 'slider' + Key) and per Min / Max range bar (cfg key ikRange<Part>).
 const IK_INFLUENCE_PARTS = [
   ['Fingers', 'Fingers (%)', 'Fingers Min / Max From Base (%)', -200, 200, 1, 100],
   ['Off', 'Pose Offset (%)', 'Pose Offset Min / Max From Base (Units)', -100, 100, 0.5, 0],
-  ['Rot', 'Whole-Hand Rotation (%)', 'Whole-Hand Rotation Min / Max From Base (Deg)', -360, 360, 1, 0],
+  ['Rot', 'Whole-Hand Rotation at Base (%)', 'Whole-Hand Rotation at Base Min / Max From Base (Deg)', -360, 360, 1, 0],
   ['WristRot', 'Wrist Rotation (%)', 'Wrist Rotation Min / Max From Base (Deg)', -360, 360, 1, 100],
   ['WristSplay', 'Wrist Splay (%)', 'Wrist Splay Min / Max From Base (Deg)', -360, 360, 1, 100],
   ['WristBend', 'Wrist Bend (%)', 'Wrist Bend Min / Max From Base (Deg)', -360, 360, 1, 100],
@@ -3085,7 +3104,7 @@ function toggleIkSolverPause(btn) {
 // fraction of its slider range: 0 = frozen at the baseline, 1 = the whole slider range.
 const IK_INFLUENCE_PART = { wristRotation: 'WristRot', wristSplay: 'WristSplay', wristBend: 'WristBend', elbowBend: 'ElbowBend', elbowSideBend: 'ElbowSideBend', forearmTwist: 'ForearmTwist' }
 function ikPartsOfKey(k) {
-  if (k.startsWith('modelRot')) return ['Rot']
+  if (/^baseRotation[XYZ]$/.test(k)) return ['Rot']
   if (k.startsWith('poseOffset')) return ['Off']
   if (IK_INFLUENCE_PART[k]) return [IK_INFLUENCE_PART[k]]
   if (IK_ARM_DOFS.includes(k)) return [] // no slider: never driven
@@ -3110,7 +3129,7 @@ function ikPoseControlRange(key) {
 }
 function ikRegWeight(key) {
   if (key.startsWith('poseOffset') || /Off[XYZ]$/.test(key)) return 0.1
-  if (key.startsWith('modelRot')) return 0.5
+  if (key.startsWith('modelRot') || /^baseRotation[XYZ]$/.test(key)) return 0.5
   return 0.15
 }
 // The same pipeline applyPoseValuesToHand() runs, minus the wrist-crop refresh (the solver runs
@@ -3118,7 +3137,12 @@ function ikRegWeight(key) {
 function ikApplyPose(extraSplay) {
   hands.forEach((h) => {
     h.currentBaseQuat.copy(computeBaseQuatFromValues(cfg))
-    applyModelRootTransform(h, cfg)
+    applyModelRootTransform(h, cfg) // also resets applyBaseArmRotation()'s tracker, so the call below applies Base Rotation from the plain pose every time (stateless)
+  })
+  // Base Rotation X/Y/Z (IK DOFs since 2026-10-09). After the transform pass and BEFORE the arm/wrist/finger pass: it updates h.currentBaseQuat,
+  // which the finger curl/splay axes are derived from. skipFingerBake: the pass below bakes the fingers once.
+  applyBaseArmRotation(computeResponsiveBaseArmRotationDeg(armBaseDistanceT), cfg, true)
+  hands.forEach((h) => {
     const skel = h.skinnedMesh.skeleton
     applyArmPoseToSkeleton(skel, cfg)
     applyWristPoseToSkeleton(skel, cfg, extraSplay)
@@ -4081,16 +4105,6 @@ function computePhoneResponsiveDisplacement() {
     const y = cfg.phoneDisplaceAxisYEnabled ? raw.y * cfg.phoneDisplaceScaleY * (cfg.phoneDisplaceInvertY ? -1 : 1) : 0
     return _phoneDisplaceResultVec.set(x, y, 0) // Z always 0 in Tilt mode -- see this function's own leading comment
   }
-  // Y/Z SWAPPED in Absolute rotation mode 2026-10-04 (direct request, same report as the rotation swap in
-  // computePhoneAbsoluteOrientationRawQuat()): the Y controls (On/Off, Scale, Invert, Range, Curve, Reference)
-  // now drive the Z displacement and vice versa. Other rotation modes are unchanged.
-  if (cfg.phoneRotationMode === 'absolute') {
-    return _phoneDisplaceResultVec.set(
-      computePhoneDisplaceAxisUnits(phoneDisplacePosX, cfg.phoneDisplaceAxisXEnabled, cfg.phoneDisplaceScaleX, cfg.phoneDisplaceInvertX, 'X'),
-      computePhoneDisplaceAxisUnits(phoneDisplacePosY, cfg.phoneDisplaceAxisZEnabled, cfg.phoneDisplaceScaleZ, cfg.phoneDisplaceInvertZ, 'Z'),
-      computePhoneDisplaceAxisUnits(phoneDisplacePosZ, cfg.phoneDisplaceAxisYEnabled, cfg.phoneDisplaceScaleY, cfg.phoneDisplaceInvertY, 'Y')
-    )
-  }
   return _phoneDisplaceResultVec.set(
     computePhoneDisplaceAxisUnits(phoneDisplacePosX, cfg.phoneDisplaceAxisXEnabled, cfg.phoneDisplaceScaleX, cfg.phoneDisplaceInvertX, 'X'),
     computePhoneDisplaceAxisUnits(phoneDisplacePosY, cfg.phoneDisplaceAxisYEnabled, cfg.phoneDisplaceScaleY, cfg.phoneDisplaceInvertY, 'Y'),
@@ -4164,12 +4178,9 @@ function computeDeviceOrientationQuat(alphaDeg, betaDeg, gammaDeg) {
 // can capture the SAME raw quaternion (pre-baseline) to invert into a new
 // baseline, without duplicating the alphaDeg/betaDeg/gammaDeg computation.
 function computePhoneAbsoluteOrientationRawQuat(e) {
-  // Y/Z SWAPPED 2026-10-04 (direct report: on the iPhone 17 Max Pro and Galaxy S26, the only models using
-  // Absolute mode, "the y and z rotation axes got switched" vs Gyro mode): alpha (spin) is now gated/scaled by
-  // the Y On/Off + Scale controls and gamma (roll) by the Z ones -- previously the other way round.
-  const alphaDeg = cfg.phoneAxisYEnabled ? (e.alpha || 0) * cfg.phoneRotationScaleY : 0
+  const alphaDeg = cfg.phoneAxisZEnabled ? (e.alpha || 0) * cfg.phoneRotationScaleZ : 0
   const betaDeg = cfg.phoneAxisXEnabled ? (e.beta || 0) * cfg.phoneRotationScaleX : 0
-  const gammaDeg = cfg.phoneAxisZEnabled ? (e.gamma || 0) * cfg.phoneRotationScaleZ : 0
+  const gammaDeg = cfg.phoneAxisYEnabled ? (e.gamma || 0) * cfg.phoneRotationScaleY : 0
   return computeDeviceOrientationQuat(alphaDeg, betaDeg, gammaDeg) // returns the shared _phoneAbsoluteQuat instance
 }
 // Baseline for Absolute/Orientation mode -- added 2026-09-30, direct
@@ -6474,8 +6485,15 @@ function relayoutField() {
     // changes. Idempotent to re-call here: quaternion/position end up at
     // the exact same values they already had, since poseValues (cfg) and
     // h.currentBaseQuat haven't changed, only scale needed recomputing.
+    // CORRECTED 2026-10-09: the "idempotent" claim above is false once Base Rotation is set. h.currentBaseQuat then carries the
+    // base-rotation delta, so applyModelRootTransform() kept the rotation but reset applyBaseArmRotation()'s tracker (lastBaseArmQuat
+    // = null) and recomputed the position without the base-bone pivot; touching a Base Rotation slider afterwards applied the rotation
+    // a SECOND time (measured: 50 deg set -> 100 deg). So rebuild the pure pose rotation here and re-apply Base Rotation once, below,
+    // exactly as applyPoseValuesToHand() does.
+    h.currentBaseQuat.copy(computeBaseQuatFromValues(cfg))
     applyModelRootTransform(h, cfg)
   })
+  applyBaseArmRotation(computeResponsiveBaseArmRotationDeg(armBaseDistanceT), cfg)
 }
 function findSkinnedMesh(root) {
   let found = null
