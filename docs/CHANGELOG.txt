@@ -8529,6 +8529,23 @@ still stale: it must be reloaded before the next Sync or it will drop them again
 any settings written to git by something other than a page Sync are lost by a Sync from a page that loaded before them.)
 
 --------------------------------------------------------------------------------
+2026-10-09 -- Recursive Render per-level Scale Min / Max + Curve (and every range-bar / curve widget) now take effect when edited
+
+Report: "the texture min max scale slider and curve editor doesn't seem to do anything. It seems like the singular texture scale slider dictates the scale."
+Checked first on the LIVE site: with the saved range 0.8-0.95 and a falling curve, the final-display texture's repeat.y was 0.95694 = 1/(1.1*0.95) and
+the previous pass's 0.96591 = 1/(1.1*0.9412) -- exactly computeScreenLevelScale()'s values, so the transform math and the restore were fine. The loss was in
+WHEN edits are picked up. Two causes, both in the on-demand render loop:
+ 1. The generic range-bar / curve-editor widgets only set their hidden input's value (no input/change event), and nothing requested a frame, so dragging
+    them drew nothing (the plain Texture Scale slider calls requestRender() itself, so it appeared to be the only thing that worked).
+ 2. curveWidgetResyncs -- what copies the widget value into cfg and re-parses it -- ran at the END of renderOneFrame(), AFTER renderVirtualScreen(), so any
+    frame that did happen still drew with the OLD range/curve and the new values only landed on a later frame.
+Fix (main.js ?v=237): curveWidgetResyncs now runs at the START of renderOneFrame(); and any pointer interaction inside the dev panel (held-button move,
+pointerdown/up, click, dblclick, contextmenu, wheel, keyup) requests a frame, so widgets that forget requestRender() are covered too (hovering without a
+button costs nothing). This also applies to every other polled widget (Rotation / Displace range+curve, Wrist Splay, Arm Length, Base Arm Rotation, Pose
+Tween). Note on feel: the per-level scale multiplies down the whole chain (each pass samples the previous one), so with 18 levels small changes compound.
+Not browser-verified (project rule).
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

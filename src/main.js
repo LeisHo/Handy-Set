@@ -7292,6 +7292,11 @@ function animate() {
   }
 }
 function renderOneFrame() {
+  // Range-bar / curve-editor widgets only set their hidden input's value (no event), and curveWidgetResyncs is what copies that into cfg
+  // and re-parses it. It used to run at the END of this function -- after renderVirtualScreen() -- so a frame always drew with the OLD
+  // widget values and the new ones only showed up on a later frame (2026-10-09, direct report: Recursive Render's per-level Min / Max
+  // Scale and Curve "don't do anything" while the plain Texture Scale slider does). Run them FIRST so every frame uses current values.
+  curveWidgetResyncs.forEach((fn) => fn())
   if (!isPaused) {
     // Phone Tilt rotation (only when tracking is enabled)
     if (cfg.trackingEnabled && hands.length) {
@@ -7437,7 +7442,6 @@ function renderOneFrame() {
     updateIkViz()
     renderVirtualScreen()
   }
-  curveWidgetResyncs.forEach((fn) => fn())
   composer.render()
 }
 
@@ -8149,6 +8153,18 @@ function onPhoneDeviceAwareEdit(e) {
 // Desktop edit both end with the device-correct value in cfg.
 document.addEventListener('input', onPhoneDeviceAwareEdit)
 document.addEventListener('change', onPhoneDeviceAwareEdit)
+// ON-DEMAND RENDERING + generic widgets (2026-10-09): the range-bar / curve-editor widgets change their hidden value on pointer events but
+// fire no input/change, and nothing else asks for a frame, so editing them drew nothing until something unrelated did (Recursive Render's
+// per-level Min / Max Scale and Curve looked dead). Any pointer interaction inside the dev panel now requests a frame -- every move of a
+// held drag, plus the release, click and key events -- which also covers any other widget that forgets to call requestRender() itself.
+// A frame only renders when requested, so hovering the panel without pressing costs nothing.
+;['pointerdown', 'pointermove', 'pointerup', 'click', 'dblclick', 'contextmenu', 'keyup', 'wheel'].forEach((type) => {
+  document.addEventListener(type, (e) => {
+    if (type === 'pointermove' && !e.buttons) return
+    const t = e.target
+    if (t && t.closest && t.closest('#devPanel')) requestRender()
+  }, { capture: true, passive: true })
+})
 // Sync / Reset / Undo / tab clicks restore values without a per-control event on the right element:
 // re-apply shortly after any click inside the dev panel, and whenever the orientation (Mobile <-> Landscape) changes.
 document.addEventListener('click', (e) => { if (e.target && e.target.closest && e.target.closest('#devPanel')) schedulePhoneDeviceAwareApply(120) })

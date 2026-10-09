@@ -160,6 +160,11 @@ wiring, and are still open:
 
 ## Gotchas
 
+- **Polled widgets (range-bar / curve-editor) need a frame requested and must be polled BEFORE the scene work (fixed 2026-10-09).** Those widgets set a hidden
+  input value with no event; `curveWidgetResyncs` copies it into cfg. It used to run after `renderVirtualScreen()` in `renderOneFrame()` and nothing requested
+  a frame on edit, so edits to Recursive Render's per-level Scale Min/Max + Curve (and every other polled widget) did nothing visible. It now runs first, and a
+  delegated listener requests a frame for any pointer interaction inside `#devPanel`. If a new widget "does nothing" while sliders work, check this pair first.
+
 - **A restored slider value must not be clamped by the slider's range (fixed 2026-10-09).** A range input silently clamps an
   assigned `.value` to its min/max and snaps it to its step, so a value saved after click-to-type auto-expanded the range
   (Recursion Levels 15 on a max-10 slider; Key Azimuth 439 on max 360) came back clamped on every reload -- the synced file was
