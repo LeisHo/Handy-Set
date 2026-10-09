@@ -141,7 +141,7 @@
     "checkboxPhoneRotationResetEnabled": true,
     "sliderPhoneRotationDamping": 0.11,
     "checkboxPhoneAxisXEnabled": true,
-    "sliderPhoneRotationScaleX": 0.9,
+    "sliderPhoneRotationScaleX": 0.7,
     "sliderPhoneResponsiveRotationFineTuneX": 0,
     "checkboxPhoneAxisYEnabled": true,
     "sliderPhoneRotationScaleY": 0.7,
