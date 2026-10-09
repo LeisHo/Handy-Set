@@ -144,7 +144,7 @@
     "sliderPhoneRotationScaleX": 0.8,
     "sliderPhoneResponsiveRotationFineTuneX": 0,
     "checkboxPhoneAxisYEnabled": true,
-    "sliderPhoneRotationScaleY": 0.6,
+    "sliderPhoneRotationScaleY": 0.7,
     "sliderPhoneResponsiveRotationFineTuneY": 0,
     "checkboxPhoneAxisZEnabled": true,
     "sliderPhoneRotationScaleZ": 0.6,
@@ -293,7 +293,7 @@
     "left": 26,
     "top": 87,
     "width": 350,
-    "height": 673
+    "height": 692
   },
   "devPanelStyle": {
     "titleFontSize": 17,
