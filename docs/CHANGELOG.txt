@@ -8412,6 +8412,29 @@ devPanel.js ?v=20, main.js ?v=234. This devPanel.js fix is generic and belongs i
   - Consequence worth knowing: until the live page is RELOADED, its next Sync will write the old scales back again. Same mechanism as every settings edit made outside the page.
 
 --------------------------------------------------------------------------------
+2026-10-09 -- Absolute rotation mode rewritten around the phone's physical axes (ccd8266); IK Rotation Weight slider (af89681) [written by a HANDO session at the user's request]
+  - ABSOLUTE MODE. Report (real phone; X left-right, Y charging port -> camera, Z face -> back): with only Z on, a real Z turn rotated the model about Y; with only Y on, a real Z turn
+    rotated the model about Z; a real Y turn never changed anything; Gyro mode was right. Cause: computePhoneAbsoluteOrientationRawQuat() gated/scaled the three W3C Euler ANGLES (alpha, beta,
+    gamma), which are an intrinsic Z-X'-Y'' chain, not rotations about the phone's own X/Y/Z (and alpha/gamma collapse onto one axis as the phone is held upright: measured axes 0 / 0.71 / 0.98 / 1.00
+    parallel at beta 0 / 45 / 80 / 89.9). Fix: the raw quaternion is now the full ungated orientation; computePhoneAbsoluteOrientationQuat() takes rel = baselineInverse * current (the turn since
+    the baseline, about the baseline's own body axes), splits it into degrees about the phone's X / Y / Z, applies each axis's On/Off and Scale, and feeds the result through GYRO's axis mapping
+    (physical X and Z = the 'tilt' axis x / y components, physical Y = spin about PHONE_GYRO_SPIN_LOCAL_AXIS, Y negated) -- Gyro's mapping was verified on the real phone over many rounds.
+    Still memoryless / drift-free; the baseline is now the unscaled orientation (it used to depend on which axes were on at the moment of reset).
+    MEASURED (the real functions from main.js run in the page with its THREE, simulated real turns about each phone axis, starting flat / upright / tilted, all On/Off combinations = 36 cases):
+    real X +20 -> model 20 deg about local X, real Z +20 -> 20 deg about local Y (the model's visual Z), real Y +20 -> 20 deg about local -Z (visual Y); an axis switched off does nothing;
+    Scale 0.8 -> 16 deg; a negative Scale reverses that axis. NOT tested on a real phone. If an axis moves the wrong way on a given phone, make its Scale negative.
+  - IK POSING TWISTING THE HAND. Report: hand right under the phone, fingers spread, targets should be easy, but turning IK on twists hand and arm into an unnatural pose; "maybe the IK is factoring in
+    some rotation we aren't". Checked: (1) not a regression of today's work -- the same state on the code from before my HANDYSET changes (2f51703) gives pair 1 rot 128.9 deg, wrist rotation -42,
+    splay -63, elbow side bend 27; (2) with the newest saved settings and the current code: pos 1.15 / 2.19 / 5.54 u but rot 117.8 / 3.3 / 21.4 deg (pair 1 thumb pad vs phone node), wrist splay -30 -> -63,
+    wrist bend -16 (its limit), wrist rotation -16, forearm twist -18, elbow bend 19; (3) with the orientation term switched off the three pairs all reach 0.00 u and the pose barely moves
+    (wrist bend -15, splay -39, elbow bend -3). So the "rotation" IK is factoring in is each pair's ORIENTATION target (the source node's axes x the pair's local rotation), weighted by the constant
+    IK_ROT_WEIGHT = 8 (position units per radian). The hand-pad node axes and the phone-node axes have no common convention, so one pair can ask for 120-170 deg of twist.
+    Fix: the constant is now cfg.ikRotationWeight, a slider "IK Rotation Weight (x)" (0..20, step 0.5, default 8 = unchanged behaviour) at the top of the IK POSING group; 0 = position only. Included in
+    ikSignature so moving it re-solves. MEASURED with the slider on the same state: 8 -> as before; 1 -> pos 0.72 / 1.10 / 0.61 u, rot 137 / 72 / 52, splay -63; 0 -> pos 0.00 / 0.00 / 0.00 u, rot not matched, natural pose.
+    Not done: a per-pair "match rotation" switch; changing the default (the saved settings have no value for the new slider, so it starts at 8 until it is moved and Synced).
+  - Both pushed from a temporary clean checkout of origin/main (the working tree holds uncommitted glb/blend changes that the user's own re-imports at 05:13-05:14 overwrote upstream).
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
