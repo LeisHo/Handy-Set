@@ -193,6 +193,7 @@ const cfg = {
   // IK Influence (HANDO's CURRENT system, 2026-10-04 rewrite: one priority slider per existing pose slider + All, each with a hard
   // Min / Max window as a range bar -- see ikInfluence() / solveIkHandPose()). Defaults as in HANDO: whole-hand offset/rotation and the
   // arm start at 0 (locked), fingers and wrist at 100. Range values are JSON strings like every other range-bar in this file.
+  ikRotationWeight: 8, // IK Rotation Weight (x): how strongly the solver matches each pair's ORIENTATION vs its position (0 = position only) -- see solveIkHandPose()
   ikInfluenceMaster: 100, ikInfluenceFingers: 100, ikInfluenceOff: 0, ikInfluenceRot: 0,
   ikInfluenceWristRot: 100, ikInfluenceWristSplay: 100, ikInfluenceWristBend: 100,
   ikInfluenceElbowBend: 0, ikInfluenceElbowSideBend: 0, ikInfluenceForearmTwist: 0,
@@ -3079,7 +3080,10 @@ const IK_INFLUENCE_PARTS = [
 ]
 const IK_INFLUENCE_ROW_KEYS = ['ikInfluenceMaster'].concat(...IK_INFLUENCE_PARTS.map(([part]) => ['ikInfluence' + part, 'ikRange' + part]))
 const IK_POS_WEIGHT = 1
-const IK_ROT_WEIGHT = 8 // position-units of error per radian of orientation error
+// Position-units of error per radian of orientation error: now cfg.ikRotationWeight (default 8, the previous constant) -- 2026-10-09, direct report: with the hand
+// right under the phone and every target a few units away, IK Posing twisted the hand/arm out of shape because it was also matching each pair's ORIENTATION (a
+// 118-129 deg error on one pair at weight 8). MEASURED on the user's saved state: weight 8 -> pos 1.2 / 2.2 / 5.5 u but rot 118 / 3 / 21 deg with wrist splay -63, wrist
+// rotation -16..-42, forearm twist -18; weight 0 -> pos 0.00 u on all three pairs with wrist bend -15, splay -39, elbow bend -3. Slider in the IK POSING group.
 let ikBasePose = null
 let ikLastSignature = null
 let ikLastSolved = null // key -> value from the previous solve (warm start)
@@ -3197,7 +3201,7 @@ function getActiveIkPairs() {
   return out
 }
 function ikSignature(pairs) {
-  return IK_PAIR_MAX + '#' + IK_INFLUENCE_ROW_KEYS.map((k) => cfg[k]).join(',') + '#' + pairs.map((p) => {
+  return IK_PAIR_MAX + '#' + cfg.ikRotationWeight + '#' + IK_INFLUENCE_ROW_KEYS.map((k) => cfg[k]).join(',') + '#' + pairs.map((p) => {
     p.src.object3d.updateWorldMatrix(true, false)
     return [p.i, p.tgt.id, p.src.id, p.displace, p.priority, p.world, p.qOff.x.toFixed(4), p.qOff.y.toFixed(4), p.qOff.z.toFixed(4),
       p.src.object3d.matrixWorld.elements.map((e) => Math.round(e * 1000)).join(',')].join(':')
@@ -3265,7 +3269,8 @@ function solveIkHandPose(pairs) {
       const ang = 2 * Math.acos(Math.min(1, qErr.w))
       const s = Math.sqrt(1 - qErr.w * qErr.w)
       const k = s < 1e-6 ? 2 : ang / s
-      r.push(qErr.x * k * IK_ROT_WEIGHT, qErr.y * k * IK_ROT_WEIGHT, qErr.z * k * IK_ROT_WEIGHT)
+      const rotW = cfg.ikRotationWeight
+      r.push(qErr.x * k * rotW, qErr.y * k * rotW, qErr.z * k * rotW)
       // Pair Priority: this pair's share of the total error (the REPORTED errors in the status stay unweighted).
       if (p.priority !== 1) for (let j = first; j < r.length; j++) r[j] *= p.priority
     })
@@ -3601,6 +3606,9 @@ function renderIkPosingGroup(handModelContent) {
   addRow(content, { id: 'checkboxIkPosingEnabled', label: 'IK Posing On/Off', type: 'checkbox' })
   document.getElementById('checkboxIkPosingEnabled').checked = cfg.ikPosingEnabled
   wireCheckbox('checkboxIkPosingEnabled', (v) => setIkPosingEnabled(v))
+  // IK Rotation Weight (2026-10-09): 0 = each pair only matches POSITION; higher = the hand pad is also turned to match the source node's orientation.
+  addRow(content, { id: 'sliderIkRotationWeight', label: 'IK Rotation Weight (x)', type: 'slider', min: 0, max: 20, step: 0.5, value: cfg.ikRotationWeight })
+  wireSlider('sliderIkRotationWeight', (v) => { cfg.ikRotationWeight = v; ikLastSignature = null; requestRender() })
   ikStatusEl = document.createElement('div')
   ikStatusEl.style.cssText = 'font-size:11px; opacity:0.85; margin:2px 0 6px;'
   content.appendChild(ikStatusEl)
