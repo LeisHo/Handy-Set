@@ -17739,5 +17739,95 @@
       "rimPower": 0.5,
       "rimColor": "#ffffff"
     }
+  ],
+  "listPicker_lighting": [
+    {
+      "name": "FLABOVE",
+      "keyAzimuth": 147,
+      "keyElevation": 66,
+      "keyTargetHeight": 54,
+      "keyIntensity": 6,
+      "keyColor": "#ffffff",
+      "ambientIntensity": 0,
+      "ambientSkyColor": "#ffffff",
+      "ambientGroundColor": "#3a2f2a"
+    },
+    {
+      "name": "2 Tone - FlatBehind",
+      "keyAzimuth": 71,
+      "keyElevation": 7,
+      "keyTargetHeight": 100,
+      "keyIntensity": 6,
+      "keyColor": "#ffffff",
+      "ambientIntensity": 0,
+      "ambientSkyColor": "#ffffff",
+      "ambientGroundColor": "#3a2f2a"
+    },
+    {
+      "name": "2 Tone - Flabove",
+      "keyAzimuth": 117,
+      "keyElevation": 56,
+      "keyTargetHeight": 71,
+      "keyIntensity": 6,
+      "keyColor": "#ffffff",
+      "ambientIntensity": 0,
+      "ambientSkyColor": "#ffffff",
+      "ambientGroundColor": "#3a2f2a"
+    },
+    {
+      "name": "2 Tone - SidePink",
+      "keyAzimuth": 439,
+      "keyElevation": -3,
+      "keyTargetHeight": -18,
+      "keyIntensity": 6,
+      "keyColor": "#ffffff",
+      "ambientIntensity": 0,
+      "ambientSkyColor": "#ffffff",
+      "ambientGroundColor": "#3a2f2a"
+    },
+    {
+      "name": "2 Tone - SideThub",
+      "keyAzimuth": 138,
+      "keyElevation": 69,
+      "keyTargetHeight": 79,
+      "keyIntensity": 6,
+      "keyColor": "#ffffff",
+      "ambientIntensity": 0,
+      "ambientSkyColor": "#ffffff",
+      "ambientGroundColor": "#3a2f2a"
+    },
+    {
+      "name": "2 Tone - Flabbehind",
+      "keyAzimuth": 114,
+      "keyElevation": 76,
+      "keyTargetHeight": -100,
+      "keyIntensity": 6,
+      "keyColor": "#ffffff",
+      "ambientIntensity": 0,
+      "ambientSkyColor": "#ffffff",
+      "ambientGroundColor": "#3a2f2a"
+    },
+    {
+      "name": "behind thumb drag",
+      "keyAzimuth": 60,
+      "keyElevation": 38,
+      "keyTargetHeight": 106,
+      "keyIntensity": 6,
+      "keyColor": "#ffffff",
+      "ambientIntensity": 0,
+      "ambientSkyColor": "#ffffff",
+      "ambientGroundColor": "#3a2f2a"
+    },
+    {
+      "name": "Skin",
+      "keyAzimuth": 267,
+      "keyElevation": 46,
+      "keyTargetHeight": -24,
+      "keyIntensity": 6,
+      "keyColor": "#ffffff",
+      "ambientIntensity": 0,
+      "ambientSkyColor": "#ffffff",
+      "ambientGroundColor": "#ffffff"
+    }
   ]
 }
