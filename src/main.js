@@ -1755,6 +1755,20 @@ function applyResponsivePoseTweenFrame() {
 // be. Wrist bone rotation is untouched by this function (only
 // finger curl/splay lives here), which is exactly why wrist visibly
 // responded to the tween while fingers stayed frozen.
+// Orientation of the HAND MESH's own local axes relative to the cloned scene root (h.clone), ported from HANDO's modelBaseFrameQ
+// (2026-10-09). In HandiBonesB-IK the Armature node is turned +90 deg about X, so the mesh's Y/Z are the root's Z/-Y; Base Rotation
+// X/Y/Z must turn about THE MESH'S axes (what the model looks like), not the root's. Built from the parent chain's LOCAL quaternions
+// (mesh up to, not including, h.clone) -- constant for a hand, because only the skinned bones move, never the mesh object or its
+// parents -- so it is cached on the hand. (HANDO documents why a world-quaternion version is wrong: the scene may not be attached yet.)
+const _baseMeshFrameQ = new THREE.Quaternion()
+function getHandMeshFrameQuat(h) {
+  if (!h.meshFrameQ) {
+    const f = new THREE.Quaternion()
+    for (let o = h.skinnedMesh; o && o !== h.clone; o = o.parent) f.premultiply(o.quaternion)
+    h.meshFrameQ = f
+  }
+  return h.meshFrameQ
+}
 function applyBaseArmRotation(extraX = 0, poseValues = cfg) {
   hands.forEach((h) => {
     const baseBone = h.skinnedMesh.skeleton.getBoneByName('rForearmBend')
@@ -1770,6 +1784,14 @@ function applyBaseArmRotation(extraX = 0, poseValues = cfg) {
 
     const desiredQuat = new THREE.Quaternion()
     desiredQuat.multiplyQuaternions(rotX, rotY).multiply(rotZ)
+    // X/Y/Z are angles about the MESH's own axes at the zero-base pose (HANDO's q = q0 * (F R F^-1)). This function stores the
+    // cumulative rotation as a LEFT-multiplied delta (clone.q = desired * q0), so the equivalent is desired = G R G^-1 with
+    // G = q0 * F, the mesh frame expressed in the clone's parent space, and q0 = lastBase^-1 * clone.q (the zero-base orientation;
+    // applyModelRootTransform() invalidates lastBaseArmQuat whenever it rewrites clone.q, so this stays consistent).
+    _baseMeshFrameQ.copy(h.clone.quaternion)
+    if (h.lastBaseArmQuat) _baseMeshFrameQ.premultiply(h.lastBaseArmQuat.clone().invert())
+    _baseMeshFrameQ.multiply(getHandMeshFrameQuat(h))
+    desiredQuat.premultiply(_baseMeshFrameQ).multiply(_baseMeshFrameQ.clone().invert())
 
     // Only apply the DELTA: desired / lastApplied (so we don't compound)
     if (!h.lastBaseArmQuat) h.lastBaseArmQuat = new THREE.Quaternion()
@@ -3026,15 +3048,15 @@ const IK_GLOBAL_DOFS = ['modelRotX', 'modelRotY', 'modelRotZ', 'poseOffsetX', 'p
 const IK_ARM_DOFS = ['elbowBend', 'elbowSideBend', 'forearmTwist']
 // One entry per influence slider (id = 'slider' + Key) and per Min / Max range bar (cfg key ikRange<Part>).
 const IK_INFLUENCE_PARTS = [
-  ['Fingers', 'Fingers (%)', 'Fingers Min / Max (%)', -200, 200, 1, 100],
-  ['Off', 'Pose Offset (%)', 'Pose Offset Min / Max (Units)', -100, 100, 0.5, 0],
-  ['Rot', 'Whole-Hand Rotation (%)', 'Whole-Hand Rotation Min / Max (Deg)', -360, 360, 1, 0],
-  ['WristRot', 'Wrist Rotation (%)', 'Wrist Rotation Min / Max (Deg)', -360, 360, 1, 100],
-  ['WristSplay', 'Wrist Splay (%)', 'Wrist Splay Min / Max (Deg)', -360, 360, 1, 100],
-  ['WristBend', 'Wrist Bend (%)', 'Wrist Bend Min / Max (Deg)', -360, 360, 1, 100],
-  ['ElbowBend', 'Elbow Bend (%)', 'Elbow Bend Min / Max (Deg)', -10, 150, 1, 0],
-  ['ElbowSideBend', 'Elbow Side Bend (%)', 'Elbow Side Bend Min / Max (Deg)', -90, 90, 1, 0],
-  ['ForearmTwist', 'Forearm Twist (%)', 'Forearm Twist Min / Max (Deg)', -90, 90, 1, 0]
+  ['Fingers', 'Fingers (%)', 'Fingers Min / Max From Base (%)', -200, 200, 1, 100],
+  ['Off', 'Pose Offset (%)', 'Pose Offset Min / Max From Base (Units)', -100, 100, 0.5, 0],
+  ['Rot', 'Whole-Hand Rotation (%)', 'Whole-Hand Rotation Min / Max From Base (Deg)', -360, 360, 1, 0],
+  ['WristRot', 'Wrist Rotation (%)', 'Wrist Rotation Min / Max From Base (Deg)', -360, 360, 1, 100],
+  ['WristSplay', 'Wrist Splay (%)', 'Wrist Splay Min / Max From Base (Deg)', -360, 360, 1, 100],
+  ['WristBend', 'Wrist Bend (%)', 'Wrist Bend Min / Max From Base (Deg)', -360, 360, 1, 100],
+  ['ElbowBend', 'Elbow Bend (%)', 'Elbow Bend Min / Max From Base (Deg)', -10, 150, 1, 0],
+  ['ElbowSideBend', 'Elbow Side Bend (%)', 'Elbow Side Bend Min / Max From Base (Deg)', -90, 90, 1, 0],
+  ['ForearmTwist', 'Forearm Twist (%)', 'Forearm Twist Min / Max From Base (Deg)', -90, 90, 1, 0]
 ]
 const IK_INFLUENCE_ROW_KEYS = ['ikInfluenceMaster'].concat(...IK_INFLUENCE_PARTS.map(([part]) => ['ikInfluence' + part, 'ikRange' + part]))
 const IK_POS_WEIGHT = 1
@@ -3166,7 +3188,8 @@ function ikSignature(pairs) {
 //     per unit moved from the baseline), the pair error weighted so it is nearly a constraint, then GUARDED by a line search:
 //     accepted only if its pair error is within a small tolerance of stage 1's best, else stage 1 stands.
 // A DOF at 0% influence is not a DOF (ikDofKeys): frozen at its baseline. Hard limits are each DOF's Min / Max window (the range
-// bar the user typed, unrestricted; the pose slider's own range is only the fallback), enforced in both stages.
+// bar the user typed, unrestricted, as an OFFSET FROM THE BASE POSE = base + Min .. base + Max; the pose slider's own range is only
+// the absolute fallback), enforced in both stages.
 // RHO 1.0, STAGE1 0.1, stage-2 weight 100 and the tolerance 0.05 / 0.5 % are HANDO's judgment calls, not measurements.
 const IK_PRIORITY_RHO = 1.0
 const IK_STAGE1_REG_SCALE = 0.1
@@ -3184,7 +3207,13 @@ function solveIkHandPose(pairs) {
     let wMin = typeof d.min === 'number' ? d.min : -Infinity
     let wMax = typeof d.max === 'number' ? d.max : Infinity
     const rng = ikRangeOf(ikPartsOfKey(dofKeys[i])[0])
-    if (rng) { wMin = Math.min(rng.min, rng.max); wMax = Math.max(rng.min, rng.max) }
+    // RELATIVE to the base pose (ported from HANDO, 2026-10-09; direct request: "the min max to stack on top of the base pose values,
+    // such that the base pose is 0 ... a max of 360 degrees would be the base pose's rotation + 360"): the window is
+    // [baseline + Min, baseline + Max], not absolute slider values, so a base pose outside an absolute window is no longer pulled
+    // onto its edge. The baseline stays inside its own window whenever Min <= 0 <= Max; it is still pulled to the nearest edge when
+    // Min > 0 or Max < 0. The pose slider's own range fallback (no valid Min / Max) stays absolute. Numbers already saved in the bars
+    // keep their values but now MEAN offsets; the defaults (+-360 deg, +-200 %, +-100 units) still allow everything.
+    if (rng) { wMin = x0[i] + Math.min(rng.min, rng.max); wMax = x0[i] + Math.max(rng.min, rng.max) }
     return { wMin, wMax }
   })
   const lo = win.map((w) => w.wMin)

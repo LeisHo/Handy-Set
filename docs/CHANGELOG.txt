@@ -8260,6 +8260,33 @@ reload before Sync so it does not write the old 0 back over the git value.
    main.js ?v=232. Not browser-verified (project rule).
 
 --------------------------------------------------------------------------------
+2026-10-09 -- Ported from HANDO: Base Rotation turns about the hand MESH's axes; IK Min / Max are offsets from the base pose
+
+Source of truth read directly: HANDO src/main.js updateModelRootRotation() / modelBaseFrameQ and the `win` block of
+solveIkHandPose() (its changelog entries 2026-10-09 01:59 AM and 02:09 AM).
+
+1. IK Min / Max From Base. The range bars under each IK influence slider used to be absolute pose-slider values, so a base pose
+   outside the bar's numbers was pulled onto the nearest edge the moment IK turned on. The window is now
+   [base + Min, base + Max] (base pose = 0), e.g. a Max of 360 deg is base + 360. Two lines in solveIkHandPose();
+   the labels now read "... Min / Max From Base (Deg|%|Units)". Numbers already saved in the bars keep their values but now MEAN
+   offsets; the defaults (+-360 deg, +-200 %, +-100 units) still allow everything, and Elbow Bend's -10 / 150 now means
+   base-10 .. base+150 (kept as in HANDO). Saved IK-influence presets carry the same numbers. The baseline stays inside its own
+   window whenever Min <= 0 <= Max; with Min > 0 or Max < 0 it is still pulled to the nearest edge.
+
+2. Whole-Hand Rotation at Base X/Y/Z (baseRotationX/Y/Z). It rotated about the clone's parent-frame axes, not the hand mesh's own,
+   so with HandiBonesB-IK (Armature turned +90 deg about X: the mesh's Y is the root's Z, its Z the root's -Y) Y and Z looked
+   swapped. getHandMeshFrameQuat(h) = product of the LOCAL quaternions from the skinned mesh up to (not including) h.clone,
+   cached per hand (constant: only bones move). applyBaseArmRotation() keeps its delta-tracking, but the cumulative rotation is
+   now desired = G * (Rx*Ry*Rz) * G^-1 with G = q0 * F (the mesh frame in the clone's parent space) and
+   q0 = lastBaseArmQuat^-1 * clone.q, i.e. HANDO's q = q0 * (F R F^-1). The arm-base pivot logic is unchanged.
+   Checked from the GLB node chains (frame-test.mjs): F = +90 deg about X for HandiBonesB-IK (matches HANDO's (0.7071, 0, 0,
+   0.7071)) and identity for Hand2.glb (a no-op there, as HANDO documents); for a random q0 each slider's rotation axis equals
+   the mesh's X/Y/Z axis (dot 1.000000). NOT run in a browser (project rule), and an IK solve driving Base Rotation was not run
+   end to end. Still absolute Euler angles composed X, then Y, then Z in the mesh frame (Y follows an earlier X rotation).
+   Saved poses with a non-zero Base Rotation will pose differently now, because the axes changed.
+   main.js ?v=233.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

@@ -160,6 +160,12 @@ wiring, and are still open:
 
 ## Gotchas
 
+- **Base Rotation X/Y/Z turn about the hand MESH's axes, not the clone's (fixed 2026-10-09, ported from HANDO).**
+  `applyBaseArmRotation()` composes `desired = G * (Rx*Ry*Rz) * G^-1`, `G = q0 * F`, where `F` is
+  `getHandMeshFrameQuat(h)` (local quaternions mesh -> h.clone; +90 deg about X for HandiBonesB-IK, identity for Hand2.glb) and
+  `q0 = lastBaseArmQuat^-1 * clone.q`. If a future hand file's mesh is rotated differently, F handles it; if axes look swapped
+  again, print F first. **IK Min / Max bars are offsets FROM the base pose** (`[base+Min, base+Max]`, labels say "From Base").
+
 - **Default phone pose vs Synced offsets (fixed 2026-10-09).** `defaultPhonePose` is only a
   STARTING pose: `loadRemoteSettingsOnStartup()` fills a field only when the Synced
   `controls` hold no value for that id. It used to be re-applied after the restore on every
