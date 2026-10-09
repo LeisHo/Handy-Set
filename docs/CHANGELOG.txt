@@ -8221,6 +8221,45 @@ reload before Sync so it does not write the old 0 back over the git value.
    Not browser-verified (project rule); numbers above are from file measurements.
 
 --------------------------------------------------------------------------------
+2026-10-09 -- Phone offsets now persist; per-mode remembered settings; per-axis toggleable groups
+
+1. "My phone model offset settings never save" -- ROOT CAUSE: loadRemoteSettingsOnStartup()
+   re-applied the Set-as-Default phone pose (defaultPhonePose = Offset X 0.9917 /
+   Y 1.9534 / Z 0, Rot 0/0/0) AFTER restoring the Synced settings on every load, so the
+   default silently replaced whatever you had Synced. Evidence from the git history of
+   dev-panel-settings.json: a Synced Galaxy S2 Offset Y of 19.2637 (top-level control AND
+   its per-model snapshot) came back as 1.9534 each refresh, and a Synced X of 0 came back
+   as 0.9917. Fix: the default pose is only a STARTING pose now -- it fills a field only
+   when the Synced settings hold no value for that control at all. Consequence: once a
+   value is Synced, "Set as Default" on a phone pose no longer overrides it.
+
+2. Per-mode remembered settings (Responsive Rotation: Gyro / Absolute; Responsive Displace:
+   all 5 modes). createPerModeStore() remembers each mode's tuning controls separately
+   (Rotation: the 3 axis On/Off, Scale, Fine-Tune, Min/Max Range, Curve and Damping.
+   Displace: the 3 axes' On/Off, Scale, Invert, Range, Curve, Reference, plus Damping,
+   Velocity/Position Decay, Stationary Gate, ZUPT, Velocity Snap, Quiet Bleed, Overshoot
+   Limit and Bias Limit). Switching the mode select swaps in that mode's stored set and
+   stores the one you left. The first visit to a mode with nothing stored keeps the current
+   values. Left out on purpose: the feature On/Off, Reset On/Off and the mode select. Only a
+   REAL user change swaps (event.isTrusted); Sync/Reset/Undo/per-model restores dispatch
+   synthetic events and must not. The stores are hidden JSON controls
+   (hiddenPhoneRotationPerModeSettings / hiddenPhoneDisplacePerModeSettings) that ride
+   Sync/Copy/Reset/Undo and the per-model snapshot. Node test (permode-test.mjs): capture,
+   restore, carry-over, untrusted-change guard and external restore all pass.
+
+3. Per-axis toggleable groups: Responsive Rotation now has ROTATION - X/Y/Z AXIS groups
+   (Scale, Fine-Tune, Min/Max Range, Curve) and Responsive Displace has DISPLACE - X/Y/Z
+   AXIS groups (Scale, Invert, Range, Curve, Reference). The old axis On/Off checkbox
+   (same id, same cfg field) now lives in each group's title bar via
+   makeDevGroupToggleable(); unchecking it hides the group. In Tilt displace mode the Z group
+   hides entirely (no depth equivalent of a tilt angle) and X/Y keep only On/Off/Scale/Invert.
+   Settings file: the saved layout for both sections was rewritten to the new structure
+   (every row kept, 2 hidden store rows added, sectionOrder subgroup copies re-normalized,
+   all non-layout keys byte-identical). HANDYSET_SETTINGS_SCHEMA_VERSION -> 2026-10-09 so
+   a stale local layout is dropped on next load (un-Synced local edits are lost).
+   main.js ?v=232. Not browser-verified (project rule).
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

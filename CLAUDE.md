@@ -160,6 +160,23 @@ wiring, and are still open:
 
 ## Gotchas
 
+- **Default phone pose vs Synced offsets (fixed 2026-10-09).** `defaultPhonePose` is only a
+  STARTING pose: `loadRemoteSettingsOnStartup()` fills a field only when the Synced
+  `controls` hold no value for that id. It used to be re-applied after the restore on every
+  load and silently overwrote Synced Offset X/Y/Z and Rot ("my offsets never save"). Check
+  this first if a phone-pose value "reverts on refresh".
+- **Per-mode settings stores (2026-10-09).** `createPerModeStore()` backs the Rotation
+  (Gyro/Absolute) and Displace (5 modes) mode selects: each mode remembers its own tuning
+  controls (the `ids` list passed in). A new tuning control for either feature must be added
+  to that list or it will NOT swap with the mode. Swapping is gated on `event.isTrusted`, so
+  restore/apply code paths that dispatch synthetic `change` events never trigger it. Both
+  stores' hidden JSON ids are in `PHONE_MODEL_PER_MODEL_CONTROL_IDS`.
+- **Axis groups (2026-10-09).** Rotation and Displace settings live in `ROTATION - X/Y/Z AXIS`
+  and `DISPLACE - X/Y/Z AXIS` groups; the axis On/Off checkbox is moved into the group title
+  by `makeDevGroupToggleable()` (same ids as before). The saved `sectionOrder` layout in
+  `dev-panel-settings.json` had to be rewritten to match (and its nested `subgroups` copies
+  re-normalized) -- a layout change like this needs that surgery plus the schema-version bump.
+
 - **Hand <-> phone scale (2026-10-08): the HAND is scaled, the phone is not.**
   `computeBaseScale()` = `HAND_REFERENCE_LENGTH_M` (0.16086, measured rHand->rMid3
   in the Handi/Handipants GLBs; Hand2.glb is the same hand x100) x

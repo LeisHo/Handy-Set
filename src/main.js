@@ -127,7 +127,7 @@ dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5
 // the time; caught after a direct report that other controls (the Mirror
 // checkboxes) elsewhere in the dev panel appeared to have vanished --
 // consistent with this exact symptom.
-const HANDYSET_SETTINGS_SCHEMA_VERSION = '2026-10-01'
+const HANDYSET_SETTINGS_SCHEMA_VERSION = '2026-10-09'
 try {
   if (localStorage.getItem('handysetSettingsSchemaVersion') !== HANDYSET_SETTINGS_SCHEMA_VERSION) {
     localStorage.removeItem('devPanelSettings')
@@ -8811,11 +8811,11 @@ let phoneModelItemSelectorContainer = null // the currently-rendered widget, rep
 const PHONE_MODEL_PER_MODEL_CONTROL_IDS = [
   'sliderPhoneModelScale',
   'sliderPhoneModelOffsetX', 'sliderPhoneModelOffsetY', 'sliderPhoneModelOffsetZ',
-  'checkboxPhoneResponsiveRotationEnabled', 'checkboxPhoneRotationResetEnabled', 'selectPhoneRotationMode',
+  'checkboxPhoneResponsiveRotationEnabled', 'checkboxPhoneRotationResetEnabled', 'selectPhoneRotationMode', 'hiddenPhoneRotationPerModeSettings', 'hiddenPhoneDisplacePerModeSettings',
   'checkboxPhoneAxisXEnabled', 'sliderPhoneRotationScaleX',
   'checkboxPhoneAxisYEnabled', 'sliderPhoneRotationScaleY',
   'checkboxPhoneAxisZEnabled', 'sliderPhoneRotationScaleZ',
-  'sliderPhoneResponsiveRotationFineTune', 'sliderPhoneRotationDamping',
+  'sliderPhoneResponsiveRotationFineTuneX', 'sliderPhoneResponsiveRotationFineTuneY', 'sliderPhoneResponsiveRotationFineTuneZ', 'sliderPhoneRotationDamping',
   // CORRECTED 2026-10-01: the old shared textPhoneResponsiveRotationRange/
   // Curve ids were replaced by 9 per-axis ones (per-axis curve-editor
   // refactor) -- this list was missed at the time, left referencing ids
@@ -8851,6 +8851,92 @@ const PHONE_MODEL_PER_MODEL_CONTROL_IDS = [
   'checkboxScreenMirrorAlternatingX', 'checkboxScreenMirrorAlternatingY',
   'checkboxScreenMirrorPhaseX', 'checkboxScreenMirrorPhaseY',
 ]
+// PER-MODE REMEMBERED SETTINGS (2026-10-09, direct requests: "for the different responsive rotation types (gyro, absolute, etc) I
+// want them each to remember their own settings such that when I change the type the settings also change" and "do the same for
+// displacement... every displacement mode also remembers its own settings"). One store per feature: it remembers the tuning controls
+// listed in `ids` separately for every value of the feature's mode select. Left OUT on purpose (they belong to the feature, not to one
+// mode): the feature's own On/Off, its Reset On/Off, and the mode select itself. The first time a mode is switched TO with nothing
+// stored, the current values carry over, so every mode starts from what you had. The store lives in a hidden JSON control that rides
+// Sync / Copy / Reset / Undo and the per-model snapshot (PHONE_MODEL_PER_MODEL_CONTROL_IDS).
+function createPerModeStore(hiddenId, ids) {
+  const store = { data: {}, hiddenId, ids }
+  store.persist = () => {
+    const el = document.getElementById(hiddenId)
+    if (el) el.value = JSON.stringify(store.data)
+  }
+  store.capture = (mode) => {
+    if (!mode) return
+    const snapshot = {}
+    ids.forEach((id) => {
+      const el = document.getElementById(id)
+      if (!el) return
+      snapshot[id] = el.type === 'checkbox' ? el.checked : el.value
+    })
+    store.data[mode] = snapshot
+    store.persist()
+  }
+  store.apply = (mode) => {
+    const snapshot = store.data[mode]
+    if (!snapshot) return // never tuned before -- keep the current values as this mode's starting point
+    ids.forEach((id) => {
+      const el = document.getElementById(id)
+      if (!el || !(id in snapshot)) return
+      if (el.type === 'checkbox') el.checked = snapshot[id]
+      else el.value = snapshot[id]
+      // Both events, same reasoning as applyPhoneModelPerModelSettings(): wireSlider/wireTextInput listen for 'input', wireCheckbox
+      // for 'change'. Range-bar / curve-editor widgets are polled and pick up the new .value on their own.
+      el.dispatchEvent(new Event('input', { bubbles: true }))
+      el.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+    requestRender()
+  }
+  // Builds the hidden JSON row and the trusted-change listener on the mode select (select must already exist in the DOM).
+  store.attach = (content, selectId, currentMode) => {
+    const row = addRow(content, { id: hiddenId, label: 'Per-Mode Settings (internal)', type: 'text', inputType: 'text', value: JSON.stringify(store.data), skipDeviceCheckbox: true })
+    row.style.display = 'none'
+    const input = row.querySelector('#' + hiddenId)
+    let lastSeenJson = input.value
+    input.addEventListener('input', () => {
+      if (input.value === lastSeenJson) return
+      lastSeenJson = input.value
+      try { store.data = JSON.parse(input.value) || {} } catch (e) { /* keep what is in memory */ }
+    })
+    const selectEl = document.getElementById(selectId)
+    let prevMode = currentMode
+    // e.isTrusted is true ONLY for a real user change. Synthetic dispatches (Sync/Reset/Undo restore, the per-model snapshot apply)
+    // already carry the right value for every control, so they must NOT swap per-mode sets.
+    selectEl.addEventListener('change', (e) => {
+      const next = selectEl.value
+      const prev = prevMode
+      prevMode = next
+      if (!e.isTrusted || prev === next) return
+      store.capture(prev)
+      store.apply(next)
+    })
+  }
+  return store
+}
+const phoneRotationModeStore = createPerModeStore('hiddenPhoneRotationPerModeSettings', [
+  'checkboxPhoneAxisXEnabled', 'checkboxPhoneAxisYEnabled', 'checkboxPhoneAxisZEnabled',
+  'sliderPhoneRotationScaleX', 'sliderPhoneRotationScaleY', 'sliderPhoneRotationScaleZ',
+  'sliderPhoneResponsiveRotationFineTuneX', 'sliderPhoneResponsiveRotationFineTuneY', 'sliderPhoneResponsiveRotationFineTuneZ',
+  'sliderPhoneRotationDamping',
+  'textPhoneRotationRangeX', 'textPhoneRotationCurveX',
+  'textPhoneRotationRangeY', 'textPhoneRotationCurveY',
+  'textPhoneRotationRangeZ', 'textPhoneRotationCurveZ',
+])
+const phoneDisplaceModeStore = createPerModeStore('hiddenPhoneDisplacePerModeSettings', [
+  'checkboxPhoneDisplaceAxisXEnabled', 'sliderPhoneDisplaceScaleX', 'checkboxPhoneDisplaceInvertX',
+  'checkboxPhoneDisplaceAxisYEnabled', 'sliderPhoneDisplaceScaleY', 'checkboxPhoneDisplaceInvertY',
+  'checkboxPhoneDisplaceAxisZEnabled', 'sliderPhoneDisplaceScaleZ', 'checkboxPhoneDisplaceInvertZ',
+  'sliderPhoneDisplaceDamping', 'sliderPhoneDisplaceVelDecayRate', 'sliderPhoneDisplacePosDecayRate',
+  'checkboxPhoneDisplaceStationaryGateEnabled', 'sliderPhoneDisplaceStationaryGateDegPerSec',
+  'sliderPhoneDisplaceZuptAccelThresholdMps2', 'sliderPhoneDisplaceZuptDwellMs', 'sliderPhoneDisplaceVelSnapMps',
+  'sliderPhoneDisplaceQuietVelBleedMs', 'sliderPhoneDisplaceOvershootLimit', 'sliderPhoneDisplaceBiasInnovationClampMps2',
+  'textPhoneDisplaceRangeX', 'textPhoneDisplaceCurveX', 'sliderPhoneDisplaceXReferenceM',
+  'textPhoneDisplaceRangeY', 'textPhoneDisplaceCurveY', 'sliderPhoneDisplaceYReferenceM',
+  'textPhoneDisplaceRangeZ', 'textPhoneDisplaceCurveZ', 'sliderPhoneDisplaceZReferenceM',
+])
 let phoneModelRestoreInProgress = false // true while loadRemoteSettingsOnStartup() applies the saved settings (see the Item Selector's restore handler)
 let phoneModelPerModelSettings = {} // { [modelFile]: { [controlId]: value } } -- persisted via hiddenPhoneModelPerModelSettings below
 
@@ -9449,6 +9535,7 @@ function renderPhoneModelGroup(content) {
   addRow(subResponsiveRotation, { id: 'selectPhoneRotationMode', label: 'Rotation Mode', type: 'select', options: [{ value: 'gyro', text: 'Gyro / Integrated' }, { value: 'absolute', text: 'Absolute / Orientation' }], value: cfg.phoneRotationMode })
   document.getElementById('selectPhoneRotationMode').value = cfg.phoneRotationMode
   wireSelect('selectPhoneRotationMode', (v) => { cfg.phoneRotationMode = v; resetPhoneModelRotationBaseline() })
+  phoneRotationModeStore.attach(subResponsiveRotation, 'selectPhoneRotationMode', cfg.phoneRotationMode)
   // Rotation Reset -- direct request 2026-09-28: double-tap(mobile)/
   // double-click(desktop) anywhere on screen re-baselines the responsive
   // rotation. See setupPhoneRotationResetGesture()'s own comment for the
@@ -9467,34 +9554,42 @@ function renderPhoneModelGroup(content) {
   // use of these cfg fields is already a plain multiply against a
   // signed degree value, so widening the range is the only change
   // needed; a negative scale already flips direction correctly.
-  addRow(subResponsiveRotation, { id: 'checkboxPhoneAxisXEnabled', label: 'X Axis Rotation On/Off', type: 'checkbox' })
-  document.getElementById('checkboxPhoneAxisXEnabled').checked = cfg.phoneAxisXEnabled
-  wireCheckbox('checkboxPhoneAxisXEnabled', (v) => { cfg.phoneAxisXEnabled = v })
-  addRow(subResponsiveRotation, { id: 'sliderPhoneRotationScaleX', label: 'X Axis Rotation Scale (x)', type: 'slider', min: -3, max: 3, step: 'any', value: cfg.phoneRotationScaleX })
-  wireSlider('sliderPhoneRotationScaleX', (v) => { cfg.phoneRotationScaleX = v })
-  addRow(subResponsiveRotation, { id: 'checkboxPhoneAxisYEnabled', label: 'Y Axis Rotation On/Off', type: 'checkbox' })
-  document.getElementById('checkboxPhoneAxisYEnabled').checked = cfg.phoneAxisYEnabled
-  wireCheckbox('checkboxPhoneAxisYEnabled', (v) => { cfg.phoneAxisYEnabled = v })
-  addRow(subResponsiveRotation, { id: 'sliderPhoneRotationScaleY', label: 'Y Axis Rotation Scale (x)', type: 'slider', min: -3, max: 3, step: 'any', value: cfg.phoneRotationScaleY })
-  wireSlider('sliderPhoneRotationScaleY', (v) => { cfg.phoneRotationScaleY = v })
-  addRow(subResponsiveRotation, { id: 'checkboxPhoneAxisZEnabled', label: 'Z Axis Rotation On/Off', type: 'checkbox' })
-  document.getElementById('checkboxPhoneAxisZEnabled').checked = cfg.phoneAxisZEnabled
-  wireCheckbox('checkboxPhoneAxisZEnabled', (v) => { cfg.phoneAxisZEnabled = v })
-  addRow(subResponsiveRotation, { id: 'sliderPhoneRotationScaleZ', label: 'Z Axis Rotation Scale (x)', type: 'slider', min: -3, max: 3, step: 'any', value: cfg.phoneRotationScaleZ })
-  wireSlider('sliderPhoneRotationScaleZ', (v) => { cfg.phoneRotationScaleZ = v })
-  addRow(subResponsiveRotation, { id: 'sliderPhoneResponsiveRotationFineTuneX', label: 'X Axis Rotation Fine-Tune (Deg)', type: 'slider', min: -90, max: 90, step: 1, value: cfg.phoneResponsiveRotationFineTuneX })
-  wireSlider('sliderPhoneResponsiveRotationFineTuneX', (v) => { cfg.phoneResponsiveRotationFineTuneX = v })
-  wireDeviceSliderMirror('sliderPhoneResponsiveRotationFineTuneX', 'phoneResponsiveRotationFineTuneX')
-  addRow(subResponsiveRotation, { id: 'sliderPhoneResponsiveRotationFineTuneY', label: 'Y Axis Rotation Fine-Tune (Deg)', type: 'slider', min: -90, max: 90, step: 1, value: cfg.phoneResponsiveRotationFineTuneY })
-  wireSlider('sliderPhoneResponsiveRotationFineTuneY', (v) => { cfg.phoneResponsiveRotationFineTuneY = v })
-  wireDeviceSliderMirror('sliderPhoneResponsiveRotationFineTuneY', 'phoneResponsiveRotationFineTuneY')
-  addRow(subResponsiveRotation, { id: 'sliderPhoneResponsiveRotationFineTuneZ', label: 'Z Axis Rotation Fine-Tune (Deg)', type: 'slider', min: -90, max: 90, step: 1, value: cfg.phoneResponsiveRotationFineTuneZ })
-  wireSlider('sliderPhoneResponsiveRotationFineTuneZ', (v) => { cfg.phoneResponsiveRotationFineTuneZ = v })
-  wireDeviceSliderMirror('sliderPhoneResponsiveRotationFineTuneZ', 'phoneResponsiveRotationFineTuneZ')
   // Added 2026-09-28, direct report: "the rotation motion is jittery and
   // not smooth." Same 1=instant/lower=smoother semantic as cfg.trackingDamping.
   addRow(subResponsiveRotation, { id: 'sliderPhoneRotationDamping', label: 'Rotation Damping (1=Instant)', type: 'slider', min: 0.05, max: 1, step: 0.01, value: cfg.phoneRotationDamping })
   wireSlider('sliderPhoneRotationDamping', (v) => { cfg.phoneRotationDamping = v })
+  // PER-AXIS TOGGLEABLE GROUPS (2026-10-09, direct request: "for each of
+  // xyz axes related settings, group them by their axis in their own
+  // toggleable group. the toggleable group function will replace the
+  // checkbox for that axis rotation on off"). Each axis gets its own group
+  // holding its Scale, Fine-Tune, Min/Max Range and Curve; the OLD axis
+  // On/Off checkbox (same id, same cfg field, same Sync / per-model /
+  // per-mode persistence) is relocated into the group's title bar by
+  // makeDevGroupToggleable() at the end of the second loop below. Unchecking
+  // it hides the whole group's content. Scale sliders allow NEGATIVE values
+  // (direct request 2026-09-29: "-1... rotate in the other direction at the
+  // same scale") -- every use is a plain multiply against a signed degree
+  // value. X=beta (up/down), Y=alpha/compass (spin), Z=gamma (left/right)
+  // -- matches computePhoneCombinedQuat()'s own world-axis assignment.
+  const rotationAxisGroups = {}
+  ;['X', 'Y', 'Z'].forEach((axis) => {
+    const g = addSubgroup(subResponsiveRotation, 'ROTATION - ' + axis + ' AXIS')
+    rotationAxisGroups[axis] = g
+    const enabledId = 'checkboxPhoneAxis' + axis + 'Enabled'
+    const enabledKey = 'phoneAxis' + axis + 'Enabled'
+    addRow(g, { id: enabledId, label: axis + ' Axis Rotation On/Off', type: 'checkbox' })
+    document.getElementById(enabledId).checked = cfg[enabledKey]
+    wireCheckbox(enabledId, (v) => { cfg[enabledKey] = v })
+    const scaleId = 'sliderPhoneRotationScale' + axis
+    const scaleKey = 'phoneRotationScale' + axis
+    addRow(g, { id: scaleId, label: axis + ' Axis Rotation Scale (x)', type: 'slider', min: -3, max: 3, step: 'any', value: cfg[scaleKey] })
+    wireSlider(scaleId, (v) => { cfg[scaleKey] = v })
+    const ftId = 'sliderPhoneResponsiveRotationFineTune' + axis
+    const ftKey = 'phoneResponsiveRotationFineTune' + axis
+    addRow(g, { id: ftId, label: axis + ' Axis Rotation Fine-Tune (Deg)', type: 'slider', min: -90, max: 90, step: 1, value: cfg[ftKey] })
+    wireSlider(ftId, (v) => { cfg[ftKey] = v })
+    wireDeviceSliderMirror(ftId, ftKey)
+  })
   // Per-axis Min/Max Range + Curve -- replaces the single shared pair
   // above (MIGRATED 2026-09-28, now superseded 2026-10-01). Called once
   // explicitly right here (matching Displace's own build-time call,
@@ -9515,7 +9610,7 @@ function renderPhoneModelGroup(content) {
     // is the symmetric output ceiling in both directions (already true
     // of the underlying magnitude-then-sign formula -- see cfg's own
     // phoneRotationRangeX declaration comment).
-    addRow(subResponsiveRotation, { id: 'textPhoneRotationRange' + axis, label: axis + ' Axis Min / Max Rotation (Deg, Symmetric ±)', type: 'range-bar', trackMin: 0, trackMax: 180, unit: '°', defaultValue: rangeDefault })
+    addRow(rotationAxisGroups[axis], { id: 'textPhoneRotationRange' + axis, label: axis + ' Axis Min / Max Rotation (Deg, Symmetric ±)', type: 'range-bar', trackMin: 0, trackMax: 180, unit: '°', defaultValue: rangeDefault })
     let lastSeenRange = document.getElementById('textPhoneRotationRange' + axis).value
     curveWidgetResyncs.push(() => {
       const el = document.getElementById('textPhoneRotationRange' + axis)
@@ -9526,7 +9621,7 @@ function renderPhoneModelGroup(content) {
     })
     let curveDefault = { points: [{ x: 0, y: 0 }, { x: 1, y: 1 }], method: 'catmullrom' }
     try { curveDefault = JSON.parse(cfg[curveKey]) } catch (e) { /* keep fallback */ }
-    addRow(subResponsiveRotation, { id: 'textPhoneRotationCurve' + axis, label: axis + ' Axis Rotation Curve (Tilt -> Rotation)', type: 'curve-editor', defaultPoints: curveDefault.points, defaultMethod: curveDefault.method, caption: 'X: ' + axis + ' Axis Tilt Magnitude, Either Direction (0-1)  ·  Y: Rotation Fraction (0=Min, 1=Max)' })
+    addRow(rotationAxisGroups[axis], { id: 'textPhoneRotationCurve' + axis, label: axis + ' Axis Rotation Curve (Tilt -> Rotation)', type: 'curve-editor', defaultPoints: curveDefault.points, defaultMethod: curveDefault.method, caption: 'X: ' + axis + ' Axis Tilt Magnitude, Either Direction (0-1)  ·  Y: Rotation Fraction (0=Min, 1=Max)' })
     let lastSeenCurve = document.getElementById('textPhoneRotationCurve' + axis).value
     curveWidgetResyncs.push(() => {
       const el = document.getElementById('textPhoneRotationCurve' + axis)
@@ -9535,6 +9630,9 @@ function renderPhoneModelGroup(content) {
       cfg[curveKey] = el.value
       parsePhoneResponsiveRotationConfig()
     })
+    // Moves this axis' On/Off checkbox into the group's title bar (must run
+    // after the group's rows are in the DOM, which they are by now).
+    if (typeof window.makeDevGroupToggleable === 'function') window.makeDevGroupToggleable('desktop', 'ROTATION - ' + axis + ' AXIS', 'checkboxPhoneAxis' + axis + 'Enabled')
   })
 
   // RESPONSIVE BEHAVIOUR - PHONE > RESPONSIVE DISPLACE -- added
@@ -9631,6 +9729,7 @@ function renderPhoneModelGroup(content) {
     // rows this hides and why.
     updateDisplaceModeRowVisibility()
   })
+  phoneDisplaceModeStore.attach(subResponsiveDisplace, 'selectPhoneDisplaceMode', cfg.phoneDisplaceMode)
   // Displace Reset -- added 2026-09-30, direct request: "add a
   // displacement reset checkbox. Similar to the rotation, a double tap
   // will place the phone back in its starting location." Independently
@@ -9640,39 +9739,6 @@ function renderPhoneModelGroup(content) {
   addRow(subResponsiveDisplace, { id: 'checkboxPhoneDisplaceResetEnabled', label: 'Displace Reset On/Off', type: 'checkbox' })
   document.getElementById('checkboxPhoneDisplaceResetEnabled').checked = cfg.phoneDisplaceResetEnabled
   wireCheckbox('checkboxPhoneDisplaceResetEnabled', (v) => { cfg.phoneDisplaceResetEnabled = v })
-  // Per-axis on/off + scale + invert -- X=left-right, Y=up-down,
-  // Z=perpendicular to the phone face/depth (direct correction of the
-  // user's own first message, which said Y for this). Matches the raw
-  // W3C devicemotion.acceleration.x/y/z convention directly -- see cfg's
-  // own phoneResponsiveDisplaceEnabled declaration comment for why no
-  // axis reshuffling was needed here, unlike Rotation's own beta/gamma/
-  // alpha mapping. Invert -- direct request: "provide me some ui to flip
-  // axes. so i dont need to go through you to fix it" -- see cfg's own
-  // phoneDisplaceInvertX declaration comment.
-  addRow(subResponsiveDisplace, { id: 'checkboxPhoneDisplaceAxisXEnabled', label: 'X Axis Displace On/Off', type: 'checkbox' })
-  document.getElementById('checkboxPhoneDisplaceAxisXEnabled').checked = cfg.phoneDisplaceAxisXEnabled
-  wireCheckbox('checkboxPhoneDisplaceAxisXEnabled', (v) => { cfg.phoneDisplaceAxisXEnabled = v })
-  addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplaceScaleX', label: 'X Axis Displace Scale (x)', type: 'slider', min: -3, max: 3, step: 'any', value: cfg.phoneDisplaceScaleX })
-  wireSlider('sliderPhoneDisplaceScaleX', (v) => { cfg.phoneDisplaceScaleX = v })
-  addRow(subResponsiveDisplace, { id: 'checkboxPhoneDisplaceInvertX', label: 'Invert X Axis Displace', type: 'checkbox' })
-  document.getElementById('checkboxPhoneDisplaceInvertX').checked = cfg.phoneDisplaceInvertX
-  wireCheckbox('checkboxPhoneDisplaceInvertX', (v) => { cfg.phoneDisplaceInvertX = v })
-  addRow(subResponsiveDisplace, { id: 'checkboxPhoneDisplaceAxisYEnabled', label: 'Y Axis Displace On/Off', type: 'checkbox' })
-  document.getElementById('checkboxPhoneDisplaceAxisYEnabled').checked = cfg.phoneDisplaceAxisYEnabled
-  wireCheckbox('checkboxPhoneDisplaceAxisYEnabled', (v) => { cfg.phoneDisplaceAxisYEnabled = v })
-  addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplaceScaleY', label: 'Y Axis Displace Scale (x)', type: 'slider', min: -3, max: 3, step: 'any', value: cfg.phoneDisplaceScaleY })
-  wireSlider('sliderPhoneDisplaceScaleY', (v) => { cfg.phoneDisplaceScaleY = v })
-  addRow(subResponsiveDisplace, { id: 'checkboxPhoneDisplaceInvertY', label: 'Invert Y Axis Displace', type: 'checkbox' })
-  document.getElementById('checkboxPhoneDisplaceInvertY').checked = cfg.phoneDisplaceInvertY
-  wireCheckbox('checkboxPhoneDisplaceInvertY', (v) => { cfg.phoneDisplaceInvertY = v })
-  displaceNonTiltRows.push(addRow(subResponsiveDisplace, { id: 'checkboxPhoneDisplaceAxisZEnabled', label: 'Z Axis Displace On/Off (Perpendicular To Face)', type: 'checkbox' }))
-  document.getElementById('checkboxPhoneDisplaceAxisZEnabled').checked = cfg.phoneDisplaceAxisZEnabled
-  wireCheckbox('checkboxPhoneDisplaceAxisZEnabled', (v) => { cfg.phoneDisplaceAxisZEnabled = v })
-  displaceNonTiltRows.push(addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplaceScaleZ', label: 'Z Axis Displace Scale (x)', type: 'slider', min: -3, max: 3, step: 'any', value: cfg.phoneDisplaceScaleZ }))
-  wireSlider('sliderPhoneDisplaceScaleZ', (v) => { cfg.phoneDisplaceScaleZ = v })
-  displaceNonTiltRows.push(addRow(subResponsiveDisplace, { id: 'checkboxPhoneDisplaceInvertZ', label: 'Invert Z Axis Displace', type: 'checkbox' }))
-  document.getElementById('checkboxPhoneDisplaceInvertZ').checked = cfg.phoneDisplaceInvertZ
-  wireCheckbox('checkboxPhoneDisplaceInvertZ', (v) => { cfg.phoneDisplaceInvertZ = v })
   addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplaceDamping', label: 'Displace Damping (1=Instant)', type: 'slider', min: 0.05, max: 1, step: 0.01, value: cfg.phoneDisplaceDamping })
   wireSlider('sliderPhoneDisplaceDamping', (v) => { cfg.phoneDisplaceDamping = v })
   displaceNonTiltRows.push(addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplaceVelDecayRate', label: 'Displace Velocity Decay Rate (1/s)', type: 'slider', min: 0, max: 10, step: 0.1, value: cfg.phoneDisplaceVelDecayRate }))
@@ -9711,13 +9777,42 @@ function renderPhoneModelGroup(content) {
   // computePhoneDisplaceAxisUnits()'s own comment for the exact formula
   // and phoneDisplaceAxisParsed's own declaration for the parsed-state
   // shape this writes into via parsePhoneResponsiveDisplaceConfig().
+  // PER-AXIS TOGGLEABLE GROUPS (2026-10-09, same request as Rotation's: each axis' settings in their own toggleable group, the
+  // axis On/Off checkbox moved into the group's title bar). Per-axis On/Off + scale + invert -- X=left-right, Y=up-down,
+  // Z=perpendicular to the phone face/depth (direct correction of the
+  // user's own first message, which said Y for this). Matches the raw
+  // W3C devicemotion.acceleration.x/y/z convention directly -- see cfg's
+  // own phoneResponsiveDisplaceEnabled declaration comment for why no
+  // axis reshuffling was needed here, unlike Rotation's own beta/gamma/
+  // alpha mapping. Invert -- direct request: "provide me some ui to flip
+  // axes. so i dont need to go through you to fix it" -- see cfg's own
+  // phoneDisplaceInvertX declaration comment.
+  const displaceAxisGroups = {}
   ;['X', 'Y', 'Z'].forEach((axis) => {
+    const g = addSubgroup(subResponsiveDisplace, 'DISPLACE - ' + axis + ' AXIS')
+    displaceAxisGroups[axis] = g
+    // In Tilt mode Z has no meaning at all (no depth equivalent of a tilt angle), so Z's whole group hides there, like its rows used to.
+    if (axis === 'Z') displaceNonTiltRows.push(g.closest('.dev-section'))
+    const enabledId = 'checkboxPhoneDisplaceAxis' + axis + 'Enabled'
+    const enabledKey = 'phoneDisplaceAxis' + axis + 'Enabled'
+    addRow(g, { id: enabledId, label: axis + (axis === 'Z' ? ' Axis Displace On/Off (Perpendicular To Face)' : ' Axis Displace On/Off'), type: 'checkbox' })
+    document.getElementById(enabledId).checked = cfg[enabledKey]
+    wireCheckbox(enabledId, (v) => { cfg[enabledKey] = v })
+    const scaleId = 'sliderPhoneDisplaceScale' + axis
+    const scaleKey = 'phoneDisplaceScale' + axis
+    addRow(g, { id: scaleId, label: axis + ' Axis Displace Scale (x)', type: 'slider', min: -3, max: 3, step: 'any', value: cfg[scaleKey] })
+    wireSlider(scaleId, (v) => { cfg[scaleKey] = v })
+    const invId = 'checkboxPhoneDisplaceInvert' + axis
+    const invKey = 'phoneDisplaceInvert' + axis
+    addRow(g, { id: invId, label: 'Invert ' + axis + ' Axis Displace', type: 'checkbox' })
+    document.getElementById(invId).checked = cfg[invKey]
+    wireCheckbox(invId, (v) => { cfg[invKey] = v })
     const rangeKey = 'phoneDisplaceRange' + axis
     const curveKey = 'phoneDisplaceCurve' + axis
     const refKey = 'phoneDisplace' + axis + 'ReferenceM'
     let rangeDefault = { min: 0, max: 20 }
     try { rangeDefault = JSON.parse(cfg[rangeKey]) } catch (e) { /* keep fallback */ }
-    displaceNonTiltRows.push(addRow(subResponsiveDisplace, { id: 'textPhoneDisplaceRange' + axis, label: axis + ' Axis Min / Max Displacement (World Units)', type: 'range-bar', trackMin: -100, trackMax: 100, unit: '', defaultValue: rangeDefault }))
+    displaceNonTiltRows.push(addRow(displaceAxisGroups[axis], { id: 'textPhoneDisplaceRange' + axis, label: axis + ' Axis Min / Max Displacement (World Units)', type: 'range-bar', trackMin: -100, trackMax: 100, unit: '', defaultValue: rangeDefault }))
     let lastSeenRange = document.getElementById('textPhoneDisplaceRange' + axis).value
     curveWidgetResyncs.push(() => {
       const el = document.getElementById('textPhoneDisplaceRange' + axis)
@@ -9728,7 +9823,7 @@ function renderPhoneModelGroup(content) {
     })
     let curveDefault = { points: [{ x: 0, y: 0 }, { x: 1, y: 1 }], method: 'monotone' }
     try { curveDefault = JSON.parse(cfg[curveKey]) } catch (e) { /* keep fallback */ }
-    displaceNonTiltRows.push(addRow(subResponsiveDisplace, { id: 'textPhoneDisplaceCurve' + axis, label: axis + ' Axis Displacement Curve (Movement -> Displace)', type: 'curve-editor', defaultPoints: curveDefault.points, defaultMethod: curveDefault.method, caption: 'X: Movement / ' + axis + ' Reference (0-1)  ·  Y: Displacement Fraction (0=Min, 1=Max)' }))
+    displaceNonTiltRows.push(addRow(displaceAxisGroups[axis], { id: 'textPhoneDisplaceCurve' + axis, label: axis + ' Axis Displacement Curve (Movement -> Displace)', type: 'curve-editor', defaultPoints: curveDefault.points, defaultMethod: curveDefault.method, caption: 'X: Movement / ' + axis + ' Reference (0-1)  ·  Y: Displacement Fraction (0=Min, 1=Max)' }))
     let lastSeenCurve = document.getElementById('textPhoneDisplaceCurve' + axis).value
     curveWidgetResyncs.push(() => {
       const el = document.getElementById('textPhoneDisplaceCurve' + axis)
@@ -9737,8 +9832,9 @@ function renderPhoneModelGroup(content) {
       cfg[curveKey] = el.value
       parsePhoneResponsiveDisplaceConfig()
     })
-    displaceNonTiltRows.push(addRow(subResponsiveDisplace, { id: 'sliderPhoneDisplace' + axis + 'ReferenceM', label: axis + ' Axis Reference Distance (M, = Curve X:1.0)', type: 'slider', min: 0.02, max: 2, step: 0.01, value: cfg[refKey] }))
+    displaceNonTiltRows.push(addRow(displaceAxisGroups[axis], { id: 'sliderPhoneDisplace' + axis + 'ReferenceM', label: axis + ' Axis Reference Distance (M, = Curve X:1.0)', type: 'slider', min: 0.02, max: 2, step: 0.01, value: cfg[refKey] }))
     wireSlider('sliderPhoneDisplace' + axis + 'ReferenceM', (v) => { cfg[refKey] = v })
+    if (typeof window.makeDevGroupToggleable === 'function') window.makeDevGroupToggleable('desktop', 'DISPLACE - ' + axis + ' AXIS', 'checkboxPhoneDisplaceAxis' + axis + 'Enabled')
   })
   // Apply once at build time so a Sync-restored Tilt mode (or the
   // default 'acceleration') shows the right row set from the very first
@@ -10690,7 +10786,16 @@ async function loadRemoteSettingsOnStartup() {
     // fetch rather than 3 more round-trips.
     if (typeof data.settings.defaultHandModel === 'string') { handModelDefaultFile = data.settings.defaultHandModel; selectHandModelFile(handModelDefaultFile) }
     if (typeof data.settings.defaultPhoneModel === 'string') { phoneModelDefaultFile = data.settings.defaultPhoneModel; selectPhoneModelFile(phoneModelDefaultFile) }
-    if (data.settings.defaultPhonePose && typeof data.settings.defaultPhonePose === 'object') applyPhonePosePreset(data.settings.defaultPhonePose)
+    // FIXED 2026-10-09, direct report: "my phone model offset settings never save." This used to re-apply the whole Set-as-Default
+    // phone pose AFTER the Sync restore on every load, so the default's Offset X/Y/Z (and Rot) silently replaced whatever you had
+    // Synced -- e.g. a Synced Galaxy S2 Offset Y of 19.26 came back as the default pose's 1.95 on every refresh. A default is only
+    // the STARTING pose: it now fills in a field only when the Synced settings hold no value for that control at all.
+    if (data.settings.defaultPhonePose && typeof data.settings.defaultPhonePose === 'object') {
+      const syncedControls = data.settings.controls || {}
+      const fill = {}
+      PHONE_POSE_SYNC_PAIRS.forEach(([id, k]) => { if (!(id in syncedControls)) fill[k] = data.settings.defaultPhonePose[k] })
+      if (Object.keys(fill).length) applyPhonePosePreset(fill)
+    }
     renderHandModelItemSelector()
     renderPhoneModelItemSelector()
   } catch (err) {
