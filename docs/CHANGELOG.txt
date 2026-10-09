@@ -8310,6 +8310,108 @@ devPanel.js ?v=20, main.js ?v=234. This devPanel.js fix is generic and belongs i
 (not folded back yet -- a deliberate separate step).
 
 --------------------------------------------------------------------------------
+2026-10-09 -- Base Rotation (ported from HANDO): fixed the quaternion-length blow-up in applyBaseArmRotation() [written by a HANDO session at the user's request]
+  - Report: "they implemented the hand model rotation fix incorrectly". The AXES part of the 03:07 port is right (measured below); the NUMERICS were not.
+  - Cause: THREE's Quaternion.invert() is only the conjugate, which equals the inverse only for a UNIT quaternion. The ported code builds G = q0 * F with
+    q0 = lastBaseArmQuat^-1 * clone.q and uses desired = G * R * G^-1, then stores desired in h.lastBaseArmQuat and multiplies deltas into
+    h.clone.quaternion / h.currentBaseQuat -- none of which were ever re-normalised. A tiny length error made G non-unit, G*R*conj(G) scaled `desired` by
+    |G|^2, that went into lastBaseArmQuat, which fed the next call's q0: the error multiplied on every call.
+  - MEASURED before the fix (preview, a few base-slider moves): |clone.q| = 1, 0.99999, 0.99997, 0.99984, 0.9992 (|lastBaseArmQuat| 0.99947); returning a slider to 0 left the
+    hand 0.16 deg (X), 0.77 deg (Y), 4.52 deg (Z) off, accumulating; after a few more cycles h.clone.quaternion, h.currentBaseQuat and h.lastBaseArmQuat were all (0,0,0,0)
+    (hand destroyed). With Responsive Arm Rotation at Base ON this function runs every frame, so it would be hit far faster.
+  - Fix (src/main.js, applyBaseArmRotation only): normalise q0 and G, normalise `desired` after the conjugation, normalise lastBaseArmQuat before inverting it, and
+    .normalize() the stored results (h.clone.quaternion, h.currentBaseQuat). No change to the axes maths or the pivot code.
+  - MEASURED after the fix (same preview): each of X / Y / Z at 40 deg rotates about exactly the mesh's X / Y / Z axis (e.g. Y: 0.999,-0.03,-0.03 = the mesh Y axis) and the
+    rForearmBend world position moves 0,0,0; after 40 mixed slider moves (-80..+79 deg) the maximum |length - 1| of clone.q / lastBaseArmQuat / currentBaseQuat is 0, and
+    returning all three sliders to 0 leaves the hand 0 deg and (0,0,0) off its start. No console errors.
+  - NOT fixed (separate, pre-existing, reported to the user): changing Whole-Hand Rotation while a Base Rotation is set drops the base rotation from the hand (applyModelRootTransform()
+    invalidates lastBaseArmQuat; the sliders still read 50 but the hand is 50 deg off until a base slider is touched again). HANDO does not have this (its base rotation is stateless).
+  - Not tested: Responsive Arm Rotation at Base running per frame with tracking on; a second hand; the user's own browser. Not committed (left for the user / the HANDYSET session).
+
+--------------------------------------------------------------------------------
+2026-10-09 -- Base Rotation stays applied when Whole-Hand Rotation / Pose Scale / a pose changes, and after a Field Layout change [written by a HANDO session at the user's request]
+  - Follow-up to the entry above ("yeah fix it" to the item it listed as NOT fixed). Two causes, same family: applyModelRootTransform() rebuilds h.clone's rotation
+    from the PLAIN pose values and sets h.lastBaseArmQuat = null, and nothing put Base Rotation back (only the Responsive Arm Rotation / Pose Tween frames did).
+  - (1) Pose changes dropped it. Any applyPoseValuesToHand() call (Whole-Hand Rotation, Pose Scale, other Pose sliders, saved-pose Use, tween sequences) removed Base Rotation
+    from the hand while the sliders still showed it. MEASURED before: Base Rotation Y = 50, then Whole-Hand Rotation X = 30 -> the hand was 50 deg off a freshly applied 50.
+    Fix: applyPoseValuesToHand(poseValues, skipBaseReapply = false) now ends with applyBaseArmRotation(computeResponsiveBaseArmRotationDeg(armBaseDistanceT), poseValues)
+    (0 unless tracking + Responsive are on). The Responsive Pose Tween frame passes true because it re-applies Base Rotation itself with its blended values.
+  - (2) Field Layout double-applied it. relayoutField() (Column/Row Spacing, Hand Model enable, ...) called applyModelRootTransform(h, cfg) assuming it was idempotent; with Base Rotation
+    set, h.currentBaseQuat already carried the delta, so the rotation was kept but the tracker reset and the position recomputed with the palm pivot instead of the base-bone pivot.
+    MEASURED before: Base Rotation Y = 50, change Column Spacing, touch the Base Rotation Y slider again with 50 -> the hand moved another 50 deg (100 total).
+    Fix: relayoutField() rebuilds the pure rotation (h.currentBaseQuat.copy(computeBaseQuatFromValues(cfg))) before applyModelRootTransform and calls applyBaseArmRotation once after the loop.
+  - MEASURED after (preview, one hand): Whole-Hand Rotation X 0 -> 30 with Base Y = 50: 0 deg and (0,0,0) from the freshly applied reference; Pose Scale 1 -> 1.4: 0 deg / (0,0,0);
+    30 mixed Whole-Hand/Base moves: quaternion lengths stay 1 (max deviation 0) and everything at 0 returns to the start (0 deg, bone 0,0,0 off); Column Spacing change: 0 deg and
+    (0,0,0) bone movement, touching the Base slider again with the same value: 0 deg movement, Base Rotation stays exactly 50 deg from zero. No console errors.
+  - Left alone: ikApplyPose() also calls applyModelRootTransform() every evaluation, so Base Rotation is not part of an IK solve (it was not before either). Not tested: Responsive Arm Rotation / Pose
+    Tween per frame with tracking on, a multi-hand field, Phone Tilt together with Base Rotation, the user's own browser. Not committed (left for the user / the HANDYSET session).
+
+--------------------------------------------------------------------------------
+2026-10-09 -- IK solver now drives Whole-Hand Rotation at BASE (baseRotationX/Y/Z) instead of Whole-Hand Rotation [written by a HANDO session at the user's request]
+  - Request: "i want handyset ik solver to use base rotation". Same change HANDO made (IK_GLOBAL_DOFS: baseRotationX/Y/Z replace modelRotX/Y/Z).
+  - Changes (src/main.js): IK_GLOBAL_DOFS now lists baseRotationX/Y/Z; ikPartsOfKey() maps baseRotation[XYZ] to the existing 'Rot' influence row (keys ikInfluenceRot / ikRangeRot,
+    so saved values carry over); ikRegWeight() gives them the same 0.5 as Whole-Hand Rotation; the 'Rot' row labels now read "Whole-Hand Rotation at Base (%)" and
+    "... at Base Min / Max From Base (Deg)". Whole-Hand Rotation (modelRot) is no longer an IK joint. ikApplyPose() (one solver evaluation) was split into two passes: pass 1 resets
+    every hand's plain pose rotation (applyModelRootTransform, which also nulls applyBaseArmRotation()'s tracker, so Base Rotation is applied from scratch each time = stateless),
+    then applyBaseArmRotation(extra, cfg, true) applies Base Rotation to all hands BEFORE pass 2 (arm / wrist / finger bake), because the finger axes come from h.currentBaseQuat.
+    applyBaseArmRotation() got a third parameter skipFingerBake (default false) so the solver bakes the fingers once, not twice. baseRotation keys were already in POSE_KEY_DEFAULTS,
+    so the baseline capture, IK-off restore and slider syncing needed no change.
+  - MEASURED (preview, one hand, a test pair index-finger pad -> phone "Back - Bottom Left", world axes, ONLY the Base Rotation influence row > 0): with the row at 0 the pair error was
+    pos 60.04 u / rot 82.1 deg and nothing moved; with it at 100 the solver changed Base Rotation from (5, 92, 0) to (-1.55, -12.2, -15.75) and reached pos 1.84 u / rot 64.9 deg
+    (16 iterations, stage 2 accepted, 19 ms), Whole-Hand Rotation stayed (90, 90, 0). The solved pose equals the slider path: re-applying the same cfg through applyPoseValuesToHand
+    (a Pose Scale slider event) moved the hand 0 deg and the target node 0 units. Turning IK off restored Base Rotation to (5, 92, 0) and the sliders show it. Quaternion lengths of
+    h.clone / currentBaseQuat / lastBaseArmQuat stayed exactly 1 across repeated solves. No console errors.
+  - Notes: the values saved in the 'Rot' influence / Min-Max controls now govern Base Rotation (they used to govern Whole-Hand Rotation); with the default Rot influence 0 nothing changes until it is raised.
+    Base Rotation inside a solve includes the Responsive Arm Rotation contribution only when tracking + Responsive are on (same as the sliders). Not tested: Responsive Arm Rotation / tracking on
+    during a solve, multi-hand fields (the solver uses one pair set), Phone Tilt together with Base Rotation, the user's own browser. Not committed (left for the user / the HANDYSET session).
+
+--------------------------------------------------------------------------------
+2026-10-09 -- Base Rotation pivot: used a WORLD position as a position inside h.wrapper, so a hand away from the world origin jumped when Base Rotation changed [written by a HANDO session at the user's request]
+  - Report: "when i slide rotation at base, the camera moves" (no camera setting locked) and "sometimes nothing happens" on the Pose-group Rotation at Base sliders.
+  - Checked first: the camera itself. OrbitControls listens on the canvas only, nothing pins the orbit target to the hand (it is the fixed Camera Anchor), and in the preview camera.position /
+    quaternion / controls.target did not change at all while the Base Rotation sliders moved (default camera and an orbited fractional one). The latest saved settings (10-09 03:23) have
+    no lock set, IK off, Tracking off, camera top-down (pitch 89, position 0 / 79.5 / 0.0002, zoom slider 79.5, defaultCamera zoom 26), Responsive Arm Rotation + Pose Tween ON (inactive without Tracking).
+  - Found: applyBaseArmRotation() took the arm-base bone's WORLD position (baseWorldPos) and used it as a position in h.clone's PARENT space (h.wrapper). That is the same thing only while
+    h.wrapper sits untransformed at the world origin. For a hand placed away from it (field grid, Phone Tilt / Displace offsets) Base Rotation did not pivot on the bone: the whole hand jumped
+    toward the origin, which looks like the view moving, and it may leave the screen. MEASURED before: wrapper at (30,0,-20): a 60 deg slide moved the base bone (-2.09,-14.69,-12.61) units
+    and returning the slider to 0 left it (-0.12, 3.55, -19.15) from where it started; with the wrapper at the origin it moved (0,0,0), which is why it never showed in single-hand tests.
+  - Fix: the pivot is converted with h.wrapper.worldToLocal() (after h.wrapper.updateWorldMatrix(true,false)) before it is used for the position offset; the rotation delta was already in
+    the parent's space. Applies to the sliders and to the IK solver (same function).
+  - MEASURED after, three setups (wrapper at origin / offset (30,0,-20) / offset + rotated 0.7 rad about Y): each of X, Y, Z at 40 deg turns the hand exactly 40 deg about the mesh's own
+    X / Y / Z axis, the base bone moves (0,0,0), and returning each slider to 0 gives 0 deg and (0,0,0) off the start. No console errors.
+  - NOT reproduced: the camera object itself moving, and the "nothing happens" case with a real mouse (the pane's coordinate frame did not deliver my drag to the slider, so only
+    synthetic input events were used; every flag combination of Tracking x Pose Tween x Responsive Arm Rotation changed the hand correctly). If the camera still moves after this, the
+    exact situation (desktop or phone, how many hands, Tracking on?) is needed. Whole-Hand Rotation was left enabled: the earlier fix already re-applies Base Rotation after it changes.
+  - Not committed (left for the user / the HANDYSET session).
+
+--------------------------------------------------------------------------------
+2026-10-09 -- Removed the Absolute-mode Y/Z swap (rotation + displacement); set Rotation Scale X/Y/Z to 0.8 for every Absolute-mode model [written by a HANDO session at the user's request]
+  - "Remove that swap then": reversed exactly the src/main.js hunks of commit 459783c (10-04, "Absolute rotation mode ... swap the Y and Z rotation and displacement controls"):
+    computePhoneAbsoluteOrientationRawQuat() is back to alpha <- Z On/Off + Scale, beta <- X, gamma <- Y; computePhoneResponsiveDisplacement() has no Absolute branch again (X, Y, Z straight).
+    The earlier, separate 09-30 "Swap Y/Z axis mapping for Responsive Displace" (commit 726ab0c) was not touched. index.html: main.js cache-bust v=234 -> v=235 (covers every pending main.js change).
+    MEASURED by running the two real functions from the file with test values (scales X 1 / Y 2 / Z 3, displace scales 1 / 10 / 100): rotation alpha(10) -> 30 (Z controls), gamma(30) -> 60 (Y controls);
+    displacement X:1*1, Y:2*10, Z:3*100. The page loads with no console errors. NOT committed (left for the user / the HANDYSET session) -- the swap is therefore still live on the deployed site until main.js is pushed.
+  - "Set xyz rotation scale for every model in absolute mode to .8": data/processed/dev-panel-settings.json, edited in place with a script (file round-trips exactly in its CRLF 2-space format; backup of the
+    previous file kept in the session scratchpad). Three layers: (1) each of the 9 file-based phones in hiddenPhoneModelPerModelSettings whose selectPhoneRotationMode is 'absolute' -- its live
+    sliderPhoneRotationScaleX/Y/Z -> 0.8 (P5_Project_1, Nothing2, Pixel 9A, Iphone17MaxPro, Galaxy S2, Motorola Razr, Samsung Galaxy S26, iPhone 17 Max, S4), plus the 'absolute' slot of that phone's own
+    per-mode store where one exists (none did); (2) the current phone's live sliders (S26) and (3) the global per-mode store's 'absolute' slot (was 1.1 / 1 / 1). Gyro slots are unchanged, and the
+    session-only blob model (a blob: URL, mode gyro) was skipped. Values keep their stored type (strings in the snapshots, numbers for the live controls).
+    DECISION: four phones had X = -1 (Motorola Razr, S26, iPhone 17 Max, S4; -1 inverts the axis); they are now +0.8. A -0.8 variant was considered, but the history shows the user set the current phone's X from -1 to +1
+    (04:44) and to 0.8 (04:48) themselves, so +0.8 matches the latest intent -- say so if those phones should stay inverted.
+    MEASURED: all 9 Absolute phones read 0.8 / 0.8 / 0.8 in the file; the app loads it (cfg and sliders 0.8 / 0.8 / 0.8, mode absolute, model Samsung Galaxy S26), no console errors. NOT tested: switching to another phone
+    in the UI (that applies the per-phone snapshot through code that was not changed). Committed and pushed as 050003a (data file only).
+
+--------------------------------------------------------------------------------
+2026-10-09 -- Pushed the pending code; the 0.8 Rotation Scale was overwritten by the live site and had to be re-applied [written by a HANDO session at the user's request: "Push"]
+  - Code pushed as 297d493 (src/main.js + index.html v=235): the Base Rotation numerics/pivot/re-apply fixes, the IK solver driving Base Rotation, and the Absolute-mode Y/Z swap removal.
+    Staged only those files; the Blender / glb working-tree changes were not touched.
+  - What happened to the data change: 050003a (Rotation Scale X/Y/Z = 0.8 for the 9 Absolute-mode phones) was overwritten two commits later (d3bd15e, d6216fa, both 10-09 04:57, "Update dev-panel-settings.json via Save
+    Settings"): the live site was open with its OLD in-memory settings (model Pixel 9A, all scales 1) and Syncing writes the whole page state, so every control it held replaced the file's values. MEASURED on those commits:
+    live scales 1,1,1 and 8 of the 9 Absolute-mode phones back at their old values. Re-applied on top of the newest file with the same script (backup in the scratchpad); the user's newer state (current phone now Pixel 9A) was kept,
+    only the scale values changed; verified 9 of 9 Absolute-mode phones at 0.8 / 0.8 / 0.8. Pushed as a separate data commit.
+  - Consequence worth knowing: until the live page is RELOADED, its next Sync will write the old scales back again. Same mechanism as every settings edit made outside the page.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
