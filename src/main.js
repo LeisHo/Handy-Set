@@ -194,10 +194,15 @@ const cfg = {
   // Min / Max window as a range bar -- see ikInfluence() / solveIkHandPose()). Defaults as in HANDO: whole-hand offset/rotation and the
   // arm start at 0 (locked), fingers and wrist at 100. Range values are JSON strings like every other range-bar in this file.
   ikRotationWeight: 8, // IK Rotation Weight (x): how strongly the solver matches each pair's ORIENTATION vs its position (0 = position only) -- see solveIkHandPose()
-  ikInfluenceMaster: 100, ikInfluenceFingers: 100, ikInfluenceOff: 0, ikInfluenceRot: 0,
+  // Ported from HANDO 2026-10-09 with its per-axis / per-finger-set granularity: Finger Curl / Finger Twist / Finger Splay (ikInfluenceFingers/ikRangeFingers
+  // keep their keys and now mean SPLAY), Pose Offset X/Y/Z and Whole-Hand Rotation at Base X/Y/Z each have their own % + Min/Max. Table: IK_INFLUENCE_PARTS.
+  ikInfluenceMaster: 100, ikInfluenceFingerCurl: 100, ikInfluenceFingerTwist: 0, ikInfluenceFingers: 100,
+  ikInfluenceOffX: 0, ikInfluenceOffY: 0, ikInfluenceOffZ: 0, ikInfluenceRotX: 0, ikInfluenceRotY: 0, ikInfluenceRotZ: 0,
   ikInfluenceWristRot: 100, ikInfluenceWristSplay: 100, ikInfluenceWristBend: 100,
   ikInfluenceElbowBend: 0, ikInfluenceElbowSideBend: 0, ikInfluenceForearmTwist: 0,
-  ikRangeFingers: '{"min":-200,"max":200}', ikRangeOff: '{"min":-100,"max":100}', ikRangeRot: '{"min":-360,"max":360}',
+  ikRangeFingerCurl: '{"min":-200,"max":200}', ikRangeFingerTwist: '{"min":-100,"max":100}', ikRangeFingers: '{"min":-200,"max":200}',
+  ikRangeOffX: '{"min":-100,"max":100}', ikRangeOffY: '{"min":-100,"max":100}', ikRangeOffZ: '{"min":-100,"max":100}',
+  ikRangeRotX: '{"min":-360,"max":360}', ikRangeRotY: '{"min":-360,"max":360}', ikRangeRotZ: '{"min":-360,"max":360}',
   ikRangeWristRot: '{"min":-360,"max":360}', ikRangeWristSplay: '{"min":-360,"max":360}', ikRangeWristBend: '{"min":-360,"max":360}',
   ikRangeElbowBend: '{"min":-10,"max":150}', ikRangeElbowSideBend: '{"min":-90,"max":90}', ikRangeForearmTwist: '{"min":-90,"max":90}',
   // Field Layout — defaults to a single centered hand (1 row x 1 col);
@@ -3056,11 +3061,15 @@ function onIkNodeRegistryChanged() {
 //     away from the baseline (0 = frozen).
 // The solve is re-run only when a pair, a source node's pose or an influence value changed.
 const IK_PAIR_MAX = 8
+// Curl, splay and TWIST per finger (HANDO's finger granularity, 2026-10-09). HANDO twists three segments per finger (base / mid / tip); this hand only has the TIP twist slider
+// (FINGER_TIP_TWIST_KEY), so 'Finger Twist' here drives those 5 joints. Twist defaults to 0 % influence = frozen at the baseline, i.e. no change until it is raised.
 const IK_FINGER_DOFS = {
-  thumb: [FINGER_CURL_KEY.thumb, FINGER_SPLAY_KEY.thumb], index: [FINGER_CURL_KEY.index, FINGER_SPLAY_KEY.index],
-  middle: [FINGER_CURL_KEY.middle, FINGER_SPLAY_KEY.middle], ring: [FINGER_CURL_KEY.ring, FINGER_SPLAY_KEY.ring],
-  pinky: [FINGER_CURL_KEY.pinky, FINGER_SPLAY_KEY.pinky]
+  thumb: [FINGER_CURL_KEY.thumb, FINGER_SPLAY_KEY.thumb, FINGER_TIP_TWIST_KEY.thumb], index: [FINGER_CURL_KEY.index, FINGER_SPLAY_KEY.index, FINGER_TIP_TWIST_KEY.index],
+  middle: [FINGER_CURL_KEY.middle, FINGER_SPLAY_KEY.middle, FINGER_TIP_TWIST_KEY.middle], ring: [FINGER_CURL_KEY.ring, FINGER_SPLAY_KEY.ring, FINGER_TIP_TWIST_KEY.ring],
+  pinky: [FINGER_CURL_KEY.pinky, FINGER_SPLAY_KEY.pinky, FINGER_TIP_TWIST_KEY.pinky]
 }
+const IK_CURL_KEYS = new Set(Object.values(FINGER_CURL_KEY))
+const IK_TWIST_KEYS = new Set(Object.values(FINGER_TIP_TWIST_KEY))
 // 2026-10-09 (user request, as in HANDO): the solver drives Whole-Hand Rotation AT BASE (baseRotationX/Y/Z, pivot = the arm-base bone, about the hand
 // mesh's own axes) instead of Whole-Hand Rotation (modelRotX/Y/Z). The 'Rot' influence row keeps its keys and now controls these three.
 const IK_GLOBAL_DOFS = ['baseRotationX', 'baseRotationY', 'baseRotationZ', 'poseOffsetX', 'poseOffsetY', 'poseOffsetZ', 'wristBend', 'wristSplay', 'wristRotation']
@@ -3068,9 +3077,15 @@ const IK_GLOBAL_DOFS = ['baseRotationX', 'baseRotationY', 'baseRotationZ', 'pose
 const IK_ARM_DOFS = ['elbowBend', 'elbowSideBend', 'forearmTwist']
 // One entry per influence slider (id = 'slider' + Key) and per Min / Max range bar (cfg key ikRange<Part>).
 const IK_INFLUENCE_PARTS = [
-  ['Fingers', 'Fingers (%)', 'Fingers Min / Max From Base (%)', -200, 200, 1, 100],
-  ['Off', 'Pose Offset (%)', 'Pose Offset Min / Max From Base (Units)', -100, 100, 0.5, 0],
-  ['Rot', 'Whole-Hand Rotation at Base (%)', 'Whole-Hand Rotation at Base Min / Max From Base (Deg)', -360, 360, 1, 0],
+  ['FingerCurl', 'Finger Curl (%)', 'Finger Curl Min / Max From Base (%)', -200, 200, 1, 100],
+  ['FingerTwist', 'Finger Twist (%)', 'Finger Twist Min / Max From Base (%)', -100, 100, 1, 0],
+  ['Fingers', 'Finger Splay (%)', 'Finger Splay Min / Max From Base (%)', -200, 200, 1, 100],
+  ['OffX', 'Pose Offset X (%)', 'Pose Offset X Min / Max From Base (Units)', -100, 100, 0.5, 0],
+  ['OffY', 'Pose Offset Y (%)', 'Pose Offset Y Min / Max From Base (Units)', -100, 100, 0.5, 0],
+  ['OffZ', 'Pose Offset Z (%)', 'Pose Offset Z Min / Max From Base (Units)', -100, 100, 0.5, 0],
+  ['RotX', 'Whole-Hand Rotation at Base X (%)', 'Whole-Hand Rotation at Base X Min / Max From Base (Deg)', -360, 360, 1, 0],
+  ['RotY', 'Whole-Hand Rotation at Base Y (%)', 'Whole-Hand Rotation at Base Y Min / Max From Base (Deg)', -360, 360, 1, 0],
+  ['RotZ', 'Whole-Hand Rotation at Base Z (%)', 'Whole-Hand Rotation at Base Z Min / Max From Base (Deg)', -360, 360, 1, 0],
   ['WristRot', 'Wrist Rotation (%)', 'Wrist Rotation Min / Max From Base (Deg)', -360, 360, 1, 100],
   ['WristSplay', 'Wrist Splay (%)', 'Wrist Splay Min / Max From Base (Deg)', -360, 360, 1, 100],
   ['WristBend', 'Wrist Bend (%)', 'Wrist Bend Min / Max From Base (Deg)', -360, 360, 1, 100],
@@ -3108,11 +3123,13 @@ function toggleIkSolverPause(btn) {
 // fraction of its slider range: 0 = frozen at the baseline, 1 = the whole slider range.
 const IK_INFLUENCE_PART = { wristRotation: 'WristRot', wristSplay: 'WristSplay', wristBend: 'WristBend', elbowBend: 'ElbowBend', elbowSideBend: 'ElbowSideBend', forearmTwist: 'ForearmTwist' }
 function ikPartsOfKey(k) {
-  if (/^baseRotation[XYZ]$/.test(k)) return ['Rot']
-  if (k.startsWith('poseOffset')) return ['Off']
+  if (/^baseRotation[XYZ]$/.test(k)) return ['Rot' + k.slice(-1)] // each rotation axis has its own influence + Min / Max (HANDO, 2026-10-06)
+  if (/^poseOffset[XYZ]$/.test(k)) return ['Off' + k.slice(-1)] // each offset axis has its own influence + Min / Max (HANDO, 2026-10-06)
   if (IK_INFLUENCE_PART[k]) return [IK_INFLUENCE_PART[k]]
   if (IK_ARM_DOFS.includes(k)) return [] // no slider: never driven
-  return ['Fingers']
+  if (IK_CURL_KEYS.has(k)) return ['FingerCurl']
+  if (IK_TWIST_KEYS.has(k)) return ['FingerTwist']
+  return ['Fingers'] // finger splay
 }
 function ikInfluence(k) {
   const pct = (v) => Math.min(1, Math.max(0, (Number(v) || 0) / 100))
@@ -3586,6 +3603,42 @@ const IK_INFLUENCE_DEFAULTS = (() => {
   IK_INFLUENCE_PARTS.forEach(([part, , , tMin, tMax, , def]) => { d['ikInfluence' + part] = def; d['ikRange' + part] = JSON.stringify({ min: tMin, max: tMax }) })
   return d
 })()
+// Values saved before the split live under the old single keys: Pose Offset / Whole-Hand Rotation (one % + one Min/Max for all 3 axes) and Fingers (one set for curl +
+// splay). Each new key seeds from its old one when nothing is saved for it yet, so no tuned value is lost; Finger Splay keeps the old 'Fingers' key itself.
+const IK_INFLUENCE_LEGACY = {
+  ikInfluenceOffX: 'ikInfluenceOff', ikInfluenceOffY: 'ikInfluenceOff', ikInfluenceOffZ: 'ikInfluenceOff',
+  ikRangeOffX: 'ikRangeOff', ikRangeOffY: 'ikRangeOff', ikRangeOffZ: 'ikRangeOff',
+  ikInfluenceRotX: 'ikInfluenceRot', ikInfluenceRotY: 'ikInfluenceRot', ikInfluenceRotZ: 'ikInfluenceRot',
+  ikRangeRotX: 'ikRangeRot', ikRangeRotY: 'ikRangeRot', ikRangeRotZ: 'ikRangeRot',
+  ikInfluenceFingerCurl: 'ikInfluenceFingers', ikRangeFingerCurl: 'ikRangeFingers'
+}
+const ikControlId = (k) => (k.startsWith('ikRange') ? 'text' : 'slider') + ikCap(k)
+// Mutates a loaded settings `controls` map (by control id) BEFORE it is applied to the panel.
+function migrateIkInfluenceLegacyControls(controls) {
+  if (!controls || typeof controls !== 'object') return
+  Object.entries(IK_INFLUENCE_LEGACY).forEach(([k, old]) => {
+    const id = ikControlId(k), oldId = ikControlId(old)
+    if (!(id in controls) && (oldId in controls)) controls[id] = controls[oldId]
+  })
+}
+// Layout as in HANDO's groupIkInfluencePercentRows(): the picker, then every % slider together, then every Min / Max bar. A saved panel order (applySectionOrder() on a
+// restore) keeps rows that existed before in their old places and parks the new ones at the end, so after a restore this puts them in order -- ONLY when they are not already
+// all-sliders-then-all-bars, so a layout the user dragged into that shape stays as they left it.
+function groupIkInfluenceRows() {
+  const sliderIds = ['sliderIkInfluenceMaster'].concat(IK_INFLUENCE_PARTS.map(([part]) => 'slider' + ikCap('ikInfluence' + part)))
+  const barIds = IK_INFLUENCE_PARTS.map(([part]) => 'text' + ikCap('ikRange' + part))
+  const rowOf = (id) => { const e = document.getElementById(id); return e && e.closest('.dev-row') }
+  const first = rowOf('sliderIkInfluenceMaster')
+  const body = first && first.parentElement
+  if (!body) return
+  const sliderRows = sliderIds.map(rowOf), barRows = barIds.map(rowOf)
+  if (sliderRows.some((r) => !r || r.parentElement !== body) || barRows.some((r) => !r || r.parentElement !== body)) return
+  const kids = Array.from(body.children)
+  const lastSlider = Math.max(...sliderRows.map((r) => kids.indexOf(r)))
+  const firstBar = Math.min(...barRows.map((r) => kids.indexOf(r)))
+  if (lastSlider < firstBar) return // already grouped
+  sliderRows.concat(barRows).forEach((r) => body.appendChild(r))
+}
 function captureIkInfluencePreset() {
   const item = {}
   IK_INFLUENCE_ROW_KEYS.forEach((k) => { item[k] = cfg[k] })
@@ -3594,9 +3647,10 @@ function captureIkInfluencePreset() {
 function useIkInfluencePreset(item) {
   IK_INFLUENCE_ROW_KEYS.forEach((k) => {
     // a key the preset predates falls back to the control's own default rather than whatever was left over
-    const v = item[k] !== undefined ? item[k] : IK_INFLUENCE_DEFAULTS[k]
+    const legacy = IK_INFLUENCE_LEGACY[k]
+    const v = item[k] !== undefined ? item[k] : (legacy && item[legacy] !== undefined ? item[legacy] : IK_INFLUENCE_DEFAULTS[k]) // a preset from before the split seeds from the old single key
     cfg[k] = v
-    syncControlDom((k.startsWith('ikRange') ? 'text' : 'slider') + ikCap(k), v)
+    syncControlDom(ikControlId(k), v)
   })
   ikLastSignature = null // re-solve with the new influences
   requestRender()
@@ -3620,11 +3674,16 @@ function renderIkPosingGroup(handModelContent) {
   addRow(subInfluence, { id: 'sliderIkInfluenceMaster', label: 'IK Influence - All (%)', type: 'slider', min: 0, max: 100, step: 1, value: cfg.ikInfluenceMaster })
   wireSlider('sliderIkInfluenceMaster', (v) => { cfg.ikInfluenceMaster = v; ikLastSignature = null; requestRender() })
   const ikRangeWatch = []
-  IK_INFLUENCE_PARTS.forEach(([part, label, rangeLabel, tMin, tMax, , def]) => {
-    const k = 'ikInfluence' + part, rk = 'ikRange' + part
-    const id = 'slider' + ikCap(k), rid = 'text' + ikCap(rk)
+  // Layout (as in HANDO): the picker, then EVERY % slider together, then every Min / Max bar -- two passes over the table.
+  IK_INFLUENCE_PARTS.forEach(([part, label]) => {
+    const k = 'ikInfluence' + part
+    const id = 'slider' + ikCap(k)
     addRow(subInfluence, { id, label, type: 'slider', min: 0, max: 100, step: 1, value: cfg[k] })
     wireSlider(id, (v) => { cfg[k] = v; ikLastSignature = null; requestRender() })
+  })
+  IK_INFLUENCE_PARTS.forEach(([part, label, rangeLabel, tMin, tMax]) => {
+    const rk = 'ikRange' + part
+    const rid = 'text' + ikCap(rk)
     let rangeDefault = { min: tMin, max: tMax }
     try { rangeDefault = JSON.parse(cfg[rk]) } catch (e) { /* keep fallback */ }
     addRow(subInfluence, { id: rid, label: rangeLabel, type: 'range-bar', trackMin: tMin, trackMax: tMax, unit: '', defaultValue: rangeDefault })
@@ -10872,9 +10931,11 @@ async function loadRemoteSettingsOnStartup() {
     if (data.settings.listPicker_phonePoses) loadListPickerItemsFromRemoteData(data.settings.listPicker_phonePoses, SAVED_PHONE_POSES)
     if (data.settings.listPicker_ikInfluence) loadListPickerItemsFromRemoteData(data.settings.listPicker_ikInfluence, SAVED_IK_INFLUENCE)
     if (data.settings.listPicker_tweenSequences) loadListPickerItemsFromRemoteData(data.settings.listPicker_tweenSequences, SAVED_TWEEN_SEQUENCES)
+    migrateIkInfluenceLegacyControls(data.settings.controls) // 2026-10-09: old single Offset / Rotation / Fingers influence values seed the split rows
     if (typeof window.ensureDevPanelBuilt === 'function') window.ensureDevPanelBuilt()
     phoneModelRestoreInProgress = true
     try { apply(data.settings) } finally { setTimeout(() => { phoneModelRestoreInProgress = false }, 1500) }
+    try { groupIkInfluenceRows() } catch (err) { /* IK Influence rows not built yet */ }
     schedulePhoneDeviceAwareApply(500); setTimeout(applyAllPhoneDeviceAwareValues, 2500) // device-aware Phone Displace/Rotation values (see PHONE_DEVICE_AWARE_ID)
     // "Set as Default" for the 2 model selectors and the phone pose -- applied
     // AFTER the normal Sync restore so a deliberate default wins (same
