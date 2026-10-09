@@ -2452,9 +2452,32 @@ function isInsideDevPanel(target) {
 // double-click gesture (not 2 separate gestures). The gesture fires if
 // EITHER checkbox is on; each piece only actually resets if its OWN
 // checkbox is checked.
+//
+// INDEPENDENT of the Responsive Rotation / Responsive Displace On/Off (2026-10-09, direct request: "when I turn off responsive rotation
+// or responsive displacement, I want the double tap to reset to still work if turned on. So turning off responsive rotation does not
+// turn off the rotation reset"). The gesture only ever checked its own Reset checkboxes; what was missing around it:
+//  * on-demand rendering: with both responsive features off nothing keeps the render loop alive, so the reset's visible snap was
+//    never drawn -> requestRender() here.
+//  * iOS only delivers orientation/motion after a permission request made from a user gesture, and with both features off none was
+//    ever made -> the double tap itself requests it, so the baseline is captured from a live reading.
+//  * turning Responsive Rotation back ON re-baselined unconditionally, throwing away the neutral pose you had just set by double tap
+//    while it was off -> phoneRotationBaselineSetWhileOff makes the enable step keep it (see onPhoneResponsiveRotationEnabled()).
+let phoneRotationBaselineSetWhileOff = false
 function firePhoneResetGesture() {
-  if (cfg.phoneRotationResetEnabled) resetPhoneRotationBaseline()
+  if (cfg.phoneRotationResetEnabled || cfg.phoneDisplaceResetEnabled) requestMotionPermissionIfNeeded()
+  if (cfg.phoneRotationResetEnabled) {
+    resetPhoneRotationBaseline()
+    if (!cfg.phoneResponsiveRotationEnabled) phoneRotationBaselineSetWhileOff = true
+  }
   if (cfg.phoneDisplaceResetEnabled) resetPhoneDisplaceBaseline()
+  requestRender()
+}
+// Called whenever Responsive Rotation is switched ON (its checkbox, or the device-aware Mobile/Landscape row). Starts clean unless a
+// Rotation Reset double tap already set the baseline while it was off.
+function onPhoneResponsiveRotationEnabled() {
+  requestMotionPermissionIfNeeded()
+  if (phoneRotationBaselineSetWhileOff) { phoneRotationBaselineSetWhileOff = false; return }
+  resetPhoneModelRotationBaseline()
 }
 function setupPhoneRotationResetGesture() {
   window.addEventListener('dblclick', (e) => {
@@ -4177,11 +4200,14 @@ function computeDeviceOrientationQuat(alphaDeg, betaDeg, gammaDeg) {
 // see that function's own comment for why) so resetPhoneModelRotationBaseline()
 // can capture the SAME raw quaternion (pre-baseline) to invert into a new
 // baseline, without duplicating the alphaDeg/betaDeg/gammaDeg computation.
+// REWRITTEN 2026-10-09 (direct report, real phone, Absolute mode): "if Z axis is phone face to phone back, Y is charging port to camera, X is left to
+// right: with only Z on, rotating the real phone about Z rotates the model about Y; with only Y on, rotating the real phone about Z rotates the model about Z;
+// rotating the real phone about Y never changes anything. In gyro mode it works, but not Absolute." Cause: this used to gate/scale the three W3C Euler ANGLES
+// (alpha/beta/gamma) one by one, but those are not rotations about the phone's own X/Y/Z: they are an intrinsic Z-X'-Y'' chain, so alpha, beta and gamma each
+// mix several physical axes (and alpha/gamma collapse onto the same axis as the phone is held upright). The raw quaternion is therefore now the FULL,
+// ungated, unscaled orientation; the per-axis On/Off + Scale are applied in computePhoneAbsoluteOrientationQuat() to the rotation ABOUT EACH PHYSICAL AXIS instead.
 function computePhoneAbsoluteOrientationRawQuat(e) {
-  const alphaDeg = cfg.phoneAxisZEnabled ? (e.alpha || 0) * cfg.phoneRotationScaleZ : 0
-  const betaDeg = cfg.phoneAxisXEnabled ? (e.beta || 0) * cfg.phoneRotationScaleX : 0
-  const gammaDeg = cfg.phoneAxisYEnabled ? (e.gamma || 0) * cfg.phoneRotationScaleY : 0
-  return computeDeviceOrientationQuat(alphaDeg, betaDeg, gammaDeg) // returns the shared _phoneAbsoluteQuat instance
+  return computeDeviceOrientationQuat(e.alpha || 0, e.beta || 0, e.gamma || 0) // returns the shared _phoneAbsoluteQuat instance
 }
 // Baseline for Absolute/Orientation mode -- added 2026-09-30, direct
 // report: "the double tap to reset button doesn't seem to work" in this
@@ -4201,9 +4227,42 @@ function computePhoneAbsoluteOrientationRawQuat(e) {
 // instead of the device's raw (alpha=0,beta=0,gamma=0).
 const _phoneAbsoluteBaselineInverse = new THREE.Quaternion()
 const _phoneAbsoluteResultQuat = new THREE.Quaternion()
+const _phoneAbsRelQuat = new THREE.Quaternion()
+const _phoneAbsTiltAxis = new THREE.Vector3()
+const _phoneAbsTiltQuat = new THREE.Quaternion()
+const _phoneAbsSpinQuat = new THREE.Quaternion()
+// Absolute mode, 2026-10-09: how far the phone has turned since the baseline, split into its rotation ABOUT THE PHONE'S OWN X (left-right), Y (charging port to
+// camera) and Z (face to back) axes, then each axis gated by its On/Off and multiplied by its Scale and fed into the model EXACTLY the way Gyro mode feeds
+// its integrated rotation (integratePhoneGyroRotation(): physical X and Z form the 'tilt' axis (x, y components), physical Y is the separate spin about
+// PHONE_GYRO_SPIN_LOCAL_AXIS, Y negated) -- Gyro's axis mapping was verified on the real phone over many rounds, so Absolute now simply reuses it.
+//   rel = baselineInverse * current  is the rotation from the baseline orientation to the current one, expressed about the baseline's own body axes, so a turn
+// of the real phone about its Y axis is a turn about Y of rel whatever the phone's tilt (no dependence on how it is held, no gimbal degeneracy), and the angle
+// is memoryless/drift-free exactly as before (nothing accumulates). The rotation-vector components are scaled per axis; exact for single-axis turns and
+// the natural generalisation for combined ones. Sign convention: +X, +Z, -Y like Gyro; if one axis moves the wrong way on a given phone, make that axis's
+// Scale negative.
 function computePhoneAbsoluteOrientationQuat(e) {
   const raw = computePhoneAbsoluteOrientationRawQuat(e)
-  return _phoneAbsoluteResultQuat.copy(_phoneAbsoluteBaselineInverse).multiply(raw)
+  const rel = _phoneAbsRelQuat.copy(_phoneAbsoluteBaselineInverse).multiply(raw).normalize()
+  if (rel.w < 0) { rel.x = -rel.x; rel.y = -rel.y; rel.z = -rel.z; rel.w = -rel.w } // shortest-arc form
+  const out = _phoneAbsoluteResultQuat.identity()
+  const sinHalf = Math.sqrt(rel.x * rel.x + rel.y * rel.y + rel.z * rel.z)
+  if (sinHalf < 1e-9) return out
+  const angleDeg = THREE.MathUtils.radToDeg(2 * Math.atan2(sinHalf, rel.w))
+  const vx = (rel.x / sinHalf) * angleDeg, vy = (rel.y / sinHalf) * angleDeg, vz = (rel.z / sinHalf) * angleDeg // degrees about the phone's X / Y / Z
+  const xDeg = cfg.phoneAxisXEnabled ? vx * cfg.phoneRotationScaleX : 0
+  const yDeg = cfg.phoneAxisYEnabled ? -vy * cfg.phoneRotationScaleY : 0
+  const zDeg = cfg.phoneAxisZEnabled ? vz * cfg.phoneRotationScaleZ : 0
+  const tiltDeg = Math.hypot(xDeg, zDeg)
+  if (tiltDeg > 1e-8) {
+    _phoneAbsTiltAxis.set(xDeg, zDeg, 0).normalize()
+    _phoneAbsTiltQuat.setFromAxisAngle(_phoneAbsTiltAxis, THREE.MathUtils.degToRad(tiltDeg))
+    out.multiply(_phoneAbsTiltQuat)
+  }
+  if (Math.abs(yDeg) > 1e-8) {
+    _phoneAbsSpinQuat.setFromAxisAngle(PHONE_GYRO_SPIN_LOCAL_AXIS, THREE.MathUtils.degToRad(yDeg))
+    out.multiply(_phoneAbsSpinQuat)
+  }
+  return out
 }
 // REMOVED 2026-09-28 (9th round) -- PHONE_GYRO_OUTPUT_FIX_QUAT, an 8th-
 // round output-conjugation constant. 3 rounds of reports (6th/7th/8th)
@@ -7983,7 +8042,7 @@ function applyPhoneDeviceAwareValue(desktopId) {
   if (cfg[key] === v) return
   cfg[key] = v
   if (key === 'phoneResponsiveDisplaceEnabled' && v) requestMotionPermissionIfNeeded()
-  if (key === 'phoneResponsiveRotationEnabled' && v) { requestMotionPermissionIfNeeded(); resetPhoneModelRotationBaseline() }
+  if (key === 'phoneResponsiveRotationEnabled' && v) onPhoneResponsiveRotationEnabled()
   if (key === 'phoneDisplaceMode') resetPhoneDisplaceTiltBaseline()
 }
 function applyAllPhoneDeviceAwareValues() {
@@ -9574,7 +9633,7 @@ function renderPhoneModelGroup(content) {
   // comment for why this matters (3 rounds of reports proved the SAME
   // code can look like a different permutation depending on the
   // phone's starting orientation).
-  wireCheckbox('checkboxPhoneResponsiveRotationEnabled', (v) => { cfg.phoneResponsiveRotationEnabled = v; if (v) { requestMotionPermissionIfNeeded(); resetPhoneModelRotationBaseline() } requestRender() })
+  wireCheckbox('checkboxPhoneResponsiveRotationEnabled', (v) => { cfg.phoneResponsiveRotationEnabled = v; if (v) onPhoneResponsiveRotationEnabled(); else phoneRotationBaselineSetWhileOff = false; requestRender() })
   // Rotation Mode -- direct request 2026-09-30: a selectable alternative
   // to the existing Gyro/Integrated system, added specifically to
   // eliminate accumulated gyro-drift/path-dependence. See

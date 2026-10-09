@@ -8412,6 +8412,22 @@ devPanel.js ?v=20, main.js ?v=234. This devPanel.js fix is generic and belongs i
   - Consequence worth knowing: until the live page is RELOADED, its next Sync will write the old scales back again. Same mechanism as every settings edit made outside the page.
 
 --------------------------------------------------------------------------------
+2026-10-09 -- Rotation / Displace Reset is independent of the Responsive On/Off
+
+Request: "when I turn off responsive rotation or responsive displacement, I want the double tap to reset to still work if turned on."
+Checked first: the gesture (setupPhoneRotationResetGesture / firePhoneResetGesture) only ever gated on the two Reset checkboxes, never on
+Responsive Rotation / Displace, so the logic itself was already independent. Three real gaps around it, fixed in main.js (?v=235):
+ 1. On-demand rendering: with both responsive features off nothing keeps the render loop alive, so the reset's visible snap was never
+    drawn -> firePhoneResetGesture() now calls requestRender().
+ 2. iOS delivers orientation/motion only after a permission request from a user gesture, and with both features off none was made, so a
+    reset could not capture a live baseline -> the double tap itself now calls requestMotionPermissionIfNeeded().
+ 3. Switching Responsive Rotation back ON re-baselined unconditionally (checkbox and the device-aware Mobile/Landscape row), erasing the
+    neutral pose set by a double tap while it was off -> phoneRotationBaselineSetWhileOff is set by a reset made while Responsive
+    Rotation is off, and onPhoneResponsiveRotationEnabled() keeps that baseline instead of re-baselining (cleared when it is consumed or
+    when the checkbox is turned off).
+Not browser-verified (project rule; the gesture needs a real phone).
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
