@@ -8506,6 +8506,18 @@ Runs once at build, so a later Sync/Reset/Undo (which never changes the active t
 (project rule; it needs a real phone).
 
 --------------------------------------------------------------------------------
+2026-10-09 -- Three new phone models imported: Iphone17MaxProFlip, Iphone17MaxProFlip2, Pixel 9AF
+
+Added to data/processed/SMARTPHONE MODELS/ by the user (untracked .glb files). Checked from the GLB files: all three are true metres with the
+same size as their base (Iphone17MaxProFlip/Flip2 0.0785 x 0.0129 x 0.1634 m = Iphone17MaxPro; Pixel 9AF 0.0741 x 0.0091 x 0.1547 m = Pixel 9A)
+and keep the 'Screen Face' mesh/material Recursive Render needs. Imported by: manifest.json entries (before S4), the hardcoded offline
+fallback list PHONE_MODEL_OPTIONS in main.js, and the three files themselves. Settings: as asked, the per-model snapshot
+(hiddenPhoneModelPerModelSettings, 74 controls each: scale, offsets, rotation, displace, recursive render ...) of Iphone17MaxPro was copied
+to Iphone17MaxProFlip and Iphone17MaxProFlip2, and Pixel 9A's to Pixel 9AF (settings file round-tripped exactly before and after; only that
+one string changed). The existing 'iPhone 17 Max' was not touched (the request was about the new files). Copies are independent from here on.
+Not browser-verified (project rule).
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

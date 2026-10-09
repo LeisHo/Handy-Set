@@ -3786,6 +3786,9 @@ let PHONE_MODEL_OPTIONS = [
   { value: 'data/processed/SMARTPHONE MODELS/Nothing2.glb', text: 'Nothing2' },
   { value: 'data/processed/SMARTPHONE MODELS/Samsung Galaxy S26.glb', text: 'Samsung Galaxy S26' },
   { value: 'data/processed/SMARTPHONE MODELS/iPhone 17 Max.glb', text: 'iPhone 17 Max' },
+  { value: 'data/processed/SMARTPHONE MODELS/Iphone17MaxProFlip.glb', text: 'Iphone17MaxProFlip' },
+  { value: 'data/processed/SMARTPHONE MODELS/Iphone17MaxProFlip2.glb', text: 'Iphone17MaxProFlip2' },
+  { value: 'data/processed/SMARTPHONE MODELS/Pixel 9AF.glb', text: 'Pixel 9AF' },
   { value: 'data/processed/SMARTPHONE MODELS/S4.glb', text: 'S4' }
 ] // hardcoded fallback, used only if BOTH the live manifest fetch (GitHub, via the API endpoint) AND the static same-origin manifest.json fail (e.g. fully offline)
 // REMOVED 2026-09-29 -- a per-model `scale` field (manifest.json) plus
