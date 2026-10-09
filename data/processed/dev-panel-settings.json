@@ -3,7 +3,7 @@
     "checkboxHandModelEnabled": true,
     "hiddenHandModelFile": "data/processed/HAND3D/HandiBonesB-IK.glb",
     "hiddenHandModelOrder": "[\"data/processed/HAND3D/HandiBonesB-IK.glb\",\"data/processed/HAND3D/Hand2.glb\"]",
-    "checkboxIkPosingEnabled": true,
+    "checkboxIkPosingEnabled": false,
     "sliderIkRotationWeight": 0,
     "sliderIkInfluenceMaster": 100,
     "sliderIkInfluenceFingerCurl": 100,
@@ -52,19 +52,19 @@
     "checkboxhandMirrorX": false,
     "checkboxhandMirrorY": false,
     "checkboxhandMirrorZ": false,
-    "sliderbaseRotationX": 29,
+    "sliderbaseRotationX": 28,
     "sliderbaseRotationY": 35,
-    "sliderbaseRotationZ": -1,
-    "sliderthumbCurl": 50,
-    "sliderthumbSplay": -87,
+    "sliderbaseRotationZ": -2,
+    "sliderthumbCurl": 54,
+    "sliderthumbSplay": -146,
     "sliderthumbSplay2": -8,
     "slidercurlBiasThumb": 0,
     "sliderbaseOnlyCurlThumb": -61,
     "slidermidOnlyCurlThumb": 0,
     "slidertipOnlyCurlThumb": 0,
-    "slidertipTwistThumb": 0,
-    "sliderelbowBend": 0.531504853303176,
-    "sliderelbowSideBend": 14,
+    "slidertipTwistThumb": 11,
+    "sliderelbowBend": 9.53150485330318,
+    "sliderelbowSideBend": 13,
     "sliderforearmTwist": 18,
     "sliderforearmBendOffX": 0,
     "sliderforearmBendOffY": 0,
@@ -75,9 +75,9 @@
     "sliderwristOffX": 0,
     "sliderwristOffY": 0,
     "sliderwristOffZ": 0,
-    "sliderwristRotation": 9,
-    "sliderwristBend": -12,
-    "sliderwristSplay": -25.9717102651131,
+    "sliderwristRotation": 13,
+    "sliderwristBend": -7,
+    "sliderwristSplay": -32.9717102651131,
     "textwristRotationClampRange": "{\"min\":-360,\"max\":360}",
     "textwristBendClampRange": "{\"min\":-90,\"max\":90}",
     "textwristSplayClampRange": "{\"min\":-180,\"max\":180}",
@@ -86,23 +86,23 @@
     "checkboxReactiveArmLengthEnabled": false,
     "textArmLengthRange": "{\"min\":0,\"max\":85}",
     "textArmLengthCurve": "{\"points\":[{\"x\":0,\"y\":1},{\"x\":0.148333740234375,\"y\":0.6613540649414062},{\"x\":0.4100001017252604,\"y\":0.31468760172526045},{\"x\":0.5316670735677084,\"y\":0.2680206298828125},{\"x\":0.748333740234375,\"y\":0.19468739827473958},{\"x\":1,\"y\":0}],\"method\":\"catmullrom\",\"bgOpacity\":0.15}",
-    "slidercurlIndex": 33,
-    "slidersplayIndex": -29,
+    "slidercurlIndex": 41,
+    "slidersplayIndex": -24,
     "slidersplayIndex2": 0,
     "slidercurlBiasIndex": 0,
     "sliderbaseOnlyCurlIndex": 0,
     "slidermidOnlyCurlIndex": -5,
     "slidertipOnlyCurlIndex": 0,
-    "slidertipTwistIndex": 0,
-    "slidercurlMiddle": 50,
-    "slidersplayMiddle": 28,
+    "slidertipTwistIndex": -2,
+    "slidercurlMiddle": 58,
+    "slidersplayMiddle": 26,
     "slidersplayMiddle2": 0,
     "slidercurlBiasMiddle": 0,
     "sliderbaseOnlyCurlMiddle": 0,
     "slidermidOnlyCurlMiddle": -5,
     "slidertipOnlyCurlMiddle": 0,
-    "slidertipTwistMiddle": 0,
-    "slidercurlRing": 57,
+    "slidertipTwistMiddle": -2,
+    "slidercurlRing": 67,
     "slidersplayRing": -27,
     "slidersplayRing2": 0,
     "slidercurlBiasRing": 0,
@@ -110,17 +110,17 @@
     "slidermidOnlyCurlRing": -5,
     "slidertipOnlyCurlRing": 0,
     "slidertipTwistRing": 0,
-    "slidercurlPinky": 57,
-    "slidersplayPinky": 47,
+    "slidercurlPinky": 69,
+    "slidersplayPinky": 37,
     "slidersplayPinky2": 0,
     "slidercurlBiasPinky": 0,
     "sliderbaseOnlyCurlPinky": 0,
     "slidermidOnlyCurlPinky": -5,
     "slidertipOnlyCurlPinky": 0,
-    "slidertipTwistPinky": 0,
-    "sliderposeOffsetX": 23.9,
-    "sliderposeOffsetY": -10.700412054081,
-    "sliderposeOffsetZ": -10.9645243304853,
+    "slidertipTwistPinky": 4,
+    "sliderposeOffsetX": 22.4,
+    "sliderposeOffsetY": -5.60041205408102,
+    "sliderposeOffsetZ": -8.5960571139003,
     "sliderPoseScale": 1,
     "sliderTweenT": 0,
     "sliderTweenFrameCount": 10,
@@ -302,9 +302,9 @@
     "checkboxDeviceInfoEnabled": true
   },
   "layout": {
-    "left": 45.916656494140625,
+    "left": 39,
     "top": 334,
-    "width": 339,
+    "width": 346,
     "height": 445
   },
   "devPanelStyle": {
@@ -10604,7 +10604,39 @@
                       },
                       {
                         "type": "row",
+                        "key": "sliderMobileIkInfluenceFingerCurl"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderMobileIkInfluenceFingerTwist"
+                      },
+                      {
+                        "type": "row",
                         "key": "sliderMobileIkInfluenceFingers"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderMobileIkInfluenceOffX"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderMobileIkInfluenceOffY"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderMobileIkInfluenceOffZ"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderMobileIkInfluenceRotX"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderMobileIkInfluenceRotY"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderMobileIkInfluenceRotZ"
                       },
                       {
                         "type": "row",
@@ -10693,7 +10725,15 @@
                     ],
                     "rowKeys": [
                       "sliderMobileIkInfluenceMaster",
+                      "sliderMobileIkInfluenceFingerCurl",
+                      "sliderMobileIkInfluenceFingerTwist",
                       "sliderMobileIkInfluenceFingers",
+                      "sliderMobileIkInfluenceOffX",
+                      "sliderMobileIkInfluenceOffY",
+                      "sliderMobileIkInfluenceOffZ",
+                      "sliderMobileIkInfluenceRotX",
+                      "sliderMobileIkInfluenceRotY",
+                      "sliderMobileIkInfluenceRotZ",
                       "sliderMobileIkInfluenceWristRot",
                       "sliderMobileIkInfluenceWristSplay",
                       "sliderMobileIkInfluenceWristBend",
@@ -10754,7 +10794,39 @@
                     },
                     {
                       "type": "row",
+                      "key": "sliderMobileIkInfluenceFingerCurl"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderMobileIkInfluenceFingerTwist"
+                    },
+                    {
+                      "type": "row",
                       "key": "sliderMobileIkInfluenceFingers"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderMobileIkInfluenceOffX"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderMobileIkInfluenceOffY"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderMobileIkInfluenceOffZ"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderMobileIkInfluenceRotX"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderMobileIkInfluenceRotY"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderMobileIkInfluenceRotZ"
                     },
                     {
                       "type": "row",
@@ -10843,7 +10915,15 @@
                   ],
                   "rowKeys": [
                     "sliderMobileIkInfluenceMaster",
+                    "sliderMobileIkInfluenceFingerCurl",
+                    "sliderMobileIkInfluenceFingerTwist",
                     "sliderMobileIkInfluenceFingers",
+                    "sliderMobileIkInfluenceOffX",
+                    "sliderMobileIkInfluenceOffY",
+                    "sliderMobileIkInfluenceOffZ",
+                    "sliderMobileIkInfluenceRotX",
+                    "sliderMobileIkInfluenceRotY",
+                    "sliderMobileIkInfluenceRotZ",
                     "sliderMobileIkInfluenceWristRot",
                     "sliderMobileIkInfluenceWristSplay",
                     "sliderMobileIkInfluenceWristBend",
@@ -11371,7 +11451,39 @@
                     },
                     {
                       "type": "row",
+                      "key": "sliderMobileIkInfluenceFingerCurl"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderMobileIkInfluenceFingerTwist"
+                    },
+                    {
+                      "type": "row",
                       "key": "sliderMobileIkInfluenceFingers"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderMobileIkInfluenceOffX"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderMobileIkInfluenceOffY"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderMobileIkInfluenceOffZ"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderMobileIkInfluenceRotX"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderMobileIkInfluenceRotY"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderMobileIkInfluenceRotZ"
                     },
                     {
                       "type": "row",
@@ -11460,7 +11572,15 @@
                   ],
                   "rowKeys": [
                     "sliderMobileIkInfluenceMaster",
+                    "sliderMobileIkInfluenceFingerCurl",
+                    "sliderMobileIkInfluenceFingerTwist",
                     "sliderMobileIkInfluenceFingers",
+                    "sliderMobileIkInfluenceOffX",
+                    "sliderMobileIkInfluenceOffY",
+                    "sliderMobileIkInfluenceOffZ",
+                    "sliderMobileIkInfluenceRotX",
+                    "sliderMobileIkInfluenceRotY",
+                    "sliderMobileIkInfluenceRotZ",
                     "sliderMobileIkInfluenceWristRot",
                     "sliderMobileIkInfluenceWristSplay",
                     "sliderMobileIkInfluenceWristBend",
@@ -11521,7 +11641,39 @@
                   },
                   {
                     "type": "row",
+                    "key": "sliderMobileIkInfluenceFingerCurl"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderMobileIkInfluenceFingerTwist"
+                  },
+                  {
+                    "type": "row",
                     "key": "sliderMobileIkInfluenceFingers"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderMobileIkInfluenceOffX"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderMobileIkInfluenceOffY"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderMobileIkInfluenceOffZ"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderMobileIkInfluenceRotX"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderMobileIkInfluenceRotY"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderMobileIkInfluenceRotZ"
                   },
                   {
                     "type": "row",
@@ -11610,7 +11762,15 @@
                 ],
                 "rowKeys": [
                   "sliderMobileIkInfluenceMaster",
+                  "sliderMobileIkInfluenceFingerCurl",
+                  "sliderMobileIkInfluenceFingerTwist",
                   "sliderMobileIkInfluenceFingers",
+                  "sliderMobileIkInfluenceOffX",
+                  "sliderMobileIkInfluenceOffY",
+                  "sliderMobileIkInfluenceOffZ",
+                  "sliderMobileIkInfluenceRotX",
+                  "sliderMobileIkInfluenceRotY",
+                  "sliderMobileIkInfluenceRotZ",
                   "sliderMobileIkInfluenceWristRot",
                   "sliderMobileIkInfluenceWristSplay",
                   "sliderMobileIkInfluenceWristBend",
@@ -14218,7 +14378,39 @@
                       },
                       {
                         "type": "row",
+                        "key": "sliderLandscapeIkInfluenceFingerCurl"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderLandscapeIkInfluenceFingerTwist"
+                      },
+                      {
+                        "type": "row",
                         "key": "sliderLandscapeIkInfluenceFingers"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderLandscapeIkInfluenceOffX"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderLandscapeIkInfluenceOffY"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderLandscapeIkInfluenceOffZ"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderLandscapeIkInfluenceRotX"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderLandscapeIkInfluenceRotY"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderLandscapeIkInfluenceRotZ"
                       },
                       {
                         "type": "row",
@@ -14307,7 +14499,15 @@
                     ],
                     "rowKeys": [
                       "sliderLandscapeIkInfluenceMaster",
+                      "sliderLandscapeIkInfluenceFingerCurl",
+                      "sliderLandscapeIkInfluenceFingerTwist",
                       "sliderLandscapeIkInfluenceFingers",
+                      "sliderLandscapeIkInfluenceOffX",
+                      "sliderLandscapeIkInfluenceOffY",
+                      "sliderLandscapeIkInfluenceOffZ",
+                      "sliderLandscapeIkInfluenceRotX",
+                      "sliderLandscapeIkInfluenceRotY",
+                      "sliderLandscapeIkInfluenceRotZ",
                       "sliderLandscapeIkInfluenceWristRot",
                       "sliderLandscapeIkInfluenceWristSplay",
                       "sliderLandscapeIkInfluenceWristBend",
@@ -14368,7 +14568,39 @@
                     },
                     {
                       "type": "row",
+                      "key": "sliderLandscapeIkInfluenceFingerCurl"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapeIkInfluenceFingerTwist"
+                    },
+                    {
+                      "type": "row",
                       "key": "sliderLandscapeIkInfluenceFingers"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapeIkInfluenceOffX"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapeIkInfluenceOffY"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapeIkInfluenceOffZ"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapeIkInfluenceRotX"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapeIkInfluenceRotY"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapeIkInfluenceRotZ"
                     },
                     {
                       "type": "row",
@@ -14457,7 +14689,15 @@
                   ],
                   "rowKeys": [
                     "sliderLandscapeIkInfluenceMaster",
+                    "sliderLandscapeIkInfluenceFingerCurl",
+                    "sliderLandscapeIkInfluenceFingerTwist",
                     "sliderLandscapeIkInfluenceFingers",
+                    "sliderLandscapeIkInfluenceOffX",
+                    "sliderLandscapeIkInfluenceOffY",
+                    "sliderLandscapeIkInfluenceOffZ",
+                    "sliderLandscapeIkInfluenceRotX",
+                    "sliderLandscapeIkInfluenceRotY",
+                    "sliderLandscapeIkInfluenceRotZ",
                     "sliderLandscapeIkInfluenceWristRot",
                     "sliderLandscapeIkInfluenceWristSplay",
                     "sliderLandscapeIkInfluenceWristBend",
@@ -14985,7 +15225,39 @@
                     },
                     {
                       "type": "row",
+                      "key": "sliderLandscapeIkInfluenceFingerCurl"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapeIkInfluenceFingerTwist"
+                    },
+                    {
+                      "type": "row",
                       "key": "sliderLandscapeIkInfluenceFingers"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapeIkInfluenceOffX"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapeIkInfluenceOffY"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapeIkInfluenceOffZ"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapeIkInfluenceRotX"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapeIkInfluenceRotY"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderLandscapeIkInfluenceRotZ"
                     },
                     {
                       "type": "row",
@@ -15074,7 +15346,15 @@
                   ],
                   "rowKeys": [
                     "sliderLandscapeIkInfluenceMaster",
+                    "sliderLandscapeIkInfluenceFingerCurl",
+                    "sliderLandscapeIkInfluenceFingerTwist",
                     "sliderLandscapeIkInfluenceFingers",
+                    "sliderLandscapeIkInfluenceOffX",
+                    "sliderLandscapeIkInfluenceOffY",
+                    "sliderLandscapeIkInfluenceOffZ",
+                    "sliderLandscapeIkInfluenceRotX",
+                    "sliderLandscapeIkInfluenceRotY",
+                    "sliderLandscapeIkInfluenceRotZ",
                     "sliderLandscapeIkInfluenceWristRot",
                     "sliderLandscapeIkInfluenceWristSplay",
                     "sliderLandscapeIkInfluenceWristBend",
@@ -15135,7 +15415,39 @@
                   },
                   {
                     "type": "row",
+                    "key": "sliderLandscapeIkInfluenceFingerCurl"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderLandscapeIkInfluenceFingerTwist"
+                  },
+                  {
+                    "type": "row",
                     "key": "sliderLandscapeIkInfluenceFingers"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderLandscapeIkInfluenceOffX"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderLandscapeIkInfluenceOffY"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderLandscapeIkInfluenceOffZ"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderLandscapeIkInfluenceRotX"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderLandscapeIkInfluenceRotY"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderLandscapeIkInfluenceRotZ"
                   },
                   {
                     "type": "row",
@@ -15224,7 +15536,15 @@
                 ],
                 "rowKeys": [
                   "sliderLandscapeIkInfluenceMaster",
+                  "sliderLandscapeIkInfluenceFingerCurl",
+                  "sliderLandscapeIkInfluenceFingerTwist",
                   "sliderLandscapeIkInfluenceFingers",
+                  "sliderLandscapeIkInfluenceOffX",
+                  "sliderLandscapeIkInfluenceOffY",
+                  "sliderLandscapeIkInfluenceOffZ",
+                  "sliderLandscapeIkInfluenceRotX",
+                  "sliderLandscapeIkInfluenceRotY",
+                  "sliderLandscapeIkInfluenceRotZ",
                   "sliderLandscapeIkInfluenceWristRot",
                   "sliderLandscapeIkInfluenceWristSplay",
                   "sliderLandscapeIkInfluenceWristBend",
@@ -15464,7 +15784,7 @@
     "desktop:Responsive Wrist Splay": true,
     "desktop:New Group": true,
     "desktop:Palm Facing": true,
-    "desktop:IK POSING": true,
+    "desktop:IK POSING": false,
     "desktop:IK Influence": true,
     "desktop:Saved IK Influence": true,
     "desktop:Ground Plane": true,
@@ -15508,7 +15828,7 @@
     "mobile:DISPLACE - Y AXIS": false,
     "mobile:DISPLACE - Z AXIS": false,
     "mobile:Saved Phone Poses": false,
-    "mobile:HAND MODEL": true,
+    "mobile:HAND MODEL": false,
     "mobile:Field Layout": false,
     "mobile:Pose": true,
     "mobile:ROTATION": false,
@@ -16182,7 +16502,23 @@
     "sliderMobileScreenTextureScale": null,
     "sliderLandscapeScreenTextureScale": null,
     "sliderMobileIkRotationWeight": null,
-    "sliderLandscapeIkRotationWeight": null
+    "sliderLandscapeIkRotationWeight": null,
+    "sliderMobileIkInfluenceFingerCurl": null,
+    "sliderLandscapeIkInfluenceFingerCurl": null,
+    "sliderMobileIkInfluenceFingerTwist": null,
+    "sliderLandscapeIkInfluenceFingerTwist": null,
+    "sliderMobileIkInfluenceOffX": null,
+    "sliderLandscapeIkInfluenceOffX": null,
+    "sliderMobileIkInfluenceOffY": null,
+    "sliderLandscapeIkInfluenceOffY": null,
+    "sliderMobileIkInfluenceOffZ": null,
+    "sliderLandscapeIkInfluenceOffZ": null,
+    "sliderMobileIkInfluenceRotX": null,
+    "sliderLandscapeIkInfluenceRotX": null,
+    "sliderMobileIkInfluenceRotY": null,
+    "sliderLandscapeIkInfluenceRotY": null,
+    "sliderMobileIkInfluenceRotZ": null,
+    "sliderLandscapeIkInfluenceRotZ": null
   },
   "devTextOverridesManual": [
     "desktop:New Group",
@@ -16374,7 +16710,15 @@
     "sliderCameraFov": true,
     "sliderCameraZoom": true,
     "sliderScreenTextureScale": true,
-    "sliderIkRotationWeight": true
+    "sliderIkRotationWeight": true,
+    "sliderIkInfluenceFingerCurl": true,
+    "sliderIkInfluenceFingerTwist": true,
+    "sliderIkInfluenceOffX": true,
+    "sliderIkInfluenceOffY": true,
+    "sliderIkInfluenceOffZ": true,
+    "sliderIkInfluenceRotX": true,
+    "sliderIkInfluenceRotY": true,
+    "sliderIkInfluenceRotZ": true
   },
   "devIndependence": {
     "mobile": {
@@ -16412,12 +16756,19 @@
       "sliderCameraZoom": 89,
       "checkboxLockCameraZoom": true,
       "sliderIkInfluenceFingers": 85,
-      "sliderIkInfluenceWristRot": 70,
-      "sliderIkInfluenceForearmTwist": 72,
-      "sliderIkInfluenceWristSplay": 100,
-      "sliderIkInfluenceWristBend": 86,
-      "sliderIkInfluenceElbowBend": 100,
-      "sliderIkInfluenceElbowSideBend": 100
+      "sliderIkInfluenceWristRot": 91,
+      "sliderIkInfluenceForearmTwist": 100,
+      "sliderIkInfluenceWristSplay": 90,
+      "sliderIkInfluenceWristBend": 39,
+      "sliderIkInfluenceElbowBend": 86,
+      "sliderIkInfluenceElbowSideBend": 82,
+      "checkboxIkPosingEnabled": true,
+      "sliderIkInfluenceOffX": 87,
+      "sliderIkInfluenceOffY": 85,
+      "sliderIkInfluenceOffZ": 76,
+      "sliderIkInfluenceRotX": 91,
+      "sliderIkInfluenceRotY": 97,
+      "sliderIkInfluenceRotZ": 9
     },
     "landscape": {}
   },
