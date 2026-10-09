@@ -7016,6 +7016,19 @@
         // Set LAST, not first - see this section's own top comment
         // (sharp edge #2) for why.
         devPanelBuilt = true;
+
+        // OPEN ON THE TAB THAT MATCHES THE DEVICE (HANDYSET, 2026-10-09, direct request: "if I open the app in dev mode on my mobile phone,
+        // it defaults to the mobile tab. And when I open it on my desktop, it defaults to the desktop tab"). A phone/tablet is a touch device
+        // whose PRIMARY pointer is coarse (so a touch-screen laptop, whose primary pointer is a mouse/trackpad, still opens on Desktop); it
+        // opens on Mobile, or on Landscape when held sideways -- the Landscape tab is the sideways-phone profile. Done once here, after
+        // the build, and never again, so a later Sync/Reset/Undo restore (which doesn't touch the active tab) can't fight the user's own
+        // tab clicks.
+        try {
+            const touch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+            const coarse = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+            const defaultTab = (touch && coarse) ? (window.innerWidth > window.innerHeight ? 'landscape' : 'mobile') : 'desktop';
+            switchDevPanelTab(defaultTab);
+        } catch (e) { /* leave the markup's own default (Desktop) */ }
     }
 
     // Always runs on page load, regardless of dev status - this is

@@ -8496,6 +8496,16 @@ Responsive Rotation / Displace, so the logic itself was already independent. Thr
 Not browser-verified (project rule; the gesture needs a real phone).
 
 --------------------------------------------------------------------------------
+2026-10-09 -- Dev panel opens on the tab that matches the device
+
+Request: "if I open the app in dev mode on my mobile phone, it defaults to the mobile tab. And when I open it on my desktop, it defaults to
+the desktop tab." ensureDevPanelBuilt() (devPanel.js ?v=21) now calls switchDevPanelTab() once, right after the build: a touch device
+whose PRIMARY pointer is coarse (matchMedia '(pointer: coarse)') opens on Mobile -- or on Landscape when held sideways (innerWidth >
+innerHeight; the Landscape tab is the sideways-phone profile) -- and everything else, including a touch-screen laptop, opens on Desktop.
+Runs once at build, so a later Sync/Reset/Undo (which never changes the active tab) cannot fight your own tab clicks. Not browser-verified
+(project rule; it needs a real phone).
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
