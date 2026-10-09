@@ -33,14 +33,14 @@
     "sliderProgressiveRowOffset": 0,
     "checkboxUseProgressiveOffset": false,
     "checkboxHideHands": false,
-    "slidermodelRotX": 90,
-    "slidermodelRotY": 90,
+    "slidermodelRotX": 0,
+    "slidermodelRotY": 0,
     "slidermodelRotZ": 0,
     "checkboxhandMirrorX": false,
     "checkboxhandMirrorY": false,
     "checkboxhandMirrorZ": false,
-    "sliderbaseRotationX": 5,
-    "sliderbaseRotationY": 92,
+    "sliderbaseRotationX": 30,
+    "sliderbaseRotationY": 33,
     "sliderbaseRotationZ": 0,
     "sliderthumbCurl": 0,
     "sliderthumbSplay": -48,
@@ -105,9 +105,9 @@
     "slidermidOnlyCurlPinky": -5,
     "slidertipOnlyCurlPinky": 0,
     "slidertipTwistPinky": 0,
-    "sliderposeOffsetX": 13.9,
+    "sliderposeOffsetX": 15.9,
     "sliderposeOffsetY": -3.9,
-    "sliderposeOffsetZ": 20,
+    "sliderposeOffsetZ": -6.4,
     "sliderPoseScale": 1,
     "sliderTweenT": 0,
     "sliderTweenFrameCount": 10,
@@ -187,7 +187,7 @@
     "textPhoneDisplaceRangeZ": "{\"min\":0,\"max\":20}",
     "textPhoneDisplaceCurveZ": "{\"points\":[{\"x\":0,\"y\":0},{\"x\":1,\"y\":1}],\"method\":\"monotone\"}",
     "sliderPhoneDisplaceZReferenceM": 0.35,
-    "checkboxScreenRenderEnabled": true,
+    "checkboxScreenRenderEnabled": false,
     "sliderScreenRecursionLevels": 15,
     "sliderScreenRenderResolution": 95,
     "sliderScreenTextureScale": 1.1,
@@ -195,7 +195,7 @@
     "textScreenLevelScaleCurve": "{\"points\":[{\"x\":0,\"y\":1},{\"x\":1,\"y\":0}],\"method\":\"linear\",\"bgOpacity\":0.15}",
     "sliderScreenTextureRotation": 180,
     "sliderScreenTextureOffsetX": 0,
-    "sliderScreenTextureOffsetY": 0.06,
+    "sliderScreenTextureOffsetY": 0,
     "sliderScreenTextureScaleX": 1,
     "sliderScreenTextureScaleY": 1,
     "sliderScreenEmissionIntensity": 1,
@@ -209,16 +209,16 @@
     "checkboxWristSplayReactiveEnabled": true,
     "textWristSplayRange": "{\"min\":5,\"max\":-71}",
     "textWristSplayCurve": "{\"points\":[{\"x\":0,\"y\":1},{\"x\":0.31833343505859374,\"y\":0.6961458841959636},{\"x\":1,\"y\":0.042812347412109375}],\"method\":\"catmullrom\",\"bgOpacity\":0.15}",
-    "sliderCameraX": 0,
-    "sliderCameraY": 79.5,
-    "sliderCameraZ": 5,
+    "sliderCameraX": -500,
+    "sliderCameraY": -126.5,
+    "sliderCameraZ": 110,
     "sliderCameraFov": 15,
-    "sliderCameraZoom": 79.5,
+    "sliderCameraZoom": 500,
     "checkboxLockCameraPan": false,
     "checkboxLockCameraZoom": false,
     "checkboxLockCameraRotate": false,
-    "sliderCameraYaw": 0,
-    "sliderCameraPitch": 86,
+    "sliderCameraYaw": -83,
+    "sliderCameraPitch": -8,
     "checkboxCameraMaxExtentsEnabled": false,
     "sliderKeyAzimuth": 439,
     "sliderKeyElevation": 53,
@@ -970,8 +970,15 @@
             "type": "group",
             "section": {
               "key": "desktop:Hotkeys",
-              "items": [],
-              "rowKeys": [],
+              "items": [
+                {
+                  "type": "row",
+                  "key": "sliderDevHotkeySequenceWindow"
+                }
+              ],
+              "rowKeys": [
+                "sliderDevHotkeySequenceWindow"
+              ],
               "subgroups": []
             }
           }
@@ -1500,8 +1507,15 @@
           },
           {
             "key": "desktop:Hotkeys",
-            "items": [],
-            "rowKeys": [],
+            "items": [
+              {
+                "type": "row",
+                "key": "sliderDevHotkeySequenceWindow"
+              }
+            ],
+            "rowKeys": [
+              "sliderDevHotkeySequenceWindow"
+            ],
             "subgroups": []
           }
         ]
@@ -4531,6 +4545,37 @@
                 {
                   "type": "group",
                   "section": {
+                    "key": "desktop:Pose Offset",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "sliderposeOffsetX"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderposeOffsetY"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderposeOffsetZ"
+                      },
+                      {
+                        "type": "row",
+                        "key": "sliderPoseScale"
+                      }
+                    ],
+                    "rowKeys": [
+                      "sliderposeOffsetX",
+                      "sliderposeOffsetY",
+                      "sliderposeOffsetZ",
+                      "sliderPoseScale"
+                    ],
+                    "subgroups": []
+                  }
+                },
+                {
+                  "type": "group",
+                  "section": {
                     "key": "desktop:THUMB",
                     "items": [
                       {
@@ -4827,37 +4872,6 @@
                 {
                   "type": "group",
                   "section": {
-                    "key": "desktop:Pose Offset",
-                    "items": [
-                      {
-                        "type": "row",
-                        "key": "sliderposeOffsetX"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderposeOffsetY"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderposeOffsetZ"
-                      },
-                      {
-                        "type": "row",
-                        "key": "sliderPoseScale"
-                      }
-                    ],
-                    "rowKeys": [
-                      "sliderposeOffsetX",
-                      "sliderposeOffsetY",
-                      "sliderposeOffsetZ",
-                      "sliderPoseScale"
-                    ],
-                    "subgroups": []
-                  }
-                },
-                {
-                  "type": "group",
-                  "section": {
                     "key": "desktop:Saved Poses",
                     "items": [],
                     "rowKeys": [],
@@ -5007,6 +5021,34 @@
                     "sliderbaseRotationX",
                     "sliderbaseRotationY",
                     "sliderbaseRotationZ"
+                  ],
+                  "subgroups": []
+                },
+                {
+                  "key": "desktop:Pose Offset",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "sliderposeOffsetX"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderposeOffsetY"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderposeOffsetZ"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderPoseScale"
+                    }
+                  ],
+                  "rowKeys": [
+                    "sliderposeOffsetX",
+                    "sliderposeOffsetY",
+                    "sliderposeOffsetZ",
+                    "sliderPoseScale"
                   ],
                   "subgroups": []
                 },
@@ -5285,34 +5327,6 @@
                     "slidermidOnlyCurlPinky",
                     "slidertipOnlyCurlPinky",
                     "slidertipTwistPinky"
-                  ],
-                  "subgroups": []
-                },
-                {
-                  "key": "desktop:Pose Offset",
-                  "items": [
-                    {
-                      "type": "row",
-                      "key": "sliderposeOffsetX"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderposeOffsetY"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderposeOffsetZ"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderPoseScale"
-                    }
-                  ],
-                  "rowKeys": [
-                    "sliderposeOffsetX",
-                    "sliderposeOffsetY",
-                    "sliderposeOffsetZ",
-                    "sliderPoseScale"
                   ],
                   "subgroups": []
                 },
@@ -6138,6 +6152,37 @@
               {
                 "type": "group",
                 "section": {
+                  "key": "desktop:Pose Offset",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "sliderposeOffsetX"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderposeOffsetY"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderposeOffsetZ"
+                    },
+                    {
+                      "type": "row",
+                      "key": "sliderPoseScale"
+                    }
+                  ],
+                  "rowKeys": [
+                    "sliderposeOffsetX",
+                    "sliderposeOffsetY",
+                    "sliderposeOffsetZ",
+                    "sliderPoseScale"
+                  ],
+                  "subgroups": []
+                }
+              },
+              {
+                "type": "group",
+                "section": {
                   "key": "desktop:THUMB",
                   "items": [
                     {
@@ -6434,37 +6479,6 @@
               {
                 "type": "group",
                 "section": {
-                  "key": "desktop:Pose Offset",
-                  "items": [
-                    {
-                      "type": "row",
-                      "key": "sliderposeOffsetX"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderposeOffsetY"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderposeOffsetZ"
-                    },
-                    {
-                      "type": "row",
-                      "key": "sliderPoseScale"
-                    }
-                  ],
-                  "rowKeys": [
-                    "sliderposeOffsetX",
-                    "sliderposeOffsetY",
-                    "sliderposeOffsetZ",
-                    "sliderPoseScale"
-                  ],
-                  "subgroups": []
-                }
-              },
-              {
-                "type": "group",
-                "section": {
                   "key": "desktop:Saved Poses",
                   "items": [],
                   "rowKeys": [],
@@ -6614,6 +6628,34 @@
                   "sliderbaseRotationX",
                   "sliderbaseRotationY",
                   "sliderbaseRotationZ"
+                ],
+                "subgroups": []
+              },
+              {
+                "key": "desktop:Pose Offset",
+                "items": [
+                  {
+                    "type": "row",
+                    "key": "sliderposeOffsetX"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderposeOffsetY"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderposeOffsetZ"
+                  },
+                  {
+                    "type": "row",
+                    "key": "sliderPoseScale"
+                  }
+                ],
+                "rowKeys": [
+                  "sliderposeOffsetX",
+                  "sliderposeOffsetY",
+                  "sliderposeOffsetZ",
+                  "sliderPoseScale"
                 ],
                 "subgroups": []
               },
@@ -6892,34 +6934,6 @@
                   "slidermidOnlyCurlPinky",
                   "slidertipOnlyCurlPinky",
                   "slidertipTwistPinky"
-                ],
-                "subgroups": []
-              },
-              {
-                "key": "desktop:Pose Offset",
-                "items": [
-                  {
-                    "type": "row",
-                    "key": "sliderposeOffsetX"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderposeOffsetY"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderposeOffsetZ"
-                  },
-                  {
-                    "type": "row",
-                    "key": "sliderPoseScale"
-                  }
-                ],
-                "rowKeys": [
-                  "sliderposeOffsetX",
-                  "sliderposeOffsetY",
-                  "sliderposeOffsetZ",
-                  "sliderPoseScale"
                 ],
                 "subgroups": []
               },
@@ -14322,9 +14336,9 @@
     "desktop:PHONE MODEL": false,
     "desktop:OFFSET": true,
     "desktop:PHONE ROTATION": true,
-    "desktop:RECURSIVE RENDER": false,
-    "desktop:RESPONSIVE BEHAVIOUR - PHONE": true,
-    "desktop:Responsive Rotation": false,
+    "desktop:RECURSIVE RENDER": true,
+    "desktop:RESPONSIVE BEHAVIOUR - PHONE": false,
+    "desktop:Responsive Rotation": true,
     "desktop:ROTATION - X AXIS": true,
     "desktop:ROTATION - Y AXIS": true,
     "desktop:ROTATION - Z AXIS": true,
@@ -14333,18 +14347,18 @@
     "desktop:DISPLACE - Y AXIS": true,
     "desktop:DISPLACE - Z AXIS": true,
     "desktop:Saved Phone Poses": true,
-    "desktop:HAND MODEL": true,
+    "desktop:HAND MODEL": false,
     "desktop:Field Layout": true,
-    "desktop:Pose": true,
+    "desktop:Pose": false,
     "desktop:ROTATION": true,
-    "desktop:Whole-Hand Rotation at Base": true,
+    "desktop:Whole-Hand Rotation at Base": false,
+    "desktop:Pose Offset": false,
     "desktop:THUMB": true,
     "desktop:Wrist": true,
     "desktop:Index": true,
     "desktop:Middle": true,
     "desktop:Ring": true,
     "desktop:Pinky": true,
-    "desktop:Pose Offset": true,
     "desktop:Saved Poses": true,
     "desktop:MIRROR": true,
     "desktop:ARM": true,
@@ -14977,7 +14991,71 @@
     "sliderMobileIkInfluenceElbowSideBend": null,
     "sliderLandscapeIkInfluenceElbowSideBend": null,
     "sliderMobileIkInfluenceForearmTwist": null,
-    "sliderLandscapeIkInfluenceForearmTwist": null
+    "sliderLandscapeIkInfluenceForearmTwist": null,
+    "checkboxMobileHandModelEnabled": null,
+    "checkboxLandscapeHandModelEnabled": null,
+    "sliderMobileFieldRows": null,
+    "sliderLandscapeFieldRows": null,
+    "sliderMobileFieldCols": null,
+    "sliderLandscapeFieldCols": null,
+    "sliderMobileRowSpacing": null,
+    "sliderLandscapeRowSpacing": null,
+    "sliderMobileColumnSpacing": null,
+    "sliderLandscapeColumnSpacing": null,
+    "sliderMobileHandScale": null,
+    "sliderLandscapeHandScale": null,
+    "sliderMobileAlternateRowOffset": null,
+    "sliderLandscapeAlternateRowOffset": null,
+    "sliderMobileProgressiveRowOffset": null,
+    "sliderLandscapeProgressiveRowOffset": null,
+    "checkboxMobileUseProgressiveOffset": null,
+    "checkboxLandscapeUseProgressiveOffset": null,
+    "checkboxMobileHideHands": null,
+    "checkboxLandscapeHideHands": null,
+    "sliderMobilebaseRotationX": null,
+    "sliderLandscapebaseRotationX": null,
+    "sliderMobilebaseRotationY": null,
+    "sliderLandscapebaseRotationY": null,
+    "sliderMobilebaseRotationZ": null,
+    "sliderLandscapebaseRotationZ": null,
+    "checkboxMobilehandMirrorX": null,
+    "checkboxLandscapehandMirrorX": null,
+    "checkboxMobilehandMirrorY": null,
+    "checkboxLandscapehandMirrorY": null,
+    "checkboxMobilehandMirrorZ": null,
+    "checkboxLandscapehandMirrorZ": null,
+    "sliderMobileelbowBend": null,
+    "sliderLandscapeelbowBend": null,
+    "sliderMobileelbowSideBend": null,
+    "sliderLandscapeelbowSideBend": null,
+    "sliderMobileforearmTwist": null,
+    "sliderLandscapeforearmTwist": null,
+    "sliderMobileforearmBendOffX": null,
+    "sliderLandscapeforearmBendOffX": null,
+    "sliderMobileforearmBendOffY": null,
+    "sliderLandscapeforearmBendOffY": null,
+    "sliderMobileforearmBendOffZ": null,
+    "sliderLandscapeforearmBendOffZ": null,
+    "sliderMobileforearmTwistOffX": null,
+    "sliderLandscapeforearmTwistOffX": null,
+    "sliderMobileforearmTwistOffY": null,
+    "sliderLandscapeforearmTwistOffY": null,
+    "sliderMobileforearmTwistOffZ": null,
+    "sliderLandscapeforearmTwistOffZ": null,
+    "sliderMobilewristOffX": null,
+    "sliderLandscapewristOffX": null,
+    "sliderMobilewristOffY": null,
+    "sliderLandscapewristOffY": null,
+    "sliderMobilewristOffZ": null,
+    "sliderLandscapewristOffZ": null,
+    "checkboxMobileBaseArmRotationResponsiveEnabled": null,
+    "checkboxLandscapeBaseArmRotationResponsiveEnabled": null,
+    "sliderMobileBaseArmRotationFineTune": null,
+    "sliderLandscapeBaseArmRotationFineTune": null,
+    "checkboxMobilePoseTweenResponsiveEnabled": null,
+    "checkboxLandscapePoseTweenResponsiveEnabled": null,
+    "selectMobilePoseTweenTargetPoseName": null,
+    "selectLandscapePoseTweenTargetPoseName": null
   },
   "devTextOverridesManual": [
     "desktop:New Group",
@@ -15124,7 +15202,39 @@
     "sliderIkInfluenceWristBend": false,
     "sliderIkInfluenceElbowBend": false,
     "sliderIkInfluenceElbowSideBend": false,
-    "sliderIkInfluenceForearmTwist": false
+    "sliderIkInfluenceForearmTwist": false,
+    "checkboxHandModelEnabled": false,
+    "sliderFieldRows": false,
+    "sliderFieldCols": false,
+    "sliderRowSpacing": false,
+    "sliderColumnSpacing": false,
+    "sliderHandScale": false,
+    "sliderAlternateRowOffset": false,
+    "sliderProgressiveRowOffset": false,
+    "checkboxUseProgressiveOffset": false,
+    "checkboxHideHands": false,
+    "sliderbaseRotationX": false,
+    "sliderbaseRotationY": false,
+    "sliderbaseRotationZ": false,
+    "checkboxhandMirrorX": false,
+    "checkboxhandMirrorY": false,
+    "checkboxhandMirrorZ": false,
+    "sliderelbowBend": false,
+    "sliderelbowSideBend": false,
+    "sliderforearmTwist": false,
+    "sliderforearmBendOffX": false,
+    "sliderforearmBendOffY": false,
+    "sliderforearmBendOffZ": false,
+    "sliderforearmTwistOffX": false,
+    "sliderforearmTwistOffY": false,
+    "sliderforearmTwistOffZ": false,
+    "sliderwristOffX": false,
+    "sliderwristOffY": false,
+    "sliderwristOffZ": false,
+    "checkboxBaseArmRotationResponsiveEnabled": false,
+    "sliderBaseArmRotationFineTune": false,
+    "checkboxPoseTweenResponsiveEnabled": false,
+    "selectPoseTweenTargetPoseName": false
   },
   "devIndependence": {
     "mobile": {
