@@ -191,11 +191,11 @@
     "checkboxScreenRenderEnabled": true,
     "sliderScreenRecursionLevels": 18,
     "sliderScreenRenderResolution": 200,
-    "sliderScreenTextureScale": 1.15,
+    "sliderScreenTextureScale": 1.1,
     "textScreenLevelScaleRange": "{\"min\":0.8,\"max\":0.95}",
     "textScreenLevelScaleCurve": "{\"points\":[{\"x\":0,\"y\":1},{\"x\":1,\"y\":0}],\"method\":\"linear\",\"bgOpacity\":0.15}",
     "sliderScreenTextureRotation": 180,
-    "sliderScreenTextureOffsetX": 0.01,
+    "sliderScreenTextureOffsetX": 0.0025,
     "sliderScreenTextureOffsetY": 0.055,
     "sliderScreenTextureScaleX": 1.35,
     "sliderScreenTextureScaleY": 1.2,
@@ -293,7 +293,7 @@
     "left": 26,
     "top": 87,
     "width": 350,
-    "height": 76
+    "height": 603
   },
   "devPanelStyle": {
     "titleFontSize": 17,
@@ -971,8 +971,15 @@
             "type": "group",
             "section": {
               "key": "desktop:Hotkeys",
-              "items": [],
-              "rowKeys": [],
+              "items": [
+                {
+                  "type": "row",
+                  "key": "sliderDevHotkeySequenceWindow"
+                }
+              ],
+              "rowKeys": [
+                "sliderDevHotkeySequenceWindow"
+              ],
               "subgroups": []
             }
           }
@@ -1501,8 +1508,15 @@
           },
           {
             "key": "desktop:Hotkeys",
-            "items": [],
-            "rowKeys": [],
+            "items": [
+              {
+                "type": "row",
+                "key": "sliderDevHotkeySequenceWindow"
+              }
+            ],
+            "rowKeys": [
+              "sliderDevHotkeySequenceWindow"
+            ],
             "subgroups": []
           }
         ]
@@ -14869,7 +14883,7 @@
     "desktop:PHONE MODEL": false,
     "desktop:OFFSET": true,
     "desktop:PHONE ROTATION": true,
-    "desktop:RECURSIVE RENDER": true,
+    "desktop:RECURSIVE RENDER": false,
     "desktop:RESPONSIVE BEHAVIOUR - PHONE": false,
     "desktop:Responsive Rotation": false,
     "desktop:ROTATION - X AXIS": false,
