@@ -16432,14 +16432,14 @@
     "zoom": 79.5
   },
   "defaultLighting": {
-    "keyAzimuth": 439,
-    "keyElevation": 53,
-    "keyTargetHeight": -18,
+    "keyAzimuth": 267,
+    "keyElevation": 46,
+    "keyTargetHeight": -24,
     "keyIntensity": 6,
     "keyColor": "#ffffff",
     "ambientIntensity": 0,
     "ambientSkyColor": "#ffffff",
-    "ambientGroundColor": "#3a2f2a"
+    "ambientGroundColor": "#ffffff"
   },
   "defaultToon": {
     "toonSteps": 8,
