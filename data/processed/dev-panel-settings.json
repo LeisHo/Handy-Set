@@ -1,9 +1,10 @@
 {
   "controls": {
-    "checkboxHandModelEnabled": true,
+    "checkboxHandModelEnabled": false,
     "hiddenHandModelFile": "data/processed/HAND3D/HandiBonesB-IK.glb",
     "hiddenHandModelOrder": "[\"data/processed/HAND3D/HandiBonesB-IK.glb\",\"data/processed/HAND3D/Hand2.glb\"]",
     "checkboxIkPosingEnabled": false,
+    "sliderIkRotationWeight": 8,
     "sliderIkInfluenceMaster": 100,
     "sliderIkInfluenceFingers": 100,
     "textIkRangeFingers": "{\"min\":-74,\"max\":103}",
@@ -32,7 +33,7 @@
     "sliderAlternateRowOffset": -5.5,
     "sliderProgressiveRowOffset": 0,
     "checkboxUseProgressiveOffset": false,
-    "checkboxHideHands": false,
+    "checkboxHideHands": true,
     "slidermodelRotX": 0,
     "slidermodelRotY": 0,
     "slidermodelRotZ": 0,
@@ -134,11 +135,11 @@
     "sliderPhoneModelRotX": 0,
     "sliderPhoneModelRotY": 0,
     "sliderPhoneModelRotZ": 0,
-    "checkboxPhoneResponsiveRotationEnabled": false,
+    "checkboxPhoneResponsiveRotationEnabled": true,
     "selectPhoneRotationMode": "absolute",
     "hiddenPhoneRotationPerModeSettings": "{}",
     "checkboxPhoneRotationResetEnabled": true,
-    "sliderPhoneRotationDamping": 1,
+    "sliderPhoneRotationDamping": 0.17,
     "checkboxPhoneAxisXEnabled": true,
     "sliderPhoneRotationScaleX": 0.8,
     "sliderPhoneResponsiveRotationFineTuneX": 0,
@@ -187,10 +188,10 @@
     "textPhoneDisplaceRangeZ": "{\"min\":0,\"max\":20}",
     "textPhoneDisplaceCurveZ": "{\"points\":[{\"x\":0,\"y\":0,\"h1\":{\"x\":0.31349204381306967,\"y\":0.41396942138671877}},{\"x\":1,\"y\":1}],\"method\":\"monotone\"}",
     "sliderPhoneDisplaceZReferenceM": 1.09,
-    "checkboxScreenRenderEnabled": false,
+    "checkboxScreenRenderEnabled": true,
     "sliderScreenRecursionLevels": 18,
     "sliderScreenRenderResolution": 200,
-    "sliderScreenTextureScale": 1.1,
+    "sliderScreenTextureScale": 1,
     "textScreenLevelScaleRange": "{\"min\":0.8,\"max\":0.95}",
     "textScreenLevelScaleCurve": "{\"points\":[{\"x\":0,\"y\":1},{\"x\":1,\"y\":0}],\"method\":\"linear\",\"bgOpacity\":0.15}",
     "sliderScreenTextureRotation": 180,
@@ -209,16 +210,16 @@
     "checkboxWristSplayReactiveEnabled": true,
     "textWristSplayRange": "{\"min\":5,\"max\":-71}",
     "textWristSplayCurve": "{\"points\":[{\"x\":0,\"y\":1},{\"x\":0.31833343505859374,\"y\":0.6961458841959636},{\"x\":1,\"y\":0.042812347412109375}],\"method\":\"catmullrom\",\"bgOpacity\":0.15}",
-    "sliderCameraX": -58.5,
-    "sliderCameraY": 32,
-    "sliderCameraZ": 43,
+    "sliderCameraX": 0,
+    "sliderCameraY": 79.5,
+    "sliderCameraZ": 0,
     "sliderCameraFov": 15,
     "sliderCameraZoom": 79.5,
     "checkboxLockCameraPan": false,
     "checkboxLockCameraZoom": false,
     "checkboxLockCameraRotate": false,
-    "sliderCameraYaw": -54,
-    "sliderCameraPitch": 24,
+    "sliderCameraYaw": 0,
+    "sliderCameraPitch": 90,
     "checkboxCameraMaxExtentsEnabled": false,
     "sliderKeyAzimuth": 439,
     "sliderKeyElevation": 53,
@@ -289,7 +290,7 @@
     "checkboxDeviceInfoEnabled": true
   },
   "layout": {
-    "left": 26,
+    "left": 35,
     "top": 87,
     "width": 350,
     "height": 692
@@ -970,15 +971,8 @@
             "type": "group",
             "section": {
               "key": "desktop:Hotkeys",
-              "items": [
-                {
-                  "type": "row",
-                  "key": "sliderDevHotkeySequenceWindow"
-                }
-              ],
-              "rowKeys": [
-                "sliderDevHotkeySequenceWindow"
-              ],
+              "items": [],
+              "rowKeys": [],
               "subgroups": []
             }
           }
@@ -1507,15 +1501,8 @@
           },
           {
             "key": "desktop:Hotkeys",
-            "items": [
-              {
-                "type": "row",
-                "key": "sliderDevHotkeySequenceWindow"
-              }
-            ],
-            "rowKeys": [
-              "sliderDevHotkeySequenceWindow"
-            ],
+            "items": [],
+            "rowKeys": [],
             "subgroups": []
           }
         ]
@@ -5907,11 +5894,16 @@
                       }
                     ]
                   }
+                },
+                {
+                  "type": "row",
+                  "key": "sliderIkRotationWeight"
                 }
               ],
               "rowKeys": [
                 "checkboxIkPosingEnabled",
-                "hiddenIkPairs"
+                "hiddenIkPairs",
+                "sliderIkRotationWeight"
               ],
               "subgroups": [
                 {
@@ -7505,11 +7497,16 @@
                     }
                   ]
                 }
+              },
+              {
+                "type": "row",
+                "key": "sliderIkRotationWeight"
               }
             ],
             "rowKeys": [
               "checkboxIkPosingEnabled",
-              "hiddenIkPairs"
+              "hiddenIkPairs",
+              "sliderIkRotationWeight"
             ],
             "subgroups": [
               {
@@ -11259,6 +11256,50 @@
         "key": "mobile:Camera",
         "items": [
           {
+            "type": "row",
+            "key": "sliderMobileCameraYaw"
+          },
+          {
+            "type": "row",
+            "key": "sliderMobileCameraPitch"
+          },
+          {
+            "type": "row",
+            "key": "checkboxMobileLockCameraRotate"
+          },
+          {
+            "type": "row",
+            "key": "checkboxMobileLockCameraPan"
+          },
+          {
+            "type": "row",
+            "key": "checkboxMobileLockCameraZoom"
+          },
+          {
+            "type": "row",
+            "key": "checkboxMobileCameraMaxExtentsEnabled"
+          },
+          {
+            "type": "row",
+            "key": "sliderMobileCameraX"
+          },
+          {
+            "type": "row",
+            "key": "sliderMobileCameraY"
+          },
+          {
+            "type": "row",
+            "key": "sliderMobileCameraZ"
+          },
+          {
+            "type": "row",
+            "key": "sliderMobileCameraFov"
+          },
+          {
+            "type": "row",
+            "key": "sliderMobileCameraZoom"
+          },
+          {
             "type": "group",
             "section": {
               "key": "mobile:Saved Cameras",
@@ -11268,7 +11309,19 @@
             }
           }
         ],
-        "rowKeys": [],
+        "rowKeys": [
+          "sliderMobileCameraYaw",
+          "sliderMobileCameraPitch",
+          "checkboxMobileLockCameraRotate",
+          "checkboxMobileLockCameraPan",
+          "checkboxMobileLockCameraZoom",
+          "checkboxMobileCameraMaxExtentsEnabled",
+          "sliderMobileCameraX",
+          "sliderMobileCameraY",
+          "sliderMobileCameraZ",
+          "sliderMobileCameraFov",
+          "sliderMobileCameraZoom"
+        ],
         "subgroups": [
           {
             "key": "mobile:Saved Cameras",
@@ -14663,6 +14716,50 @@
         "key": "landscape:Camera",
         "items": [
           {
+            "type": "row",
+            "key": "sliderLandscapeCameraYaw"
+          },
+          {
+            "type": "row",
+            "key": "sliderLandscapeCameraPitch"
+          },
+          {
+            "type": "row",
+            "key": "checkboxLandscapeLockCameraRotate"
+          },
+          {
+            "type": "row",
+            "key": "checkboxLandscapeLockCameraPan"
+          },
+          {
+            "type": "row",
+            "key": "checkboxLandscapeLockCameraZoom"
+          },
+          {
+            "type": "row",
+            "key": "checkboxLandscapeCameraMaxExtentsEnabled"
+          },
+          {
+            "type": "row",
+            "key": "sliderLandscapeCameraX"
+          },
+          {
+            "type": "row",
+            "key": "sliderLandscapeCameraY"
+          },
+          {
+            "type": "row",
+            "key": "sliderLandscapeCameraZ"
+          },
+          {
+            "type": "row",
+            "key": "sliderLandscapeCameraFov"
+          },
+          {
+            "type": "row",
+            "key": "sliderLandscapeCameraZoom"
+          },
+          {
             "type": "group",
             "section": {
               "key": "landscape:Saved Cameras",
@@ -14672,7 +14769,19 @@
             }
           }
         ],
-        "rowKeys": [],
+        "rowKeys": [
+          "sliderLandscapeCameraYaw",
+          "sliderLandscapeCameraPitch",
+          "checkboxLandscapeLockCameraRotate",
+          "checkboxLandscapeLockCameraPan",
+          "checkboxLandscapeLockCameraZoom",
+          "checkboxLandscapeCameraMaxExtentsEnabled",
+          "sliderLandscapeCameraX",
+          "sliderLandscapeCameraY",
+          "sliderLandscapeCameraZ",
+          "sliderLandscapeCameraFov",
+          "sliderLandscapeCameraZoom"
+        ],
         "subgroups": [
           {
             "key": "landscape:Saved Cameras",
@@ -14757,11 +14866,11 @@
     "desktop:Displace Log": true,
     "desktop:Select Logs To Copy": true,
     "desktop:IK Nodes": true,
-    "desktop:PHONE MODEL": true,
+    "desktop:PHONE MODEL": false,
     "desktop:OFFSET": true,
     "desktop:PHONE ROTATION": true,
-    "desktop:RECURSIVE RENDER": true,
-    "desktop:RESPONSIVE BEHAVIOUR - PHONE": true,
+    "desktop:RECURSIVE RENDER": false,
+    "desktop:RESPONSIVE BEHAVIOUR - PHONE": false,
     "desktop:Responsive Rotation": true,
     "desktop:ROTATION - X AXIS": true,
     "desktop:ROTATION - Y AXIS": true,
@@ -14770,8 +14879,8 @@
     "desktop:DISPLACE - X AXIS": true,
     "desktop:DISPLACE - Y AXIS": true,
     "desktop:DISPLACE - Z AXIS": true,
-    "desktop:Saved Phone Poses": false,
-    "desktop:HAND MODEL": false,
+    "desktop:Saved Phone Poses": true,
+    "desktop:HAND MODEL": true,
     "desktop:Field Layout": true,
     "desktop:Pose": true,
     "desktop:ROTATION": false,
@@ -14800,14 +14909,14 @@
     "desktop:Saved IK Influence": true,
     "desktop:Ground Plane": true,
     "desktop:Finger Gizmos": true,
-    "desktop:Camera": true,
+    "desktop:Camera": false,
     "desktop:Saved Cameras": true,
     "desktop:Lighting": true,
     "desktop:Saved Lighting": true,
     "desktop:Toon Shading": true,
     "desktop:Saved Toon Shading": true,
     "desktop:Background": true,
-    "mobile:Dev Panel": true,
+    "mobile:Dev Panel": false,
     "mobile:MECHANICS": false,
     "mobile:PANEL UI": false,
     "mobile:TEXT": false,
@@ -14830,7 +14939,7 @@
     "mobile:PHONE ROTATION": true,
     "mobile:RECURSIVE RENDER": false,
     "mobile:RESPONSIVE BEHAVIOUR - PHONE": false,
-    "mobile:Responsive Rotation": true,
+    "mobile:Responsive Rotation": false,
     "mobile:ROTATION - X AXIS": false,
     "mobile:ROTATION - Y AXIS": false,
     "mobile:ROTATION - Z AXIS": false,
@@ -15479,7 +15588,29 @@
     "checkboxMobilePoseTweenResponsiveEnabled": null,
     "checkboxLandscapePoseTweenResponsiveEnabled": null,
     "selectMobilePoseTweenTargetPoseName": null,
-    "selectLandscapePoseTweenTargetPoseName": null
+    "selectLandscapePoseTweenTargetPoseName": null,
+    "sliderMobileCameraYaw": null,
+    "sliderLandscapeCameraYaw": null,
+    "sliderMobileCameraPitch": null,
+    "sliderLandscapeCameraPitch": null,
+    "checkboxMobileLockCameraRotate": null,
+    "checkboxLandscapeLockCameraRotate": null,
+    "checkboxMobileLockCameraPan": null,
+    "checkboxLandscapeLockCameraPan": null,
+    "checkboxMobileLockCameraZoom": null,
+    "checkboxLandscapeLockCameraZoom": null,
+    "checkboxMobileCameraMaxExtentsEnabled": null,
+    "checkboxLandscapeCameraMaxExtentsEnabled": null,
+    "sliderMobileCameraX": null,
+    "sliderLandscapeCameraX": null,
+    "sliderMobileCameraY": null,
+    "sliderLandscapeCameraY": null,
+    "sliderMobileCameraZ": null,
+    "sliderLandscapeCameraZ": null,
+    "sliderMobileCameraFov": null,
+    "sliderLandscapeCameraFov": null,
+    "sliderMobileCameraZoom": null,
+    "sliderLandscapeCameraZoom": null
   },
   "devTextOverridesManual": [
     "desktop:New Group",
@@ -15658,7 +15789,18 @@
     "checkboxBaseArmRotationResponsiveEnabled": false,
     "sliderBaseArmRotationFineTune": false,
     "checkboxPoseTweenResponsiveEnabled": false,
-    "selectPoseTweenTargetPoseName": false
+    "selectPoseTweenTargetPoseName": false,
+    "sliderCameraYaw": true,
+    "sliderCameraPitch": true,
+    "checkboxLockCameraRotate": true,
+    "checkboxLockCameraPan": true,
+    "checkboxLockCameraZoom": true,
+    "checkboxCameraMaxExtentsEnabled": true,
+    "sliderCameraX": true,
+    "sliderCameraY": true,
+    "sliderCameraZ": true,
+    "sliderCameraFov": true,
+    "sliderCameraZoom": true
   },
   "devIndependence": {
     "mobile": {
