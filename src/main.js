@@ -1021,7 +1021,17 @@ let modelRoot = null
 let hands = [] // [{ wrapper, clone, skinnedMesh, outlineMesh, currentBaseQuat, clipPlane, row, col }, ...]
 let hand = null // hands[0] — the "primary" hand: pose-editing reference frame, camera targeting, wireframe/tint toggles
 
-function computeBaseScale() { return (8 / handLengthRaw) * cfg.handScale }
+// HAND <-> PHONE SCALE (2026-10-08, direct request: "double check the scaling of the phone models and the hand models... if scaling is to
+// be done, scale the hand model and not the phone model"). Every phone GLB is in true meters (measured: 0.125-0.163 m tall, e.g. iPhone
+// 17 Pro Max 0.1634 m) and is drawn at UNITS_PER_METER (= PHONE_MODEL_SCALE_BASE, 100) x its slider. The hand used to be normalized to a
+// fixed 8 units wrist->middle fingertip, which made a real-size phone ~2x too big beside it (16.3 vs 8 units). The hand is now scaled to
+// the same units-per-metre: its real wrist->middle-tip length (HAND_REFERENCE_LENGTH_M, measured 0.16086 m from rHand->rMid3 in
+// HandiBonesB-IK / HandipantsOL*.glb; Hand2.glb is the identical hand authored x100, 16.086) times UNITS_PER_METER, so Hand Scale 1 =
+// true size next to a phone at Model Scale 1. The phone's own scale is untouched. Divided by the live handLengthRaw so any hand file
+// (metres or centimetres) lands on the same real size.
+const UNITS_PER_METER = 100
+const HAND_REFERENCE_LENGTH_M = 0.16086
+function computeBaseScale() { return (HAND_REFERENCE_LENGTH_M * UNITS_PER_METER / handLengthRaw) * cfg.handScale }
 
 // ---------------------------------------------------------------------
 // Reactive Arm Length + Responsive Wrist Splay — curve math, ported
@@ -5453,7 +5463,7 @@ function resetPhoneDisplaceBaseline() {
 // personal settings" instruction from earlier the same round) --
 // cfg.phoneModelScale is the small, user-facing fine-tune multiplier
 // on top of this fixed base (0.5-5 slider range, default 1).
-const PHONE_MODEL_SCALE_BASE = 100
+const PHONE_MODEL_SCALE_BASE = UNITS_PER_METER // 100 (see UNITS_PER_METER near computeBaseScale)
 // Responsive Displace's own damped/smoothed contribution -- persists
 // across frames (module-level, like phoneGyroQuat) so cfg.phoneDisplaceDamping
 // can lerp it smoothly toward computePhoneResponsiveDisplacement()'s own

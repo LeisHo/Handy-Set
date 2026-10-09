@@ -8191,6 +8191,36 @@ the limit on or off (0.3235 m both). NOT verified on a real device. The phone mu
 reload before Sync so it does not write the old 0 back over the git value.
 
 --------------------------------------------------------------------------------
+2026-10-08 -- Dropdown text white; hand scaled to true size next to the phone
+
+1. Every dev-panel dropdown (closed value AND the open option list, including
+   selects without the .dev-select class such as the Tween pose rows) is now white
+   (style.css ?v=13).
+
+2. Scale audit vs HANDO. Measured from the GLB files' own node transforms (Node,
+   no browser): every phone is in true metres -- Galaxy S2 0.1253, iPhone 17 Max
+   0.1511, iPhone 17 Pro Max 0.1634, Nothing 2 0.1621, P5 Project 1 0.1446,
+   Pixel 9A 0.1547, Galaxy S26 0.1518 m tall (Motorola Razr 0.2289 m, S4.glb has no
+   nodes). Hand wrist->middle tip (rHand->rMid3): 0.16086 in HandiBonesB-IK and
+   HandipantsOL/OL2/OL3, 16.086 in Hand2.glb (same hand authored x100). HANDO draws
+   hand and phone at the same units-per-metre (388.436). HANDYSET did not: the
+   phone was 100 units/m while computeBaseScale() normalized the hand to a fixed
+   8 x Hand Scale units wrist->tip (synced Hand Scale 1 = 8 units), so a real
+   phone (0.1634 m -> 16.3 units) sat beside a hand about half its real relative
+   size.
+
+   Fix, per the instruction "scale the hand model and not the phone model":
+   computeBaseScale() = HAND_REFERENCE_LENGTH_M (0.16086) x UNITS_PER_METER (100)
+   / handLengthRaw x Hand Scale. Hand Scale 1 is now true size beside a phone at
+   Model Scale 1 (hand wrist->tip 16.086 units instead of 8). Phone scale is
+   unchanged (PHONE_MODEL_SCALE_BASE = UNITS_PER_METER = 100). main.js ?v=231.
+
+   Consequences: the hand is ~2x larger on screen at the same Hand Scale and
+   camera; saved cameras and the per-model phone Offset Y values were tuned for the
+   old hand size and may need re-adjusting. Hand Scale 0.5 restores the old size.
+   Not browser-verified (project rule); numbers above are from file measurements.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

@@ -1096,6 +1096,10 @@ html, body {
         padding: 4px; border-radius: 3px; cursor: pointer;
         font-family: var(--dev-panel-font-family, monospace); font-size: 10px;
     }
+    /* HANDYSET: every dropdown's text (closed value AND the open list) is white,
+       including selects without the .dev-select class (e.g. the Tween pose rows). */
+    .dev-panel select, .dev-panel .dev-select { color: #fff; }
+    .dev-panel select option, .dev-panel .dev-select option { color: #fff; background: #222; }
 
     /* ============================================================
        [CSS-10] CAPITALIZE-TEXT TOGGLES

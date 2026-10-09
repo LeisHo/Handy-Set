@@ -160,6 +160,16 @@ wiring, and are still open:
 
 ## Gotchas
 
+- **Hand <-> phone scale (2026-10-08): the HAND is scaled, the phone is not.**
+  `computeBaseScale()` = `HAND_REFERENCE_LENGTH_M` (0.16086, measured rHand->rMid3
+  in the Handi/Handipants GLBs; Hand2.glb is the same hand x100) x
+  `UNITS_PER_METER` (100 = `PHONE_MODEL_SCALE_BASE`) / `handLengthRaw` x Hand
+  Scale, so Hand Scale 1 is true size next to a phone at Model Scale 1 (every phone
+  GLB is true metres, 0.125-0.163 m tall). It used to normalize the hand to a fixed
+  8 units, which left a real-size phone ~2x too big. Do NOT "fix" a future
+  mismatch by changing the phone's scale -- change the hand's. HANDO's
+  equivalent is `scaleCorrection`/`objectScaleCorrection` = 388.436 for both.
+
 - **Reactive Arm Length / Responsive Wrist Splay's "distance" input is
   `tiltMagnitude` (0-1, the same normalized cursor/tilt-from-center value
   Phone Tilt already computes every frame), not HANDY DANDIES' own
