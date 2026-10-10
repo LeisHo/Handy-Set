@@ -8569,6 +8569,17 @@ The window.isDevRowIndependent export added to devPanel.js (?v=22) was removed a
 value is indistinguishable from "never tuned" and defers to Mobile.
 
 --------------------------------------------------------------------------------
+2026-10-09 -- Verification note for the Landscape-follows-Mobile change (testing caveat, no code change)
+
+The 812x375 "landscape" check made earlier was NOT a valid reproduction: a custom 812x375 viewport is not treated as a touch device (the pane only emulates touch
+for the Mobile preset / width < 768), so the app ran as a desktop and used Desktop values -- that, not the orientation logic, produced "Mobile settings stop applying".
+The orientation flip itself is real by construction (getRuntimeDeviceSuffix() picks Mobile vs Landscape LIVE from innerWidth > innerHeight, and an untuned Landscape row
+holds Desktop's value), but it was not reproduced before the fix. After the fix (main.js ?v=239), with touch emulation ON (Mobile preset) and window.innerWidth /
+innerHeight overridden to 812 x 375 and a resize event dispatched: cfg stayed at the Mobile values (Recursion Levels 20, Texture Scale 1.3, Responsive Rotation true,
+IK Posing true) in portrait, in simulated landscape, and back in portrait. If the report was about something else (e.g. a control with no Mobile row, or the Min/Max Scale
+range + curve, which are Desktop-only widgets), this change does not address it -- say which control.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
