@@ -8111,14 +8111,24 @@ function wireDeviceSliderMirror(desktopId, cfgKey) {
 // Range/curve widgets and the per-axis FineTune sliders are NOT included (they have their own paths).
 // ---------------------------------------------------------------------
 // WHICH ROW GOVERNS ON THIS DEVICE (2026-10-09, direct report: "I'm on mobile but the mobile settings don't apply. The desktop ones do"). A phone has two
-// runtime profiles -- Mobile (portrait) and Landscape (sideways) -- chosen LIVE from innerWidth > innerHeight. Landscape rows that are not marked Independent just mirror
-// DESKTOP, so the moment the phone went sideways (auto-rotate while tilting it around, which is exactly what Responsive Rotation / Displace invite) every Mobile-tab setting
-// silently stopped applying and the Desktop values took over. Mobile is now the base phone profile: in landscape a control uses its Landscape row ONLY if that row is
-// marked Independent (a real override); otherwise it keeps using the Mobile row (which itself mirrors Desktop unless independent). Portrait is unchanged.
+// runtime profiles -- Mobile (portrait) and Landscape (sideways) -- chosen LIVE from innerWidth > innerHeight. Landscape rows that were never tuned just hold Desktop's value,
+// so the moment the phone went sideways (auto-rotate while tilting it around, which is exactly what Responsive Rotation / Displace invite) every Mobile-tab setting silently
+// stopped applying and the Desktop values took over (verified on the live site with a 375x812 then 812x375 emulation: Recursion Levels 20 -> 18, Responsive Rotation true -> false).
+// Mobile is now the base phone profile: in landscape a control uses its Landscape row ONLY when that row holds a value of its own (differs from Desktop's); otherwise it keeps
+// using the Mobile row (which itself equals Desktop unless tuned). Portrait is unchanged. (devPanel.js's isDevRowIndependent() cannot be used for this: it reports true for
+// every row that exists, tuned or not.) Known limit: a Landscape override that happens to equal Desktop's value is indistinguishable from "never tuned" and defers to Mobile.
+function devRowValuesEqual(a, b) {
+  if (a.type === 'checkbox') return !!a.checked === !!b.checked
+  if (a.type === 'range') return Math.abs(parseFloat(a.value) - parseFloat(b.value)) < 1e-6
+  return String(a.value) === String(b.value)
+}
 function governingRowId(desktopId, device) {
   if (!device) return null
   const rowOf = (dev) => desktopId.replace(/^(slider|color|select|checkbox)/, '$1' + dev)
-  if (device === 'Landscape' && window.isDevRowIndependent && window.isDevRowIndependent('landscape', desktopId) && document.getElementById(rowOf('Landscape'))) return rowOf('Landscape')
+  if (device === 'Landscape') {
+    const le = document.getElementById(rowOf('Landscape')), de = document.getElementById(desktopId)
+    if (le && de && !devRowValuesEqual(le, de)) return rowOf('Landscape')
+  }
   return document.getElementById(rowOf('Mobile')) ? rowOf('Mobile') : null
 }
 const PHONE_DEVICE_AWARE_ID = /^(slider|checkbox|select)(PhoneDisplace(?!Range|Curve)\w+|PhoneResponsiveDisplaceEnabled|PhoneAxis[XYZ]Enabled|PhoneRotationScale[XYZ]|PhoneResponsiveRotationEnabled|PhoneRotationDamping|PhoneRotationMode|PhoneRotationResetEnabled)$/

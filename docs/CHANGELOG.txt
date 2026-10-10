@@ -8560,6 +8560,15 @@ Used by the Phone Displace/Rotation bridge, the general bridge and the texture-o
 Behaviour change to know: a Landscape row that is NOT independent now follows Mobile rather than Desktop. Not verified on a real phone (project rule).
 
 --------------------------------------------------------------------------------
+2026-10-09 -- CORRECTION to the entry above: Landscape-follows-Mobile keyed on the row's VALUE, not isDevRowIndependent()
+
+Verifying the previous commit on the live deploy (main.js ?v=238) showed it did nothing: window.isDevRowIndependent('landscape', id) returned TRUE for every
+row that exists (hasStaticDeviceCounterpart() finds the row's own DOM element), tuned or not, so a Landscape row always "governed" and just held Desktop's value.
+governingRowId() now treats a Landscape row as a real override only when its value DIFFERS from Desktop's (devRowValuesEqual); otherwise it uses the Mobile row.
+The window.isDevRowIndependent export added to devPanel.js (?v=22) was removed again (?v=23). main.js ?v=239. Known limit: a Landscape override equal to Desktop's
+value is indistinguishable from "never tuned" and defers to Mobile.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

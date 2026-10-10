@@ -2074,7 +2074,6 @@
         if (devIndependence[tab] && devIndependence[tab][desktopId] !== undefined) return devIndependence[tab][desktopId];
         return hasStaticDeviceCounterpart(desktopId, tab);
     }
-    window.isDevRowIndependent = isDevRowIndependent; // HANDYSET: the runtime device resolver (main.js governingRowId) needs to know which Landscape rows are real overrides
 
     // Shows/hides an existing Mobile/Landscape row per its own
     // devVisibility flag, for a control OUTSIDE the registerDevControlArray()
