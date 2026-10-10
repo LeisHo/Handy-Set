@@ -8110,14 +8110,25 @@ function wireDeviceSliderMirror(desktopId, cfgKey) {
 // (sliderPhoneDisplaceDamping -> cfg.phoneDisplaceDamping); only ids whose key exists in cfg are touched.
 // Range/curve widgets and the per-axis FineTune sliders are NOT included (they have their own paths).
 // ---------------------------------------------------------------------
+// WHICH ROW GOVERNS ON THIS DEVICE (2026-10-09, direct report: "I'm on mobile but the mobile settings don't apply. The desktop ones do"). A phone has two
+// runtime profiles -- Mobile (portrait) and Landscape (sideways) -- chosen LIVE from innerWidth > innerHeight. Landscape rows that are not marked Independent just mirror
+// DESKTOP, so the moment the phone went sideways (auto-rotate while tilting it around, which is exactly what Responsive Rotation / Displace invite) every Mobile-tab setting
+// silently stopped applying and the Desktop values took over. Mobile is now the base phone profile: in landscape a control uses its Landscape row ONLY if that row is
+// marked Independent (a real override); otherwise it keeps using the Mobile row (which itself mirrors Desktop unless independent). Portrait is unchanged.
+function governingRowId(desktopId, device) {
+  if (!device) return null
+  const rowOf = (dev) => desktopId.replace(/^(slider|color|select|checkbox)/, '$1' + dev)
+  if (device === 'Landscape' && window.isDevRowIndependent && window.isDevRowIndependent('landscape', desktopId) && document.getElementById(rowOf('Landscape'))) return rowOf('Landscape')
+  return document.getElementById(rowOf('Mobile')) ? rowOf('Mobile') : null
+}
 const PHONE_DEVICE_AWARE_ID = /^(slider|checkbox|select)(PhoneDisplace(?!Range|Curve)\w+|PhoneResponsiveDisplaceEnabled|PhoneAxis[XYZ]Enabled|PhoneRotationScale[XYZ]|PhoneResponsiveRotationEnabled|PhoneRotationDamping|PhoneRotationMode|PhoneRotationResetEnabled)$/
 function applyPhoneDeviceAwareValue(desktopId) {
   const m = desktopId.match(PHONE_DEVICE_AWARE_ID)
   if (!m) return
   const key = m[2].charAt(0).toLowerCase() + m[2].slice(1)
   if (!(key in cfg)) return
-  const suffix = getRuntimeDeviceSuffix()
-  const el = (suffix && document.getElementById(m[1] + suffix + m[2])) || document.getElementById(desktopId)
+  const govId = governingRowId(desktopId, getRuntimeDeviceSuffix())
+  const el = (govId && document.getElementById(govId)) || document.getElementById(desktopId)
   if (!el) return
   let v
   if (m[1] === 'checkbox') v = !!el.checked
@@ -8199,8 +8210,8 @@ function applyDeviceAwareControl(desktopId, force) {
   if (!apply || PHONE_DEVICE_AWARE_ID.test(desktopId)) return
   const desktopEl = document.getElementById(desktopId)
   if (!desktopEl) return
-  const suffix = getRuntimeDeviceSuffix()
-  const rowEl = suffix ? document.getElementById(deviceRowId(desktopId, suffix)) : null
+  const govId = governingRowId(desktopId, getRuntimeDeviceSuffix())
+  const rowEl = govId ? document.getElementById(govId) : null
   const dv = readDeviceAwareEl(desktopEl)
   if (!rowEl) { // desktop runtime / no device row: the Desktop control governs (undo a device value applied earlier, e.g. after an orientation change)
     if (deviceAwareLast.has(desktopId)) { deviceAwareLast.delete(desktopId); apply(dv) }
@@ -8226,7 +8237,8 @@ let deviceAwareApplying = false // set while the bridge itself runs, so a callba
 function syncDeviceMirrorSlots() {
   deviceMirrorSlots.forEach(([desktopId, cfgKey]) => {
     ;['Mobile', 'Landscape'].forEach((device) => {
-      const row = document.getElementById(deviceRowId(desktopId, device))
+      const govId = governingRowId(desktopId, device) // Landscape follows Mobile unless its own row is Independent (see governingRowId)
+      const row = govId ? document.getElementById(govId) : null
       const v = row ? roundSliderValue(row.value) : cfg[cfgKey]
       if (typeof v === 'number' && !Number.isNaN(v)) cfg[cfgKey + device] = v
     })
