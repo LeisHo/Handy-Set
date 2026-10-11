@@ -8703,6 +8703,23 @@ flaws before shipping (Blender suffix on dash-numbers; the near-spelling stage m
 are not re-resolved when you merely switch models (not asked for). main.js ?v=241. Not browser-verified (project rule).
 
 --------------------------------------------------------------------------------
+2026-10-11 -- IK pairs survive hand / phone model changes (closest-name carry-over + per-combination memory)
+
+Report: "when i change hand or phone models, it seems to forget the ik pair i was using previously. fix it so that it remembers."
+What actually happened (read from main.js): nothing deleted the pairs on a model swap, but a pair stored exact node ids (owner|group/name). On a model whose nodes are named
+differently (e.g. XOut's "Back - Center001" vs XIn's "Back - Center") getActiveIkPairs() found no node, so the pair silently stopped working, and because there was ONE global pair
+list, any pair edit made on the other model overwrote the first model's picks. Fix (main.js ?v=242):
+ 1. A pair keeps the ids the user CHOSE and never has them rewritten by a swap. ikNodeFor(id) returns the exact node, or else the closest-named one (the resolveIkNodeId() added earlier
+    today, cached until the node registry changes). The solver, the node colours, the overlap check and the pair UI all use it; the UI shows the node being used and a tooltip says it is the
+    closest match. Switching to a model with the exact id goes straight back to it (no chained drift through intermediate models).
+ 2. The whole pair list is remembered per hand-model + phone-model COMBINATION (ikPairMemory, stored in the hidden Sync control hiddenIkPairMemory, newest 40 combinations kept). Leaving a
+    combination stores its pairs; entering one used before restores them exactly (fresh ids, remembered settings); a never-used combination keeps the current pairs (carried over by 1).
+    Not applied during the startup Sync restore, where the pairs in hand already belong to the synced models.
+Node test (ik-memory-test.mjs, real XIn / XOut / Nothing2 node names): XIn -> XOut keeps both pairs with the stored ids untouched and resolves them to "Back - Center001" / "Phone Right Side - 83001";
+edit on XOut, back to XIn: XIn's own pairs return exactly (rotX 5, not the 90 set on XOut); XOut again: its edit is remembered; a third model keeps the pairs; changing only the HAND model also keys the
+memory; startup restore swaps nothing; 88 of 92 XIn nodes have a counterpart on XOut. Not browser-verified (project rule). New synced field hiddenIkPairMemory is empty until the first swap.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

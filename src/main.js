@@ -3207,6 +3207,8 @@ function rebuildIkNodeRegistry() {
   }
   ikNodeById.clear()
   ikNodes.forEach((n) => ikNodeById.set(n.id, n))
+  ikResolveCache.clear()
+  ikSwapPairMemory()
   rebuildIkViz()
   if (typeof onIkNodeRegistryChanged === 'function') onIkNodeRegistryChanged()
   requestRender()
@@ -3314,6 +3316,54 @@ let lastSeenIkPairsJson = '[]'
 const IK_COLOR_TARGET = new THREE.Color(0x44ff66)
 const IK_COLOR_SOURCE = new THREE.Color(0xff44dd)
 const ikNodeById = new Map()
+// WHAT A PAIR USES ON THE CURRENT MODEL (2026-10-11, direct report: "when i change hand or phone models, it seems to forget the ik pair i was using previously"). A pair stores the
+// node ids the user CHOSE (owner|group/name). Those are never rewritten by a model swap: on a model that lacks an exact id the pair now uses the closest-named node
+// (resolveIkNodeId(), cached until the registry changes), and on a model that has the exact id again it goes straight back to it -- so the intent survives any number of swaps.
+const ikResolveCache = new Map()
+function ikNodeFor(id) {
+  if (!id) return null
+  const exact = ikNodeById.get(id)
+  if (exact) return exact
+  if (ikResolveCache.has(id)) return ikResolveCache.get(id)
+  const r = resolveIkNodeId(id)
+  const node = r ? ikNodeById.get(r.id) || null : null
+  ikResolveCache.set(id, node)
+  return node
+}
+// Per hand-model + phone-model combination memory of the whole pair list: leaving a combination stores its pairs, entering one that has been used before restores them; a
+// brand-new combination keeps the current pairs (carried over by the closest-name lookup above). Skipped during the startup Sync restore (the pairs in hand already belong to it).
+let ikPairMemory = {} // { 'handFile||phoneFile': [pair, ...] } -- persisted through the hidden hiddenIkPairMemory control
+let ikPairMemoryKey = null
+let ikPairMemoryInputEl = null
+let lastSeenIkPairMemoryJson = '{}'
+const IK_PAIR_MEMORY_MAX = 40
+function ikPairMemoryKeyNow() { return String(cfg.handModelFile || '') + '||' + String(cfg.phoneModelFile || '') }
+function persistIkPairMemory() {
+  const keys = Object.keys(ikPairMemory)
+  if (keys.length > IK_PAIR_MEMORY_MAX) keys.slice(0, keys.length - IK_PAIR_MEMORY_MAX).forEach((k) => { delete ikPairMemory[k] })
+  const json = JSON.stringify(ikPairMemory)
+  lastSeenIkPairMemoryJson = json
+  if (ikPairMemoryInputEl) ikPairMemoryInputEl.value = json
+}
+function ikSwapPairMemory() {
+  const key = ikPairMemoryKeyNow()
+  if (ikPairMemoryKey === null) { ikPairMemoryKey = key; return }
+  if (key === ikPairMemoryKey) return
+  const startup = (() => { try { return phoneModelRestoreInProgress } catch (e) { return true } })() || performance.now() < 8000 // a let declared further down: not initialised yet this early at boot
+  if (!startup) {
+    delete ikPairMemory[ikPairMemoryKey] // re-insert last so the oldest-first trim keeps recently used combinations
+    ikPairMemory[ikPairMemoryKey] = ikPairs.map((p) => Object.assign({}, p))
+    const remembered = ikPairMemory[key]
+    if (remembered) {
+      ikPairs = remembered.map((p) => Object.assign(newIkPair(), p)) // fresh ids, remembered settings
+      ikPairPresetMismatches = new Set()
+      if (ikPicking) cancelIkPick()
+      persistIkPairs()
+    }
+    persistIkPairMemory()
+  }
+  ikPairMemoryKey = key
+}
 function syncIkVizVisibility() {
   const vis = cfg.ikNodesEnabled || !!ikPicking
   if (ikSpheres) ikSpheres.visible = vis
@@ -3321,7 +3371,8 @@ function syncIkVizVisibility() {
 }
 function refreshIkNodeColors() {
   if (!ikSpheres) return
-  const targets = new Set(ikPairs.map((p) => p.targetId)), sources = new Set(ikPairs.map((p) => p.sourceId))
+  const effId = (id) => { const n = ikNodeFor(id); return n ? n.id : id }
+  const targets = new Set(ikPairs.map((p) => effId(p.targetId))), sources = new Set(ikPairs.map((p) => effId(p.sourceId)))
   ikNodes.forEach((n, i) => ikSpheres.setColorAt(i, targets.has(n.id) ? IK_COLOR_TARGET : sources.has(n.id) ? IK_COLOR_SOURCE : (n.owner === 'hand' ? IK_COLOR_HAND : IK_COLOR_PHONE)))
   ikSpheres.instanceColor.needsUpdate = true
 }
@@ -3497,7 +3548,7 @@ function getActiveIkPairs() {
   const out = []
   ikPairs.forEach((pair, idx) => {
     if (pair.enabled === false) return // pair switched off: its other settings are kept
-    const tgt = ikNodeById.get(pair.targetId), src = ikNodeById.get(pair.sourceId)
+    const tgt = ikNodeFor(pair.targetId), src = ikNodeFor(pair.sourceId)
     if (!tgt || !src || tgt.owner !== 'hand' || !tgt.att) return
     const h = hands[tgt.ownerIndex]
     if (!h) return
@@ -3829,7 +3880,9 @@ function useIkPairsPreset(item) {
 function ikNodeLabelById(id) {
   if (!id) return '— not set —'
   const n = ikNodeById.get(id)
-  return n ? n.label : (id.split('/').pop() + ' (not loaded)')
+  if (n) return n.label
+  const near = ikNodeFor(id)
+  return near ? near.label + ' (closest to "' + id.split('/').pop() + '")' : (id.split('/').pop() + ' (not loaded)')
 }
 function startIkPick(pairId, role) {
   ikPicking = { pairId, role }
@@ -3947,8 +4000,10 @@ function renderIkPairsUI() {
         if (!groups.has(gl)) { const og = document.createElement('optgroup'); og.label = gl; groups.set(gl, og); val.appendChild(og) }
         const o = document.createElement('option'); o.value = n.id; o.textContent = n.name; groups.get(gl).appendChild(o)
       })
-      if (nodeId && !ikNodeById.has(nodeId)) { const o = document.createElement('option'); o.value = nodeId; o.textContent = ikNodeLabelById(nodeId); val.appendChild(o) }
-      val.value = nodeId || ''
+      const nearNode = nodeId && !ikNodeById.has(nodeId) ? ikNodeFor(nodeId) : null
+      if (nodeId && !ikNodeById.has(nodeId) && !nearNode) { const o = document.createElement('option'); o.value = nodeId; o.textContent = ikNodeLabelById(nodeId); val.appendChild(o) }
+      val.value = nearNode ? nearNode.id : (nodeId || '') // a pair whose exact node is missing shows (and uses) the closest-named one; the stored id is kept
+      if (nearNode) val.title = 'Saved as "' + nodeId.split('/').pop() + '" -- not on this model, so the closest-named node is used. Choose a node to replace it.'
       val.addEventListener('change', () => {
         if (role === 'target') pair.targetId = val.value; else pair.sourceId = val.value
         ikPairPresetMismatches.delete(pair.id) // manually fixed -- clear any stale preset-mismatch highlight
@@ -3991,8 +4046,9 @@ function updateIkPairOverlapHighlight() {
   const live = ikPairs.filter((p) => p.enabled !== false)
   ikPairsContainerEl.querySelectorAll('.ik-pair-card').forEach((card) => {
     const p = ikPairs.find((q) => q.id === card.dataset.pairId)
-    const sameT = p && p.enabled !== false && p.targetId ? live.filter((q) => q !== p && q.targetId === p.targetId).map((q) => ikPairs.indexOf(q) + 1) : []
-    const sameS = p && p.enabled !== false && p.sourceId ? live.filter((q) => q !== p && q.sourceId === p.sourceId).map((q) => ikPairs.indexOf(q) + 1) : []
+    const eff = (id) => { const n = ikNodeFor(id); return n ? n.id : id }
+    const sameT = p && p.enabled !== false && p.targetId ? live.filter((q) => q !== p && eff(q.targetId) === eff(p.targetId)).map((q) => ikPairs.indexOf(q) + 1) : []
+    const sameS = p && p.enabled !== false && p.sourceId ? live.filter((q) => q !== p && eff(q.sourceId) === eff(p.sourceId)).map((q) => ikPairs.indexOf(q) + 1) : []
     card.classList.toggle('ik-pair-overlap', sameT.length > 0 || sameS.length > 0)
     const why = []
     if (sameT.length) why.push('Target also used by pair ' + sameT.join(', '))
@@ -4121,6 +4177,15 @@ function renderIkPosingGroup(handModelContent) {
     lastSeenIkPairsJson = ikPairsInputEl.value
     try { const parsed = JSON.parse(ikPairsInputEl.value); ikPairs = Array.isArray(parsed) ? parsed : [] } catch (e) { return }
     refreshIkNodeColors(); renderIkPairsUI(); requestRender()
+  })
+  const memoryRow = addRow(content, { id: 'hiddenIkPairMemory', label: 'IK Pairs By Model (internal)', type: 'text', inputType: 'text', value: JSON.stringify(ikPairMemory), skipDeviceCheckbox: true })
+  memoryRow.style.display = 'none'
+  ikPairMemoryInputEl = memoryRow.querySelector('#hiddenIkPairMemory')
+  lastSeenIkPairMemoryJson = ikPairMemoryInputEl.value
+  ikPairMemoryInputEl.addEventListener('input', () => {
+    if (ikPairMemoryInputEl.value === lastSeenIkPairMemoryJson) return
+    lastSeenIkPairMemoryJson = ikPairMemoryInputEl.value
+    try { const parsed = JSON.parse(ikPairMemoryInputEl.value); ikPairMemory = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {} } catch (e) { /* keep what is in memory */ }
   })
   ikPairsContainerEl = document.createElement('div')
   content.appendChild(ikPairsContainerEl)
