@@ -216,6 +216,8 @@ const cfg = {
   cameraFov: 32, targetX: 0, targetY: 0, targetZ: 0, // CAMERA ANCHOR (direct request 2026-10-04): orbit/rotate, Zoom distance and Yaw/Pitch all pivot on controls.target, which starts at (and every saved-camera 'Use' snaps back to) the world origin; pan stays free
   cameraZoom: 60, lockCameraPan: false, lockCameraZoom: false, lockCameraRotate: false,
   cameraYaw: 0, cameraPitch: 0, cameraMaxExtentsEnabled: false,
+  previewCameraEnabled: false, // Preview Camera group master toggle (2026-10-11) -- panels/per-camera settings are session-only, not Synced
+
   cropWristEnabled: true,
   // Phone Tilt (renamed from Cursor Tracking)
   // trackingEnabled is now a pure on/off gate for motion input; doesn't itself cause rotation
@@ -1962,6 +1964,259 @@ outlinePass.edgeGlow = cfg.outlineGlow
 outlinePass.enabled = cfg.outlineEnabled
 composer.addPass(outlinePass)
 composer.addPass(new OutputPass())
+
+// =======================================================================
+// Preview Camera -- floating draggable/resizable secondary-camera
+// viewport panels (direct request 2026-10-11). Architecture: ONE shared
+// WebGLRenderer/canvas -- this never creates a 2nd WebGL context (that
+// would duplicate every texture/geometry upload per extra camera, and
+// browsers cap concurrent contexts anyway). Each panel's own visible
+// content is produced by SCISSOR-rendering the same scene with a
+// DIFFERENT camera into a specific rectangle of the one real canvas,
+// once per panel, right after the main view's own composer.render() --
+// the panel itself is ordinary DOM (title bar/close button, native CSS
+// `resize:both` for the resize corner), with its "viewport" area left
+// fully transparent so the canvas' own just-painted pixels at that
+// screen location show through. No render target, no CPU pixel readback.
+//
+// Disclosed scope decisions:
+//  - Previews skip the main view's OutlinePass/EffectComposer chain (a
+//    plain renderer.render(scene, cam) call) -- reasonable for a
+//    secondary inspection view, and avoids needing a full extra
+//    composer pipeline per panel.
+//  - Preview camera existence/count/per-panel settings are SESSION-ONLY,
+//    not part of Sync/dev-panel-settings.json -- only the master On/Off
+//    checkbox (cfg.previewCameraEnabled) persists. A dynamic N-length
+//    array of camera objects has no existing serialization precedent in
+//    this file to build on safely in the time available; this project's
+//    saved-preset pickers (list-picker) are for NAMED snapshots a user
+//    explicitly saves, which Saved Preview Camera presets (below) still
+//    gets, just not "the open panels themselves survive a reload."
+//  - "Saved Preview Camera" presets are their OWN list, separate from
+//    the main camera's SAVED_CAMERAS -- a preview's framing is a
+//    logically different thing to save/recall than the main view's.
+const previewCameras = []
+let activePreviewCameraId = null
+let previewCameraIdCounter = 0
+const SAVED_PREVIEW_CAMERAS = []
+loadListPickerItemsFromLocalStorage('previewCameraPresets', SAVED_PREVIEW_CAMERAS)
+
+function getActivePreviewCamera() {
+  return previewCameras.find((pc) => pc.id === activePreviewCameraId) || null
+}
+function setActivePreviewCamera(id) {
+  if (activePreviewCameraId === id) return
+  activePreviewCameraId = id
+  previewCameras.forEach((pc) => pc.panel.classList.toggle('preview-camera-active', pc.id === id))
+  syncPreviewCameraPanelFromLive()
+  applyPreviewCameraLockState()
+}
+function createPreviewCamera() {
+  // Turning this on from the "Add Camera Preview" button (rather than
+  // the group's own checkbox) must flip the SAME On/Off state the
+  // checkbox drives, including the group's own visible/disabled CSS
+  // class -- makeDevGroupToggleable() (devPanel.js) only reacts to a
+  // real 'change'/'input' EVENT on the checkbox, not a bare .checked
+  // assignment, so that class is set directly here using the exact same
+  // selector/class makeDevGroupToggleable() itself uses, rather than
+  // dispatching a synthetic event (which would re-enter this same
+  // function via the checkbox's own wireCheckbox callback and create a
+  // 2nd, unwanted camera).
+  cfg.previewCameraEnabled = true
+  const enableCb = document.getElementById('checkboxPreviewCameraEnabled')
+  if (enableCb && !enableCb.checked) {
+    enableCb.checked = true
+    const titleEl = document.querySelector('#desktopTabContent .dev-section-title[data-sid="Preview Camera"]')
+    const section = titleEl ? titleEl.closest('.dev-section') : null
+    if (section) section.classList.remove('dev-section-group-disabled')
+  }
+  const id = 'pc' + (++previewCameraIdCounter)
+  const pcCamera = new THREE.PerspectiveCamera(cfg.cameraFov, 320 / 240, 0.1, 2000)
+  // Starts framed like the main camera's CURRENT view (offset panel
+  // position only, not a different starting angle) so it isn't pointed
+  // at nothing the moment it appears.
+  pcCamera.position.copy(camera.position)
+  pcCamera.up.copy(camera.up)
+
+  const panel = document.createElement('div')
+  panel.className = 'preview-camera-panel'
+  // previewCameraIdCounter, not previewCameras.length -- it's monotonic
+  // (never reused after a delete), so the cascade offset and the title
+  // label below never repeat a number for a panel that's still open
+  // alongside others, even after some earlier panel was closed.
+  const n = previewCameraIdCounter
+  panel.style.left = (72 + ((n - 1) % 6) * 28) + 'px'
+  panel.style.top = (72 + ((n - 1) % 6) * 28) + 'px'
+
+  const titlebar = document.createElement('div')
+  titlebar.className = 'preview-camera-titlebar'
+  const titleLabel = document.createElement('span')
+  titleLabel.className = 'preview-camera-title-label'
+  titleLabel.textContent = 'Preview Camera ' + n
+  const closeBtn = document.createElement('button')
+  closeBtn.type = 'button'
+  closeBtn.className = 'preview-camera-close'
+  closeBtn.textContent = '×'
+  closeBtn.title = 'Close this preview'
+  titlebar.append(titleLabel, closeBtn)
+
+  const viewportEl = document.createElement('div')
+  viewportEl.className = 'preview-camera-viewport'
+
+  panel.append(titlebar, viewportEl)
+  document.body.appendChild(panel)
+
+  const pcControls = new OrbitControls(pcCamera, viewportEl)
+  pcControls.target.copy(controls.target)
+  pcControls.enableDamping = true
+  pcCamera.lookAt(pcControls.target)
+  pcControls.update()
+
+  const entry = {
+    id, camera: pcCamera, controls: pcControls, panel, viewportEl, titleLabel,
+    locks: { pan: false, zoom: false, rotate: false },
+  }
+  previewCameras.push(entry)
+
+  pcControls.addEventListener('change', () => { setActivePreviewCamera(id); requestRender() })
+  titlebar.addEventListener('pointerdown', (e) => {
+    if (e.target === closeBtn) return
+    setActivePreviewCamera(id)
+    startPreviewCameraDrag(entry, e)
+  })
+  viewportEl.addEventListener('pointerdown', () => setActivePreviewCamera(id))
+  closeBtn.addEventListener('click', () => removePreviewCamera(id))
+
+  if (typeof ResizeObserver !== 'undefined') {
+    const ro = new ResizeObserver(() => {
+      const r = viewportEl.getBoundingClientRect()
+      if (r.width < 2 || r.height < 2) return
+      pcCamera.aspect = r.width / r.height
+      pcCamera.updateProjectionMatrix()
+      requestRender()
+    })
+    ro.observe(panel)
+    entry.resizeObserver = ro
+  }
+
+  setActivePreviewCamera(id)
+  updatePreviewCameraCounterLabel()
+  requestRender()
+  return entry
+}
+function removePreviewCamera(id) {
+  const idx = previewCameras.findIndex((pc) => pc.id === id)
+  if (idx < 0) return
+  const [entry] = previewCameras.splice(idx, 1)
+  if (entry.resizeObserver) entry.resizeObserver.disconnect()
+  entry.controls.dispose()
+  entry.panel.remove()
+  if (activePreviewCameraId === id) {
+    activePreviewCameraId = null
+    if (previewCameras.length) setActivePreviewCamera(previewCameras[previewCameras.length - 1].id)
+  }
+  updatePreviewCameraCounterLabel()
+  syncPreviewCameraPanelFromLive()
+  requestRender()
+}
+function removeAllPreviewCameras() {
+  previewCameras.slice().forEach((pc) => removePreviewCamera(pc.id)) // slice a copy first -- removePreviewCamera mutates previewCameras in place
+}
+function updatePreviewCameraCounterLabel() {
+  const el = document.getElementById('previewCameraCounterLabel')
+  if (el) el.textContent = 'Camera Previews: ' + previewCameras.length
+}
+
+// Panel drag-to-move (title bar only -- the viewport area's own pointer
+// events are claimed by that panel's OWN OrbitControls for camera
+// orbit/pan, same "two regions, no overlap" convention the dev panel's
+// own chrome uses for its resize-edge vs. move-titlebar split, CLAUDE.md
+// Section 12c).
+function startPreviewCameraDrag(entry, downEvent) {
+  const panel = entry.panel
+  const startLeft = panel.offsetLeft
+  const startTop = panel.offsetTop
+  const startX = downEvent.clientX
+  const startY = downEvent.clientY
+  function onMove(e) {
+    const nextLeft = startLeft + (e.clientX - startX)
+    const nextTop = startTop + (e.clientY - startY)
+    const maxLeft = window.innerWidth - 40
+    const maxTop = window.innerHeight - 24
+    panel.style.left = Math.max(-panel.offsetWidth + 40, Math.min(maxLeft, nextLeft)) + 'px'
+    panel.style.top = Math.max(0, Math.min(maxTop, nextTop)) + 'px'
+  }
+  function onUp() {
+    window.removeEventListener('pointermove', onMove)
+    window.removeEventListener('pointerup', onUp)
+  }
+  window.addEventListener('pointermove', onMove)
+  window.addEventListener('pointerup', onUp)
+}
+
+// Mirrors syncCameraPanelFromLive() for whichever preview panel is
+// currently active -- called every animate() frame, same pattern
+// (including syncValue()'s own "don't clobber a focused input" guard).
+// Disables the shared sliders entirely while no preview panel exists.
+function syncPreviewCameraPanelFromLive() {
+  const pc = getActivePreviewCamera()
+  const disabled = !pc
+  ;['sliderPreviewCameraX', 'sliderPreviewCameraY', 'sliderPreviewCameraZ', 'sliderPreviewCameraFov', 'sliderPreviewCameraZoom', 'sliderPreviewCameraYaw', 'sliderPreviewCameraPitch'].forEach((id) => {
+    const el = document.getElementById(id)
+    if (el) el.disabled = disabled
+  })
+  if (!pc) return
+  const yp = getYawPitchFor(pc.camera, pc.controls)
+  syncValue('sliderPreviewCameraX', pc.camera.position.x)
+  syncValue('sliderPreviewCameraY', pc.camera.position.y)
+  syncValue('sliderPreviewCameraZ', pc.camera.position.z)
+  syncValue('sliderPreviewCameraYaw', yp.yaw)
+  syncValue('sliderPreviewCameraPitch', yp.pitch)
+  syncValue('sliderPreviewCameraFov', pc.camera.fov)
+  syncValue('sliderPreviewCameraZoom', pc.camera.position.distanceTo(pc.controls.target))
+}
+// Mirrors applyCameraLockState(), operating on the ACTIVE preview
+// camera's own per-panel lock state (each panel has its own, per direct
+// spec point 6 -- "each panel will have their own settings").
+function applyPreviewCameraLockState() {
+  const pc = getActivePreviewCamera()
+  const locks = pc ? pc.locks : { pan: false, zoom: false, rotate: false }
+  if (pc) {
+    pc.controls.enablePan = !locks.pan
+    pc.controls.enableZoom = !locks.zoom
+    pc.controls.enableRotate = !locks.rotate
+  }
+  ;['sliderPreviewCameraX', 'sliderPreviewCameraY', 'sliderPreviewCameraZ'].forEach((id) => setSliderLocked(id, locks.pan))
+  setSliderLocked('sliderPreviewCameraZoom', locks.zoom)
+  ;['sliderPreviewCameraYaw', 'sliderPreviewCameraPitch'].forEach((id) => setSliderLocked(id, locks.rotate))
+}
+// Scissor-renders every open preview panel's own camera into its own
+// screen rectangle. Called from renderOneFrame() right after the main
+// view's composer.render() has already painted the full canvas -- see
+// this section's own top comment for why this (not a 2nd renderer/
+// render-target) is the chosen approach.
+function renderPreviewCameraViewports() {
+  if (previewCameras.length === 0) return
+  const canvasRect = renderer.domElement.getBoundingClientRect()
+  const pixelRatio = renderer.getPixelRatio()
+  const canvasPixelHeight = renderer.domElement.height
+  previewCameras.forEach((pc) => {
+    const rect = pc.viewportEl.getBoundingClientRect()
+    if (rect.width < 2 || rect.height < 2) return
+    const x = Math.round((rect.left - canvasRect.left) * pixelRatio)
+    const yTop = Math.round((rect.top - canvasRect.top) * pixelRatio)
+    const w = Math.round(rect.width * pixelRatio)
+    const h = Math.round(rect.height * pixelRatio)
+    const y = canvasPixelHeight - yTop - h // WebGL viewport/scissor origin is bottom-left; DOM rects are top-left
+    renderer.setScissorTest(true)
+    renderer.setScissor(x, y, w, h)
+    renderer.setViewport(x, y, w, h)
+    renderer.clear(true, true)
+    renderer.render(scene, pc.camera)
+  })
+  renderer.setScissorTest(false)
+  renderer.setViewport(0, 0, renderer.domElement.width, canvasPixelHeight)
+}
 
 const hemiLight = new THREE.HemisphereLight(cfg.ambientSkyColor, cfg.ambientGroundColor, cfg.ambientIntensity)
 scene.add(hemiLight)
@@ -7255,6 +7510,14 @@ function animate() {
   }
   controls.update()
   syncCameraPanelFromLive()
+  // Preview Camera panels (2026-10-11): each one's own OrbitControls needs
+  // .update() called every frame too, unconditionally, same as the main
+  // camera's own controls.update() above -- this is what keeps a damped
+  // orbit glide alive (each call can re-fire that panel's own 'change'
+  // listener, which re-flags needsRender) and what makes a locked-off
+  // pan/zoom/rotate actually take effect frame to frame.
+  previewCameras.forEach((pc) => pc.controls.update())
+  syncPreviewCameraPanelFromLive()
   // On-demand rendering -- see the requestRender()/needsRender comment
   // near the top of this file. Responsive Rotation's own master gate
   // (cfg.trackingEnabled, with a real hand present) forces continuous
@@ -7448,6 +7711,7 @@ function renderOneFrame() {
     renderVirtualScreen()
   }
   composer.render()
+  renderPreviewCameraViewports()
 }
 
 // =======================================================================
@@ -8732,6 +8996,104 @@ function renderCameraGroup(content) {
   // (e.g. from Sync) never actually disabled OrbitControls or the
   // sliders until the user re-toggled the checkbox.
   applyCameraLockState()
+  renderPreviewCameraGroup(addSubgroup(content, 'Preview Camera'))
+}
+// Preview Camera -- toggleable subgroup of Camera (direct request
+// 2026-10-11). ONE shared set of sliders/locks/presets for every open
+// preview panel -- they always act on whichever panel is "active"
+// (last clicked into, or last orbited/panned), per the explicit spec:
+// "There will only be a single set of setting ui for all cameras, but
+// each panel will have their own settings." See the Preview Camera
+// engine's own top comment (near the renderer/camera setup) for the
+// scissor-rendering architecture and disclosed scope decisions.
+function renderPreviewCameraGroup(content) {
+  addRow(content, { id: 'checkboxPreviewCameraEnabled', label: 'Preview Camera On/Off', type: 'checkbox' })
+  document.getElementById('checkboxPreviewCameraEnabled').checked = cfg.previewCameraEnabled
+  wireCheckbox('checkboxPreviewCameraEnabled', (v) => {
+    cfg.previewCameraEnabled = v
+    if (v) { if (previewCameras.length === 0) createPreviewCamera() } else { removeAllPreviewCameras() }
+  })
+
+  addRow(content, { id: 'sliderPreviewCameraX', label: 'Camera X Position (x)', type: 'slider', min: -500, max: 500, step: 0.5, value: 0 })
+  wireSlider('sliderPreviewCameraX', (v) => { const pc = getActivePreviewCamera(); if (!pc) return; pc.camera.position.x = v; pc.controls.update(); requestRender() })
+  addRow(content, { id: 'sliderPreviewCameraY', label: 'Camera Y Position (x)', type: 'slider', min: -500, max: 500, step: 0.5, value: 0 })
+  wireSlider('sliderPreviewCameraY', (v) => { const pc = getActivePreviewCamera(); if (!pc) return; pc.camera.position.y = v; pc.controls.update(); requestRender() })
+  addRow(content, { id: 'sliderPreviewCameraZ', label: 'Camera Z Position (x)', type: 'slider', min: -500, max: 500, step: 0.5, value: 0 })
+  wireSlider('sliderPreviewCameraZ', (v) => { const pc = getActivePreviewCamera(); if (!pc) return; pc.camera.position.z = v; pc.controls.update(); requestRender() })
+  addRow(content, { id: 'sliderPreviewCameraFov', label: 'Field Of View (Deg)', type: 'slider', min: 15, max: 90, step: 1, value: cfg.cameraFov })
+  wireSlider('sliderPreviewCameraFov', (v) => { const pc = getActivePreviewCamera(); if (!pc) return; pc.camera.fov = v; pc.camera.updateProjectionMatrix(); requestRender() })
+  addRow(content, { id: 'sliderPreviewCameraZoom', label: 'Zoom (Distance To Pan Target) (x)', type: 'slider', min: 1, max: 500, step: 0.5, value: 60 })
+  wireSlider('sliderPreviewCameraZoom', (v) => { const pc = getActivePreviewCamera(); if (!pc) return; setSphericalFor(pc.camera, pc.controls, { dist: v }); requestRender() })
+  addRow(content, { id: 'checkboxLockPreviewCameraPan', label: 'Lock Camera Pan', type: 'checkbox' })
+  wireCheckbox('checkboxLockPreviewCameraPan', (v) => { const pc = getActivePreviewCamera(); if (pc) pc.locks.pan = v; applyPreviewCameraLockState() })
+  addRow(content, { id: 'checkboxLockPreviewCameraZoom', label: 'Lock Camera Zoom', type: 'checkbox' })
+  wireCheckbox('checkboxLockPreviewCameraZoom', (v) => { const pc = getActivePreviewCamera(); if (pc) pc.locks.zoom = v; applyPreviewCameraLockState() })
+  addRow(content, { id: 'checkboxLockPreviewCameraRotate', label: 'Lock Camera Rotate', type: 'checkbox' })
+  wireCheckbox('checkboxLockPreviewCameraRotate', (v) => { const pc = getActivePreviewCamera(); if (pc) pc.locks.rotate = v; applyPreviewCameraLockState() })
+  addRow(content, { id: 'sliderPreviewCameraYaw', label: 'Camera Yaw (Deg)', type: 'slider', min: -180, max: 180, step: 1, value: 0 })
+  wireSlider('sliderPreviewCameraYaw', (v) => { const pc = getActivePreviewCamera(); if (!pc) return; setSphericalFor(pc.camera, pc.controls, { yaw: v }); requestRender() })
+  addRow(content, { id: 'sliderPreviewCameraPitch', label: 'Camera Pitch (Deg)', type: 'slider', min: -89, max: 89, step: 1, value: 0 })
+  wireSlider('sliderPreviewCameraPitch', (v) => { const pc = getActivePreviewCamera(); if (!pc) return; setSphericalFor(pc.camera, pc.controls, { pitch: v }); requestRender() })
+
+  renderPresetPicker(content, 'Saved Preview Cameras', SAVED_PREVIEW_CAMERAS, null, applyPreviewCameraPreset, capturePreviewCameraFromLive, { exportable: true, importable: true, storageKey: 'previewCameraPresets' })
+
+  const addBtnRow = document.createElement('div')
+  addBtnRow.className = 'dev-buttons'
+  const addBtn = document.createElement('button')
+  addBtn.type = 'button'
+  addBtn.textContent = 'Add Camera Preview'
+  addBtn.addEventListener('click', () => createPreviewCamera())
+  addBtnRow.appendChild(addBtn)
+  content.appendChild(addBtnRow)
+
+  const counterLabel = document.createElement('div')
+  counterLabel.id = 'previewCameraCounterLabel'
+  counterLabel.className = 'dev-label'
+  counterLabel.style.cssText = 'display:block; padding:4px 0; opacity:0.8;'
+  counterLabel.textContent = 'Camera Previews: ' + previewCameras.length
+  content.appendChild(counterLabel)
+
+  const deleteAllRow = document.createElement('div')
+  deleteAllRow.className = 'dev-buttons'
+  const deleteAllBtn = document.createElement('button')
+  deleteAllBtn.type = 'button'
+  deleteAllBtn.textContent = 'Delete All Camera Previews'
+  deleteAllBtn.addEventListener('click', () => {
+    removeAllPreviewCameras()
+    cfg.previewCameraEnabled = false
+    const cb = document.getElementById('checkboxPreviewCameraEnabled')
+    if (cb) {
+      cb.checked = false
+      const titleEl = document.querySelector('#desktopTabContent .dev-section-title[data-sid="Preview Camera"]')
+      const section = titleEl ? titleEl.closest('.dev-section') : null
+      if (section) section.classList.add('dev-section-group-disabled')
+    }
+  })
+  deleteAllRow.appendChild(deleteAllBtn)
+  content.appendChild(deleteAllRow)
+
+  applyPreviewCameraLockState()
+  syncPreviewCameraPanelFromLive()
+  if (typeof window.makeDevGroupToggleable === 'function') window.makeDevGroupToggleable('desktop', 'Preview Camera', 'checkboxPreviewCameraEnabled')
+}
+function capturePreviewCameraFromLive() {
+  const pc = getActivePreviewCamera()
+  if (!pc) return {}
+  return { x: pc.camera.position.x, y: pc.camera.position.y, z: pc.camera.position.z, fov: pc.camera.fov, zoom: pc.camera.position.distanceTo(pc.controls.target) }
+}
+// Same world-origin pan-target anchor convention as the main camera's
+// own applyCameraPreset() (CAMERA ANCHOR, 2026-10-04) -- a saved
+// preview's own target is not stored/restored, orbit/zoom always pivot
+// on world (0,0,0).
+function applyPreviewCameraPreset(item) {
+  const pc = getActivePreviewCamera()
+  if (!pc) return
+  pc.controls.target.set(0, 0, 0)
+  pc.camera.position.set(item.x, item.y, item.z)
+  pc.camera.fov = item.fov
+  pc.camera.updateProjectionMatrix()
+  pc.controls.update()
+  requestRender()
 }
 // Center World Origin: a pure pan. The camera and its orbit target both move by the same offset so the
 // target lands exactly on world (0,0,0) -- the origin then sits on the camera's optical axis, i.e. at the
@@ -8757,22 +9119,8 @@ function centerWorldOriginOnScreen() {
 // (4) rebuilds the position from the three. Yaw and Pitch used to rebuild from cfg.cameraYaw / cfg.cameraPitch, which only those two sliders ever write (they start at 0), so
 // after any mouse orbit, pan or zoom, dragging one snapped the other to a stale value. FOV only touches the projection. Camera X / Y / Z POSITION are the same three
 // degrees of freedom in Cartesian form (the camera moves, the target stays at the world origin), so changing one of THOSE necessarily changes the derived zoom / yaw / pitch.
-function flushOrbitInertia() {
-  const damping = controls.enableDamping
-  controls.enableDamping = false // without damping update() applies the whole pending delta and clears it
-  controls.update()
-  controls.enableDamping = damping
-}
-function setCameraSpherical({ yaw, pitch, dist }) {
-  flushOrbitInertia()
-  const live = getCameraYawPitch()
-  const yawRad = (yaw === undefined ? live.yaw : yaw) * Math.PI / 180
-  const pitchRad = (pitch === undefined ? live.pitch : pitch) * Math.PI / 180
-  const d = dist === undefined ? live.dist : dist
-  if (!(d > 1e-6)) return
-  const dir = new THREE.Vector3(Math.cos(pitchRad) * Math.sin(yawRad), Math.sin(pitchRad), Math.cos(pitchRad) * Math.cos(yawRad))
-  camera.position.copy(controls.target).addScaledVector(dir, d)
-  controls.update()
+function setCameraSpherical(opts) {
+  setSphericalFor(camera, controls, opts)
 }
 function setCameraDistance(distance) { setCameraSpherical({ dist: distance }) }
 // Direct request 2026-09-28: "When I lock pan, zoom, or rotate, lock
@@ -8828,14 +9176,42 @@ function applyCameraLockState() {
 // the round-trip to a mathematical identity: re-verified algebraically
 // (dirGet = normalize(camera.position - target) = normalize(dist*dirSet)
 // = dirSet exactly, so pitchGet = pitch and yawGet = yaw with zero error).
-function getCameraYawPitch() {
-  const dir = camera.position.clone().sub(controls.target)
+// Generalized 2026-10-11 (camera + controls as params) so Preview Camera
+// panels can reuse this exact, already-debugged formula instead of a
+// fresh copy -- this file's own getCameraYawPitch()/setCameraYawPitch()
+// comment documents a real, subtle sign-convention bug that was only
+// caught because syncCameraPanelFromLive() resyncs every frame; a 2nd,
+// independently-written copy for preview cameras would risk
+// reintroducing the exact same class of bug with no equivalent
+// per-frame resync to surface it. getCameraYawPitch()/setCameraSpherical()
+// below are now thin wrappers over these, calling them with the global
+// camera/controls -- zero behavior change for any existing call site.
+function getYawPitchFor(cam, ctrls) {
+  const dir = cam.position.clone().sub(ctrls.target)
   const dist = dir.length() || 1
   dir.normalize()
   const pitch = Math.asin(Math.max(-1, Math.min(1, dir.y))) * 180 / Math.PI
   const yaw = Math.atan2(dir.x, dir.z) * 180 / Math.PI
   return { yaw, pitch, dist }
 }
+function flushOrbitInertiaFor(ctrls) {
+  const damping = ctrls.enableDamping
+  ctrls.enableDamping = false // without damping update() applies the whole pending delta and clears it
+  ctrls.update()
+  ctrls.enableDamping = damping
+}
+function setSphericalFor(cam, ctrls, { yaw, pitch, dist }) {
+  flushOrbitInertiaFor(ctrls)
+  const live = getYawPitchFor(cam, ctrls)
+  const yawRad = (yaw === undefined ? live.yaw : yaw) * Math.PI / 180
+  const pitchRad = (pitch === undefined ? live.pitch : pitch) * Math.PI / 180
+  const d = dist === undefined ? live.dist : dist
+  if (!(d > 1e-6)) return
+  const dir = new THREE.Vector3(Math.cos(pitchRad) * Math.sin(yawRad), Math.sin(pitchRad), Math.cos(pitchRad) * Math.cos(yawRad))
+  cam.position.copy(ctrls.target).addScaledVector(dir, d)
+  ctrls.update()
+}
+function getCameraYawPitch() { return getYawPitchFor(camera, controls) }
 
 // Rotate by moving the camera (not target) to a point at current distance
 // along the new yaw/pitch direction (ported from HANDO)

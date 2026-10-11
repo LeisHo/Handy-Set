@@ -8641,6 +8641,26 @@ select (anchor + extend to a contiguous range), not independent per-row toggling
 shift-click MouseEvents against the real buildListPickerRow() code.
 
 --------------------------------------------------------------------------------
+2026-10-11 -- New feature: Preview Camera (floating draggable/resizable secondary-camera viewport panels)
+
+Direct request, 8-point spec. New toggleable "Preview Camera" subgroup under Camera. Each open panel is a draggable/resizable (native CSS resize:both)
+DOM panel showing a scissor-rendered view from its own secondary THREE.PerspectiveCamera + its own OrbitControls (bound to that panel, not the main
+canvas -- no cross-talk with the main camera). One shared row of sliders/lock checkboxes/Saved-presets picker drives whichever panel is currently
+"active" (last clicked into or orbited/panned), matching the spec's "single set of setting ui for all cameras... click between panels to see their
+different settings." Reused this file's own already-debugged yaw/pitch spherical-coordinate math (generalized getYawPitchFor()/setSphericalFor(),
+camera+controls as params) rather than a second copy, given that formula's own real bug history. "Add Camera Preview" button, a live counter, and
+"Delete All Camera Previews" round out the spec.
+
+Disclosed scope decisions: previews skip the main view's OutlinePass/EffectComposer chain (plain renderer.render); panel existence/count/per-panel
+settings are session-only, not part of Sync (only the master On/Off checkbox persists -- restoring it checked auto-creates one fresh default panel,
+not the exact prior layout); Saved Preview Camera presets are their own separate list from the main camera's SAVED_CAMERAS. Known minor cosmetic
+limitation: Finger Gizmo/Object Axes line thickness is calibrated to the main canvas resolution, not each preview panel's own smaller viewport.
+
+Not live-verified (per this project's own standing rule) -- confirmed via node --check, cross-referenced every new identifier against its real
+definition, traced the scissor-rect/Y-flip coordinate math by hand, checked the new group name against every other addGroup()/addSubgroup() call.
+See CLAUDE.md's matching 2026-10-11 entry for the full architecture account.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

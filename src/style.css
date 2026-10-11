@@ -1276,3 +1276,65 @@ html, body {
 .ik-num { width: 48px; flex-shrink: 0; }
 .ik-node-select { flex: 1; min-width: 0; }
 .ik-pair-card.ik-pair-overlap .ik-pair-title { color: rgb(255, 77, 77); }
+
+/* Preview Camera floating panels (2026-10-11, direct request). Resizable
+   via native CSS `resize:both` (the browser draws its own grip in the
+   bottom-right corner) -- no hand-rolled resize-corner JS needed. The
+   viewport area is deliberately given NO background: the real content is
+   the main WebGL canvas showing through at that exact screen rect, via
+   renderer.setScissor()/setViewport() in renderPreviewCameraViewports()
+   (main.js) -- this element exists only to host OrbitControls' own
+   pointer listeners and to mark the "hole" where nothing else should be
+   drawn on top. */
+.preview-camera-panel {
+    position: fixed;
+    width: 320px;
+    height: 240px;
+    min-width: 160px;
+    min-height: 120px;
+    z-index: 500;
+    display: flex;
+    flex-direction: column;
+    resize: both;
+    overflow: hidden;
+    border: 2px solid rgba(0, 255, 255, 0.35);
+    border-radius: 4px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+    background: transparent;
+}
+.preview-camera-panel.preview-camera-active {
+    border-color: #0ff;
+    box-shadow: 0 0 0 2px rgba(0, 255, 255, 0.55), 0 2px 12px rgba(0, 0, 0, 0.5);
+}
+.preview-camera-titlebar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    padding: 3px 6px;
+    background: rgba(0, 0, 0, 0.65);
+    color: #0ff;
+    font: 11px monospace;
+    cursor: move;
+    user-select: none;
+    touch-action: none;
+}
+.preview-camera-title-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.preview-camera-close {
+    background: none;
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    padding: 0 3px;
+    flex-shrink: 0;
+}
+.preview-camera-close:hover { color: #f55; }
+.preview-camera-viewport {
+    flex: 1 1 auto;
+    cursor: grab;
+    touch-action: none;
+}
+.preview-camera-viewport:active { cursor: grabbing; }
