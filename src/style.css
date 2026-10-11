@@ -1270,7 +1270,13 @@ html, body {
 
 /* IK POSING pair cards (2026-10-04). */
 .ik-pair-card { border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 4px; padding: 4px 6px; margin-bottom: 6px; background: rgba(255, 255, 255, 0.03); }
-.ik-pair-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 3px; }
+/* Each IK pair is a toggleable group (2026-10-11): a clickable title bar (collapse / expand) carrying the pair's On/Off checkbox and DELETE, then the pair's settings. */
+.ik-pair-head { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; cursor: pointer; user-select: none; flex-wrap: nowrap; }
+.ik-pair-head .ik-pair-title { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ik-pair-arrow { flex-shrink: 0; opacity: 0.8; font-size: 10px; width: 10px; }
+.ik-pair-delete { flex-shrink: 0; cursor: pointer; font-size: 10px; padding: 1px 6px; }
+.ik-pair-collapsed .ik-pair-group-content, .ik-pair-off .ik-pair-group-content { display: none; }
+.ik-pair-off .ik-pair-title { opacity: 0.55; }
 .ik-pair-row { align-items: center; gap: 6px; }
 .ik-node-label { flex: 1; min-width: 0; font-size: calc(var(--dev-setting-title-font-size-px, 12) * 1px); opacity: 0.9; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ik-num { width: 48px; flex-shrink: 0; }

@@ -3298,6 +3298,7 @@ function updateIkViz() {
 // =======================================================================
 let ikPairs = [] // [{id, targetId, sourceId, axesMode:'source'|'world', rotX, rotY, rotZ, overlap}]
 let ikPicking = null // {pairId, role:'target'|'source'} while waiting for a click on a node
+const ikPairCollapsed = new Set() // ids of pair groups the user collapsed (runtime UI state only)
 // IK Pair Preset "Use" validation (2026-10-11, direct spec): "If I click
 // Use when i select an IK pair, and one or more of the models dont have
 // an IK node of the right name. Default the entry as empty, but
@@ -3558,15 +3559,16 @@ function getActiveIkPairs() {
       displace: !!pair.overlap,
       priority: Math.min(1, Math.max(0, (pair.priority === undefined ? 100 : Number(pair.priority) || 0) / 100)), // Pair Priority (HANDO): scales this pair's errors in the solver
       world: pair.axesMode === 'world',
+      rotWeight: ikPairRotWeight(pair),
       qOff: new THREE.Quaternion().setFromEuler(new THREE.Euler(rad(pair.rotX || 0), rad(pair.rotY || 0), rad(pair.rotZ || 0), 'XYZ'))
     })
   })
   return out
 }
 function ikSignature(pairs) {
-  return IK_PAIR_MAX + '#' + cfg.ikRotationWeight + '#' + IK_INFLUENCE_ROW_KEYS.map((k) => cfg[k]).join(',') + '#' + pairs.map((p) => {
+  return IK_PAIR_MAX + '#' + IK_INFLUENCE_ROW_KEYS.map((k) => cfg[k]).join(',') + '#' + pairs.map((p) => {
     p.src.object3d.updateWorldMatrix(true, false)
-    return [p.i, p.tgt.id, p.src.id, p.displace, p.priority, p.world, p.qOff.x.toFixed(4), p.qOff.y.toFixed(4), p.qOff.z.toFixed(4),
+    return [p.i, p.tgt.id, p.src.id, p.displace, p.priority, p.world, p.rotWeight, p.qOff.x.toFixed(4), p.qOff.y.toFixed(4), p.qOff.z.toFixed(4),
       p.src.object3d.matrixWorld.elements.map((e) => Math.round(e * 1000)).join(',')].join(':')
   }).join('|')
 }
@@ -3632,7 +3634,7 @@ function solveIkHandPose(pairs) {
       const ang = 2 * Math.acos(Math.min(1, qErr.w))
       const s = Math.sqrt(1 - qErr.w * qErr.w)
       const k = s < 1e-6 ? 2 : ang / s
-      const rotW = cfg.ikRotationWeight
+      const rotW = p.rotWeight // this pair's own Rotation Weight
       r.push(qErr.x * k * rotW, qErr.y * k * rotW, qErr.z * k * rotW)
       // Pair Priority: this pair's share of the total error (the REPORTED errors in the status stay unweighted).
       if (p.priority !== 1) for (let j = first; j < r.length; j++) r[j] *= p.priority
@@ -3761,11 +3763,30 @@ function updateIkHandPose() {
 }
 
 // ---------------- pairs: state, persistence, picking ----------------
+// PER-PAIR ROTATION WEIGHT (2026-10-11, direct request: "Provide each pair with its own rotational weight slider as opposed to a single global slider"). Each pair's
+// orientation error is multiplied by ITS OWN weight (position-units of error per radian). A pair saved before this existed has no rotWeight and keeps behaving as the old global
+// slider told it to: it falls back to cfg.ikRotationWeight (the retired global, restored from the synced settings at boot -- see loadRemoteSettingsOnStartup). New pairs start at 8.
+const IK_DEFAULT_ROT_WEIGHT = 8
+function ikPairRotWeight(pair) {
+  const w = pair ? pair.rotWeight : undefined
+  return typeof w === 'number' && Number.isFinite(w) ? w : cfg.ikRotationWeight
+}
+function ikPairTitleText(pair, i) {
+  const tn = ikNodeFor(pair.targetId), sn = ikNodeFor(pair.sourceId)
+  return 'IK Pair ' + (i + 1) + (tn || sn ? ' · ' + (tn ? tn.name : '—') + ' ← ' + (sn ? sn.name : '—') : '')
+}
 function newIkPair() {
-  return { id: 'p' + Date.now().toString(36) + Math.floor(Math.random() * 46656).toString(36), targetId: '', sourceId: '', axesMode: 'source', rotX: 0, rotY: 0, rotZ: 0, overlap: true, enabled: true, priority: 100 }
+  return { id: 'p' + Date.now().toString(36) + Math.floor(Math.random() * 46656).toString(36), targetId: '', sourceId: '', axesMode: 'source', rotX: 0, rotY: 0, rotZ: 0, overlap: true, enabled: true, priority: 100, rotWeight: IK_DEFAULT_ROT_WEIGHT }
 }
 function persistIkPairs() {
   ikLastSignature = null // any pair edit re-solves
+  if (ikPairsContainerEl) {
+    ikPairsContainerEl.querySelectorAll('.ik-pair-card').forEach((card) => {
+      const i = ikPairs.findIndex((q) => q.id === card.dataset.pairId)
+      const t = card.querySelector('.ik-pair-title')
+      if (i >= 0 && t) t.textContent = ikPairTitleText(ikPairs[i], i)
+    })
+  }
   const json = JSON.stringify(ikPairs)
   lastSeenIkPairsJson = json
   if (ikPairsInputEl) ikPairsInputEl.value = json
@@ -3965,27 +3986,42 @@ function renderIkPairsUI() {
     return
   }
   ikPairs.forEach((pair, i) => {
-    const card = document.createElement('div'); card.className = 'ik-pair-card'
+    // Every pair is a TOGGLEABLE GROUP (2026-10-11, direct request: "Make IK Pair setting Ui such that each pair is a toggleable group"): a title bar that collapses / expands the
+    // pair and carries its On/Off checkbox (off hides the whole group's content, settings kept, the solver ignores the pair), with the pair's chosen nodes summarised in the title.
+    const card = document.createElement('div'); card.className = 'ik-pair-card ik-pair-group'
     // Preset "Use" mismatch highlight (2026-10-11) -- see useIkPairsPreset()'s own comment.
     if (ikPairPresetMismatches.has(pair.id)) card.classList.add('ik-pair-preset-mismatch')
-    const head = document.createElement('div'); head.className = 'ik-pair-head'
+    if (pair.enabled === false) card.classList.add('ik-pair-off')
+    const collapsed = ikPairCollapsed.has(pair.id)
+    if (collapsed) card.classList.add('ik-pair-collapsed')
     card.dataset.pairId = pair.id
-    const title = document.createElement('span'); title.className = 'dev-label ik-pair-title'; title.textContent = 'IK Pair ' + (i + 1)
-    // Pair On (HANDO): off = the solver ignores the pair, its other settings are kept.
-    const onWrap = document.createElement('label'); onWrap.className = 'dev-label'; onWrap.style.cssText = 'margin-left:8px; cursor:pointer;'
-    const onCb = document.createElement('input'); onCb.type = 'checkbox'; onCb.checked = pair.enabled !== false
-    onCb.addEventListener('change', () => { pair.enabled = onCb.checked; ikLastSignature = null; persistIkPairs() })
-    onWrap.append(onCb, document.createTextNode(' Pair On'))
-    const delWrap = document.createElement('div'); delWrap.className = 'dev-buttons'
-    const del = document.createElement('button'); del.type = 'button'; del.textContent = 'DELETE PAIR'
-    del.addEventListener('click', () => {
+    const head = document.createElement('div'); head.className = 'ik-pair-head'
+    const arrow = document.createElement('span'); arrow.className = 'ik-pair-arrow'; arrow.textContent = collapsed ? '▶' : '▼'
+    const title = document.createElement('span'); title.className = 'dev-label ik-pair-title'
+    title.textContent = ikPairTitleText(pair, i)
+    head.addEventListener('click', () => {
+      if (ikPairCollapsed.has(pair.id)) ikPairCollapsed.delete(pair.id); else ikPairCollapsed.add(pair.id)
+      card.classList.toggle('ik-pair-collapsed', ikPairCollapsed.has(pair.id))
+      arrow.textContent = ikPairCollapsed.has(pair.id) ? '▶' : '▼'
+    })
+    // Pair On (HANDO): off = the solver ignores the pair, its other settings are kept; the checkbox lives in the title bar like every toggleable group's.
+    const onCb = document.createElement('input'); onCb.type = 'checkbox'; onCb.className = 'dev-group-toggle-checkbox'; onCb.checked = pair.enabled !== false; onCb.title = 'Pair On / Off'
+    onCb.addEventListener('click', (e) => e.stopPropagation())
+    onCb.addEventListener('change', () => { pair.enabled = onCb.checked; card.classList.toggle('ik-pair-off', !onCb.checked); ikLastSignature = null; persistIkPairs() })
+    const del = document.createElement('button'); del.type = 'button'; del.className = 'ik-pair-delete'; del.textContent = 'DELETE'; del.title = 'Delete this pair'
+    del.addEventListener('click', (e) => {
+      e.stopPropagation()
       if (ikPicking && ikPicking.pairId === pair.id) cancelIkPick()
+      ikPairCollapsed.delete(pair.id)
       ikPairs = ikPairs.filter((p) => p.id !== pair.id)
       persistIkPairs(); renderIkPairsUI()
     })
-    delWrap.appendChild(del); head.append(title, onWrap, delWrap); card.appendChild(head)
+    head.append(arrow, title, onCb, del)
+    card.appendChild(head)
+    const body = document.createElement('div'); body.className = 'ik-pair-group-content'
+    card.appendChild(body)
     // Pair Priority (HANDO): 100 = full weight, 0 = this pair adds no pull on the solve; scales the pair's errors in the solver.
-    card.appendChild(ikMakeSliderRow('Pair Priority (%)', 0, 100, pair.priority === undefined ? 100 : pair.priority, (v) => { pair.priority = v; persistIkPairs() }))
+    body.appendChild(ikMakeSliderRow('Pair Priority (%)', 0, 100, pair.priority === undefined ? 100 : pair.priority, (v) => { pair.priority = v; persistIkPairs() }))
     const pickRow = (role, nodeId) => {
       const r = document.createElement('div'); r.className = 'dev-row ik-pair-row'
       const l = document.createElement('span'); l.className = 'dev-label'; l.textContent = role === 'target' ? 'Target (follows)' : 'Source (leads)'
@@ -4017,8 +4053,8 @@ function renderIkPairsUI() {
       bw.appendChild(b); r.append(l, val, bw)
       return r
     }
-    card.appendChild(pickRow('target', pair.targetId))
-    card.appendChild(pickRow('source', pair.sourceId))
+    body.appendChild(pickRow('target', pair.targetId))
+    body.appendChild(pickRow('source', pair.sourceId))
     // Axes mode
     const axRow = document.createElement('div'); axRow.className = 'dev-row ik-pair-row'
     const axL = document.createElement('span'); axL.className = 'dev-label'; axL.textContent = 'Axes'
@@ -4026,15 +4062,17 @@ function renderIkPairsUI() {
     ;[['source', 'Source Node Axes (Match)'], ['world', 'World Axes']].forEach(([v, t]) => { const o = document.createElement('option'); o.value = v; o.textContent = t; sel.appendChild(o) })
     sel.value = pair.axesMode
     sel.addEventListener('change', () => { pair.axesMode = sel.value; persistIkPairs() })
-    axRow.append(axL, sel); card.appendChild(axRow)
-    card.appendChild(ikMakeSliderRow('Rotate X (Deg)', -180, 180, pair.rotX, (v) => { pair.rotX = v; persistIkPairs() }))
-    card.appendChild(ikMakeSliderRow('Rotate Y (Deg)', -180, 180, pair.rotY, (v) => { pair.rotY = v; persistIkPairs() }))
-    card.appendChild(ikMakeSliderRow('Rotate Z (Deg)', -180, 180, pair.rotZ, (v) => { pair.rotZ = v; persistIkPairs() }))
+    axRow.append(axL, sel); body.appendChild(axRow)
+    // This pair's own Rotation Weight (x): how many position units of error one radian (~57 deg) of orientation error is worth. 0 = this pair matches position only.
+    body.appendChild(ikMakeSliderRow('Rotation Weight (x)', 0, 20, ikPairRotWeight(pair), (v) => { pair.rotWeight = v; ikLastSignature = null; persistIkPairs() }))
+    body.appendChild(ikMakeSliderRow('Rotate X (Deg)', -180, 180, pair.rotX, (v) => { pair.rotX = v; persistIkPairs() }))
+    body.appendChild(ikMakeSliderRow('Rotate Y (Deg)', -180, 180, pair.rotY, (v) => { pair.rotY = v; persistIkPairs() }))
+    body.appendChild(ikMakeSliderRow('Rotate Z (Deg)', -180, 180, pair.rotZ, (v) => { pair.rotZ = v; persistIkPairs() }))
     const ovRow = document.createElement('div'); ovRow.className = 'dev-row ik-pair-row'
     const ovL = document.createElement('span'); ovL.className = 'dev-label'; ovL.textContent = 'Displace Target To Overlap Source'
     const ov = document.createElement('input'); ov.type = 'checkbox'; ov.checked = !!pair.overlap
     ov.addEventListener('change', () => { pair.overlap = ov.checked; persistIkPairs() })
-    ovRow.append(ovL, ov); card.appendChild(ovRow)
+    ovRow.append(ovL, ov); body.appendChild(ovRow)
     ikPairsContainerEl.appendChild(card)
   })
   updateIkPairOverlapHighlight()
@@ -4119,9 +4157,7 @@ function renderIkPosingGroup(handModelContent) {
   addRow(content, { id: 'checkboxIkPosingEnabled', label: 'IK Posing On/Off', type: 'checkbox' })
   document.getElementById('checkboxIkPosingEnabled').checked = cfg.ikPosingEnabled
   wireCheckbox('checkboxIkPosingEnabled', (v) => setIkPosingEnabled(v))
-  // IK Rotation Weight (2026-10-09): 0 = each pair only matches POSITION; higher = the hand pad is also turned to match the source node's orientation.
-  addRow(content, { id: 'sliderIkRotationWeight', label: 'IK Rotation Weight (x)', type: 'slider', min: 0, max: 20, step: 0.5, value: cfg.ikRotationWeight })
-  wireSlider('sliderIkRotationWeight', (v) => { cfg.ikRotationWeight = v; ikLastSignature = null; requestRender() })
+  // (The single global IK Rotation Weight slider was replaced by a Rotation Weight slider inside every pair, 2026-10-11.)
   ikStatusEl = document.createElement('div')
   ikStatusEl.style.cssText = 'font-size:11px; opacity:0.85; margin:2px 0 6px;'
   content.appendChild(ikStatusEl)
@@ -11629,6 +11665,8 @@ async function loadRemoteSettingsOnStartup() {
     if (data.settings.listPicker_tweenSequences) loadListPickerItemsFromRemoteData(data.settings.listPicker_tweenSequences, SAVED_TWEEN_SEQUENCES)
     migrateIkInfluenceLegacyControls(data.settings.controls) // 2026-10-09: old single Offset / Rotation / Fingers influence values seed the split rows
     if (typeof window.ensureDevPanelBuilt === 'function') window.ensureDevPanelBuilt()
+    const legacyRotW = data.settings.controls && data.settings.controls.sliderIkRotationWeight
+    if (legacyRotW !== undefined && legacyRotW !== null && Number.isFinite(Number(legacyRotW))) cfg.ikRotationWeight = Number(legacyRotW) // the retired global IK Rotation Weight: pairs without their own value keep using it
     phoneModelRestoreInProgress = true
     try { apply(data.settings) } finally { setTimeout(() => { phoneModelRestoreInProgress = false }, 1500) }
     try { groupIkInfluenceRows() } catch (err) { /* IK Influence rows not built yet */ }

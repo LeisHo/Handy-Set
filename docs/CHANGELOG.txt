@@ -8720,6 +8720,20 @@ edit on XOut, back to XIn: XIn's own pairs return exactly (rotX 5, not the 90 se
 memory; startup restore swaps nothing; 88 of 92 XIn nodes have a counterpart on XOut. Not browser-verified (project rule). New synced field hiddenIkPairMemory is empty until the first swap.
 
 --------------------------------------------------------------------------------
+2026-10-11 -- IK pairs: each pair is a toggleable group, with its own Rotation Weight
+
+Requests: "Make IK Pair setting Ui such that each pair is a toggleable group. Provide each pair with its own rotational weight slider as opposed to a single global slider."
+1. Pair UI (main.js renderIkPairsUI(), style.css ?v=14): every pair is now a group with a clickable title bar -- arrow, "IK Pair N . <target node> <- <source node>" (kept current when a node is
+   re-picked), the pair's On/Off checkbox, and DELETE. Clicking the bar collapses / expands the pair; unchecking On hides the whole group's content (the settings are kept and the solver ignores the
+   pair, as before). The pair's rows (Priority, Target, Source, Axes, Rotation Weight, Rotate X/Y/Z, Displace To Overlap) sit in the group body. Collapsed state is runtime-only UI state. The pair groups
+   deliberately do NOT use the dev panel's own .dev-section machinery (drag handles, cascade checkboxes, section-order capture) -- only matching look and the same title-bar toggle idea.
+2. Per-pair Rotation Weight (x): pair.rotWeight, 0-20 slider (type a bigger number to widen), used by the solver for THAT pair only (ikPairRotWeight() -> p.rotWeight in solveIkHandPose(); the
+   solve signature now includes each pair's weight). The single global IK Rotation Weight slider was removed. Migration: a pair saved before this has no rotWeight and keeps the old global's value --
+   cfg.ikRotationWeight, restored at boot from the synced controls.sliderIkRotationWeight (0 on the user's saved state), so nothing changes until a pair's own slider is touched; new pairs start at 8.
+   Pair presets carry rotWeight (an older preset without it falls back the same way). Node test (ik-weight-test.mjs): legacy fallback, own value, explicit 0 respected, non-numbers fall back, default 8.
+Not browser-verified (project rule); the group UI itself was syntax-checked only.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
