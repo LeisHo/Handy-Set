@@ -8661,6 +8661,28 @@ definition, traced the scissor-rect/Y-flip coordinate math by hand, checked the 
 See CLAUDE.md's matching 2026-10-11 entry for the full architecture account.
 
 --------------------------------------------------------------------------------
+2026-10-11 -- Phone Model Selector settings fixes + IK Pair Presets + 2 new phone models + updated hand model
+
+Phone Model Item Selector: fixed overwrite-import not retaining a model's own saved settings (importPhoneModelFile() always loaded via a
+temporary blob: URL and never went through selectPhoneModelFile(), the only place that called capture/applyPhoneModelPerModelSettings() --
+and that function explicitly refuses a blob: URL). Now calls both directly, keyed by the file's real destination path, applied immediately
+rather than waiting for the GitHub upload to finish. Added Copy Settings / Paste Settings buttons (a manual, session-only clipboard for
+carrying one model's tuning onto a different model) and multi-file import (fileInput.multiple + a sequential await loop, not concurrent, so
+each file's own overwrite confirm/upload doesn't race another's).
+
+IK Posing: new "Saved IK Pairs" preset selector (same buttons as every other list-picker) saving/restoring the whole ikPairs array as one
+snapshot. Use validates every pair's target/source against the currently loaded models' real IK nodes -- a mismatched field resets to empty
+and that pair's card gets a new red border/background highlight (ik-pair-preset-mismatch), distinct from the existing title-only overlap
+highlight since a pair can show both. Clears automatically the moment the pair is fixed by hand.
+
+Loaded in 2 new phone model variants (Iphone17MaxPro-XIn.glb, Iphone17MaxPro-XOut.glb, added to manifest.json) and the user's updated
+HandiBonesB-IK.glb (same filename, no manifest change needed). Per this project's own raw-vs-processed convention, Blender source files and
+the raw .fbx intermediate were left untracked.
+
+Not live-verified (per this project's own standing rule) -- confirmed via node --check and cross-referencing every new identifier against
+its real definition. See CLAUDE.md's matching 2026-10-11 entries for the full account.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

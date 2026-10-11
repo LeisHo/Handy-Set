@@ -1276,6 +1276,11 @@ html, body {
 .ik-num { width: 48px; flex-shrink: 0; }
 .ik-node-select { flex: 1; min-width: 0; }
 .ik-pair-card.ik-pair-overlap .ik-pair-title { color: rgb(255, 77, 77); }
+/* IK Pair Preset "Use" mismatch (2026-10-11) -- a preset referenced a node name
+   the currently-loaded model doesn't have; that pair's target/source was reset to
+   empty. Highlights the WHOLE card's own border/background (distinct from the
+   title-only overlap highlight above, since a pair can show both at once). */
+.ik-pair-card.ik-pair-preset-mismatch { border-color: rgb(255, 77, 77); background: rgba(255, 77, 77, 0.1); }
 
 /* Preview Camera floating panels (2026-10-11, direct request). Resizable
    via native CSS `resize:both` (the browser draws its own grip in the

@@ -730,6 +730,7 @@ const SAVED_LIGHTING = [
 const SAVED_TWEEN_SEQUENCES = []
 const SAVED_TOON = []
 const SAVED_IK_INFLUENCE = [] // IK Influence presets (HANDO's 'Saved IK Influence'): the All slider, every influence slider and every Min / Max range
+const SAVED_IK_PAIRS = [] // IK Pair presets (2026-10-11, direct request) -- a saved snapshot of the WHOLE ikPairs array (every pair's target/source node id, axes mode, rotation, overlap, priority, enabled)
 const SAVED_PHONE_POSES = [] // Phone Model's own Offset X/Y/Z + manual Rotation X/Y/Z presets (direct request 2026-10-04)
 const DEFAULT_POSE_NAME = 'Fist'
 const DEFAULT_CAMERA_NAME = 'FRONTOS'
@@ -3295,6 +3296,17 @@ function updateIkViz() {
 // =======================================================================
 let ikPairs = [] // [{id, targetId, sourceId, axesMode:'source'|'world', rotX, rotY, rotZ, overlap}]
 let ikPicking = null // {pairId, role:'target'|'source'} while waiting for a click on a node
+// IK Pair Preset "Use" validation (2026-10-11, direct spec): "If I click
+// Use when i select an IK pair, and one or more of the models dont have
+// an IK node of the right name. Default the entry as empty, but
+// highlight the ik pair selection area in Red." Tracks pair ids (not a
+// field ON the pair object itself) specifically so it never gets
+// serialized into persistIkPairs()'s own JSON.stringify(ikPairs) --
+// this is a transient UI hint about THIS restore, not saved state.
+// Cleared per-pair the moment that pair's own target/source is fixed by
+// hand (its dropdown's 'change' handler / the pick-complete handler,
+// both below).
+let ikPairPresetMismatches = new Set()
 let ikPairsContainerEl = null
 let ikPairsInputEl = null
 let ikPickStatusEl = null
@@ -3710,6 +3722,36 @@ function persistIkPairs() {
   updateIkPairOverlapHighlight()
   requestRender()
 }
+// IK Pair Presets (2026-10-11, direct request) -- a named snapshot of
+// the WHOLE ikPairs array, via the standard list-picker (same
+// captureCurrent/onUse contract as Saved IK Influence directly above).
+function captureIkPairsPreset() {
+  return { pairs: ikPairs.map((p) => Object.assign({}, p)) }
+}
+// Validates every pair's target/source against whatever hand/phone
+// model is ACTUALLY loaded right now -- a preset saved against one rig
+// can reference IK node ids that don't exist on a different rig (fewer
+// IK nodes, a renamed node, Hand2.glb's own zero-IK-node case, etc.).
+// Per the direct spec: default that one entry to empty rather than
+// silently keeping a dangling id solveIkHandPose() would just skip
+// anyway, and flag the pair so renderIkPairsUI() highlights it.
+function useIkPairsPreset(item) {
+  const incoming = Array.isArray(item.pairs) ? item.pairs : []
+  const mismatches = new Set()
+  ikPairs = incoming.map((p) => {
+    const pair = newIkPair() // fresh, guaranteed-unique id -- the preset's own stored id is never reused
+    Object.assign(pair, p, { id: pair.id })
+    let mismatched = false
+    if (pair.targetId && !ikNodeById.has(pair.targetId)) { pair.targetId = ''; mismatched = true }
+    if (pair.sourceId && !ikNodeById.has(pair.sourceId)) { pair.sourceId = ''; mismatched = true }
+    if (mismatched) mismatches.add(pair.id)
+    return pair
+  })
+  ikPairPresetMismatches = mismatches
+  if (ikPicking) cancelIkPick()
+  persistIkPairs()
+  renderIkPairsUI()
+}
 function ikNodeLabelById(id) {
   if (!id) return '— not set —'
   const n = ikNodeById.get(id)
@@ -3760,6 +3802,7 @@ function attachIkPickListeners() {
     const node = findIkNodeNearPointer(e.clientX, e.clientY, ikPicking.role === 'target' ? 'hand' : null)
     if (!node) { setIkPickStatus('No ' + (ikPicking.role === 'target' ? 'hand ' : '') + 'IK node near that spot — click closer to a node, or press Pick again to cancel.'); return }
     if (ikPicking.role === 'target') pair.targetId = node.id; else pair.sourceId = node.id
+    ikPairPresetMismatches.delete(pair.id) // manually fixed -- clear any stale preset-mismatch highlight
     ikPicking = null
     syncIkVizVisibility()
     setIkPickStatus('Set: ' + node.label)
@@ -3796,6 +3839,8 @@ function renderIkPairsUI() {
   }
   ikPairs.forEach((pair, i) => {
     const card = document.createElement('div'); card.className = 'ik-pair-card'
+    // Preset "Use" mismatch highlight (2026-10-11) -- see useIkPairsPreset()'s own comment.
+    if (ikPairPresetMismatches.has(pair.id)) card.classList.add('ik-pair-preset-mismatch')
     const head = document.createElement('div'); head.className = 'ik-pair-head'
     card.dataset.pairId = pair.id
     const title = document.createElement('span'); title.className = 'dev-label ik-pair-title'; title.textContent = 'IK Pair ' + (i + 1)
@@ -3832,6 +3877,7 @@ function renderIkPairsUI() {
       val.value = nodeId || ''
       val.addEventListener('change', () => {
         if (role === 'target') pair.targetId = val.value; else pair.sourceId = val.value
+        ikPairPresetMismatches.delete(pair.id) // manually fixed -- clear any stale preset-mismatch highlight
         persistIkPairs()
       })
       const bw = document.createElement('div'); bw.className = 'dev-buttons'
@@ -3985,6 +4031,10 @@ function renderIkPosingGroup(handModelContent) {
       if (cfg.ikPosingEnabled) requestRender()
     })
   }, 250)
+  // IK Pair Presets (2026-10-11, direct request) -- "same buttons" as
+  // every other list-picker in this file: Save/Overwrite/Use/Rename/
+  // Delete/+Group/Export/Import, via the standard generic engine.
+  renderPresetPicker(content, 'Saved IK Pairs', SAVED_IK_PAIRS, null, useIkPairsPreset, captureIkPairsPreset, { exportable: true, importable: true, storageKey: 'ikPairs' })
   // Hidden, Sync-participating JSON of the pair list -- same reason as every
   // other hand-built widget in this file (a plain DOM list is invisible to
   // devPanel.js's generic capture/restore otherwise).
@@ -9551,6 +9601,48 @@ function persistPhoneModelPerModelSettings() {
   if (el) el.value = JSON.stringify(phoneModelPerModelSettings)
 }
 
+// Copy Settings / Paste Settings (2026-10-11, direct request) -- lets
+// the CURRENT phone model's tuning be carried over to a DIFFERENT model
+// by hand (e.g. "I like Model A's rotation/displace tuning, apply the
+// same thing to Model B"), separate from capturePhoneModelPerModelSettings()/
+// applyPhoneModelPerModelSettings() above (which fire automatically on
+// every model SWITCH, keyed by that model's own saved snapshot -- these
+// 2 are a manual, cross-model copy instead). Session-only (an in-memory
+// variable, not Synced) -- it's a clipboard for the duration of this
+// page load, not a saved preset; "Saved Preview Camera"-style named
+// presets weren't asked for here.
+let phoneModelSettingsClipboard = null
+function capturePhoneModelSettingsSnapshot() {
+  const snapshot = {}
+  PHONE_MODEL_PER_MODEL_CONTROL_IDS.forEach((id) => {
+    const el = document.getElementById(id)
+    if (!el) return
+    snapshot[id] = el.type === 'checkbox' ? el.checked : el.value
+  })
+  return snapshot
+}
+function applyPhoneModelSettingsSnapshotToCurrentModel(snapshot) {
+  if (!snapshot) return
+  PHONE_MODEL_PER_MODEL_CONTROL_IDS.forEach((id) => {
+    const el = document.getElementById(id)
+    if (!el || !(id in snapshot)) return
+    setControlValueFitted(el, snapshot[id])
+    // Same dual-dispatch as applyPhoneModelPerModelSettings() above -- wireSlider()/wireTextInput() listen
+    // for 'input', wireCheckbox() for 'change'; see that function's own comment for the bug this avoids.
+    el.dispatchEvent(new Event('input', { bubbles: true }))
+    el.dispatchEvent(new Event('change', { bubbles: true }))
+  })
+  // Also updates this model's own saved per-model snapshot, not just the
+  // live sliders -- otherwise switching away and back would silently
+  // discard the pasted values the next time applyPhoneModelPerModelSettings()
+  // runs for this file.
+  if (cfg.phoneModelFile && !/^blob:/.test(cfg.phoneModelFile)) {
+    phoneModelPerModelSettings[cfg.phoneModelFile] = Object.assign({}, snapshot)
+    persistPhoneModelPerModelSettings()
+  }
+  requestRender()
+}
+
 // Hand Model Item Selector -- visually mirrors renderPhoneModelItemSelector()
 // below (same .dp-list-picker-row-container/.dp-list-picker-item CSS, same
 // clickable-row pattern), deliberately narrower: no per-model settings
@@ -9808,6 +9900,12 @@ function renderPhoneModelItemSelector(parentContent) {
   if (!parent) return // manifest resolved before the dev panel was ever built -- the next real build reads PHONE_MODEL_OPTIONS fresh anyway
   phoneModelItemSelectorParent = parent
   if (phoneModelItemSelectorContainer) phoneModelItemSelectorContainer.remove()
+  // Same lookup-by-id pattern as importPhoneModelFile()'s own local
+  // setStatus() (a different function's own closure, not reachable from
+  // here) -- safe to call from Copy/Paste Settings below since by the
+  // time either button can actually be clicked, #phoneModelImportStatus
+  // (built further down in this same function) already exists in the DOM.
+  const setStatus = (msg) => { const el = document.getElementById('phoneModelImportStatus'); if (el) el.textContent = msg }
 
   const container = document.createElement('div')
   container.className = 'dp-list-picker-row-container'
@@ -9925,12 +10023,19 @@ function renderPhoneModelItemSelector(parentContent) {
   const fileInput = document.createElement('input')
   fileInput.type = 'file'
   fileInput.accept = '.glb'
+  fileInput.multiple = true // 2026-10-11, direct request: "allow me to import multiple models at once"
   fileInput.style.display = 'none'
   importBtn.addEventListener('click', () => fileInput.click())
-  fileInput.addEventListener('change', () => {
-    const file = fileInput.files && fileInput.files[0]
-    fileInput.value = '' // clears the input so importing the SAME filename again later still fires a 'change' event
-    if (file) importPhoneModelFile(file)
+  fileInput.addEventListener('change', async () => {
+    const files = fileInput.files ? Array.from(fileInput.files) : []
+    fileInput.value = '' // clears the input so importing the SAME filename(s) again later still fires a 'change' event
+    // Sequential, not Promise.all -- each import already shows its own
+    // confirm() overwrite prompt and status text; running them one at a
+    // time keeps those prompts from overlapping/racing, and keeps the
+    // per-file GitHub upload requests from all hitting the endpoint at
+    // once (same discipline as every other sequential-by-design loop in
+    // this file, e.g. exportTweenSequence()'s own frame-export loop).
+    for (const file of files) { await importPhoneModelFile(file) }
   })
   btnRow.appendChild(importBtn)
   btnRow.appendChild(fileInput)
@@ -9943,6 +10048,29 @@ function renderPhoneModelItemSelector(parentContent) {
     if (await saveFieldAsDefault('defaultPhoneModel', () => file, phoneDefaultBtn)) { phoneModelDefaultFile = file; renderPhoneModelItemSelector() }
   })
   btnRow.appendChild(phoneDefaultBtn)
+  // Copy Settings / Paste Settings (2026-10-11, direct request) -- see
+  // capturePhoneModelSettingsSnapshot()/applyPhoneModelSettingsSnapshotToCurrentModel()'s
+  // own comment for the full reasoning (a manual, session-only clipboard
+  // for carrying one model's tuning over to a different model).
+  const copySettingsBtn = document.createElement('button')
+  copySettingsBtn.type = 'button'
+  copySettingsBtn.textContent = 'Copy Settings'
+  copySettingsBtn.addEventListener('click', () => {
+    phoneModelSettingsClipboard = capturePhoneModelSettingsSnapshot()
+    setStatus('Copied this model\'s settings.')
+    setTimeout(() => setStatus(''), 2500)
+  })
+  btnRow.appendChild(copySettingsBtn)
+  const pasteSettingsBtn = document.createElement('button')
+  pasteSettingsBtn.type = 'button'
+  pasteSettingsBtn.textContent = 'Paste Settings'
+  pasteSettingsBtn.addEventListener('click', () => {
+    if (!phoneModelSettingsClipboard) { setStatus('Nothing copied yet -- use Copy Settings on a model first.'); setTimeout(() => setStatus(''), 2500); return }
+    applyPhoneModelSettingsSnapshotToCurrentModel(phoneModelSettingsClipboard)
+    setStatus('Pasted settings onto this model.')
+    setTimeout(() => setStatus(''), 2500)
+  })
+  btnRow.appendChild(pasteSettingsBtn)
   container.appendChild(btnRow)
 
   const statusEl = document.createElement('div')
@@ -9975,6 +10103,23 @@ async function importPhoneModelFile(file) {
     if (!overwrite) { setStatus('Import cancelled.'); return }
   }
 
+  // Retain per-model settings through an import/overwrite (2026-10-11,
+  // direct request: "if i overwrite a model, retain the settings
+  // throughout"). Root cause this fixes: selectPhoneModelFile() is the
+  // ONLY place that normally calls capturePhoneModelPerModelSettings()/
+  // applyPhoneModelPerModelSettings(), but it explicitly refuses a
+  // `blob:` URL (`/^blob:/.test(file)`) -- and this import flow always
+  // goes through a blob: URL first, by necessity (the real GitHub path
+  // doesn't exist yet until the upload below finishes). That meant
+  // neither function ever ran during an import: the outgoing model's
+  // live tuning was never captured, and the incoming model's own
+  // previously-saved settings (if this is an OVERWRITE of a file that
+  // already had some) were never reapplied -- the sliders just kept
+  // showing whatever was on screen before, unrelated to this file.
+  // Fixed by calling both directly, keyed by realPath (the file's real,
+  // final destination path, already known here even before the upload
+  // completes) rather than routing through selectPhoneModelFile() at all.
+  capturePhoneModelPerModelSettings(cfg.phoneModelFile)
   const blobUrl = URL.createObjectURL(file)
   if (existing) existing.value = blobUrl
   else PHONE_MODEL_OPTIONS = PHONE_MODEL_OPTIONS.concat([{ value: blobUrl, text: file.name.replace(/\.glb$/i, '') }])
@@ -9983,6 +10128,12 @@ async function importPhoneModelFile(file) {
   const enabledCb = document.getElementById('checkboxPhoneModelEnabled')
   if (enabledCb) enabledCb.checked = true
   loadPhoneModel(blobUrl)
+  // Applied against realPath, not blobUrl -- an overwrite's whole point
+  // is "same logical model, new geometry," so its previously-saved
+  // settings (stored under realPath in phoneModelPerModelSettings) are
+  // exactly what should come back. A brand-new model (no prior entry)
+  // no-ops here, same as a normal model switch.
+  applyPhoneModelPerModelSettings(realPath)
   renderPhoneModelItemSelector()
   setStatus('Loaded locally — uploading to GitHub for permanent storage…')
 
