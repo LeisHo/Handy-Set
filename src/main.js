@@ -3560,7 +3560,7 @@ function getActiveIkPairs() {
       displace: !!pair.overlap,
       priority: Math.min(1, Math.max(0, (pair.priority === undefined ? 100 : Number(pair.priority) || 0) / 100)), // Pair Priority (HANDO): scales this pair's errors in the solver
       world: pair.axesMode === 'world',
-      rotWeight: ikPairRotWeight(pair),
+      rotWeights: ikPairRotWeights(pair),
       qOff: new THREE.Quaternion().setFromEuler(new THREE.Euler(rad(pair.rotX || 0), rad(pair.rotY || 0), rad(pair.rotZ || 0), 'XYZ'))
     })
   })
@@ -3569,7 +3569,7 @@ function getActiveIkPairs() {
 function ikSignature(pairs) {
   return IK_PAIR_MAX + '#' + IK_INFLUENCE_ROW_KEYS.map((k) => cfg[k]).join(',') + '#' + pairs.map((p) => {
     p.src.object3d.updateWorldMatrix(true, false)
-    return [p.i, p.tgt.id, p.src.id, p.displace, p.priority, p.world, p.rotWeight, p.qOff.x.toFixed(4), p.qOff.y.toFixed(4), p.qOff.z.toFixed(4),
+    return [p.i, p.tgt.id, p.src.id, p.displace, p.priority, p.world, p.rotWeights.join('/'), p.qOff.x.toFixed(4), p.qOff.y.toFixed(4), p.qOff.z.toFixed(4),
       p.src.object3d.matrixWorld.elements.map((e) => Math.round(e * 1000)).join(',')].join(':')
   }).join('|')
 }
@@ -3588,6 +3588,7 @@ function ikSignature(pairs) {
 const IK_PRIORITY_RHO = 1.0
 const IK_STAGE1_REG_SCALE = 0.1
 const IK_STAGE2_PAIR_WEIGHT = 100
+const _iksV = new THREE.Vector3(), _iksDesInv = new THREE.Quaternion()
 const IK_COLD_START_ITERS = 40 // stage-1 iteration cap when every solve starts from the base pose (see "START POINT" in solveIkHandPose)
 const IK_PAIR_TOL = 0.05
 function solveIkHandPose(pairs) {
@@ -3636,8 +3637,10 @@ function solveIkHandPose(pairs) {
       const ang = 2 * Math.acos(Math.min(1, qErr.w))
       const s = Math.sqrt(1 - qErr.w * qErr.w)
       const k = s < 1e-6 ? 2 : ang / s
-      const rotW = p.rotWeight // this pair's own Rotation Weight
-      r.push(qErr.x * k * rotW, qErr.y * k * rotW, qErr.z * k * rotW)
+      // The error rotation vector (axis * angle, world frame) is expressed along the DESIRED orientation's own X / Y / Z axes (the source node's, or the offset-rotated world axes) and each
+      // component gets this pair's weight for that axis. With all three equal this is the same cost as before (a rotation of the vector does not change its length).
+      _iksV.set(qErr.x * k, qErr.y * k, qErr.z * k).applyQuaternion(_iksDesInv.copy(qDes[idx]).invert())
+      r.push(_iksV.x * p.rotWeights[0], _iksV.y * p.rotWeights[1], _iksV.z * p.rotWeights[2])
       // Pair Priority: this pair's share of the total error (the REPORTED errors in the status stay unweighted).
       if (p.priority !== 1) for (let j = first; j < r.length; j++) r[j] *= p.priority
     })
@@ -3779,12 +3782,21 @@ function ikPairRotWeight(pair) {
   const w = pair ? pair.rotWeight : undefined
   return typeof w === 'number' && Number.isFinite(w) ? w : cfg.ikRotationWeight
 }
+// PER-AXIS (2026-10-11, direct request: "make it 3 sliders for each axis, so I can set the weight for a single axis"): the pair's orientation error is split along the pair's OWN axes -- the
+// axes of the orientation it is trying to reach (the source node's X / Y / Z in Source Node Axes mode, the offset-rotated world axes in World mode, i.e. the same axes the Rotate X / Y / Z
+// sliders turn about) -- and each part has its own weight. rotWeightX / Y / Z; a pair that only has the single rotWeight (saved a moment earlier) uses it for all three, and a pair with neither falls
+// back to the retired global value, so nothing changes until a slider is touched.
+function ikPairRotWeights(pair) {
+  const one = ikPairRotWeight(pair)
+  const pick = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : one)
+  return [pick(pair && pair.rotWeightX), pick(pair && pair.rotWeightY), pick(pair && pair.rotWeightZ)]
+}
 function ikPairTitleText(pair, i) {
   const tn = ikNodeFor(pair.targetId), sn = ikNodeFor(pair.sourceId)
   return 'IK Pair ' + (i + 1) + (tn || sn ? ' · ' + (tn ? tn.name : '—') + ' ← ' + (sn ? sn.name : '—') : '')
 }
 function newIkPair() {
-  return { id: 'p' + Date.now().toString(36) + Math.floor(Math.random() * 46656).toString(36), targetId: '', sourceId: '', axesMode: 'source', rotX: 0, rotY: 0, rotZ: 0, overlap: true, enabled: true, priority: 100, rotWeight: IK_DEFAULT_ROT_WEIGHT }
+  return { id: 'p' + Date.now().toString(36) + Math.floor(Math.random() * 46656).toString(36), targetId: '', sourceId: '', axesMode: 'source', rotX: 0, rotY: 0, rotZ: 0, overlap: true, enabled: true, priority: 100, rotWeightX: IK_DEFAULT_ROT_WEIGHT, rotWeightY: IK_DEFAULT_ROT_WEIGHT, rotWeightZ: IK_DEFAULT_ROT_WEIGHT }
 }
 function persistIkPairs() {
   ikLastSignature = null // any pair edit re-solves
@@ -4072,7 +4084,18 @@ function renderIkPairsUI() {
     sel.addEventListener('change', () => { pair.axesMode = sel.value; persistIkPairs() })
     axRow.append(axL, sel); body.appendChild(axRow)
     // This pair's own Rotation Weight (x): how many position units of error one radian (~57 deg) of orientation error is worth. 0 = this pair matches position only.
-    body.appendChild(ikMakeSliderRow('Rotation Weight (x)', 0, 20, ikPairRotWeight(pair), (v) => { pair.rotWeight = v; ikLastSignature = null; persistIkPairs() }))
+    // This pair's Rotation Weight (x), per axis: how many position units of error one radian (~57 deg) of orientation error about THAT axis of the pair's orientation is worth. 0 = ignore that axis.
+    const rw = ikPairRotWeights(pair)
+    ;[['X', 0], ['Y', 1], ['Z', 2]].forEach(([ax, ai]) => {
+      body.appendChild(ikMakeSliderRow('Rotation Weight ' + ax + ' (x)', 0, 20, rw[ai], (v) => {
+        // setting any one axis materialises all three (so the other two keep the value they were showing), then drops the legacy single weight
+        const cur = ikPairRotWeights(pair)
+        pair.rotWeightX = cur[0]; pair.rotWeightY = cur[1]; pair.rotWeightZ = cur[2]
+        pair['rotWeight' + ax] = v
+        delete pair.rotWeight
+        ikLastSignature = null; persistIkPairs()
+      }))
+    })
     body.appendChild(ikMakeSliderRow('Rotate X (Deg)', -180, 180, pair.rotX, (v) => { pair.rotX = v; persistIkPairs() }))
     body.appendChild(ikMakeSliderRow('Rotate Y (Deg)', -180, 180, pair.rotY, (v) => { pair.rotY = v; persistIkPairs() }))
     body.appendChild(ikMakeSliderRow('Rotate Z (Deg)', -180, 180, pair.rotZ, (v) => { pair.rotZ = v; persistIkPairs() }))
