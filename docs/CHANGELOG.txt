@@ -8683,6 +8683,26 @@ Not live-verified (per this project's own standing rule) -- confirmed via node -
 its real definition. See CLAUDE.md's matching 2026-10-11 entries for the full account.
 
 --------------------------------------------------------------------------------
+2026-10-11 -- IK Pair Presets: closest-named node when the exact one does not exist on this model
+
+Request: "When I use an ik pair on another model. If the IK node for the Phone or Hand doesnt exist with the same name, look for and use the next node with the closest
+name, unless none have a similar name. For example it may have the same name, but with some number suffix."
+Checked first what was there (commit dbff80b, 2026-10-11 04:42): useIkPairsPreset() set a pair's target / source to empty and flagged it red whenever the saved node id
+(owner|group/name) was not in the live registry. That is still the fallback; resolveIkNodeId(savedId) now runs first. Read every IK layer straight from the GLBs (12 phone
+models + the hand; Galaxy S2 / Motorola Razr / Hand2 have none) to design against real names, which differ in exactly these ways: a Blender duplicate suffix ("Back - Center" vs
+"Back - Center002"), Blender's ".001" glued onto a dash-number by the GLTF loader ("Edge - 25" vs "Edge - 25001"), spacing / punctuation slips ("Phone Bottom Edge- 12", double
+spaces, a stray trailing backslash), and different points that merely share words ("Power Button" vs "Side Button", "Back - Center" vs "Back - CenterLeft").
+Order (same OWNER only -- a hand node never becomes a phone node; the same hand index if present): 1 exact id; 2 same name after case / spacing / punctuation normalisation;
+3 same name once a duplicate-number suffix is dropped (closest suffix wins; a node in the same group beats one elsewhere); 4 near-identical spelling (similarity >= 0.88) with
+IDENTICAL numbers. A number set off by a dash ("Edge - 25") identifies a point and is never dropped or substituted. Anything else -> empty + red, as before. After Use, the pick-status
+line lists each substitution ("Pair 1 source: Phone - Back - Center -> Phone - Back - Center002 (number suffix)") and how many pairs were left empty.
+Tests (ik-resolve-test.mjs, real node names): iPhone "Back - Center" <-> Nothing2 "Back - Center002" both ways; exact ids untouched; "Side Button" and "Back - CenterLeft" NOT forced onto
+a neighbour; absent "Left Edge - 16" is not guessed as "- 25"; hand never resolves to phone; closest suffix / same group ranking; and a sweep of all 132 ordered pairs of the 12 IK-capable phone
+models (5184 exact, 16 same name, 1050 number suffix, 0 near-spelling, 2231 left empty) found ZERO mappings that changed a dash-number point. The first version of the sweep caught two real
+flaws before shipping (Blender suffix on dash-numbers; the near-spelling stage matching "Edge - 50" to "Edge - 25001") -- both fixed. Applies when a preset is Used; pairs already on screen
+are not re-resolved when you merely switch models (not asked for). main.js ?v=241. Not browser-verified (project rule).
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

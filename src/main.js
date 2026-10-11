@@ -3735,22 +3735,96 @@ function captureIkPairsPreset() {
 // Per the direct spec: default that one entry to empty rather than
 // silently keeping a dangling id solveIkHandPose() would just skip
 // anyway, and flag the pair so renderIkPairsUI() highlights it.
+//
+// CLOSEST-NAME FALLBACK (2026-10-11, direct request: "When I use an ik pair on another model. If the IK node for the Phone or Hand doesnt exist with the same name, look
+// for and use the next node with the closest name, unless none have a similar name. For example it may have the same name, but with some number suffix."). Real node
+// names differ between models in exactly these ways (read from the GLBs): a Blender duplicate suffix ("Back - Center" vs "Back - Center002"), spacing/punctuation slips
+// ("Phone Bottom Edge- 12", double spaces, a stray trailing backslash), and genuinely different points that share words ("Power Button" vs "Side Button"). So a saved node
+// id (owner|group/name) is resolved in this order, only ever against nodes of the SAME owner (a hand node never becomes a phone node):
+//   1. exact id;  2. same name after normalising case / spacing / punctuation;  3. same name once a duplicate-number suffix ("Center002", "Center 2", "Edge - 25.001") is dropped --
+//   the closest suffix wins, a node in the same group beats one elsewhere;  4. a near-identical spelling (edit-distance similarity >= 0.88) with IDENTICAL numbers.
+// A number set off by a dash ("Edge - 25" vs "Edge - 50") is a different point, NOT a suffix, so it is never dropped or substituted. Below those, the entry is left empty and highlighted red.
+function ikNameKey(name) {
+  return String(name || '').toLowerCase().replace(/[^a-z0-9 -]/g, ' ').replace(/\s*-\s*/g, '-').replace(/\s+/g, ' ').trim()
+}
+// Drops a duplicate-number suffix: digits glued to a letter ("center002", "center 2") and Blender's ".001" glued onto a dash-number (the dot is stripped by the GLTF loader, so
+// "Edge - 25.001" arrives as "edge-25001" and must still equal "edge-25"; a plain "edge-625" has too few digits to lose a 3-digit group, so it is kept).
+function ikNameStem(key) { return key.replace(/([a-z])\s*\d+$/, '$1').replace(/(-\d+)\d{3}$/, '$1').trim() }
+function ikNameSuffix(key) { const m = key.match(/([a-z])\s*(\d+)$/) || key.match(/-\d+(\d{3})$/); return m ? Number(m[m.length - 1]) : 0 }
+function ikNameDigits(key) { return (key.match(/\d+/g) || []).join(',') }
+function ikSimilarity(a, b) {
+  if (a === b) return 1
+  const n = a.length, m = b.length
+  if (!n || !m) return 0
+  let prev = Array.from({ length: m + 1 }, (_, j) => j)
+  for (let i = 1; i <= n; i++) {
+    const cur = [i]
+    for (let j = 1; j <= m; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1))
+    prev = cur
+  }
+  return 1 - prev[m] / Math.max(n, m)
+}
+function resolveIkNodeId(savedId, registry = ikNodes) {
+  if (!savedId) return null
+  const byId = new Map(registry.map((n) => [n.id, n]))
+  if (byId.has(savedId)) return { id: savedId, how: 'exact' }
+  const m = String(savedId).match(/^(hand(\d+)|phone)\|([^/]*)\/([\s\S]*)$/)
+  if (!m) return null
+  const owner = m[1] === 'phone' ? 'phone' : 'hand'
+  const ownerIndex = m[2] === undefined ? 0 : Number(m[2])
+  const wantKey = ikNameKey(m[4]), wantStem = ikNameStem(wantKey), wantSuffix = ikNameSuffix(wantKey), wantGroup = ikNameKey(m[3])
+  const pool = registry.filter((n) => n.owner === owner)
+  if (!pool.length) return null
+  const sameIndex = pool.filter((n) => n.ownerIndex === ownerIndex)
+  const cands = sameIndex.length ? sameIndex : pool
+  const order = new Map(cands.map((n, i) => [n, i]))
+  const groupHit = (n) => (ikNameKey(n.group) === wantGroup ? 0 : 1)
+  const pick = (list, how) => {
+    if (!list.length) return null
+    list = list.slice().sort((a, b) => groupHit(a) - groupHit(b) || Math.abs(ikNameSuffix(ikNameKey(a.name)) - wantSuffix) - Math.abs(ikNameSuffix(ikNameKey(b.name)) - wantSuffix) || order.get(a) - order.get(b))
+    return { id: list[0].id, how }
+  }
+  const sameKey = pick(cands.filter((n) => ikNameKey(n.name) === wantKey), 'same name')
+  if (sameKey) return sameKey
+  const sameStem = pick(cands.filter((n) => ikNameStem(ikNameKey(n.name)) === wantStem), 'number suffix')
+  if (sameStem) return sameStem
+  let best = null
+  cands.forEach((n) => {
+    const candKey = ikNameKey(n.name)
+    if (ikNameDigits(candKey) !== ikNameDigits(wantKey)) return // numbers identify a point ("Edge - 25" is not "Edge - 50"): only the LETTERS may differ in a near-match
+    const sim = ikSimilarity(wantKey, candKey)
+    if (sim >= 0.88 && (!best || sim > best.sim || (sim === best.sim && groupHit(n) < groupHit(best.n)))) best = { n, sim }
+  })
+  return best ? { id: best.n.id, how: 'similar name' } : null
+}
 function useIkPairsPreset(item) {
   const incoming = Array.isArray(item.pairs) ? item.pairs : []
   const mismatches = new Set()
-  ikPairs = incoming.map((p) => {
+  const substitutions = []
+  const resolveSlot = (pair, key, label) => {
+    const wanted = pair[key]
+    if (!wanted) return false
+    const r = resolveIkNodeId(wanted)
+    if (!r) { pair[key] = ''; return true }
+    if (r.id !== wanted) { pair[key] = r.id; substitutions.push(label + ': ' + ikNodeLabelById(wanted) + ' -> ' + ikNodeLabelById(r.id) + ' (' + r.how + ')') }
+    return false
+  }
+  ikPairs = incoming.map((p, i) => {
     const pair = newIkPair() // fresh, guaranteed-unique id -- the preset's own stored id is never reused
     Object.assign(pair, p, { id: pair.id })
-    let mismatched = false
-    if (pair.targetId && !ikNodeById.has(pair.targetId)) { pair.targetId = ''; mismatched = true }
-    if (pair.sourceId && !ikNodeById.has(pair.sourceId)) { pair.sourceId = ''; mismatched = true }
-    if (mismatched) mismatches.add(pair.id)
+    const t = resolveSlot(pair, 'targetId', 'Pair ' + (i + 1) + ' target')
+    const so = resolveSlot(pair, 'sourceId', 'Pair ' + (i + 1) + ' source')
+    if (t || so) mismatches.add(pair.id)
     return pair
   })
   ikPairPresetMismatches = mismatches
   if (ikPicking) cancelIkPick()
   persistIkPairs()
   renderIkPairsUI()
+  const notes = []
+  if (substitutions.length) notes.push('Used the closest-named node for ' + substitutions.length + ': ' + substitutions.join(' | '))
+  if (mismatches.size) notes.push(mismatches.size + ' pair(s) have a node with no similar name on this model (left empty, shown in red)')
+  if (notes.length) setIkPickStatus(notes.join(' -- '))
 }
 function ikNodeLabelById(id) {
   if (!id) return '— not set —'
