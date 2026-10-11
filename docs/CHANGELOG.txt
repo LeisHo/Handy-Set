@@ -8603,6 +8603,18 @@ none of the three). Not live-verified (per this project's own standing rule) -- 
 mutation path against the template's identical source.
 
 --------------------------------------------------------------------------------
+2026-10-11 -- Fixed list-picker group deletion to cascade into nested subgroups (direct real-usage report)
+
+Direct report: "I grouped some items in a new group. I deleted an existing group. My new group gets deleted, and all the items inside it are
+ungrouped again." Root cause in devpanel/devPanel.js's buildLpGroupHeader(): the group-remove button only cleared items whose .group EXACTLY
+matched the deleted group's path, never a nested descendant (.group starting with path + '/'). If the new group ends up nested inside the one
+being deleted, its items kept a dangling path like "GroupB/New Group" -- the next render then silently resurrected "GroupB" as a bare wrapper
+just to hold that orphaned child, collapsed by default, which is functionally invisible. Fixed to cascade-clear items, pendingGroups, groupOrder,
+and expandedGroups for the deleted group AND every nested descendant. Verified via a live standalone reproduction against the real engine code
+(served locally, synthetic test picker, a real nested-group DOM state) before and after the fix. Ported identically into
+.claude/TEMPLATE_DEV_PANEL.html's own matching function.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

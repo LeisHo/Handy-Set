@@ -3580,9 +3580,31 @@
         removeBtn.textContent = '×';
         removeBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            entry.items.forEach(it => { if (it.group === path) delete it.group; });
-            entry.pendingGroups = (entry.pendingGroups || []).filter(p => p !== path);
-            entry.expandedGroups.delete(path);
+            // Cascades into nested subgroups -- fixed 2026-10-11, direct
+            // report: "I grouped some items in a new group. I deleted an
+            // existing group. My new group gets deleted, and all the items
+            // inside it are ungrouped again." Root cause: this only ever
+            // cleared items with `.group === path` EXACTLY, never a nested
+            // descendant (`.group` starting with `path + '/'`). If the new
+            // group ends up nested inside the one being deleted (e.g.
+            // dragged in, deliberately or by accident), its items keep a
+            // dangling path like "GroupB/New Group" that no longer has a
+            // real top-level parent -- the NEXT render then silently
+            // resurrects "GroupB" as a bare wrapper just to hold that
+            // orphaned child, collapsed by default (never in
+            // expandedGroups), which is functionally invisible -- reads
+            // exactly like "my new group got deleted and its items are
+            // ungrouped" even though the data technically still has a
+            // (now-meaningless) group path. Verified via a standalone
+            // reproduction (synthetic entry, real buildLpGroupHeader/
+            // syncLpFromDom) before this fix: nesting a real populated
+            // group inside another, then removing the outer one, left the
+            // inner group's items at the stale nested path.
+            const prefix = path + LP_GROUP_PATH_SEP;
+            entry.items.forEach(it => { if (it.group === path || (it.group && it.group.startsWith(prefix))) delete it.group; });
+            entry.pendingGroups = (entry.pendingGroups || []).filter(p => p !== path && !p.startsWith(prefix));
+            entry.groupOrder = (entry.groupOrder || []).filter(p => p !== path && !p.startsWith(prefix));
+            Array.from(entry.expandedGroups).forEach(p => { if (p === path || p.startsWith(prefix)) entry.expandedGroups.delete(p); });
             lpCommit(entry);
             renderLpRows(entry);
         });
