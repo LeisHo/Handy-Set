@@ -8615,6 +8615,24 @@ and expandedGroups for the deleted group AND every nested descendant. Verified v
 .claude/TEMPLATE_DEV_PANEL.html's own matching function.
 
 --------------------------------------------------------------------------------
+2026-10-11 -- Camera Zoom / Yaw / Pitch sliders no longer affect each other
+
+Report: "when camera checkboxes are all unlocked, sometimes when i change ZOOM settings, rotate settings changes that shouldn't happen. make sure all the sliders
+for camera don't affect each other."
+Cause (read from main.js, then reproduced numerically): Zoom, Yaw and Pitch are three coordinates of ONE camera position around the pan target.
+ 1. The Yaw handler rebuilt the camera from (new yaw, cfg.cameraPitch) and the Pitch handler from (cfg.cameraYaw, new pitch). cfg.cameraYaw / cfg.cameraPitch are
+    written ONLY by those two sliders and start at 0, so after any mouse orbit, pan or Zoom change they were stale: dragging Yaw snapped Pitch to the stale value and
+    vice versa. Node test (cam-test.mjs): with the camera at yaw 29.5 / pitch 16.2, the old Yaw handler gave yaw 40 / pitch 0.0.
+ 2. Every handler ended with controls.update() while OrbitControls damping was on; that applies a fraction of any pending mouse-orbit inertia on every call, so each
+    slider edit also nudged the rotation a little (this is what made a Zoom change move the rotate readouts).
+Fix (main.js ?v=240): setCameraSpherical({yaw?, pitch?, dist?}) first flushes the damping inertia (flushOrbitInertia(): update() once with damping off, then restore),
+reads the camera's LIVE yaw / pitch / distance, replaces only the coordinate that was edited and rebuilds the position. Yaw, Pitch and Zoom all use it
+(setCameraDistance() is now a wrapper). Tests: Yaw sets yaw=40 exactly with Pitch and distance unchanged to 1e-9; Pitch sets -25 with Yaw and distance unchanged; Zoom sets 80
+with Yaw and Pitch unchanged; the damping flag is restored each time. FOV only touches the projection and was already independent.
+Not changed, by nature: Camera X / Y / Z POSITION are the same three degrees of freedom in Cartesian form (the camera moves, the target stays at the world origin), so editing
+one of those necessarily changes the derived Zoom / Yaw / Pitch. They cannot be made independent of them without changing what they mean. Not browser-verified (project rule).
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

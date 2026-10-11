@@ -8720,9 +8720,9 @@ function renderCameraGroup(content) {
   document.getElementById('checkboxLockCameraRotate').checked = cfg.lockCameraRotate
   wireCheckbox('checkboxLockCameraRotate', (v) => { cfg.lockCameraRotate = v; applyCameraLockState() })
   addRow(content, { id: 'sliderCameraYaw', label: 'Camera Yaw (Deg)', type: 'slider', min: -180, max: 180, step: 1, value: cfg.cameraYaw })
-  wireSlider('sliderCameraYaw', (v) => { cfg.cameraYaw = v; setCameraYawPitch(cfg.cameraYaw, cfg.cameraPitch) })
+  wireSlider('sliderCameraYaw', (v) => { cfg.cameraYaw = v; setCameraSpherical({ yaw: v }) })
   addRow(content, { id: 'sliderCameraPitch', label: 'Camera Pitch (Deg)', type: 'slider', min: -89, max: 89, step: 1, value: cfg.cameraPitch })
-  wireSlider('sliderCameraPitch', (v) => { cfg.cameraPitch = v; setCameraYawPitch(cfg.cameraYaw, cfg.cameraPitch) })
+  wireSlider('sliderCameraPitch', (v) => { cfg.cameraPitch = v; setCameraSpherical({ pitch: v }) })
   addRow(content, { id: 'checkboxCameraMaxExtentsEnabled', label: 'Set Default Camera As Max Extents', type: 'checkbox' })
   document.getElementById('checkboxCameraMaxExtentsEnabled').checked = cfg.cameraMaxExtentsEnabled
   wireCheckbox('checkboxCameraMaxExtentsEnabled', (v) => { cfg.cameraMaxExtentsEnabled = v; updateCameraMaxExtentsBound() })
@@ -8750,14 +8750,31 @@ function centerWorldOriginOnScreen() {
 // Moves the camera along the existing camera->target line to a new
 // distance, preserving viewing direction (ported concept from Handy
 // Dandies' own setCameraDistance()).
-function setCameraDistance(distance) {
-  const dir = camera.position.clone().sub(controls.target)
-  const len = dir.length()
-  if (len < 1e-6) return
-  dir.multiplyScalar(distance / len)
-  camera.position.copy(controls.target).add(dir)
+// CAMERA SLIDERS DO NOT AFFECT EACH OTHER (2026-10-09/11, direct report: "when camera checkboxes are all unlocked, sometimes when i change ZOOM settings, rotate settings
+// change that shouldn't happen. make sure all the sliders for camera don't affect each other"). Zoom / Yaw / Pitch are three coordinates of ONE camera position around the
+// pan target, so each handler now (1) flushes OrbitControls' leftover damping inertia FIRST -- controls.update() with damping on applies a fraction of a pending mouse-orbit
+// every call, so every slider edit used to nudge the rotation a bit -- then (2) reads the camera's LIVE yaw / pitch / distance, (3) changes ONLY its own coordinate and
+// (4) rebuilds the position from the three. Yaw and Pitch used to rebuild from cfg.cameraYaw / cfg.cameraPitch, which only those two sliders ever write (they start at 0), so
+// after any mouse orbit, pan or zoom, dragging one snapped the other to a stale value. FOV only touches the projection. Camera X / Y / Z POSITION are the same three
+// degrees of freedom in Cartesian form (the camera moves, the target stays at the world origin), so changing one of THOSE necessarily changes the derived zoom / yaw / pitch.
+function flushOrbitInertia() {
+  const damping = controls.enableDamping
+  controls.enableDamping = false // without damping update() applies the whole pending delta and clears it
+  controls.update()
+  controls.enableDamping = damping
+}
+function setCameraSpherical({ yaw, pitch, dist }) {
+  flushOrbitInertia()
+  const live = getCameraYawPitch()
+  const yawRad = (yaw === undefined ? live.yaw : yaw) * Math.PI / 180
+  const pitchRad = (pitch === undefined ? live.pitch : pitch) * Math.PI / 180
+  const d = dist === undefined ? live.dist : dist
+  if (!(d > 1e-6)) return
+  const dir = new THREE.Vector3(Math.cos(pitchRad) * Math.sin(yawRad), Math.sin(pitchRad), Math.cos(pitchRad) * Math.cos(yawRad))
+  camera.position.copy(controls.target).addScaledVector(dir, d)
   controls.update()
 }
+function setCameraDistance(distance) { setCameraSpherical({ dist: distance }) }
 // Direct request 2026-09-28: "When I lock pan, zoom, or rotate, lock
 // the relevant sliders as well. Those 2 should be in sync. I guess FOV
 // can just not be locked ever." Maps each OrbitControls lock to the
