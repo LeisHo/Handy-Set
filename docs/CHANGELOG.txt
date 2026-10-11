@@ -8633,6 +8633,14 @@ Not changed, by nature: Camera X / Y / Z POSITION are the same three degrees of 
 one of those necessarily changes the derived Zoom / Yaw / Pitch. They cannot be made independent of them without changing what they mean. Not browser-verified (project rule).
 
 --------------------------------------------------------------------------------
+2026-10-11 -- List-picker Delete now multi-deletes via the existing shift-click range selection
+
+Direct request. Delete now removes every item in entry.multiSelected when it's non-empty (the same set +Group already uses), falling back to
+entry.selectedItem alone otherwise -- a plain single click-then-Delete is unchanged. Note: shift-click in this control is Explorer-style range
+select (anchor + extend to a contiguous range), not independent per-row toggling -- there's no Ctrl/Cmd-click add. Verified live with real
+shift-click MouseEvents against the real buildListPickerRow() code.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

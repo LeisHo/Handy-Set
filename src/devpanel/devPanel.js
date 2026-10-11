@@ -3869,8 +3869,15 @@
             renderLpRows(entry);
         });
         deleteBtn.addEventListener('click', () => {
-            if (!entry.selectedItem) return;
-            lpSetItems(entry, entry.items.filter(it => it !== entry.selectedItem));
+            // Multi-delete (2026-10-11, direct request) -- shift-click
+            // several rows first (same selection entry.multiSelected
+            // already used for +Group), then Delete removes all of them
+            // at once. Falls back to entry.selectedItem alone when
+            // nothing is multi-selected, so a plain single click-then-
+            // Delete still works exactly as before.
+            const toRemove = entry.multiSelected.size > 0 ? entry.multiSelected : new Set(entry.selectedItem ? [entry.selectedItem] : []);
+            if (toRemove.size === 0) return;
+            lpSetItems(entry, entry.items.filter(it => !toRemove.has(it)));
             entry.selectedItem = null;
             entry.multiSelected = new Set();
             lpCommit(entry);
