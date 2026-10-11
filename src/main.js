@@ -193,6 +193,7 @@ const cfg = {
   // IK Influence (HANDO's CURRENT system, 2026-10-04 rewrite: one priority slider per existing pose slider + All, each with a hard
   // Min / Max window as a range bar -- see ikInfluence() / solveIkHandPose()). Defaults as in HANDO: whole-hand offset/rotation and the
   // arm start at 0 (locked), fingers and wrist at 100. Range values are JSON strings like every other range-bar in this file.
+  ikWarmStart: false, // IK Warm Start: false (default) = every live solve starts from the default (base) pose; true = start from the previous solve's result (faster, but the result depends on the path the sliders took)
   ikRotationWeight: 8, // IK Rotation Weight (x): how strongly the solver matches each pair's ORIENTATION vs its position (0 = position only) -- see solveIkHandPose()
   // Ported from HANDO 2026-10-09 with its per-axis / per-finger-set granularity: Finger Curl / Finger Twist / Finger Splay (ikInfluenceFingers/ikRangeFingers
   // keep their keys and now mean SPLAY), Pose Offset X/Y/Z and Whole-Hand Rotation at Base X/Y/Z each have their own % + Min/Max. Table: IK_INFLUENCE_PARTS.
@@ -3587,6 +3588,7 @@ function ikSignature(pairs) {
 const IK_PRIORITY_RHO = 1.0
 const IK_STAGE1_REG_SCALE = 0.1
 const IK_STAGE2_PAIR_WEIGHT = 100
+const IK_COLD_START_ITERS = 40 // stage-1 iteration cap when every solve starts from the base pose (see "START POINT" in solveIkHandPose)
 const IK_PAIR_TOL = 0.05
 function solveIkHandPose(pairs) {
   const t0 = performance.now()
@@ -3685,9 +3687,15 @@ function solveIkHandPose(pairs) {
     }
     return { x, iters: it }
   }
-  const xStart = clampX(dofKeys.map((k, i) => (ikLastSolved && typeof ikLastSolved[k] === 'number' ? ikLastSolved[k] : x0[i])))
+  // START POINT (2026-10-11, direct request: "is there a way so that the live updates always do the IK solving based on the default hand pose as the ik solving source?"): the solver is a
+  // local search, so where it starts decides which answer it finds. Warm-starting from the previous solve made the result depend on the PATH the sliders took (drag A -> B -> C lands somewhere
+  // else than going straight to C, and toggling IK off/on, which clears the warm start, gave a third answer). Now every solve starts from the base pose captured when IK Posing was turned
+  // on (x0) unless IK Warm Start is switched on, so the pose is a function of the current pairs / settings / source nodes only. A cold start gets a bigger iteration budget to make up for
+  // the progress a warm start carried over from earlier frames.
+  const warm = !!cfg.ikWarmStart
+  const xStart = clampX(dofKeys.map((k, i) => (warm && ikLastSolved && typeof ikLastSolved[k] === 'number' ? ikLastSolved[k] : x0[i])))
   // Stage 1: best achievable pair error.
-  const s1 = runLM(makeResidual(1, regPlain.map((v) => v * IK_STAGE1_REG_SCALE)), xStart, 14)
+  const s1 = runLM(makeResidual(1, regPlain.map((v) => v * IK_STAGE1_REG_SCALE)), xStart, warm ? 14 : IK_COLD_START_ITERS)
   let x = s1.x
   const E1 = pairCost(x)
   // Stage 2: choose the DOFs by influence while the pair error stays within tolerance of stage 1's best.
@@ -4157,6 +4165,10 @@ function renderIkPosingGroup(handModelContent) {
   addRow(content, { id: 'checkboxIkPosingEnabled', label: 'IK Posing On/Off', type: 'checkbox' })
   document.getElementById('checkboxIkPosingEnabled').checked = cfg.ikPosingEnabled
   wireCheckbox('checkboxIkPosingEnabled', (v) => setIkPosingEnabled(v))
+  // IK Warm Start (2026-10-11): off = every live solve starts from the default (base) pose, so the result never depends on the path the sliders took; on = start from the previous solve (faster).
+  addRow(content, { id: 'checkboxIkWarmStart', label: 'IK Warm Start (Faster, Path-Dependent)', type: 'checkbox' })
+  document.getElementById('checkboxIkWarmStart').checked = cfg.ikWarmStart
+  wireCheckbox('checkboxIkWarmStart', (v) => { cfg.ikWarmStart = v; ikLastSignature = null })
   // (The single global IK Rotation Weight slider was replaced by a Rotation Weight slider inside every pair, 2026-10-11.)
   ikStatusEl = document.createElement('div')
   ikStatusEl.style.cssText = 'font-size:11px; opacity:0.85; margin:2px 0 6px;'

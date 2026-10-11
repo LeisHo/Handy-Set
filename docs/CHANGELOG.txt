@@ -8734,6 +8734,24 @@ Requests: "Make IK Pair setting Ui such that each pair is a toggleable group. Pr
 Not browser-verified (project rule); the group UI itself was syntax-checked only.
 
 --------------------------------------------------------------------------------
+2026-10-11 -- IK Posing solves from the default pose every time (no warm start) -- the result no longer depends on the slider path
+
+Report: "when im setting IK pairs etc, the hand moves as expected, but if i turn the IK posing off and on, the latter pose is different from before. I assume the IK posing is based off of
+the last pose ... Is there a way so that the live updates always do the IK solving based on the default hand pose as the IK solving source?"
+Confirmed in solveIkHandPose(): each live solve started its local search from ikLastSolved (the previous solve's result, a WARM START); only the first solve after IK was turned on (which clears
+ikLastSolved) started from the base pose. The solver is a local search with an iteration cap, so where it starts decides where it ends: a drag A -> B -> C and a straight jump to C (= what off/on
+does) gave different poses.
+Reproduced on the REAL solver and the real HandiBonesB-IK hand in Node (run8.mjs: 3 pairs -- index / middle / thumb tips -- following one rigid moving source frame, tight windows): with warm start the
+final pose differed by 0.04-0.12 (rotation weight 0) and 41.8-80.0 slider units (rotation weight 6) depending on the path taken; the pair error also differed (worst tip gap 7.46 u via the path vs 6.00 u
+direct at weight 6).
+Fix (main.js ?v=244): new cfg.ikWarmStart (default OFF, checkbox "IK Warm Start (Faster, Path-Dependent)" in the IK POSING group, synced). Off = every solve starts from x0, the base pose captured when
+IK Posing was turned on, with the stage-1 iteration cap raised from 14 to IK_COLD_START_ITERS = 40 to make up for the progress a warm start carried between frames. The pose is now a function of the current
+pairs / settings / source nodes only. Measured with it off: pose difference between any two paths to the same source position = 0.000 in every scenario, and no worse on pair error (6.535 u vs 7.463 u
+for the path case at weight 6). Cost: about 45 ms per solve for 3 pairs in Node (a warm solve is cheaper) -- live dragging is therefore roughly 20 solves/second with 3 pairs; turn Warm Start on to trade
+repeatability for speed. NOT touched: the base pose itself is still captured when IK Posing is turned on.
+Test harness note: test-hando-ik3.mjs / run8.mjs (scratchpad copy of the earlier IK harness, updated for the closest-name helpers, per-pair weights and the new influence keys). Not browser-verified (project rule).
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
