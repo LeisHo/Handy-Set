@@ -734,13 +734,18 @@ const DEFAULT_CAMERA_NAME = 'FRONTOS'
 const DEFAULT_LIGHTING_NAME = 'FLABOVE'
 
 // Restore any locally-saved list-picker edits (Saved Poses/Cameras/
-// Lighting/Toon Shading/Tween Sequences) over the hardcoded seed data
-// above, synchronously, before anything else in this module reads these
-// arrays -- see persistListPickerItems()/loadListPickerItemsFromLocalStorage()
+// Lighting/Toon Shading/Tween Sequences/Phone Poses/IK Influence) over
+// the hardcoded seed data above, synchronously, before anything else in
+// this module reads these arrays -- see loadListPickerItemsFromLocalStorage()
 // (defined further down, but function declarations are hoisted within
-// this module's scope so calling them here is safe) for the full account
-// of the bug this fixes. Remote (git-synced) restore happens separately,
-// asynchronously, alongside the other loadFieldDefaultIfSaved() calls.
+// this module's scope so calling them here is safe) for why this is
+// still needed even after the 2026-10-11 migration onto devPanel.js's
+// own generic, now-live-array-synced type:'list-picker' control: it's
+// the one-time bridge that carries a real user's existing saved presets,
+// which still live at this OLD custom storage location, into the new
+// control's standard storage location on first load. Remote (git-synced)
+// restore happens separately, asynchronously, alongside the other
+// loadFieldDefaultIfSaved() calls.
 loadListPickerItemsFromLocalStorage('poses', SAVED_POSES)
 loadListPickerItemsFromLocalStorage('cameras', SAVED_CAMERAS)
 loadListPickerItemsFromLocalStorage('lighting', SAVED_LIGHTING)
@@ -8402,55 +8407,26 @@ function capturePoseFromCfg() { const o = {}; POSE_PRESET_KEYS.forEach((k) => { 
 function captureCameraFromLive() { return { x: camera.position.x, y: camera.position.y, z: camera.position.z, fov: camera.fov, tx: controls.target.x, ty: controls.target.y, tz: controls.target.z, zoom: cfg.cameraZoom } }
 function captureLightingFromLive() { const o = {}; LIGHTING_PRESET_KEYS.forEach((k) => { o[k] = cfg[k] }); return o }
 
-// FIXED 2026-09-27, direct report: "double check the saed cameras. it
-// doesnt seem to save still." Root cause, confirmed by directly
-// inspecting localStorage after a real Save click: `buildListPicker()`
-// only ever mutated its own `items` array IN MEMORY, then called
-// `saveDevPanelSettings()` hoping it would persist -- but that
-// (devPanel.js-owned) function only ever captures state from
-// REGISTERED dev-panel controls (hidden inputs, sliders, etc.). A raw
-// JS array like SAVED_CAMERAS has no such registration, so it was
-// COMPLETELY INVISIBLE to Sync -- confirmed live: `devPanelSettings` in
-// localStorage has no field for it at all, only the standard
-// controls/layout/style keys. This silently affected ALL FIVE
-// list-pickers built by this function (Saved Tween Sequences, Poses,
-// Cameras, Lighting, Toon Shading), not just Cameras -- every
-// Save/Overwrite/Rename/Delete/+Group/Import ever appeared to work
-// (the in-memory array and its DOM list both updated) but reset back
-// to the hardcoded seed data on every reload.
+// MIGRATED 2026-10-11 off this project's own hand-built buildListPicker()
+// onto devPanel.js's generic type:'list-picker' control, now that control
+// is itself live-array-synced (see its own [JS-15] top comment) -- the
+// one real advantage buildListPicker() had over it, and the reason the
+// 2026-09-28 CLAUDE.md entry explicitly declined this migration at the
+// time. buildListPicker() itself, and the write side of the custom
+// persistence layer below (persistListPickerItems()) are REMOVED, not
+// kept alongside -- they're both fully superseded, not complementary.
 //
-// Fixed with a dedicated persistence layer per list-picker, keyed by
-// the new required `opts.storageKey`, following the EXACT pattern
-// already proven for defaultPose/defaultCamera/defaultLighting/
-// defaultToon (saveFieldAsDefault()/loadFieldDefaultIfSaved(), below):
-// localStorage (always-on baseline, per CLAUDE.md §12l) plus an async
-// GET-merge-POST to the same git-tracked settings endpoint when it's
-// configured/reachable. persistListPickerItems() is called after every
-// mutation (in addition to, not instead of, the existing
-// saveDevPanelSettings() call); loadListPickerItemsFromLocalStorage()
-// runs synchronously at module load (mirroring the schema-version
-// guard at the top of this file) so every reference to the array
-// (Tween's own SAVED_POSES read included) sees the restored data
-// before anything else runs; loadListPickerItemsFromRemoteData() is
-// called from loadRemoteSettingsOnStartup() (this file's own single
-// shared startup GET), alongside the other loadFieldDefaultIfSaved()
-// logic.
-function persistListPickerItems(storageKey, items) {
-  try { localStorage.setItem('handyset_listPicker_' + storageKey, JSON.stringify(items)) } catch (e) { /* localStorage unavailable -- remote save below is the fallback */ }
-  ;(async () => {
-    try {
-      const getResp = await fetch(SAVE_SETTINGS_ENDPOINT, { cache: 'no-store' })
-      const getBody = await getResp.json().catch(() => ({}))
-      const base = (getResp.ok && getBody.ok === true && getBody.settings && typeof getBody.settings === 'object') ? getBody.settings : {}
-      const merged = Object.assign({}, base, { ['listPicker_' + storageKey]: items })
-      await fetch(SAVE_SETTINGS_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Dev-Panel-Secret': DEV_PANEL_SAVE_SECRET },
-        body: JSON.stringify(merged)
-      })
-    } catch (e) { /* offline/unreachable/not-yet-deployed -- localStorage above already covers the same-browser case */ }
-  })()
-}
+// loadListPickerItemsFromLocalStorage()/loadListPickerItemsFromRemoteData()
+// are KEPT as a one-time migration path: they still seed SAVED_POSES/
+// SAVED_CAMERAS/etc. from the OLD custom storage locations (localStorage
+// 'handyset_listPicker_<key>', remote 'listPicker_<key>') at module load,
+// BEFORE the dev panel is ever built -- so a real user's existing saved
+// presets come through correctly on the very first load after this
+// change, even though nothing writes to those old locations anymore.
+// Once the user Syncs once under the new scheme, the data lives at the
+// standard location (dev-panel-settings.json's `controls.<id>`) going
+// forward and these old locations become harmless, unread-again orphans.
+//
 // Synchronous, local-only restore -- called once per array, at module
 // scope, so it runs before ANYTHING (including other code that captured
 // a reference to the same array) reads it.
@@ -8471,164 +8447,39 @@ function loadListPickerItemsFromLocalStorage(storageKey, items) {
 function loadListPickerItemsFromRemoteData(remoteArr, items) {
   if (Array.isArray(remoteArr) && remoteArr.length) { items.length = 0; items.push(...remoteArr) }
 }
-// Full list-picker widget, ported to match HANDY DANDIES' own
-// buildListPickerRow()/renderListPickerRows() (src/devpanel/devPanel.js
-// there) as closely as practical in the time available: Save/Overwrite/
-// Use/Rename/Delete/+Group buttons, optional Export Selected/Import
-// (checkbox-per-item clipboard JSON, only on Saved Poses — matching HANDY
-// DANDIES, where only its own savedPoses control has these 2 buttons),
-// a scrollable item list with group headers. `items` is mutated IN
-// PLACE (push/splice, never reassigned) so other code already holding a
-// reference to the same array (e.g. Tween's own SAVED_POSES read) sees
-// live updates without needing its own refresh call.
-function buildListPicker(content, opts) {
-  const container = document.createElement('div')
-  container.className = 'dp-list-picker-row-container'
-  const listEl = document.createElement('div')
-  listEl.className = 'dp-list-picker'
-  container.appendChild(listEl)
-
-  function mkBtn(text) { const b = document.createElement('button'); b.type = 'button'; b.textContent = text; return b }
-  const btnRow = document.createElement('div')
-  btnRow.className = 'dev-buttons'
-  const saveBtn = mkBtn('Save'), overwriteBtn = mkBtn('Overwrite'), useBtn = mkBtn('Use'), renameBtn = mkBtn('Rename'), deleteBtn = mkBtn('Delete'), groupBtn = mkBtn('+ Group')
-  btnRow.append(saveBtn, overwriteBtn, useBtn, renameBtn, deleteBtn, groupBtn)
-  container.appendChild(btnRow)
-  let exportBtn = null, importBtn = null
-  if (opts.exportable || opts.importable) {
-    const btnRow2 = document.createElement('div')
-    btnRow2.className = 'dev-buttons'
-    if (opts.exportable) { exportBtn = mkBtn('Export Selected'); btnRow2.appendChild(exportBtn) }
-    if (opts.importable) { importBtn = mkBtn('Import'); btnRow2.appendChild(importBtn) }
-    container.appendChild(btnRow2)
-  }
-  content.appendChild(container)
-
-  const items = opts.items
-  const state = { selected: items.find((i) => i.name === opts.defaultName) || null, exportChecked: new Set() }
-
-  function renderItem(it, parentEl) {
-    const row = document.createElement('div')
-    row.className = 'dp-list-picker-item'
-    if (state.selected === it) row.classList.add('dp-list-picker-item-selected')
-    if (opts.exportable) {
-      const cb = document.createElement('input')
-      cb.type = 'checkbox'
-      cb.checked = state.exportChecked.has(it)
-      cb.addEventListener('click', (e) => { e.stopPropagation(); if (cb.checked) state.exportChecked.add(it); else state.exportChecked.delete(it) })
-      row.appendChild(cb)
-    }
-    const label = document.createElement('span')
-    label.className = 'dp-list-picker-item-label'
-    label.textContent = it.name
-    row.appendChild(label)
-    row.addEventListener('click', () => { state.selected = it; render() })
-    parentEl.appendChild(row)
-  }
-  function render() {
-    listEl.innerHTML = ''
-    const groups = {}
-    const ungrouped = []
-    items.forEach((it) => { if (it.group) { (groups[it.group] = groups[it.group] || []).push(it) } else ungrouped.push(it) })
-    ungrouped.forEach((it) => renderItem(it, listEl))
-    Object.keys(groups).forEach((gname) => {
-      const header = document.createElement('div')
-      header.className = 'dp-list-picker-group-header'
-      header.textContent = '▾ ' + gname
-      listEl.appendChild(header)
-      groups[gname].forEach((it) => renderItem(it, listEl))
-    })
-  }
-  render()
-
-  saveBtn.addEventListener('click', () => {
-    const label = opts.itemLabel || 'Item'
-    const name = prompt(label + ' name:', label + ' ' + (items.length + 1))
-    if (!name) return
-    const data = opts.captureCurrent ? opts.captureCurrent() : {}
-    const existing = items.find((it) => it.name === name)
-    if (existing) {
-      if (!confirm(`"${name}" already exists. Overwrite it?`)) return
-      Object.assign(existing, data, { name })
-    } else {
-      items.push(Object.assign({ name }, data))
-    }
-    render()
-    // Persist the updated items array to localStorage + git via Sync
-    if (typeof saveDevPanelSettings === 'function') {
-      saveDevPanelSettings()
-    }
-    if (opts.storageKey) persistListPickerItems(opts.storageKey, items)
-  })
-  overwriteBtn.addEventListener('click', () => {
-    if (!state.selected) return
-    const data = opts.captureCurrent ? opts.captureCurrent() : {}
-    Object.assign(state.selected, data, { name: state.selected.name })
-    render()
-    // Persist the updated items array to localStorage + git via Sync
-    if (typeof saveDevPanelSettings === 'function') {
-      saveDevPanelSettings()
-    }
-    if (opts.storageKey) persistListPickerItems(opts.storageKey, items)
-  })
-  // requestRender(): shared by all 5 list-pickers (Poses/Cameras/Lighting/
-  // Toon Shading/Tween Sequences) via this one function -- opts.onUse()
-  // applies the preset directly (applyPoseValuesToHand/applyCameraPreset/
-  // etc), none of which go through wireSlider/wireCheckbox, so on-demand
-  // rendering would otherwise never see this as a "setting modified".
-  useBtn.addEventListener('click', () => { if (state.selected && opts.onUse) { opts.onUse(state.selected); requestRender() } })
-  renameBtn.addEventListener('click', () => {
-    if (!state.selected) return
-    const name = prompt('Rename to:', state.selected.name)
-    if (!name || name === state.selected.name) return
-    state.selected.name = name
-    render()
-    if (typeof saveDevPanelSettings === 'function') saveDevPanelSettings()
-    if (opts.storageKey) persistListPickerItems(opts.storageKey, items)
-  })
-  deleteBtn.addEventListener('click', () => {
-    if (!state.selected) return
-    const idx = items.indexOf(state.selected)
-    if (idx >= 0) items.splice(idx, 1)
-    state.selected = null
-    render()
-    if (typeof saveDevPanelSettings === 'function') saveDevPanelSettings()
-    if (opts.storageKey) persistListPickerItems(opts.storageKey, items)
-  })
-  groupBtn.addEventListener('click', () => {
-    if (!state.selected) { alert('Select an item first, then + Group.'); return }
-    const gname = prompt('Group name:')
-    if (!gname) return
-    state.selected.group = gname
-    render()
-    if (typeof saveDevPanelSettings === 'function') saveDevPanelSettings()
-    if (opts.storageKey) persistListPickerItems(opts.storageKey, items)
-  })
-  if (exportBtn) exportBtn.addEventListener('click', () => {
-    const chosen = items.filter((it) => state.exportChecked.has(it))
-    if (!chosen.length) { alert('Check at least one item to export.'); return }
-    navigator.clipboard.writeText(JSON.stringify(chosen, null, 2)).then(() => alert('Copied ' + chosen.length + ' item(s) to clipboard.'))
-  })
-  if (importBtn) importBtn.addEventListener('click', async () => {
-    try {
-      const text = await navigator.clipboard.readText()
-      const parsed = JSON.parse(text)
-      const arr = Array.isArray(parsed) ? parsed : [parsed]
-      arr.forEach((item) => {
-        const existing = items.find((it) => it.name === item.name)
-        if (existing) Object.assign(existing, item)
-        else items.push(item)
-      })
-      render()
-      if (typeof saveDevPanelSettings === 'function') saveDevPanelSettings()
-      if (opts.storageKey) persistListPickerItems(opts.storageKey, items)
-    } catch (e) { alert('Import failed: ' + e.message) }
-  })
-  return state
-}
+// Behavior changes from the old hand-built version, disclosed:
+//   - Persistence no longer fires on every individual Save/Rename/
+//     Delete/+Group/Import click -- it rides the SAME hidden-input
+//     Copy/Save/Reset/Undo pipeline every other control (sliders,
+//     checkboxes) already uses, so it persists on the panel's own
+//     explicit Sync/Save click, same as everything else. The old
+//     per-action auto-persist existed ONLY to work around list-pickers
+//     being invisible to Sync -- a problem this migration removes at
+//     the root, so the workaround is gone too, not kept redundantly.
+//   - The generic engine's own Use button does not call requestRender()
+//     (this project's on-demand-rendering gate) -- wrapped below so
+//     applying a preset still shows up immediately, matching the old
+//     behavior exactly (which called requestRender() unconditionally
+//     after every onUse, whether or not that specific apply function
+//     already requested one itself -- confirmed by reading all 5:
+//     applyPosePreset/applyCameraPreset/applyLightingPreset/
+//     applyToonPreset don't call it themselves; applyPhonePosePreset
+//     does, so the wrap is a harmless redundant 2nd call there).
+//   - +Group now supports multi-select (shift-click several rows, then
+//     +Group folds all of them in at once) instead of one item at a
+//     time; drag-reorder and nested collapsible groups are new too --
+//     the old version had neither.
 function renderPresetPicker(content, title, items, defaultName, applyFn, captureFn, opts) {
   const sub = addSubgroup(content, title)
-  buildListPicker(sub, Object.assign({ items, defaultName, itemLabel: title.replace(/^Saved /, '').replace(/s$/, ''), captureCurrent: captureFn, onUse: applyFn }, opts || {}))
+  const key = (opts && opts.storageKey) || title.replace(/\s+/g, '')
+  const id = 'listPicker' + key.charAt(0).toUpperCase() + key.slice(1)
+  addRow(sub, Object.assign({
+    type: 'list-picker', id, label: title,
+    itemLabel: title.replace(/^Saved /, '').replace(/s$/, ''),
+    value: items, defaultName,
+    captureCurrent: captureFn,
+    onUse: (item) => { applyFn(item); requestRender() },
+  }, (opts && opts.exportable) ? { exportable: true } : {}, (opts && opts.importable) ? { importable: true } : {}))
   // "Set as Default" — a sibling control AFTER the list-picker, not part
   // of it (matches Hando exactly: it's a separate `type: 'button'` DEV_GROUPS
   // entry, never one of buildListPickerRow's own buttons). Captures LIVE
@@ -11074,8 +10925,9 @@ async function loadRemoteSettingsOnStartup() {
     // for a normal visitor exactly as before (visibility is a separate,
     // pure-CSS `.dev-mode` gate untouched by this).
     // Merge any remote (git-synced) list-picker items -- Saved Poses/
-    // Cameras/Lighting/Toon Shading/Tween Sequences -- BEFORE the dev
-    // panel gets built below, so a fresh visit whose panel hasn't been
+    // Cameras/Lighting/Toon Shading/Tween Sequences/Phone Poses/IK
+    // Influence -- BEFORE the dev panel gets built below, so a fresh
+    // visit whose panel hasn't been
     // eagerly built yet (the normal production/no-?dev=1 case, since
     // ensureDevPanelBuilt() below is exactly what builds it) renders the
     // list-picker widgets already showing the remote data, not just the

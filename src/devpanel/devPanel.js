@@ -3398,7 +3398,14 @@
     //   label            - row label text.
     //   itemLabel        - noun used in the Save-name prompt ("Camera",
     //                      "Pose", "Preset") — defaults to "Item".
-    //   value            - default items array, e.g. [].
+    //   value            - items array (see the live-array contract
+    //                      below — this is a real, mutated reference,
+    //                      not a one-time seed).
+    //   defaultName      - optional; pre-selects the item with this
+    //                      .name on initial build, so Use/Overwrite/
+    //                      Rename/Delete work without clicking a row
+    //                      first. Initial build only — never reapplied
+    //                      on a later Reset/Undo/Sync restore.
     //   captureCurrent() - REQUIRED. Returns a plain object snapshotting
     //                      whatever this picker represents right now.
     //   onUse(item)      - REQUIRED. Applies a saved item back to live
@@ -3415,12 +3422,59 @@
     // JSON-serialized {items, groupOrder}, exactly like a slider's own
     // numeric .value — no special-casing needed in the capture/apply
     // pipeline (captureAllRegisteredControlValues()/applyControlValues()).
+    //
+    // LIVE-ARRAY CONTRACT (changed 2026-10-11, no opt-in — this is now
+    // the only behavior): `value` is not a one-time seed the control
+    // privately copies — it's the REAL backing array, and this control
+    // mutates it IN PLACE for the rest of the page's life, via the
+    // internal lpSetItems() helper (entry.items.length = 0; entry.items
+    // .push(...)) rather than ever reassigning entry.items to a new
+    // array object. This matters because `entry.items === ctrl.value`
+    // holds for as long as the control exists — any other code that
+    // captured a direct reference to the same array (e.g. this file's
+    // own SAVED_POSES, read by Tween playback/findSavedPoseByName())
+    // sees every Save/Rename/Delete/+Group/Import AND every Reset/Undo/
+    // Sync restore immediately, with no extra wiring. This is the exact
+    // property `buildListPicker()`'s own hand-built picker (main.js) has
+    // always had — this control did not, before this fix, which is why
+    // the 9 selectors in this project were never migrated onto it (see
+    // this file's own CLAUDE.md, 2026-09-28 entry).
+    //
+    // Things to know before registering a list-picker, given this:
+    //   1. Pass a real, intentional, long-lived array (a module-level
+    //      `let`/`const`, not a throwaway inline `[]` literal) UNLESS you
+    //      genuinely don't need anything else to read it — a fresh
+    //      literal is fine too, it just gets no benefit from this.
+    //   2. Never pass a frozen array (`Object.freeze(arr)`). The first
+    //      Save/Rename/Delete/restore will throw — `.length = 0`/`.push()`
+    //      on a frozen array is a TypeError, not a silent no-op.
+    //   3. The in-place clear-then-refill on restore (`.length = 0`,
+    //      then `.push(...)`) LOOKS non-atomic but isn't a real risk —
+    //      JS is single-threaded and nothing else runs between those two
+    //      statements, so no other code can ever observe the array in
+    //      its momentarily-empty state.
+    //   4. If you need the control to OWN its own independent copy
+    //      instead (no external code holds a reference, or you
+    //      deliberately want one-way isolation), pass `value:
+    //      someArray.slice()` yourself at registration time — the
+    //      control no longer does this defensively on your behalf.
     const LP_GROUP_PATH_SEP = '/';
     const lpEntries = {};
 
     function lpCommit(entry) {
         const hidden = document.getElementById(entry.ctrl.id);
         if (hidden) hidden.value = JSON.stringify({ items: entry.items, groupOrder: entry.groupOrder || [] });
+    }
+
+    // Replaces entry.items' CONTENTS in place rather than reassigning
+    // entry.items to a new array object — see the live-array contract in
+    // this section's own top comment. Every internal mutation path
+    // (Save/Overwrite/Rename/Delete/+Group/Import) and the external-
+    // restore listener (Reset/Undo/Sync) both go through this, never a
+    // bare `entry.items = ...`.
+    function lpSetItems(entry, newArr) {
+        entry.items.length = 0;
+        Array.prototype.push.apply(entry.items, newArr);
     }
 
     // Renders one item row (ungrouped or inside a group body). Click
@@ -3571,7 +3625,7 @@
         Array.from(entry.listEl.querySelectorAll(':scope > .dev-lp-group')).forEach(g => {
             walk(g.querySelector(':scope > .dev-lp-group-body'), g.__groupName);
         });
-        entry.items = items;
+        lpSetItems(entry, items);
         entry.pendingGroups = pending;
         entry.groupOrder = Array.from(entry.listEl.querySelectorAll(':scope > .dev-lp-group')).map(g => g.__groupName);
         lpCommit(entry);
@@ -3730,7 +3784,10 @@
         const hidden = document.createElement('input');
         hidden.type = 'hidden';
         hidden.id = ctrl.id;
-        const initialItems = (ctrl.value || []).slice();
+        // No defensive .slice() — see the live-array contract in this
+        // section's own top comment. ctrl.value itself becomes
+        // entry.items, mutated in place for the control's whole life.
+        const initialItems = ctrl.value || [];
         hidden.value = JSON.stringify({ items: initialItems, groupOrder: [] });
         row.appendChild(hidden);
 
@@ -3744,7 +3801,7 @@
         hidden.addEventListener('input', () => {
             let parsed;
             try { parsed = JSON.parse(hidden.value || '{}'); } catch (err) { parsed = {}; }
-            entry.items = Array.isArray(parsed.items) ? parsed.items : [];
+            lpSetItems(entry, Array.isArray(parsed.items) ? parsed.items : []);
             entry.groupOrder = Array.isArray(parsed.groupOrder) ? parsed.groupOrder : [];
             entry.selectedItem = null;
             entry.multiSelected = new Set();
@@ -3762,9 +3819,9 @@
             const existing = entry.items.find(it => it.name === name);
             if (existing) {
                 if (!confirm('"' + name + '" already exists. Overwrite it?')) return;
-                entry.items = entry.items.map(it => it === existing ? Object.assign({ name }, data, it.group ? { group: it.group } : {}) : it);
+                lpSetItems(entry, entry.items.map(it => it === existing ? Object.assign({ name }, data, it.group ? { group: it.group } : {}) : it));
             } else {
-                entry.items = entry.items.concat([Object.assign({ name }, data)]);
+                lpSetItems(entry, entry.items.concat([Object.assign({ name }, data)]));
             }
             lpCommit(entry);
             renderLpRows(entry);
@@ -3773,7 +3830,7 @@
             if (!entry.selectedItem) return;
             const target = entry.selectedItem;
             const data = ctrl.captureCurrent ? ctrl.captureCurrent() : {};
-            entry.items = entry.items.map(it => it === target ? Object.assign({ name: it.name }, data, it.group ? { group: it.group } : {}) : it);
+            lpSetItems(entry, entry.items.map(it => it === target ? Object.assign({ name: it.name }, data, it.group ? { group: it.group } : {}) : it));
             entry.selectedItem = entry.items.find(it => it.name === target.name && it.group === target.group) || null;
             lpCommit(entry);
             renderLpRows(entry);
@@ -3784,14 +3841,14 @@
             const target = entry.selectedItem;
             const name = prompt('Rename to:', target.name);
             if (!name || name === target.name) return;
-            entry.items = entry.items.map(it => it === target ? Object.assign({}, it, { name }) : it);
+            lpSetItems(entry, entry.items.map(it => it === target ? Object.assign({}, it, { name }) : it));
             entry.selectedItem = entry.items.find(it => it.name === name && it.group === target.group) || null;
             lpCommit(entry);
             renderLpRows(entry);
         });
         deleteBtn.addEventListener('click', () => {
             if (!entry.selectedItem) return;
-            entry.items = entry.items.filter(it => it !== entry.selectedItem);
+            lpSetItems(entry, entry.items.filter(it => it !== entry.selectedItem));
             entry.selectedItem = null;
             entry.multiSelected = new Set();
             lpCommit(entry);
@@ -3855,13 +3912,19 @@
                     if (idx >= 0) items[idx] = Object.assign({}, incomingItem, items[idx].group ? { group: items[idx].group } : {});
                     else items = items.concat([incomingItem]);
                 });
-                entry.items = items;
+                lpSetItems(entry, items);
                 lpCommit(entry);
                 renderLpRows(entry);
                 flashBtn(importBtn, 'Imported ' + incoming.length + '!');
             });
         }
 
+        // Optional ctrl.defaultName — pre-selects a named item so Use/
+        // Overwrite/Rename/Delete work immediately without the user first
+        // clicking a row, matching this project's own hand-built picker's
+        // original behavior (CLAUDE.md §12r). Only affects the INITIAL
+        // build; never re-applied on a later restore.
+        if (ctrl.defaultName) entry.selectedItem = entry.items.find(it => it.name === ctrl.defaultName) || null;
         renderLpRows(entry);
         return row;
     }

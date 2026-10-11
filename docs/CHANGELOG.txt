@@ -8580,6 +8580,29 @@ IK Posing true) in portrait, in simulated landscape, and back in portrait. If th
 range + curve, which are Desktop-only widgets), this change does not address it -- say which control.
 
 --------------------------------------------------------------------------------
+2026-10-11 -- Migrated the 7 Saved-preset pickers off the hand-built buildListPicker() onto devPanel.js's generic list-picker, after making that control live-array-synced
+
+Fixed the generic type:'list-picker' control (devpanel/devPanel.js, ported into .claude/TEMPLATE_DEV_PANEL.html too) to mutate its backing array IN PLACE
+(a new lpSetItems() helper: entry.items.length=0; entry.items.push(...)) instead of reassigning entry.items to a fresh array on every Save/Rename/Delete/
++Group/Import and on every Reset/Undo/Sync restore -- this is the one real property this project's own hand-built buildListPicker() had and the generic
+control didn't, which is why the 2026-09-28 CLAUDE.md entry declined migrating onto it. With entry.items === the array passed as `value` for the control's
+whole life, SAVED_POSES/SAVED_CAMERAS/SAVED_LIGHTING/SAVED_TOON/SAVED_TWEEN_SEQUENCES/SAVED_PHONE_POSES/SAVED_IK_INFLUENCE (still read directly by Tween
+playback, findSavedPoseByName(), etc.) see every mutation with no bridging code. Also added an optional ctrl.defaultName (pre-selects a named item on
+initial build) to match buildListPicker()'s own original defaultName behavior.
+
+renderPresetPicker() (main.js) now calls addRow(sub, {type:'list-picker', ...}) instead of buildListPicker() -- same 7 call sites, same signature, unchanged.
+buildListPicker() and the WRITE side of the custom persistence layer (persistListPickerItems()) are removed outright, not kept alongside. The READ side
+(loadListPickerItemsFromLocalStorage()/loadListPickerItemsFromRemoteData()) is kept as a one-time migration bridge from the old custom storage locations.
+The Hand Model Selector / Phone Model Selector are deliberately NOT part of this migration (different mechanism -- file picking/import, no saved-snapshot
+concept) and still share the .dp-list-picker CSS classes, left untouched.
+
+Disclosed behavior changes: persistence now happens on the panel's own explicit Sync/Save click (same as every other control) rather than on every
+individual list-picker button click; the generic engine's Use button doesn't call requestRender() on its own, so renderPresetPicker()'s onUse wraps applyFn
+with one to match old behavior; +Group now supports multi-select/empty groups, and drag-reorder + nested collapsible groups are new (the old picker had
+none of the three). Not live-verified (per this project's own standing rule) -- confirmed via node --check on both files and direct reading of every
+mutation path against the template's identical source.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
