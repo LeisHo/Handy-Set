@@ -51,6 +51,10 @@
     {
       "file": "Iphone17MaxPro2.glb",
       "name": "Iphone17MaxPro2"
+    },
+    {
+      "file": "Iphone17MaxPro-XOut.glb",
+      "name": "Iphone17MaxPro-XOut"
     }
   ]
 }
