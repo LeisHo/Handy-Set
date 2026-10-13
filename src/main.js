@@ -2672,17 +2672,42 @@ function attachMotionListeners() {
 // real user click, instead of a dedicated button.
 let motionPermissionRequested = false
 function requestMotionPermissionIfNeeded() {
-  if (typeof DeviceOrientationEvent === 'undefined') return
-  const needsPermission = typeof DeviceOrientationEvent.requestPermission === 'function'
-  if (!needsPermission) { attachMotionListeners(); return }
+  const orientationPermission = typeof DeviceOrientationEvent !== 'undefined'
+    && typeof DeviceOrientationEvent.requestPermission === 'function'
+  const motionPermission = typeof DeviceMotionEvent !== 'undefined'
+    && typeof DeviceMotionEvent.requestPermission === 'function'
+  if (!orientationPermission && !motionPermission) {
+    attachMotionListeners()
+    return
+  }
   if (motionPermissionRequested) return
   motionPermissionRequested = true
-  DeviceOrientationEvent.requestPermission().then((state) => {
-    if (state === 'granted') attachMotionListeners()
-  }).catch(() => {})
-  if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-    DeviceMotionEvent.requestPermission().catch(() => {})
+
+  // iOS requires each permission request to be initiated directly from a
+  // user gesture. Start BOTH requests synchronously before awaiting either:
+  // permission for deviceorientation must not determine whether devicemotion
+  // is allowed to attach (and vice versa). The streams remain independently
+  // permission-gated by the browser.
+  const requests = []
+  if (orientationPermission) {
+    try {
+      requests.push(DeviceOrientationEvent.requestPermission().catch(() => 'denied'))
+    } catch (_) {
+      requests.push(Promise.resolve('denied'))
+    }
   }
+  if (motionPermission) {
+    try {
+      requests.push(DeviceMotionEvent.requestPermission().catch(() => 'denied'))
+    } catch (_) {
+      requests.push(Promise.resolve('denied'))
+    }
+  }
+  Promise.all(requests).then((states) => {
+    // Attach if at least one requested stream was granted. If only one was
+    // granted, the other event stream will simply remain silent on iOS.
+    if (states.some((state) => state === 'granted')) attachMotionListeners()
+  })
 }
 function initMotionInput() {
   window.addEventListener('mousemove', handleMouseMoveFallback)
