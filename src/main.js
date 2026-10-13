@@ -193,7 +193,9 @@ const cfg = {
   // IK Influence (HANDO's CURRENT system, 2026-10-04 rewrite: one priority slider per existing pose slider + All, each with a hard
   // Min / Max window as a range bar -- see ikInfluence() / solveIkHandPose()). Defaults as in HANDO: whole-hand offset/rotation and the
   // arm start at 0 (locked), fingers and wrist at 100. Range values are JSON strings like every other range-bar in this file.
-  ikMaxSolveHz: 20, // IK Max Solve Rate (Hz): upper limit on how often the live IK solver runs while its inputs keep changing (a rotating phone moves every source node every frame). 0 = solve every frame.
+  ikSmoothingEnabled: false, // IK Smoothing: on = the hand EASES toward each solved pose (and solves are spaced out); off = the original snap-to-solution every frame
+  ikSmoothingMs: 100, // IK Smoothing Time (ms): time constant of the ease (about 95% of the way in 3x this)
+  ikSmoothSolveMs: 50, // IK Solve Interval While Smoothing (ms): minimum gap between solves while smoothing is on (never shorter than a solve's own duration)
   ikWarmStart: false, // IK Warm Start: false (default) = every live solve starts from the default (base) pose; true = start from the previous solve's result (faster, but the result depends on the path the sliders took)
   ikRotationWeight: 8, // IK Rotation Weight (x): how strongly the solver matches each pair's ORIENTATION vs its position (0 = position only) -- see solveIkHandPose()
   // Ported from HANDO 2026-10-09 with its per-axis / per-finger-set granularity: Finger Curl / Finger Twist / Finger Splay (ikInfluenceFingers/ikRangeFingers
@@ -3613,6 +3615,7 @@ function solveIkHandPose(pairs) {
   const base = ikBasePose
   const extraSplay = computeResponsiveWristSplayDeg(armBaseDistanceT)
   const dofKeys = ikDofKeys(pairs)
+  const shownBefore = cfg.ikSmoothingEnabled ? Object.fromEntries(dofKeys.map((k) => [k, cfg[k]])) : null // the pose currently ON SCREEN (smoothing starts from it)
   POSE_PRESET_KEYS.forEach((k) => { if (!dofKeys.includes(k) && base[k] !== undefined) cfg[k] = base[k] })
   const defs = dofKeys.map(ikPoseControlRange)
   const x0 = dofKeys.map((k) => (typeof base[k] === 'number' ? base[k] : (POSE_KEY_DEFAULTS[k] || 0)))
@@ -3745,6 +3748,16 @@ function solveIkHandPose(pairs) {
     return 'P' + p.i + ': ' + (p.displace ? 'pos ' + _iksP.distanceTo(srcPose[idx].pos).toFixed(2) + ' u, ' : '') + 'rot ' + THREE.MathUtils.radToDeg(_iksQ.angleTo(qDes[idx])).toFixed(1) + ' deg'
   })
   setIkStatus((pairs.length ? errs.join(' | ') : 'No complete pairs (set target + source)') + ' | ' + iters + ' it (' + s1.iters + '+' + (iters - s1.iters) + ', stage 2 ' + stage2 + '), ' + Math.round(performance.now() - t0) + ' ms')
+  // Smoothing: the solved pose was applied above only to measure it and report its errors -- put the pose that was on screen back and ease toward the solved one from the next frame on.
+  if (cfg.ikSmoothingEnabled && shownBefore) {
+    ikSmooth.tgt = Object.fromEntries(dofKeys.map((k, i) => [k, x[i]]))
+    ikSmooth.lastT = performance.now()
+    dofKeys.forEach((k) => { cfg[k] = shownBefore[k] })
+    ikApplyShownPose()
+    requestRender()
+  } else {
+    ikSmooth.tgt = null
+  }
 }
 function setIkPosingEnabled(v) {
   cfg.ikPosingEnabled = v
@@ -3756,6 +3769,7 @@ function setIkPosingEnabled(v) {
     // Before startup has settled the saved pose / Sync restore may not have landed yet: the baseline is then captured lazily by updateIkHandPose().
     if (ikStartupSettled) { ikBasePose = capturePoseFromCfg(); ikLastSolved = null }
   } else if (ikBasePose) {
+    ikSmooth.tgt = null // forget any pending ease; the base pose is restored right below
     Object.assign(cfg, ikBasePose)
     applyPoseValuesToHand(cfg)
     syncPairsFromCfg(POSE_SYNC_PAIRS)
@@ -3784,18 +3798,20 @@ function updateIkHandPose() {
     if (!ikStartupSettled) return false
     ikBasePose = capturePoseFromCfg(); ikLastSolved = null; ikLastSignature = null
   }
+  let moved = false
+  if (cfg.ikSmoothingEnabled) moved = stepIkSmoothing()
+  else if (ikSmooth.tgt) { flushIkSmoothing(true); moved = true }
   const pairs = getActiveIkPairs()
   const sig = ikSignature(pairs)
-  if (sig === ikLastSignature) return false
-  // SOLVE-RATE LIMIT (2026-10-13, direct report: responsive rotation "isn't running smoothly" with IK posing on). A rotating phone changes every source node's
-  // world matrix EVERY frame, so the signature changes every frame and a full solve (many finite-difference pose evaluations) ran every frame -- measured in Node
-  // with 5 pairs: median 46 ms per solve, so a phone several times slower than a desktop stalls each frame for 100+ ms and the whole scene (the phone's own
-  // rotation included) drops to a few fps. Now a new solve waits until BOTH (a) 1/ikMaxSolveHz has passed since the last one ended and (b) at least TWICE as long as the
-  // last solve took has passed since it ended (so the solver never uses more than ~a third of the main thread). The signature is NOT consumed when a solve is skipped, so
-  // the newest inputs are always solved next, and a frame is requested so the loop stays alive until that happens (on-demand rendering would otherwise go idle).
-  const nowMs = performance.now()
-  const minGap = Math.max(cfg.ikMaxSolveHz > 0 ? 1000 / cfg.ikMaxSolveHz : 0, ikLastSolveMs * 2) // x2 = the solver uses at most ~1/3 of the main thread (a judgment call, not a measurement)
-  if (ikLastSolveEnd > 0 && nowMs - ikLastSolveEnd < minGap) { requestRender(); return false }
+  if (sig === ikLastSignature) return moved
+  // IK SMOOTHING (2026-10-13, direct request, replaces the earlier solve-rate limit which made the hand lag/stutter MORE): off = exactly the original behavior
+  // (a changed signature is solved right away, every frame). On = the solver still runs, but no more often than "IK Solve Interval While Smoothing" and never faster than
+  // its own last duration (so it uses at most ~half the main thread), and the pose it finds is not snapped onto the hand: the hand EASES toward it every frame
+  // (stepIkSmoothing). A skipped solve does not consume the signature, so the newest inputs are solved next; requestRender() keeps the on-demand loop alive until then.
+  if (cfg.ikSmoothingEnabled && ikLastSolveEnd > 0) {
+    const gap = Math.max(cfg.ikSmoothSolveMs, ikLastSolveMs)
+    if (performance.now() - ikLastSolveEnd < gap) { requestRender(); return moved }
+  }
   ikLastSignature = sig
   const t0 = performance.now()
   solveIkHandPose(pairs)
@@ -3804,6 +3820,39 @@ function updateIkHandPose() {
   return true
 }
 let ikLastSolveEnd = 0, ikLastSolveMs = 0
+// Smoothing state: tgt = {poseKey: solved value} still being eased toward (null when settled); lastT = time of the previous easing step.
+const ikSmooth = { tgt: null, lastT: 0 }
+function ikSyncSolvedSliders() {
+  POSE_SYNC_PAIRS.forEach(([id, k]) => { if (ikSyncedValues[k] !== cfg[k]) { ikSyncedValues[k] = cfg[k]; syncControlDom(id, cfg[k]) } })
+}
+function ikApplyShownPose() {
+  ikApplyPose(computeResponsiveWristSplayDeg(armBaseDistanceT))
+  ikFollowHandNodes()
+  ikSyncSolvedSliders()
+  updateWristCrop()
+}
+// Ease the displayed pose toward the latest solved pose: frame-rate-independent exponential smoothing, time constant = IK Smoothing Time (about 95% of the way in 3x that).
+// Returns true if it moved the pose this frame.
+function stepIkSmoothing() {
+  const tgt = ikSmooth.tgt
+  if (!tgt) return false
+  const now = performance.now()
+  const dt = Math.min(100, Math.max(0, now - ikSmooth.lastT))
+  ikSmooth.lastT = now
+  const a = 1 - Math.exp(-dt / Math.max(1, cfg.ikSmoothingMs))
+  let maxDiff = 0
+  for (const k in tgt) { const d = tgt[k] - cfg[k]; if (Math.abs(d) > maxDiff) maxDiff = Math.abs(d); cfg[k] += d * a }
+  if (maxDiff * (1 - a) < 0.01) { for (const k in tgt) cfg[k] = tgt[k]; ikSmooth.tgt = null } // settled: land exactly on the solved pose
+  ikApplyShownPose()
+  if (ikSmooth.tgt) requestRender()
+  return true
+}
+// Smoothing turned off (or IK turned off) while an ease is pending: jump straight to the solved pose / forget it.
+function flushIkSmoothing(land) {
+  const tgt = ikSmooth.tgt
+  ikSmooth.tgt = null
+  if (tgt && land) { for (const k in tgt) cfg[k] = tgt[k]; ikApplyShownPose() }
+}
 
 // ---------------- pairs: state, persistence, picking ----------------
 // PER-PAIR ROTATION WEIGHT (2026-10-11, direct request: "Provide each pair with its own rotational weight slider as opposed to a single global slider"). Each pair's
@@ -4247,8 +4296,13 @@ function renderIkPosingGroup(handModelContent) {
   addRow(content, { id: 'checkboxIkWarmStart', label: 'IK Warm Start (Faster, Path-Dependent)', type: 'checkbox' })
   document.getElementById('checkboxIkWarmStart').checked = cfg.ikWarmStart
   wireCheckbox('checkboxIkWarmStart', (v) => { cfg.ikWarmStart = v; ikLastSignature = null })
-  addRow(content, { id: 'sliderIkMaxSolveHz', label: 'IK Max Solve Rate (Hz, 0 = Every Frame)', type: 'slider', min: 0, max: 60, step: 1, value: cfg.ikMaxSolveHz })
-  wireSlider('sliderIkMaxSolveHz', (v) => { cfg.ikMaxSolveHz = v; requestRender() })
+  addRow(content, { id: 'checkboxIkSmoothing', label: 'IK Smoothing Between Solves', type: 'checkbox' })
+  document.getElementById('checkboxIkSmoothing').checked = cfg.ikSmoothingEnabled
+  wireCheckbox('checkboxIkSmoothing', (v) => { cfg.ikSmoothingEnabled = v; if (!v) flushIkSmoothing(true); ikLastSignature = null; requestRender() })
+  addRow(content, { id: 'sliderIkSmoothingMs', label: 'IK Smoothing Time (Ms)', type: 'slider', min: 10, max: 1000, step: 1, value: cfg.ikSmoothingMs })
+  wireSlider('sliderIkSmoothingMs', (v) => { cfg.ikSmoothingMs = v; requestRender() })
+  addRow(content, { id: 'sliderIkSmoothSolveMs', label: 'IK Solve Interval While Smoothing (Ms)', type: 'slider', min: 0, max: 500, step: 1, value: cfg.ikSmoothSolveMs })
+  wireSlider('sliderIkSmoothSolveMs', (v) => { cfg.ikSmoothSolveMs = v; requestRender() })
   // (The single global IK Rotation Weight slider was replaced by a Rotation Weight slider inside every pair, 2026-10-11.)
   ikStatusEl = document.createElement('div')
   ikStatusEl.style.cssText = 'font-size:11px; opacity:0.85; margin:2px 0 6px;'

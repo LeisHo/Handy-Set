@@ -8848,6 +8848,23 @@ passed on both devPanel.js and main.js.
     between slices) -- a larger change, not done. Cheaper solves also come from fewer free DOFs (influence 0 on unneeded ones) and fewer pairs.
   - NOT verified on a phone (project rule / no device); node --check passed.
 
+2026-10-13 -- IK solve-rate limit REMOVED; new optional IK Smoothing Between Solves (main.js v=252)
+  - Direct report: after the v=251 solve-rate limit the IK stutter/lag was "much worse", even with the slider at 0. Removed entirely (cfg.ikMaxSolveHz and its slider).
+    Correction to the v=251 entry: its "0 = every frame" was wrong -- the second condition (twice the last solve's duration) still applied at 0, so 0 never restored the
+    original behavior. With the limit gone, IK solves exactly as before v=251 unless the new smoothing toggle is on.
+  - New dev-panel controls (IK Posing group, under IK Warm Start): "IK Smoothing Between Solves" (checkbox, default OFF), "IK Smoothing Time (Ms)" (10-1000, default 100: the
+    time constant of the ease, ~95% of the way in 3x), "IK Solve Interval While Smoothing (Ms)" (0-500, default 50).
+  - Behavior with smoothing ON: solveIkHandPose() still computes the full solution (cold start, path-independent) and reports its errors, then puts back the pose that was on
+    screen and records the solution as a target (ikSmooth.tgt). stepIkSmoothing(), called every frame from updateIkHandPose(), eases every solved pose slider toward it
+    (frame-rate-independent exponential smoothing), re-applies the pose + IK nodes + slider display + wrist crop, and requests another frame until it lands EXACTLY on the target.
+    Solves are spaced at least "Solve Interval" and at least their own last duration apart (the skipped signature is not consumed, so the newest inputs are solved next).
+    Turning smoothing off mid-ease lands on the solved pose at once; turning IK Posing off forgets any pending ease.
+  - TESTED (Node, real solver + real Draco hand, 5 pairs): smoothing off leaves no pending ease; smoothing on leaves the pose on screen unchanged right after the solve,
+    the distance to the solved pose never grows, it ends exactly on the solved pose (gap 0) after 58 frames @16 ms with tau 100 ms, and switching smoothing off mid-ease lands
+    on the solved pose immediately.
+  - LIMIT, stated plainly (not measured on a phone): smoothing does not shorten a solve -- a frame that contains a solve still takes as long as the solve. It only spreads the
+    hand's movement across the frames in between, at the price of the hand trailing the phone by roughly the smoothing time. NOT browser/phone verified (project rule).
+
 --------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
