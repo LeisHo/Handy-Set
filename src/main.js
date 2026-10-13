@@ -3573,6 +3573,10 @@ function getActiveIkPairs() {
       priority: Math.min(1, Math.max(0, (pair.priority === undefined ? 100 : Number(pair.priority) || 0) / 100)), // Pair Priority (HANDO): scales this pair's errors in the solver
       world: pair.axesMode === 'world',
       rotWeights: ikPairRotWeights(pair),
+      // Source Point Offset X / Y / Z (2026-10-12, direct request): fine-tunes where the goal point sits relative to the source node, in world units,
+      // along the same axes the rotation is measured against -- the source node's own X / Y / Z in Source Node Axes mode, the world axes in World mode.
+      // It is NOT turned by the Rotate X / Y / Z sliders (those only change the target orientation).
+      off: new THREE.Vector3(Number(pair.offX) || 0, Number(pair.offY) || 0, Number(pair.offZ) || 0),
       qOff: new THREE.Quaternion().setFromEuler(new THREE.Euler(rad(pair.rotX || 0), rad(pair.rotY || 0), rad(pair.rotZ || 0), 'XYZ'))
     })
   })
@@ -3581,7 +3585,7 @@ function getActiveIkPairs() {
 function ikSignature(pairs) {
   return IK_PAIR_MAX + '#' + IK_INFLUENCE_ROW_KEYS.map((k) => cfg[k]).join(',') + '#' + pairs.map((p) => {
     p.src.object3d.updateWorldMatrix(true, false)
-    return [p.i, p.tgt.id, p.src.id, p.displace, p.priority, p.world, p.rotWeights.join('/'), p.qOff.x.toFixed(4), p.qOff.y.toFixed(4), p.qOff.z.toFixed(4),
+    return [p.i, p.tgt.id, p.src.id, p.displace, p.priority, p.world, p.rotWeights.join('/'), p.off.x.toFixed(4), p.off.y.toFixed(4), p.off.z.toFixed(4), p.qOff.x.toFixed(4), p.qOff.y.toFixed(4), p.qOff.z.toFixed(4),
       p.src.object3d.matrixWorld.elements.map((e) => Math.round(e * 1000)).join(',')].join(':')
   }).join('|')
 }
@@ -3600,7 +3604,7 @@ function ikSignature(pairs) {
 const IK_PRIORITY_RHO = 1.0
 const IK_STAGE1_REG_SCALE = 0.1
 const IK_STAGE2_PAIR_WEIGHT = 100
-const _iksV = new THREE.Vector3(), _iksDesInv = new THREE.Quaternion()
+const _iksV = new THREE.Vector3(), _iksDesInv = new THREE.Quaternion(), _iksIdentityQ = new THREE.Quaternion()
 const IK_COLD_START_ITERS = 40 // stage-1 iteration cap when every solve starts from the base pose (see "START POINT" in solveIkHandPose)
 const IK_PAIR_TOL = 0.05
 function solveIkHandPose(pairs) {
@@ -3628,6 +3632,8 @@ function solveIkHandPose(pairs) {
   const hi = win.map((w) => w.wMax)
   const clampX = (x) => x.map((v, i) => Math.min(hi[i], Math.max(lo[i], v)))
   const srcPose = pairs.map((p) => { p.src.object3d.updateWorldMatrix(true, false); const pos = new THREE.Vector3(), q = new THREE.Quaternion(); p.src.object3d.matrixWorld.decompose(pos, q, new THREE.Vector3()); return { pos, q } })
+  // apply each pair's Source Point Offset to its goal position (frame: source node axes, or world axes in World mode)
+  pairs.forEach((p, idx) => { if (p.off.lengthSq() > 0) srcPose[idx].pos.add(p.off.clone().applyQuaternion(p.world ? _iksIdentityQ : srcPose[idx].q)) })
   const qDes = pairs.map((p, idx) => (p.world ? new THREE.Quaternion() : srcPose[idx].q.clone()).multiply(p.qOff))
   const regPlain = dofKeys.map((k) => ikRegWeight(k))
   const regInfluence = dofKeys.map((k) => {
@@ -4131,6 +4137,9 @@ function renderIkPairsUI() {
     body.appendChild(ikMakeSliderRow('Rotate X (Deg)', -180, 180, pair.rotX, (v) => { pair.rotX = v; persistIkPairs() }))
     body.appendChild(ikMakeSliderRow('Rotate Y (Deg)', -180, 180, pair.rotY, (v) => { pair.rotY = v; persistIkPairs() }))
     body.appendChild(ikMakeSliderRow('Rotate Z (Deg)', -180, 180, pair.rotZ, (v) => { pair.rotZ = v; persistIkPairs() }))
+    ;[['X', 'offX'], ['Y', 'offY'], ['Z', 'offZ']].forEach(([ax, key]) => {
+      body.appendChild(ikMakeSliderRow('Source Point Offset ' + ax + ' (Units)', -20, 20, Number(pair[key]) || 0, (v) => { pair[key] = v; ikLastSignature = null; persistIkPairs(); requestRender() }))
+    })
     const ovRow = document.createElement('div'); ovRow.className = 'dev-row ik-pair-row'
     const ovL = document.createElement('span'); ovL.className = 'dev-label'; ovL.textContent = 'Displace Target To Overlap Source'
     const ov = document.createElement('input'); ov.type = 'checkbox'; ov.checked = !!pair.overlap

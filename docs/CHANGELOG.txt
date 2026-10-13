@@ -8823,6 +8823,16 @@ passed on both devPanel.js and main.js.
     afterwards, so the nested screen images never contain IK nodes. The main view and the preview panels still show them.
   - NOT browser-verified (project rule); node --check passed.
 
+2026-10-12 -- IK pairs: Source Point Offset X / Y / Z sliders (main.js v=250)
+  - Direct request: next to the rotation sliders, add XYZ offset sliders to fine-tune the source point location.
+  - Each IK pair now has offX / offY / offZ (default 0, world units, slider -20..20; click-to-type for more). They move the GOAL position the target
+    node is solved toward. Frame: the source node's own X / Y / Z in Source Node Axes mode, the world axes in World mode (the same axes the rotation
+    weights use). They are NOT turned by the Rotate X / Y / Z sliders, which only change the target orientation. The offset is part of ikSignature(),
+    so moving a slider re-solves. Saved with the pair (pair presets, pair memory, Sync) because it is a plain pair field; old pairs read as 0.
+  - TESTED (Node, real solver + real Draco hand, index tip pair): no offset -> tip on the source (0.000); offset X 0.6 -> tip 0.59 units from the
+    source; with the source turned 90 deg about Z, Source Node Axes mode puts the offset on world Y (0.600) while World mode keeps it on world X
+    (0.600). NOT browser-verified (project rule).
+
 --------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
