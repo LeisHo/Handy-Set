@@ -3,7 +3,7 @@
     "checkboxHandModelEnabled": true,
     "hiddenHandModelFile": "data/processed/HAND3D/HandiBonesB-IK.glb",
     "hiddenHandModelOrder": "[\"data/processed/HAND3D/HandiBonesB-IK.glb\",\"data/processed/HAND3D/Hand2.glb\"]",
-    "checkboxIkPosingEnabled": true,
+    "checkboxIkPosingEnabled": false,
     "checkboxIkWarmStart": false,
     "listPickerIkInfluence": "{\"items\":[{\"name\":\"IK Influence 1\",\"ikInfluenceMaster\":100,\"ikInfluenceFingerCurl\":100,\"ikRangeFingerCurl\":\"{\\\"min\\\":-103,\\\"max\\\":114}\",\"ikInfluenceFingerTwist\":8,\"ikRangeFingerTwist\":\"{\\\"min\\\":-13,\\\"max\\\":20}\",\"ikInfluenceFingers\":100,\"ikRangeFingers\":\"{\\\"min\\\":-96,\\\"max\\\":95}\",\"ikInfluenceOffX\":100,\"ikRangeOffX\":\"{\\\"min\\\":-100,\\\"max\\\":150}\",\"ikInfluenceOffY\":100,\"ikRangeOffY\":\"{\\\"min\\\":-120,\\\"max\\\":100}\",\"ikInfluenceOffZ\":100,\"ikRangeOffZ\":\"{\\\"min\\\":-100,\\\"max\\\":100}\",\"ikInfluenceRotX\":100,\"ikRangeRotX\":\"{\\\"min\\\":-170,\\\"max\\\":192}\",\"ikInfluenceRotY\":100,\"ikRangeRotY\":\"{\\\"min\\\":-181,\\\"max\\\":196}\",\"ikInfluenceRotZ\":100,\"ikRangeRotZ\":\"{\\\"min\\\":-184,\\\"max\\\":183}\",\"ikInfluenceWristRot\":75,\"ikRangeWristRot\":\"{\\\"min\\\":-90,\\\"max\\\":90}\",\"ikInfluenceWristSplay\":90,\"ikRangeWristSplay\":\"{\\\"min\\\":2,\\\"max\\\":240}\",\"ikInfluenceWristBend\":39,\"ikRangeWristBend\":\"{\\\"min\\\":-20,\\\"max\\\":20}\",\"ikInfluenceElbowBend\":100,\"ikRangeElbowBend\":\"{\\\"min\\\":-180,\\\"max\\\":93}\",\"ikInfluenceElbowSideBend\":100,\"ikRangeElbowSideBend\":\"{\\\"min\\\":-37,\\\"max\\\":45}\",\"ikInfluenceForearmTwist\":54,\"ikRangeForearmTwist\":\"{\\\"min\\\":-45,\\\"max\\\":45}\"}],\"groupOrder\":[]}",
     "sliderIkInfluenceMaster": 100,
@@ -55,20 +55,20 @@
     "checkboxhandMirrorX": false,
     "checkboxhandMirrorY": false,
     "checkboxhandMirrorZ": false,
-    "sliderbaseRotationX": 30,
-    "sliderbaseRotationY": 35,
-    "sliderbaseRotationZ": -2,
-    "sliderthumbCurl": 52,
-    "sliderthumbSplay": -81,
+    "sliderbaseRotationX": 6,
+    "sliderbaseRotationY": 6,
+    "sliderbaseRotationZ": 0,
+    "sliderthumbCurl": 0,
+    "sliderthumbSplay": -48,
     "sliderthumbSplay2": -8,
     "slidercurlBiasThumb": 0,
     "sliderbaseOnlyCurlThumb": -61,
     "slidermidOnlyCurlThumb": 0,
     "slidertipOnlyCurlThumb": 0,
     "slidertipTwistThumb": 0,
-    "sliderelbowBend": -3,
-    "sliderelbowSideBend": 10,
-    "sliderforearmTwist": 18,
+    "sliderelbowBend": 0,
+    "sliderelbowSideBend": 0,
+    "sliderforearmTwist": 0,
     "sliderforearmBendOffX": 0,
     "sliderforearmBendOffY": 0,
     "sliderforearmBendOffZ": 0,
@@ -78,9 +78,9 @@
     "sliderwristOffX": 0,
     "sliderwristOffY": 0,
     "sliderwristOffZ": 0,
-    "sliderwristRotation": 7,
-    "sliderwristBend": -15,
-    "sliderwristSplay": -22.8,
+    "sliderwristRotation": 0,
+    "sliderwristBend": 0,
+    "sliderwristSplay": -1.8,
     "textwristRotationClampRange": "{\"min\":-360,\"max\":360}",
     "textwristBendClampRange": "{\"min\":-90,\"max\":90}",
     "textwristSplayClampRange": "{\"min\":-180,\"max\":180}",
@@ -89,43 +89,43 @@
     "checkboxReactiveArmLengthEnabled": false,
     "textArmLengthRange": "{\"min\":0,\"max\":85}",
     "textArmLengthCurve": "{\"points\":[{\"x\":0,\"y\":1},{\"x\":0.148333740234375,\"y\":0.6613540649414062},{\"x\":0.4100001017252604,\"y\":0.31468760172526045},{\"x\":0.5316670735677084,\"y\":0.2680206298828125},{\"x\":0.748333740234375,\"y\":0.19468739827473958},{\"x\":1,\"y\":0}],\"method\":\"catmullrom\",\"bgOpacity\":0.15}",
-    "slidercurlIndex": 21,
-    "slidersplayIndex": -57,
+    "slidercurlIndex": 0,
+    "slidersplayIndex": -68,
     "slidersplayIndex2": 0,
     "slidercurlBiasIndex": 0,
     "sliderbaseOnlyCurlIndex": 0,
     "slidermidOnlyCurlIndex": -5,
     "slidertipOnlyCurlIndex": 0,
     "slidertipTwistIndex": 0,
-    "slidercurlMiddle": 36,
-    "slidersplayMiddle": -14,
+    "slidercurlMiddle": 0,
+    "slidersplayMiddle": -6,
     "slidersplayMiddle2": 0,
     "slidercurlBiasMiddle": 0,
     "sliderbaseOnlyCurlMiddle": 0,
     "slidermidOnlyCurlMiddle": -5,
     "slidertipOnlyCurlMiddle": 0,
     "slidertipTwistMiddle": 0,
-    "slidercurlRing": 40,
-    "slidersplayRing": 27,
+    "slidercurlRing": 0,
+    "slidersplayRing": -34,
     "slidersplayRing2": 0,
     "slidercurlBiasRing": 0,
     "sliderbaseOnlyCurlRing": 0,
     "slidermidOnlyCurlRing": -5,
     "slidertipOnlyCurlRing": 0,
     "slidertipTwistRing": 0,
-    "slidercurlPinky": 35,
-    "slidersplayPinky": -10,
+    "slidercurlPinky": 0,
+    "slidersplayPinky": 86,
     "slidersplayPinky2": 0,
     "slidercurlBiasPinky": 0,
     "sliderbaseOnlyCurlPinky": 0,
     "slidermidOnlyCurlPinky": -5,
     "slidertipOnlyCurlPinky": 0,
-    "slidertipTwistPinky": -1,
-    "sliderposeOffsetX": 23.3809873575904,
-    "sliderposeOffsetY": -14.44,
-    "sliderposeOffsetZ": -8.08,
+    "slidertipTwistPinky": 0,
+    "sliderposeOffsetX": 15.8809873575904,
+    "sliderposeOffsetY": -13.74,
+    "sliderposeOffsetZ": -6.38,
     "sliderPoseScale": 1,
-    "listPickerPoses": "{\"items\":[{\"name\":\"Fist\",\"thumbCurl\":75,\"thumbSplay\":42,\"thumbSplay2\":13,\"curlBiasThumb\":32,\"baseOnlyCurlThumb\":-23,\"midOnlyCurlThumb\":-8,\"tipOnlyCurlThumb\":20,\"tipTwistThumb\":46,\"curlIndex\":90,\"splayIndex\":18,\"splayIndex2\":0,\"curlBiasIndex\":-8,\"baseOnlyCurlIndex\":6,\"midOnlyCurlIndex\":0,\"tipOnlyCurlIndex\":-1,\"tipTwistIndex\":0,\"curlMiddle\":92,\"splayMiddle\":-15,\"splayMiddle2\":0,\"curlBiasMiddle\":0,\"baseOnlyCurlMiddle\":-4,\"midOnlyCurlMiddle\":0,\"tipOnlyCurlMiddle\":-1,\"tipTwistMiddle\":0,\"curlRing\":98,\"splayRing\":40,\"splayRing2\":0,\"curlBiasRing\":0,\"baseOnlyCurlRing\":-15,\"midOnlyCurlRing\":0,\"tipOnlyCurlRing\":6,\"tipTwistRing\":0,\"curlPinky\":88,\"splayPinky\":-90,\"splayPinky2\":25,\"curlBiasPinky\":0,\"baseOnlyCurlPinky\":0,\"midOnlyCurlPinky\":0,\"tipOnlyCurlPinky\":15,\"tipTwistPinky\":0,\"wristBend\":0,\"wristSplay\":0,\"modelRotX\":0,\"modelRotY\":0,\"modelRotZ\":0,\"hideWrist\":78,\"poseOffsetX\":0,\"poseOffsetY\":0,\"poseOffsetZ\":0,\"poseScale\":1},{\"name\":\"Fist - Bent Back\",\"thumbCurl\":75,\"thumbSplay\":42,\"thumbSplay2\":13,\"curlBiasThumb\":32,\"baseOnlyCurlThumb\":-23,\"midOnlyCurlThumb\":-8,\"tipOnlyCurlThumb\":20,\"tipTwistThumb\":46,\"curlIndex\":90,\"splayIndex\":18,\"splayIndex2\":0,\"curlBiasIndex\":-8,\"baseOnlyCurlIndex\":6,\"midOnlyCurlIndex\":0,\"tipOnlyCurlIndex\":-1,\"tipTwistIndex\":0,\"curlMiddle\":92,\"splayMiddle\":-15,\"splayMiddle2\":0,\"curlBiasMiddle\":0,\"baseOnlyCurlMiddle\":-4,\"midOnlyCurlMiddle\":0,\"tipOnlyCurlMiddle\":-1,\"tipTwistMiddle\":0,\"curlRing\":98,\"splayRing\":40,\"splayRing2\":0,\"curlBiasRing\":0,\"baseOnlyCurlRing\":-15,\"midOnlyCurlRing\":0,\"tipOnlyCurlRing\":6,\"tipTwistRing\":0,\"curlPinky\":88,\"splayPinky\":-90,\"splayPinky2\":25,\"curlBiasPinky\":0,\"baseOnlyCurlPinky\":0,\"midOnlyCurlPinky\":0,\"tipOnlyCurlPinky\":15,\"tipTwistPinky\":0,\"wristBend\":0,\"wristSplay\":-50,\"modelRotX\":0,\"modelRotY\":0,\"modelRotZ\":0,\"hideWrist\":78,\"poseOffsetX\":0,\"poseOffsetY\":0,\"poseOffsetZ\":0,\"poseScale\":1},{\"name\":\"Pose 13\",\"thumbCurl\":75,\"thumbSplay\":42,\"thumbSplay2\":13,\"curlBiasThumb\":32,\"baseOnlyCurlThumb\":-23,\"midOnlyCurlThumb\":-8,\"tipOnlyCurlThumb\":20,\"tipTwistThumb\":46,\"curlIndex\":90,\"splayIndex\":18,\"splayIndex2\":0,\"curlBiasIndex\":-8,\"baseOnlyCurlIndex\":6,\"midOnlyCurlIndex\":0,\"tipOnlyCurlIndex\":-1,\"tipTwistIndex\":0,\"curlMiddle\":92,\"splayMiddle\":-15,\"splayMiddle2\":0,\"curlBiasMiddle\":0,\"baseOnlyCurlMiddle\":-4,\"midOnlyCurlMiddle\":0,\"tipOnlyCurlMiddle\":-1,\"tipTwistMiddle\":0,\"curlRing\":98,\"splayRing\":40,\"splayRing2\":0,\"curlBiasRing\":0,\"baseOnlyCurlRing\":-15,\"midOnlyCurlRing\":0,\"tipOnlyCurlRing\":6,\"tipTwistRing\":0,\"curlPinky\":88,\"splayPinky\":-90,\"splayPinky2\":25,\"curlBiasPinky\":0,\"baseOnlyCurlPinky\":0,\"midOnlyCurlPinky\":0,\"tipOnlyCurlPinky\":15,\"tipTwistPinky\":0,\"wristBend\":0,\"wristSplay\":0,\"wristRotation\":0,\"modelRotX\":90,\"modelRotY\":90,\"modelRotZ\":0,\"baseRotationX\":5,\"baseRotationY\":92,\"baseRotationZ\":0,\"hideWrist\":78,\"poseOffsetX\":-1.8,\"poseOffsetY\":-9,\"poseOffsetZ\":0,\"poseScale\":1,\"elbowBend\":0,\"elbowSideBend\":0,\"forearmTwist\":0,\"forearmBendOffX\":0,\"forearmBendOffY\":0,\"forearmBendOffZ\":0,\"forearmTwistOffX\":0,\"forearmTwistOffY\":0,\"forearmTwistOffZ\":0,\"wristOffX\":0,\"wristOffY\":0,\"wristOffZ\":0},{\"name\":\"Pose 14\",\"thumbCurl\":0,\"thumbSplay\":-48,\"thumbSplay2\":-8,\"curlBiasThumb\":0,\"baseOnlyCurlThumb\":-61,\"midOnlyCurlThumb\":0,\"tipOnlyCurlThumb\":0,\"tipTwistThumb\":0,\"curlIndex\":0,\"splayIndex\":-68,\"splayIndex2\":0,\"curlBiasIndex\":0,\"baseOnlyCurlIndex\":0,\"midOnlyCurlIndex\":-5,\"tipOnlyCurlIndex\":0,\"tipTwistIndex\":0,\"curlMiddle\":0,\"splayMiddle\":-6,\"splayMiddle2\":0,\"curlBiasMiddle\":0,\"baseOnlyCurlMiddle\":0,\"midOnlyCurlMiddle\":-5,\"tipOnlyCurlMiddle\":0,\"tipTwistMiddle\":0,\"curlRing\":0,\"splayRing\":-34,\"splayRing2\":0,\"curlBiasRing\":0,\"baseOnlyCurlRing\":0,\"midOnlyCurlRing\":-5,\"tipOnlyCurlRing\":0,\"tipTwistRing\":0,\"curlPinky\":0,\"splayPinky\":86,\"splayPinky2\":0,\"curlBiasPinky\":0,\"baseOnlyCurlPinky\":0,\"midOnlyCurlPinky\":-5,\"tipOnlyCurlPinky\":0,\"tipTwistPinky\":0,\"wristBend\":0,\"wristSplay\":-30,\"wristRotation\":0,\"modelRotX\":90,\"modelRotY\":90,\"modelRotZ\":0,\"baseRotationX\":5,\"baseRotationY\":92,\"baseRotationZ\":0,\"hideWrist\":78,\"poseOffsetX\":13.9,\"poseOffsetY\":-3.9,\"poseOffsetZ\":20,\"poseScale\":1,\"elbowBend\":0,\"elbowSideBend\":0,\"forearmTwist\":0,\"forearmBendOffX\":0,\"forearmBendOffY\":0,\"forearmBendOffZ\":0,\"forearmTwistOffX\":0,\"forearmTwistOffY\":0,\"forearmTwistOffZ\":0,\"wristOffX\":0,\"wristOffY\":0,\"wristOffZ\":0},{\"name\":\"Pose 15\",\"thumbCurl\":0,\"thumbSplay\":-48,\"thumbSplay2\":-8,\"curlBiasThumb\":0,\"baseOnlyCurlThumb\":-61,\"midOnlyCurlThumb\":0,\"tipOnlyCurlThumb\":0,\"tipTwistThumb\":0,\"curlIndex\":0,\"splayIndex\":-68,\"splayIndex2\":0,\"curlBiasIndex\":0,\"baseOnlyCurlIndex\":0,\"midOnlyCurlIndex\":-5,\"tipOnlyCurlIndex\":0,\"tipTwistIndex\":0,\"curlMiddle\":0,\"splayMiddle\":-6,\"splayMiddle2\":0,\"curlBiasMiddle\":0,\"baseOnlyCurlMiddle\":0,\"midOnlyCurlMiddle\":-5,\"tipOnlyCurlMiddle\":0,\"tipTwistMiddle\":0,\"curlRing\":0,\"splayRing\":-34,\"splayRing2\":0,\"curlBiasRing\":0,\"baseOnlyCurlRing\":0,\"midOnlyCurlRing\":-5,\"tipOnlyCurlRing\":0,\"tipTwistRing\":0,\"curlPinky\":0,\"splayPinky\":86,\"splayPinky2\":0,\"curlBiasPinky\":0,\"baseOnlyCurlPinky\":0,\"midOnlyCurlPinky\":-5,\"tipOnlyCurlPinky\":0,\"tipTwistPinky\":0,\"wristBend\":0,\"wristSplay\":-30,\"wristRotation\":0,\"modelRotX\":79,\"modelRotY\":61,\"modelRotZ\":-86,\"baseRotationX\":10,\"baseRotationY\":28,\"baseRotationZ\":89,\"hideWrist\":78,\"poseOffsetX\":19.1,\"poseOffsetY\":-18.5,\"poseOffsetZ\":0.5,\"poseScale\":1,\"elbowBend\":0,\"elbowSideBend\":0,\"forearmTwist\":0,\"forearmBendOffX\":0,\"forearmBendOffY\":0,\"forearmBendOffZ\":0,\"forearmTwistOffX\":0,\"forearmTwistOffY\":0,\"forearmTwistOffZ\":0,\"wristOffX\":0,\"wristOffY\":0,\"wristOffZ\":0},{\"name\":\"Pose 16\",\"thumbCurl\":0,\"thumbSplay\":-48,\"thumbSplay2\":-8,\"curlBiasThumb\":0,\"baseOnlyCurlThumb\":-61,\"midOnlyCurlThumb\":0,\"tipOnlyCurlThumb\":0,\"tipTwistThumb\":0,\"curlIndex\":0,\"splayIndex\":-68,\"splayIndex2\":0,\"curlBiasIndex\":0,\"baseOnlyCurlIndex\":0,\"midOnlyCurlIndex\":-5,\"tipOnlyCurlIndex\":0,\"tipTwistIndex\":0,\"curlMiddle\":0,\"splayMiddle\":-6,\"splayMiddle2\":0,\"curlBiasMiddle\":0,\"baseOnlyCurlMiddle\":0,\"midOnlyCurlMiddle\":-5,\"tipOnlyCurlMiddle\":0,\"tipTwistMiddle\":0,\"curlRing\":0,\"splayRing\":-34,\"splayRing2\":0,\"curlBiasRing\":0,\"baseOnlyCurlRing\":0,\"midOnlyCurlRing\":-5,\"tipOnlyCurlRing\":0,\"tipTwistRing\":0,\"curlPinky\":0,\"splayPinky\":86,\"splayPinky2\":0,\"curlBiasPinky\":0,\"baseOnlyCurlPinky\":0,\"midOnlyCurlPinky\":-5,\"tipOnlyCurlPinky\":0,\"tipTwistPinky\":0,\"wristBend\":0,\"wristSplay\":-30,\"wristRotation\":0,\"modelRotX\":0,\"modelRotY\":0,\"modelRotZ\":0,\"baseRotationX\":30,\"baseRotationY\":33,\"baseRotationZ\":0,\"hideWrist\":78,\"poseOffsetX\":15.9,\"poseOffsetY\":-3.9,\"poseOffsetZ\":-6.4,\"poseScale\":1,\"elbowBend\":0,\"elbowSideBend\":0,\"forearmTwist\":0,\"forearmBendOffX\":0,\"forearmBendOffY\":0,\"forearmBendOffZ\":0,\"forearmTwistOffX\":0,\"forearmTwistOffY\":0,\"forearmTwistOffZ\":0,\"wristOffX\":0,\"wristOffY\":0,\"wristOffZ\":0},{\"name\":\"Pose 17\",\"thumbCurl\":0,\"thumbSplay\":-48,\"thumbSplay2\":-8,\"curlBiasThumb\":0,\"baseOnlyCurlThumb\":-61,\"midOnlyCurlThumb\":0,\"tipOnlyCurlThumb\":0,\"tipTwistThumb\":0,\"curlIndex\":0,\"splayIndex\":-68,\"splayIndex2\":0,\"curlBiasIndex\":0,\"baseOnlyCurlIndex\":0,\"midOnlyCurlIndex\":-5,\"tipOnlyCurlIndex\":0,\"tipTwistIndex\":0,\"curlMiddle\":0,\"splayMiddle\":-6,\"splayMiddle2\":0,\"curlBiasMiddle\":0,\"baseOnlyCurlMiddle\":0,\"midOnlyCurlMiddle\":-5,\"tipOnlyCurlMiddle\":0,\"tipTwistMiddle\":0,\"curlRing\":0,\"splayRing\":-34,\"splayRing2\":0,\"curlBiasRing\":0,\"baseOnlyCurlRing\":0,\"midOnlyCurlRing\":-5,\"tipOnlyCurlRing\":0,\"tipTwistRing\":0,\"curlPinky\":0,\"splayPinky\":86,\"splayPinky2\":0,\"curlBiasPinky\":0,\"baseOnlyCurlPinky\":0,\"midOnlyCurlPinky\":-5,\"tipOnlyCurlPinky\":0,\"tipTwistPinky\":0,\"wristBend\":0,\"wristSplay\":-30,\"wristRotation\":0,\"modelRotX\":0,\"modelRotY\":0,\"modelRotZ\":0,\"baseRotationX\":30,\"baseRotationY\":33,\"baseRotationZ\":0,\"hideWrist\":78,\"poseOffsetX\":15.9,\"poseOffsetY\":-13.7,\"poseOffsetZ\":-6.4,\"poseScale\":1,\"elbowBend\":0,\"elbowSideBend\":0,\"forearmTwist\":0,\"forearmBendOffX\":0,\"forearmBendOffY\":0,\"forearmBendOffZ\":0,\"forearmTwistOffX\":0,\"forearmTwistOffY\":0,\"forearmTwistOffZ\":0,\"wristOffX\":0,\"wristOffY\":0,\"wristOffZ\":0},{\"name\":\"Big Open Palm\",\"thumbCurl\":0,\"thumbSplay\":-48,\"thumbSplay2\":-8,\"curlBiasThumb\":0,\"baseOnlyCurlThumb\":-61,\"midOnlyCurlThumb\":0,\"tipOnlyCurlThumb\":0,\"tipTwistThumb\":0,\"curlIndex\":0,\"splayIndex\":-68,\"splayIndex2\":0,\"curlBiasIndex\":0,\"baseOnlyCurlIndex\":0,\"midOnlyCurlIndex\":-5,\"tipOnlyCurlIndex\":0,\"tipTwistIndex\":0,\"curlMiddle\":0,\"splayMiddle\":-6,\"splayMiddle2\":0,\"curlBiasMiddle\":0,\"baseOnlyCurlMiddle\":0,\"midOnlyCurlMiddle\":-5,\"tipOnlyCurlMiddle\":0,\"tipTwistMiddle\":0,\"curlRing\":0,\"splayRing\":-34,\"splayRing2\":0,\"curlBiasRing\":0,\"baseOnlyCurlRing\":0,\"midOnlyCurlRing\":-5,\"tipOnlyCurlRing\":0,\"tipTwistRing\":0,\"curlPinky\":0,\"splayPinky\":86,\"splayPinky2\":0,\"curlBiasPinky\":0,\"baseOnlyCurlPinky\":0,\"midOnlyCurlPinky\":-5,\"tipOnlyCurlPinky\":0,\"tipTwistPinky\":0,\"wristBend\":0,\"wristSplay\":0,\"modelRotX\":0,\"modelRotY\":0,\"modelRotZ\":0,\"hideWrist\":78,\"poseOffsetX\":0,\"poseOffsetY\":0,\"poseOffsetZ\":0,\"poseScale\":1,\"shoulderRaise\":0,\"shoulderSwing\":0,\"shoulderRotation\":0,\"elbowBend\":0,\"elbowSideBend\":0,\"forearmTwist\":0,\"group\":\"BIG OPEN PALM\"},{\"name\":\"Big Open Palm (S)\",\"thumbCurl\":0,\"thumbSplay\":-48,\"thumbSplay2\":-8,\"curlBiasThumb\":0,\"baseOnlyCurlThumb\":-61,\"midOnlyCurlThumb\":0,\"tipOnlyCurlThumb\":0,\"tipTwistThumb\":0,\"curlIndex\":0,\"splayIndex\":-68,\"splayIndex2\":0,\"curlBiasIndex\":0,\"baseOnlyCurlIndex\":0,\"midOnlyCurlIndex\":-5,\"tipOnlyCurlIndex\":0,\"tipTwistIndex\":0,\"curlMiddle\":0,\"splayMiddle\":-6,\"splayMiddle2\":0,\"curlBiasMiddle\":0,\"baseOnlyCurlMiddle\":0,\"midOnlyCurlMiddle\":-5,\"tipOnlyCurlMiddle\":0,\"tipTwistMiddle\":0,\"curlRing\":0,\"splayRing\":-34,\"splayRing2\":0,\"curlBiasRing\":0,\"baseOnlyCurlRing\":0,\"midOnlyCurlRing\":-5,\"tipOnlyCurlRing\":0,\"tipTwistRing\":0,\"curlPinky\":0,\"splayPinky\":86,\"splayPinky2\":0,\"curlBiasPinky\":0,\"baseOnlyCurlPinky\":0,\"midOnlyCurlPinky\":-5,\"tipOnlyCurlPinky\":0,\"tipTwistPinky\":0,\"wristBend\":0,\"wristSplay\":-55,\"modelRotX\":0,\"modelRotY\":0,\"modelRotZ\":0,\"hideWrist\":78,\"poseOffsetX\":0,\"poseOffsetY\":0,\"poseOffsetZ\":0,\"poseScale\":1,\"shoulderRaise\":0,\"shoulderSwing\":0,\"shoulderRotation\":0,\"elbowBend\":0,\"elbowSideBend\":0,\"forearmTwist\":0,\"group\":\"BIG OPEN PALM\"},{\"name\":\"Closed Flower\",\"thumbCurl\":26,\"thumbSplay\":12,\"thumbSplay2\":17,\"curlBiasThumb\":-4,\"baseOnlyCurlThumb\":120,\"midOnlyCurlThumb\":19,\"tipOnlyCurlThumb\":-21,\"tipTwistThumb\":-4,\"curlIndex\":0,\"splayIndex\":66,\"splayIndex2\":0,\"curlBiasIndex\":0,\"baseOnlyCurlIndex\":93,\"midOnlyCurlIndex\":0,\"tipOnlyCurlIndex\":0,\"tipTwistIndex\":-34,\"curlMiddle\":0,\"splayMiddle\":33,\"splayMiddle2\":0,\"curlBiasMiddle\":0,\"baseOnlyCurlMiddle\":93,\"midOnlyCurlMiddle\":0,\"tipOnlyCurlMiddle\":0,\"tipTwistMiddle\":16,\"curlRing\":2,\"splayRing\":7,\"splayRing2\":0,\"curlBiasRing\":0,\"baseOnlyCurlRing\":93,\"midOnlyCurlRing\":0,\"tipOnlyCurlRing\":0,\"tipTwistRing\":30,\"curlPinky\":2,\"splayPinky\":-48,\"splayPinky2\":0,\"curlBiasPinky\":0,\"baseOnlyCurlPinky\":93,\"midOnlyCurlPinky\":0,\"tipOnlyCurlPinky\":0,\"tipTwistPinky\":56,\"wristBend\":0,\"wristSplay\":0,\"modelRotX\":0,\"modelRotY\":0,\"modelRotZ\":0,\"hideWrist\":78,\"shoulderRaise\":0,\"shoulderSwing\":0,\"shoulderRotation\":0,\"elbowBend\":0,\"elbowSideBend\":0,\"forearmTwist\":0,\"group\":\"CLOSED FLOWER\",\"poseOffsetX\":0,\"poseOffsetY\":0,\"poseOffsetZ\":0,\"poseScale\":1},{\"name\":\"Point\",\"thumbCurl\":75,\"thumbSplay\":42,\"thumbSplay2\":13,\"curlBiasThumb\":32,\"baseOnlyCurlThumb\":-23,\"tipTwistThumb\":46,\"curlIndex\":-3,\"splayIndex\":0,\"splayIndex2\":0,\"curlBiasIndex\":-8,\"baseOnlyCurlIndex\":2,\"midOnlyCurlIndex\":0,\"tipOnlyCurlIndex\":-8,\"tipTwistIndex\":0,\"curlMiddle\":99,\"splayMiddle\":-16,\"splayMiddle2\":0,\"curlBiasMiddle\":0,\"baseOnlyCurlMiddle\":-4,\"midOnlyCurlMiddle\":-5,\"tipOnlyCurlMiddle\":-80,\"tipTwistMiddle\":0,\"curlRing\":85,\"splayRing\":49,\"splayRing2\":0,\"curlBiasRing\":32,\"baseOnlyCurlRing\":-7,\"midOnlyCurlRing\":6,\"tipOnlyCurlRing\":-15,\"tipTwistRing\":0,\"curlPinky\":91,\"splayPinky\":-95,\"splayPinky2\":25,\"curlBiasPinky\":0,\"baseOnlyCurlPinky\":18,\"midOnlyCurlPinky\":-8,\"tipOnlyCurlPinky\":-50,\"tipTwistPinky\":0,\"wristBend\":0,\"wristSplay\":0,\"modelRotX\":0,\"modelRotY\":0,\"modelRotZ\":0,\"hideWrist\":78,\"shoulderRaise\":0,\"shoulderSwing\":0,\"shoulderRotation\":0,\"elbowBend\":0,\"elbowSideBend\":0,\"forearmTwist\":0,\"group\":\"SINGLE GESTURES\",\"poseOffsetX\":0,\"poseOffsetY\":0,\"poseOffsetZ\":0,\"poseScale\":1},{\"name\":\"ThumbsUp\",\"thumbCurl\":-37,\"thumbSplay\":-60,\"thumbSplay2\":32,\"curlBiasThumb\":-24,\"tipTwistThumb\":-90,\"curlIndex\":89,\"splayIndex\":15,\"splayIndex2\":72,\"curlBiasIndex\":-1,\"tipTwistIndex\":-4,\"curlMiddle\":89,\"splayMiddle\":-14,\"splayMiddle2\":-13,\"curlBiasMiddle\":10,\"tipTwistMiddle\":-5,\"curlRing\":95,\"splayRing\":37,\"splayRing2\":-32,\"curlBiasRing\":-3,\"tipTwistRing\":-5,\"curlPinky\":89,\"splayPinky\":-82,\"splayPinky2\":33,\"curlBiasPinky\":6,\"tipTwistPinky\":-3,\"wristBend\":0,\"wristSplay\":-1,\"modelRotX\":0,\"modelRotY\":0,\"modelRotZ\":0,\"hideWrist\":78,\"group\":\"SINGLE GESTURES\",\"poseOffsetX\":0,\"poseOffsetY\":0,\"poseOffsetZ\":0,\"poseScale\":1},{\"name\":\"MiddleFinger\",\"thumbCurl\":75,\"thumbSplay\":42,\"thumbSplay2\":13,\"curlBiasThumb\":32,\"baseOnlyCurlThumb\":-23,\"tipTwistThumb\":46,\"curlIndex\":99,\"splayIndex\":50,\"splayIndex2\":0,\"curlBiasIndex\":-8,\"baseOnlyCurlIndex\":2,\"midOnlyCurlIndex\":0,\"tipOnlyCurlIndex\":-87,\"tipTwistIndex\":0,\"curlMiddle\":0,\"splayMiddle\":0,\"splayMiddle2\":0,\"curlBiasMiddle\":0,\"baseOnlyCurlMiddle\":-4,\"midOnlyCurlMiddle\":0,\"tipOnlyCurlMiddle\":-1,\"tipTwistMiddle\":0,\"curlRing\":85,\"splayRing\":49,\"splayRing2\":0,\"curlBiasRing\":32,\"baseOnlyCurlRing\":-7,\"midOnlyCurlRing\":6,\"tipOnlyCurlRing\":-15,\"tipTwistRing\":0,\"curlPinky\":91,\"splayPinky\":-95,\"splayPinky2\":25,\"curlBiasPinky\":0,\"baseOnlyCurlPinky\":18,\"midOnlyCurlPinky\":-8,\"tipOnlyCurlPinky\":-50,\"tipTwistPinky\":0,\"wristBend\":0,\"wristSplay\":0,\"modelRotX\":0,\"modelRotY\":0,\"modelRotZ\":0,\"hideWrist\":78,\"shoulderRaise\":0,\"shoulderSwing\":0,\"shoulderRotation\":0,\"elbowBend\":0,\"elbowSideBend\":0,\"forearmTwist\":0,\"group\":\"SINGLE GESTURES\",\"poseOffsetX\":0,\"poseOffsetY\":0,\"poseOffsetZ\":0,\"poseScale\":1},{\"name\":\"Waiting Horizontal Tap - 0\",\"thumbCurl\":20,\"thumbSplay\":6,\"thumbSplay2\":-14,\"curlBiasThumb\":-1,\"baseOnlyCurlThumb\":-8,\"midOnlyCurlThumb\":-116,\"tipOnlyCurlThumb\":0,\"tipTwistThumb\":0,\"curlIndex\":0,\"splayIndex\":0,\"splayIndex2\":0,\"curlBiasIndex\":47,\"baseOnlyCurlIndex\":-1,\"midOnlyCurlIndex\":-8,\"tipOnlyCurlIndex\":4,\"tipTwistIndex\":0,\"curlMiddle\":0,\"splayMiddle\":0,\"splayMiddle2\":0,\"curlBiasMiddle\":140,\"baseOnlyCurlMiddle\":12,\"midOnlyCurlMiddle\":0,\"tipOnlyCurlMiddle\":0,\"tipTwistMiddle\":0,\"curlRing\":0,\"splayRing\":8,\"splayRing2\":0,\"curlBiasRing\":300,\"baseOnlyCurlRing\":25,\"midOnlyCurlRing\":0,\"tipOnlyCurlRing\":0,\"tipTwistRing\":0,\"curlPinky\":0,\"splayPinky\":-10,\"splayPinky2\":0,\"curlBiasPinky\":207,\"baseOnlyCurlPinky\":40,\"midOnlyCurlPinky\":30,\"tipOnlyCurlPinky\":-35,\"tipTwistPinky\":0,\"wristBend\":0,\"wristSplay\":-15,\"modelRotX\":85,\"modelRotY\":20,\"modelRotZ\":0,\"hideWrist\":78,\"shoulderRaise\":0,\"shoulderSwing\":0,\"shoulderRotation\":0,\"elbowBend\":0,\"elbowSideBend\":0,\"forearmTwist\":0,\"poseOffsetX\":0,\"poseOffsetY\":0,\"poseOffsetZ\":0,\"poseScale\":1,\"group\":\"WAITING HORIZONTAL TAP\"},{\"name\":\"Waiting Horizontal Tap - 1\",\"thumbCurl\":25,\"thumbSplay\":6,\"thumbSplay2\":-14,\"curlBiasThumb\":-1,\"baseOnlyCurlThumb\":20,\"midOnlyCurlThumb\":-116,\"tipOnlyCurlThumb\":10,\"tipTwistThumb\":0,\"curlIndex\":0,\"splayIndex\":0,\"splayIndex2\":0,\"curlBiasIndex\":47,\"baseOnlyCurlIndex\":10,\"midOnlyCurlIndex\":10,\"tipOnlyCurlIndex\":4,\"tipTwistIndex\":0,\"curlMiddle\":0,\"splayMiddle\":-1,\"splayMiddle2\":20,\"curlBiasMiddle\":140,\"baseOnlyCurlMiddle\":35,\"midOnlyCurlMiddle\":15,\"tipOnlyCurlMiddle\":0,\"tipTwistMiddle\":0,\"curlRing\":0,\"splayRing\":-1,\"splayRing2\":-30,\"curlBiasRing\":300,\"baseOnlyCurlRing\":40,\"midOnlyCurlRing\":40,\"tipOnlyCurlRing\":-35,\"tipTwistRing\":0,\"curlPinky\":0,\"splayPinky\":6,\"splayPinky2\":0,\"curlBiasPinky\":207,\"baseOnlyCurlPinky\":30,\"midOnlyCurlPinky\":20,\"tipOnlyCurlPinky\":0,\"tipTwistPinky\":0,\"wristBend\":0,\"wristSplay\":-15,\"modelRotX\":85,\"modelRotY\":20,\"modelRotZ\":0,\"hideWrist\":78,\"shoulderRaise\":0,\"shoulderSwing\":0,\"shoulderRotation\":0,\"elbowBend\":0,\"elbowSideBend\":0,\"forearmTwist\":0,\"poseOffsetX\":0,\"poseOffsetY\":0,\"poseOffsetZ\":0,\"poseScale\":1,\"group\":\"WAITING HORIZONTAL TAP\"},{\"name\":\"Waiting Hoirzontal Tap - 2\",\"thumbCurl\":25,\"thumbSplay\":6,\"thumbSplay2\":-14,\"curlBiasThumb\":-1,\"baseOnlyCurlThumb\":30,\"midOnlyCurlThumb\":-51,\"tipOnlyCurlThumb\":10,\"tipTwistThumb\":0,\"curlIndex\":0,\"splayIndex\":20,\"splayIndex2\":0,\"curlBiasIndex\":47,\"baseOnlyCurlIndex\":30,\"midOnlyCurlIndex\":30,\"tipOnlyCurlIndex\":4,\"tipTwistIndex\":0,\"curlMiddle\":0,\"splayMiddle\":20,\"splayMiddle2\":28,\"curlBiasMiddle\":140,\"baseOnlyCurlMiddle\":49,\"midOnlyCurlMiddle\":35,\"tipOnlyCurlMiddle\":-35,\"tipTwistMiddle\":0,\"curlRing\":0,\"splayRing\":-8,\"splayRing2\":0,\"curlBiasRing\":300,\"baseOnlyCurlRing\":30,\"midOnlyCurlRing\":15,\"tipOnlyCurlRing\":0,\"tipTwistRing\":0,\"curlPinky\":0,\"splayPinky\":-23,\"splayPinky2\":0,\"curlBiasPinky\":207,\"baseOnlyCurlPinky\":5,\"midOnlyCurlPinky\":5,\"tipOnlyCurlPinky\":0,\"tipTwistPinky\":0,\"wristBend\":0,\"wristSplay\":-15,\"modelRotX\":85,\"modelRotY\":20,\"modelRotZ\":0,\"hideWrist\":78,\"shoulderRaise\":0,\"shoulderSwing\":0,\"shoulderRotation\":0,\"elbowBend\":0,\"elbowSideBend\":0,\"forearmTwist\":0,\"poseOffsetX\":0,\"poseOffsetY\":0,\"poseOffsetZ\":0,\"poseScale\":1,\"group\":\"WAITING HORIZONTAL TAP\"},{\"name\":\"Waiting Horizontal Tap - 3\",\"thumbCurl\":28,\"thumbSplay\":6,\"thumbSplay2\":-14,\"curlBiasThumb\":-1,\"baseOnlyCurlThumb\":49,\"midOnlyCurlThumb\":-51,\"tipOnlyCurlThumb\":10,\"tipTwistThumb\":0,\"curlIndex\":0,\"splayIndex\":42,\"splayIndex2\":71,\"curlBiasIndex\":47,\"baseOnlyCurlIndex\":60,\"midOnlyCurlIndex\":18,\"tipOnlyCurlIndex\":-35,\"tipTwistIndex\":-29,\"curlMiddle\":0,\"splayMiddle\":13,\"splayMiddle2\":20,\"curlBiasMiddle\":140,\"baseOnlyCurlMiddle\":30,\"midOnlyCurlMiddle\":25,\"tipOnlyCurlMiddle\":0,\"tipTwistMiddle\":0,\"curlRing\":0,\"splayRing\":-1,\"splayRing2\":0,\"curlBiasRing\":300,\"baseOnlyCurlRing\":15,\"midOnlyCurlRing\":15,\"tipOnlyCurlRing\":0,\"tipTwistRing\":0,\"curlPinky\":0,\"splayPinky\":-15,\"splayPinky2\":0,\"curlBiasPinky\":207,\"baseOnlyCurlPinky\":-5,\"midOnlyCurlPinky\":0,\"tipOnlyCurlPinky\":0,\"tipTwistPinky\":0,\"wristBend\":0,\"wristSplay\":-15,\"modelRotX\":85,\"modelRotY\":20,\"modelRotZ\":0,\"hideWrist\":78,\"shoulderRaise\":0,\"shoulderSwing\":0,\"shoulderRotation\":0,\"elbowBend\":0,\"elbowSideBend\":0,\"forearmTwist\":0,\"poseOffsetX\":0,\"poseOffsetY\":0,\"poseOffsetZ\":0,\"poseScale\":1,\"group\":\"WAITING HORIZONTAL TAP\"}],\"groupOrder\":[\"BIG OPEN PALM\",\"CLOSED FLOWER\",\"SINGLE GESTURES\",\"WAITING HORIZONTAL TAP\"]}",
+    "listPickerPoses": "{\"items\":[{\"name\":\"Fist\",\"thumbCurl\":75,\"thumbSplay\":42,\"thumbSplay2\":13,\"curlBiasThumb\":32,\"baseOnlyCurlThumb\":-23,\"midOnlyCurlThumb\":-8,\"tipOnlyCurlThumb\":20,\"tipTwistThumb\":46,\"curlIndex\":90,\"splayIndex\":18,\"splayIndex2\":0,\"curlBiasIndex\":-8,\"baseOnlyCurlIndex\":6,\"midOnlyCurlIndex\":0,\"tipOnlyCurlIndex\":-1,\"tipTwistIndex\":0,\"curlMiddle\":92,\"splayMiddle\":-15,\"splayMiddle2\":0,\"curlBiasMiddle\":0,\"baseOnlyCurlMiddle\":-4,\"midOnlyCurlMiddle\":0,\"tipOnlyCurlMiddle\":-1,\"tipTwistMiddle\":0,\"curlRing\":98,\"splayRing\":40,\"splayRing2\":0,\"curlBiasRing\":0,\"baseOnlyCurlRing\":-15,\"midOnlyCurlRing\":0,\"tipOnlyCurlRing\":6,\"tipTwistRing\":0,\"curlPinky\":88,\"splayPinky\":-90,\"splayPinky2\":25,\"curlBiasPinky\":0,\"baseOnlyCurlPinky\":0,\"midOnlyCurlPinky\":0,\"tipOnlyCurlPinky\":15,\"tipTwistPinky\":0,\"wristBend\":0,\"wristSplay\":0,\"modelRotX\":0,\"modelRotY\":0,\"modelRotZ\":0,\"hideWrist\":78,\"poseOffsetX\":0,\"poseOffsetY\":0,\"poseOffsetZ\":0,\"poseScale\":1},{\"name\":\"Fist - Bent Back\",\"thumbCurl\":75,\"thumbSplay\":42,\"thumbSplay2\":13,\"curlBiasThumb\":32,\"baseOnlyCurlThumb\":-23,\"midOnlyCurlThumb\":-8,\"tipOnlyCurlThumb\":20,\"tipTwistThumb\":46,\"curlIndex\":90,\"splayIndex\":18,\"splayIndex2\":0,\"curlBiasIndex\":-8,\"baseOnlyCurlIndex\":6,\"midOnlyCurlIndex\":0,\"tipOnlyCurlIndex\":-1,\"tipTwistIndex\":0,\"curlMiddle\":92,\"splayMiddle\":-15,\"splayMiddle2\":0,\"curlBiasMiddle\":0,\"baseOnlyCurlMiddle\":-4,\"midOnlyCurlMiddle\":0,\"tipOnlyCurlMiddle\":-1,\"tipTwistMiddle\":0,\"curlRing\":98,\"splayRing\":40,\"splayRing2\":0,\"curlBiasRing\":0,\"baseOnlyCurlRing\":-15,\"midOnlyCurlRing\":0,\"tipOnlyCurlRing\":6,\"tipTwistRing\":0,\"curlPinky\":88,\"splayPinky\":-90,\"splayPinky2\":25,\"curlBiasPinky\":0,\"baseOnlyCurlPinky\":0,\"midOnlyCurlPinky\":0,\"tipOnlyCurlPinky\":15,\"tipTwistPinky\":0,\"wristBend\":0,\"wristSplay\":-50,\"modelRotX\":0,\"modelRotY\":0,\"modelRotZ\":0,\"hideWrist\":78,\"poseOffsetX\":0,\"poseOffsetY\":0,\"poseOffsetZ\":0,\"poseScale\":1},{\"name\":\"Pose 13\",\"thumbCurl\":75,\"thumbSplay\":42,\"thumbSplay2\":13,\"curlBiasThumb\":32,\"baseOnlyCurlThumb\":-23,\"midOnlyCurlThumb\":-8,\"tipOnlyCurlThumb\":20,\"tipTwistThumb\":46,\"curlIndex\":90,\"splayIndex\":18,\"splayIndex2\":0,\"curlBiasIndex\":-8,\"baseOnlyCurlIndex\":6,\"midOnlyCurlIndex\":0,\"tipOnlyCurlIndex\":-1,\"tipTwistIndex\":0,\"curlMiddle\":92,\"splayMiddle\":-15,\"splayMiddle2\":0,\"curlBiasMiddle\":0,\"baseOnlyCurlMiddle\":-4,\"midOnlyCurlMiddle\":0,\"tipOnlyCurlMiddle\":-1,\"tipTwistMiddle\":0,\"curlRing\":98,\"splayRing\":40,\"splayRing2\":0,\"curlBiasRing\":0,\"baseOnlyCurlRing\":-15,\"midOnlyCurlRing\":0,\"tipOnlyCurlRing\":6,\"tipTwistRing\":0,\"curlPinky\":88,\"splayPinky\":-90,\"splayPinky2\":25,\"curlBiasPinky\":0,\"baseOnlyCurlPinky\":0,\"midOnlyCurlPinky\":0,\"tipOnlyCurlPinky\":15,\"tipTwistPinky\":0,\"wristBend\":0,\"wristSplay\":0,\"wristRotation\":0,\"modelRotX\":90,\"modelRotY\":90,\"modelRotZ\":0,\"baseRotationX\":5,\"baseRotationY\":92,\"baseRotationZ\":0,\"hideWrist\":78,\"poseOffsetX\":-1.8,\"poseOffsetY\":-9,\"poseOffsetZ\":0,\"poseScale\":1,\"elbowBend\":0,\"elbowSideBend\":0,\"forearmTwist\":0,\"forearmBendOffX\":0,\"forearmBendOffY\":0,\"forearmBendOffZ\":0,\"forearmTwistOffX\":0,\"forearmTwistOffY\":0,\"forearmTwistOffZ\":0,\"wristOffX\":0,\"wristOffY\":0,\"wristOffZ\":0},{\"name\":\"Pose 14\",\"thumbCurl\":0,\"thumbSplay\":-48,\"thumbSplay2\":-8,\"curlBiasThumb\":0,\"baseOnlyCurlThumb\":-61,\"midOnlyCurlThumb\":0,\"tipOnlyCurlThumb\":0,\"tipTwistThumb\":0,\"curlIndex\":0,\"splayIndex\":-68,\"splayIndex2\":0,\"curlBiasIndex\":0,\"baseOnlyCurlIndex\":0,\"midOnlyCurlIndex\":-5,\"tipOnlyCurlIndex\":0,\"tipTwistIndex\":0,\"curlMiddle\":0,\"splayMiddle\":-6,\"splayMiddle2\":0,\"curlBiasMiddle\":0,\"baseOnlyCurlMiddle\":0,\"midOnlyCurlMiddle\":-5,\"tipOnlyCurlMiddle\":0,\"tipTwistMiddle\":0,\"curlRing\":0,\"splayRing\":-34,\"splayRing2\":0,\"curlBiasRing\":0,\"baseOnlyCurlRing\":0,\"midOnlyCurlRing\":-5,\"tipOnlyCurlRing\":0,\"tipTwistRing\":0,\"curlPinky\":0,\"splayPinky\":86,\"splayPinky2\":0,\"curlBiasPinky\":0,\"baseOnlyCurlPinky\":0,\"midOnlyCurlPinky\":-5,\"tipOnlyCurlPinky\":0,\"tipTwistPinky\":0,\"wristBend\":0,\"wristSplay\":-30,\"wristRotation\":0,\"modelRotX\":90,\"modelRotY\":90,\"modelRotZ\":0,\"baseRotationX\":5,\"baseRotationY\":92,\"baseRotationZ\":0,\"hideWrist\":78,\"poseOffsetX\":13.9,\"poseOffsetY\":-3.9,\"poseOffsetZ\":20,\"poseScale\":1,\"elbowBend\":0,\"elbowSideBend\":0,\"forearmTwist\":0,\"forearmBendOffX\":0,\"forearmBendOffY\":0,\"forearmBendOffZ\":0,\"forearmTwistOffX\":0,\"forearmTwistOffY\":0,\"forearmTwistOffZ\":0,\"wristOffX\":0,\"wristOffY\":0,\"wristOffZ\":0},{\"name\":\"Pose 15\",\"thumbCurl\":0,\"thumbSplay\":-48,\"thumbSplay2\":-8,\"curlBiasThumb\":0,\"baseOnlyCurlThumb\":-61,\"midOnlyCurlThumb\":0,\"tipOnlyCurlThumb\":0,\"tipTwistThumb\":0,\"curlIndex\":0,\"splayIndex\":-68,\"splayIndex2\":0,\"curlBiasIndex\":0,\"baseOnlyCurlIndex\":0,\"midOnlyCurlIndex\":-5,\"tipOnlyCurlIndex\":0,\"tipTwistIndex\":0,\"curlMiddle\":0,\"splayMiddle\":-6,\"splayMiddle2\":0,\"curlBiasMiddle\":0,\"baseOnlyCurlMiddle\":0,\"midOnlyCurlMiddle\":-5,\"tipOnlyCurlMiddle\":0,\"tipTwistMiddle\":0,\"curlRing\":0,\"splayRing\":-34,\"splayRing2\":0,\"curlBiasRing\":0,\"baseOnlyCurlRing\":0,\"midOnlyCurlRing\":-5,\"tipOnlyCurlRing\":0,\"tipTwistRing\":0,\"curlPinky\":0,\"splayPinky\":86,\"splayPinky2\":0,\"curlBiasPinky\":0,\"baseOnlyCurlPinky\":0,\"midOnlyCurlPinky\":-5,\"tipOnlyCurlPinky\":0,\"tipTwistPinky\":0,\"wristBend\":0,\"wristSplay\":-30,\"wristRotation\":0,\"modelRotX\":79,\"modelRotY\":61,\"modelRotZ\":-86,\"baseRotationX\":10,\"baseRotationY\":28,\"baseRotationZ\":89,\"hideWrist\":78,\"poseOffsetX\":19.1,\"poseOffsetY\":-18.5,\"poseOffsetZ\":0.5,\"poseScale\":1,\"elbowBend\":0,\"elbowSideBend\":0,\"forearmTwist\":0,\"forearmBendOffX\":0,\"forearmBendOffY\":0,\"forearmBendOffZ\":0,\"forearmTwistOffX\":0,\"forearmTwistOffY\":0,\"forearmTwistOffZ\":0,\"wristOffX\":0,\"wristOffY\":0,\"wristOffZ\":0},{\"name\":\"Pose 16\",\"thumbCurl\":0,\"thumbSplay\":-48,\"thumbSplay2\":-8,\"curlBiasThumb\":0,\"baseOnlyCurlThumb\":-61,\"midOnlyCurlThumb\":0,\"tipOnlyCurlThumb\":0,\"tipTwistThumb\":0,\"curlIndex\":0,\"splayIndex\":-68,\"splayIndex2\":0,\"curlBiasIndex\":0,\"baseOnlyCurlIndex\":0,\"midOnlyCurlIndex\":-5,\"tipOnlyCurlIndex\":0,\"tipTwistIndex\":0,\"curlMiddle\":0,\"splayMiddle\":-6,\"splayMiddle2\":0,\"curlBiasMiddle\":0,\"baseOnlyCurlMiddle\":0,\"midOnlyCurlMiddle\":-5,\"tipOnlyCurlMiddle\":0,\"tipTwistMiddle\":0,\"curlRing\":0,\"splayRing\":-34,\"splayRing2\":0,\"curlBiasRing\":0,\"baseOnlyCurlRing\":0,\"midOnlyCurlRing\":-5,\"tipOnlyCurlRing\":0,\"tipTwistRing\":0,\"curlPinky\":0,\"splayPinky\":86,\"splayPinky2\":0,\"curlBiasPinky\":0,\"baseOnlyCurlPinky\":0,\"midOnlyCurlPinky\":-5,\"tipOnlyCurlPinky\":0,\"tipTwistPinky\":0,\"wristBend\":0,\"wristSplay\":-30,\"wristRotation\":0,\"modelRotX\":0,\"modelRotY\":0,\"modelRotZ\":0,\"baseRotationX\":30,\"baseRotationY\":33,\"baseRotationZ\":0,\"hideWrist\":78,\"poseOffsetX\":15.9,\"poseOffsetY\":-3.9,\"poseOffsetZ\":-6.4,\"poseScale\":1,\"elbowBend\":0,\"elbowSideBend\":0,\"forearmTwist\":0,\"forearmBendOffX\":0,\"forearmBendOffY\":0,\"forearmBendOffZ\":0,\"forearmTwistOffX\":0,\"forearmTwistOffY\":0,\"forearmTwistOffZ\":0,\"wristOffX\":0,\"wristOffY\":0,\"wristOffZ\":0},{\"name\":\"Pose 17\",\"thumbCurl\":0,\"thumbSplay\":-48,\"thumbSplay2\":-8,\"curlBiasThumb\":0,\"baseOnlyCurlThumb\":-61,\"midOnlyCurlThumb\":0,\"tipOnlyCurlThumb\":0,\"tipTwistThumb\":0,\"curlIndex\":0,\"splayIndex\":-68,\"splayIndex2\":0,\"curlBiasIndex\":0,\"baseOnlyCurlIndex\":0,\"midOnlyCurlIndex\":-5,\"tipOnlyCurlIndex\":0,\"tipTwistIndex\":0,\"curlMiddle\":0,\"splayMiddle\":-6,\"splayMiddle2\":0,\"curlBiasMiddle\":0,\"baseOnlyCurlMiddle\":0,\"midOnlyCurlMiddle\":-5,\"tipOnlyCurlMiddle\":0,\"tipTwistMiddle\":0,\"curlRing\":0,\"splayRing\":-34,\"splayRing2\":0,\"curlBiasRing\":0,\"baseOnlyCurlRing\":0,\"midOnlyCurlRing\":-5,\"tipOnlyCurlRing\":0,\"tipTwistRing\":0,\"curlPinky\":0,\"splayPinky\":86,\"splayPinky2\":0,\"curlBiasPinky\":0,\"baseOnlyCurlPinky\":0,\"midOnlyCurlPinky\":-5,\"tipOnlyCurlPinky\":0,\"tipTwistPinky\":0,\"wristBend\":0,\"wristSplay\":-30,\"wristRotation\":0,\"modelRotX\":0,\"modelRotY\":0,\"modelRotZ\":0,\"baseRotationX\":30,\"baseRotationY\":33,\"baseRotationZ\":0,\"hideWrist\":78,\"poseOffsetX\":15.9,\"poseOffsetY\":-13.7,\"poseOffsetZ\":-6.4,\"poseScale\":1,\"elbowBend\":0,\"elbowSideBend\":0,\"forearmTwist\":0,\"forearmBendOffX\":0,\"forearmBendOffY\":0,\"forearmBendOffZ\":0,\"forearmTwistOffX\":0,\"forearmTwistOffY\":0,\"forearmTwistOffZ\":0,\"wristOffX\":0,\"wristOffY\":0,\"wristOffZ\":0},{\"name\":\"Big Open Palm\",\"thumbCurl\":0,\"thumbSplay\":-48,\"thumbSplay2\":-8,\"curlBiasThumb\":0,\"baseOnlyCurlThumb\":-61,\"midOnlyCurlThumb\":0,\"tipOnlyCurlThumb\":0,\"tipTwistThumb\":0,\"curlIndex\":0,\"splayIndex\":-68,\"splayIndex2\":0,\"curlBiasIndex\":0,\"baseOnlyCurlIndex\":0,\"midOnlyCurlIndex\":-5,\"tipOnlyCurlIndex\":0,\"tipTwistIndex\":0,\"curlMiddle\":0,\"splayMiddle\":-6,\"splayMiddle2\":0,\"curlBiasMiddle\":0,\"baseOnlyCurlMiddle\":0,\"midOnlyCurlMiddle\":-5,\"tipOnlyCurlMiddle\":0,\"tipTwistMiddle\":0,\"curlRing\":0,\"splayRing\":-34,\"splayRing2\":0,\"curlBiasRing\":0,\"baseOnlyCurlRing\":0,\"midOnlyCurlRing\":-5,\"tipOnlyCurlRing\":0,\"tipTwistRing\":0,\"curlPinky\":0,\"splayPinky\":86,\"splayPinky2\":0,\"curlBiasPinky\":0,\"baseOnlyCurlPinky\":0,\"midOnlyCurlPinky\":-5,\"tipOnlyCurlPinky\":0,\"tipTwistPinky\":0,\"wristBend\":0,\"wristSplay\":0,\"modelRotX\":0,\"modelRotY\":0,\"modelRotZ\":0,\"hideWrist\":78,\"poseOffsetX\":0,\"poseOffsetY\":0,\"poseOffsetZ\":0,\"poseScale\":1,\"shoulderRaise\":0,\"shoulderSwing\":0,\"shoulderRotation\":0,\"elbowBend\":0,\"elbowSideBend\":0,\"forearmTwist\":0,\"group\":\"BIG OPEN PALM\"},{\"name\":\"Big Open Palm (S)\",\"thumbCurl\":0,\"thumbSplay\":-48,\"thumbSplay2\":-8,\"curlBiasThumb\":0,\"baseOnlyCurlThumb\":-61,\"midOnlyCurlThumb\":0,\"tipOnlyCurlThumb\":0,\"tipTwistThumb\":0,\"curlIndex\":0,\"splayIndex\":-68,\"splayIndex2\":0,\"curlBiasIndex\":0,\"baseOnlyCurlIndex\":0,\"midOnlyCurlIndex\":-5,\"tipOnlyCurlIndex\":0,\"tipTwistIndex\":0,\"curlMiddle\":0,\"splayMiddle\":-6,\"splayMiddle2\":0,\"curlBiasMiddle\":0,\"baseOnlyCurlMiddle\":0,\"midOnlyCurlMiddle\":-5,\"tipOnlyCurlMiddle\":0,\"tipTwistMiddle\":0,\"curlRing\":0,\"splayRing\":-34,\"splayRing2\":0,\"curlBiasRing\":0,\"baseOnlyCurlRing\":0,\"midOnlyCurlRing\":-5,\"tipOnlyCurlRing\":0,\"tipTwistRing\":0,\"curlPinky\":0,\"splayPinky\":86,\"splayPinky2\":0,\"curlBiasPinky\":0,\"baseOnlyCurlPinky\":0,\"midOnlyCurlPinky\":-5,\"tipOnlyCurlPinky\":0,\"tipTwistPinky\":0,\"wristBend\":0,\"wristSplay\":-55,\"modelRotX\":0,\"modelRotY\":0,\"modelRotZ\":0,\"hideWrist\":78,\"poseOffsetX\":0,\"poseOffsetY\":0,\"poseOffsetZ\":0,\"poseScale\":1,\"shoulderRaise\":0,\"shoulderSwing\":0,\"shoulderRotation\":0,\"elbowBend\":0,\"elbowSideBend\":0,\"forearmTwist\":0,\"group\":\"BIG OPEN PALM\"},{\"name\":\"Closed Flower\",\"thumbCurl\":26,\"thumbSplay\":12,\"thumbSplay2\":17,\"curlBiasThumb\":-4,\"baseOnlyCurlThumb\":120,\"midOnlyCurlThumb\":19,\"tipOnlyCurlThumb\":-21,\"tipTwistThumb\":-4,\"curlIndex\":0,\"splayIndex\":66,\"splayIndex2\":0,\"curlBiasIndex\":0,\"baseOnlyCurlIndex\":93,\"midOnlyCurlIndex\":0,\"tipOnlyCurlIndex\":0,\"tipTwistIndex\":-34,\"curlMiddle\":0,\"splayMiddle\":33,\"splayMiddle2\":0,\"curlBiasMiddle\":0,\"baseOnlyCurlMiddle\":93,\"midOnlyCurlMiddle\":0,\"tipOnlyCurlMiddle\":0,\"tipTwistMiddle\":16,\"curlRing\":2,\"splayRing\":7,\"splayRing2\":0,\"curlBiasRing\":0,\"baseOnlyCurlRing\":93,\"midOnlyCurlRing\":0,\"tipOnlyCurlRing\":0,\"tipTwistRing\":30,\"curlPinky\":2,\"splayPinky\":-48,\"splayPinky2\":0,\"curlBiasPinky\":0,\"baseOnlyCurlPinky\":93,\"midOnlyCurlPinky\":0,\"tipOnlyCurlPinky\":0,\"tipTwistPinky\":56,\"wristBend\":0,\"wristSplay\":0,\"modelRotX\":0,\"modelRotY\":0,\"modelRotZ\":0,\"hideWrist\":78,\"shoulderRaise\":0,\"shoulderSwing\":0,\"shoulderRotation\":0,\"elbowBend\":0,\"elbowSideBend\":0,\"forearmTwist\":0,\"group\":\"CLOSED FLOWER\",\"poseOffsetX\":0,\"poseOffsetY\":0,\"poseOffsetZ\":0,\"poseScale\":1},{\"name\":\"Point\",\"thumbCurl\":75,\"thumbSplay\":42,\"thumbSplay2\":13,\"curlBiasThumb\":32,\"baseOnlyCurlThumb\":-23,\"tipTwistThumb\":46,\"curlIndex\":-3,\"splayIndex\":0,\"splayIndex2\":0,\"curlBiasIndex\":-8,\"baseOnlyCurlIndex\":2,\"midOnlyCurlIndex\":0,\"tipOnlyCurlIndex\":-8,\"tipTwistIndex\":0,\"curlMiddle\":99,\"splayMiddle\":-16,\"splayMiddle2\":0,\"curlBiasMiddle\":0,\"baseOnlyCurlMiddle\":-4,\"midOnlyCurlMiddle\":-5,\"tipOnlyCurlMiddle\":-80,\"tipTwistMiddle\":0,\"curlRing\":85,\"splayRing\":49,\"splayRing2\":0,\"curlBiasRing\":32,\"baseOnlyCurlRing\":-7,\"midOnlyCurlRing\":6,\"tipOnlyCurlRing\":-15,\"tipTwistRing\":0,\"curlPinky\":91,\"splayPinky\":-95,\"splayPinky2\":25,\"curlBiasPinky\":0,\"baseOnlyCurlPinky\":18,\"midOnlyCurlPinky\":-8,\"tipOnlyCurlPinky\":-50,\"tipTwistPinky\":0,\"wristBend\":0,\"wristSplay\":0,\"modelRotX\":0,\"modelRotY\":0,\"modelRotZ\":0,\"hideWrist\":78,\"shoulderRaise\":0,\"shoulderSwing\":0,\"shoulderRotation\":0,\"elbowBend\":0,\"elbowSideBend\":0,\"forearmTwist\":0,\"group\":\"SINGLE GESTURES\",\"poseOffsetX\":0,\"poseOffsetY\":0,\"poseOffsetZ\":0,\"poseScale\":1},{\"name\":\"ThumbsUp\",\"thumbCurl\":-37,\"thumbSplay\":-60,\"thumbSplay2\":32,\"curlBiasThumb\":-24,\"tipTwistThumb\":-90,\"curlIndex\":89,\"splayIndex\":15,\"splayIndex2\":72,\"curlBiasIndex\":-1,\"tipTwistIndex\":-4,\"curlMiddle\":89,\"splayMiddle\":-14,\"splayMiddle2\":-13,\"curlBiasMiddle\":10,\"tipTwistMiddle\":-5,\"curlRing\":95,\"splayRing\":37,\"splayRing2\":-32,\"curlBiasRing\":-3,\"tipTwistRing\":-5,\"curlPinky\":89,\"splayPinky\":-82,\"splayPinky2\":33,\"curlBiasPinky\":6,\"tipTwistPinky\":-3,\"wristBend\":0,\"wristSplay\":-1,\"modelRotX\":0,\"modelRotY\":0,\"modelRotZ\":0,\"hideWrist\":78,\"group\":\"SINGLE GESTURES\",\"poseOffsetX\":0,\"poseOffsetY\":0,\"poseOffsetZ\":0,\"poseScale\":1},{\"name\":\"MiddleFinger\",\"thumbCurl\":75,\"thumbSplay\":42,\"thumbSplay2\":13,\"curlBiasThumb\":32,\"baseOnlyCurlThumb\":-23,\"tipTwistThumb\":46,\"curlIndex\":99,\"splayIndex\":50,\"splayIndex2\":0,\"curlBiasIndex\":-8,\"baseOnlyCurlIndex\":2,\"midOnlyCurlIndex\":0,\"tipOnlyCurlIndex\":-87,\"tipTwistIndex\":0,\"curlMiddle\":0,\"splayMiddle\":0,\"splayMiddle2\":0,\"curlBiasMiddle\":0,\"baseOnlyCurlMiddle\":-4,\"midOnlyCurlMiddle\":0,\"tipOnlyCurlMiddle\":-1,\"tipTwistMiddle\":0,\"curlRing\":85,\"splayRing\":49,\"splayRing2\":0,\"curlBiasRing\":32,\"baseOnlyCurlRing\":-7,\"midOnlyCurlRing\":6,\"tipOnlyCurlRing\":-15,\"tipTwistRing\":0,\"curlPinky\":91,\"splayPinky\":-95,\"splayPinky2\":25,\"curlBiasPinky\":0,\"baseOnlyCurlPinky\":18,\"midOnlyCurlPinky\":-8,\"tipOnlyCurlPinky\":-50,\"tipTwistPinky\":0,\"wristBend\":0,\"wristSplay\":0,\"modelRotX\":0,\"modelRotY\":0,\"modelRotZ\":0,\"hideWrist\":78,\"shoulderRaise\":0,\"shoulderSwing\":0,\"shoulderRotation\":0,\"elbowBend\":0,\"elbowSideBend\":0,\"forearmTwist\":0,\"group\":\"SINGLE GESTURES\",\"poseOffsetX\":0,\"poseOffsetY\":0,\"poseOffsetZ\":0,\"poseScale\":1},{\"name\":\"Waiting Horizontal Tap - 0\",\"thumbCurl\":20,\"thumbSplay\":6,\"thumbSplay2\":-14,\"curlBiasThumb\":-1,\"baseOnlyCurlThumb\":-8,\"midOnlyCurlThumb\":-116,\"tipOnlyCurlThumb\":0,\"tipTwistThumb\":0,\"curlIndex\":0,\"splayIndex\":0,\"splayIndex2\":0,\"curlBiasIndex\":47,\"baseOnlyCurlIndex\":-1,\"midOnlyCurlIndex\":-8,\"tipOnlyCurlIndex\":4,\"tipTwistIndex\":0,\"curlMiddle\":0,\"splayMiddle\":0,\"splayMiddle2\":0,\"curlBiasMiddle\":140,\"baseOnlyCurlMiddle\":12,\"midOnlyCurlMiddle\":0,\"tipOnlyCurlMiddle\":0,\"tipTwistMiddle\":0,\"curlRing\":0,\"splayRing\":8,\"splayRing2\":0,\"curlBiasRing\":300,\"baseOnlyCurlRing\":25,\"midOnlyCurlRing\":0,\"tipOnlyCurlRing\":0,\"tipTwistRing\":0,\"curlPinky\":0,\"splayPinky\":-10,\"splayPinky2\":0,\"curlBiasPinky\":207,\"baseOnlyCurlPinky\":40,\"midOnlyCurlPinky\":30,\"tipOnlyCurlPinky\":-35,\"tipTwistPinky\":0,\"wristBend\":0,\"wristSplay\":-15,\"modelRotX\":85,\"modelRotY\":20,\"modelRotZ\":0,\"hideWrist\":78,\"shoulderRaise\":0,\"shoulderSwing\":0,\"shoulderRotation\":0,\"elbowBend\":0,\"elbowSideBend\":0,\"forearmTwist\":0,\"poseOffsetX\":0,\"poseOffsetY\":0,\"poseOffsetZ\":0,\"poseScale\":1,\"group\":\"WAITING HORIZONTAL TAP\"},{\"name\":\"Waiting Horizontal Tap - 1\",\"thumbCurl\":25,\"thumbSplay\":6,\"thumbSplay2\":-14,\"curlBiasThumb\":-1,\"baseOnlyCurlThumb\":20,\"midOnlyCurlThumb\":-116,\"tipOnlyCurlThumb\":10,\"tipTwistThumb\":0,\"curlIndex\":0,\"splayIndex\":0,\"splayIndex2\":0,\"curlBiasIndex\":47,\"baseOnlyCurlIndex\":10,\"midOnlyCurlIndex\":10,\"tipOnlyCurlIndex\":4,\"tipTwistIndex\":0,\"curlMiddle\":0,\"splayMiddle\":-1,\"splayMiddle2\":20,\"curlBiasMiddle\":140,\"baseOnlyCurlMiddle\":35,\"midOnlyCurlMiddle\":15,\"tipOnlyCurlMiddle\":0,\"tipTwistMiddle\":0,\"curlRing\":0,\"splayRing\":-1,\"splayRing2\":-30,\"curlBiasRing\":300,\"baseOnlyCurlRing\":40,\"midOnlyCurlRing\":40,\"tipOnlyCurlRing\":-35,\"tipTwistRing\":0,\"curlPinky\":0,\"splayPinky\":6,\"splayPinky2\":0,\"curlBiasPinky\":207,\"baseOnlyCurlPinky\":30,\"midOnlyCurlPinky\":20,\"tipOnlyCurlPinky\":0,\"tipTwistPinky\":0,\"wristBend\":0,\"wristSplay\":-15,\"modelRotX\":85,\"modelRotY\":20,\"modelRotZ\":0,\"hideWrist\":78,\"shoulderRaise\":0,\"shoulderSwing\":0,\"shoulderRotation\":0,\"elbowBend\":0,\"elbowSideBend\":0,\"forearmTwist\":0,\"poseOffsetX\":0,\"poseOffsetY\":0,\"poseOffsetZ\":0,\"poseScale\":1,\"group\":\"WAITING HORIZONTAL TAP\"},{\"name\":\"Waiting Hoirzontal Tap - 2\",\"thumbCurl\":25,\"thumbSplay\":6,\"thumbSplay2\":-14,\"curlBiasThumb\":-1,\"baseOnlyCurlThumb\":30,\"midOnlyCurlThumb\":-51,\"tipOnlyCurlThumb\":10,\"tipTwistThumb\":0,\"curlIndex\":0,\"splayIndex\":20,\"splayIndex2\":0,\"curlBiasIndex\":47,\"baseOnlyCurlIndex\":30,\"midOnlyCurlIndex\":30,\"tipOnlyCurlIndex\":4,\"tipTwistIndex\":0,\"curlMiddle\":0,\"splayMiddle\":20,\"splayMiddle2\":28,\"curlBiasMiddle\":140,\"baseOnlyCurlMiddle\":49,\"midOnlyCurlMiddle\":35,\"tipOnlyCurlMiddle\":-35,\"tipTwistMiddle\":0,\"curlRing\":0,\"splayRing\":-8,\"splayRing2\":0,\"curlBiasRing\":300,\"baseOnlyCurlRing\":30,\"midOnlyCurlRing\":15,\"tipOnlyCurlRing\":0,\"tipTwistRing\":0,\"curlPinky\":0,\"splayPinky\":-23,\"splayPinky2\":0,\"curlBiasPinky\":207,\"baseOnlyCurlPinky\":5,\"midOnlyCurlPinky\":5,\"tipOnlyCurlPinky\":0,\"tipTwistPinky\":0,\"wristBend\":0,\"wristSplay\":-15,\"modelRotX\":85,\"modelRotY\":20,\"modelRotZ\":0,\"hideWrist\":78,\"shoulderRaise\":0,\"shoulderSwing\":0,\"shoulderRotation\":0,\"elbowBend\":0,\"elbowSideBend\":0,\"forearmTwist\":0,\"poseOffsetX\":0,\"poseOffsetY\":0,\"poseOffsetZ\":0,\"poseScale\":1,\"group\":\"WAITING HORIZONTAL TAP\"},{\"name\":\"Waiting Horizontal Tap - 3\",\"thumbCurl\":28,\"thumbSplay\":6,\"thumbSplay2\":-14,\"curlBiasThumb\":-1,\"baseOnlyCurlThumb\":49,\"midOnlyCurlThumb\":-51,\"tipOnlyCurlThumb\":10,\"tipTwistThumb\":0,\"curlIndex\":0,\"splayIndex\":42,\"splayIndex2\":71,\"curlBiasIndex\":47,\"baseOnlyCurlIndex\":60,\"midOnlyCurlIndex\":18,\"tipOnlyCurlIndex\":-35,\"tipTwistIndex\":-29,\"curlMiddle\":0,\"splayMiddle\":13,\"splayMiddle2\":20,\"curlBiasMiddle\":140,\"baseOnlyCurlMiddle\":30,\"midOnlyCurlMiddle\":25,\"tipOnlyCurlMiddle\":0,\"tipTwistMiddle\":0,\"curlRing\":0,\"splayRing\":-1,\"splayRing2\":0,\"curlBiasRing\":300,\"baseOnlyCurlRing\":15,\"midOnlyCurlRing\":15,\"tipOnlyCurlRing\":0,\"tipTwistRing\":0,\"curlPinky\":0,\"splayPinky\":-15,\"splayPinky2\":0,\"curlBiasPinky\":207,\"baseOnlyCurlPinky\":-5,\"midOnlyCurlPinky\":0,\"tipOnlyCurlPinky\":0,\"tipTwistPinky\":0,\"wristBend\":0,\"wristSplay\":-15,\"modelRotX\":85,\"modelRotY\":20,\"modelRotZ\":0,\"hideWrist\":78,\"shoulderRaise\":0,\"shoulderSwing\":0,\"shoulderRotation\":0,\"elbowBend\":0,\"elbowSideBend\":0,\"forearmTwist\":0,\"poseOffsetX\":0,\"poseOffsetY\":0,\"poseOffsetZ\":0,\"poseScale\":1,\"group\":\"WAITING HORIZONTAL TAP\"},{\"name\":\"HS - 0\",\"thumbCurl\":0,\"thumbSplay\":-48,\"thumbSplay2\":-8,\"curlBiasThumb\":0,\"baseOnlyCurlThumb\":-61,\"midOnlyCurlThumb\":0,\"tipOnlyCurlThumb\":0,\"tipTwistThumb\":0,\"curlIndex\":0,\"splayIndex\":-68,\"splayIndex2\":0,\"curlBiasIndex\":0,\"baseOnlyCurlIndex\":0,\"midOnlyCurlIndex\":-5,\"tipOnlyCurlIndex\":0,\"tipTwistIndex\":0,\"curlMiddle\":0,\"splayMiddle\":-6,\"splayMiddle2\":0,\"curlBiasMiddle\":0,\"baseOnlyCurlMiddle\":0,\"midOnlyCurlMiddle\":-5,\"tipOnlyCurlMiddle\":0,\"tipTwistMiddle\":0,\"curlRing\":0,\"splayRing\":-34,\"splayRing2\":0,\"curlBiasRing\":0,\"baseOnlyCurlRing\":0,\"midOnlyCurlRing\":-5,\"tipOnlyCurlRing\":0,\"tipTwistRing\":0,\"curlPinky\":0,\"splayPinky\":86,\"splayPinky2\":0,\"curlBiasPinky\":0,\"baseOnlyCurlPinky\":0,\"midOnlyCurlPinky\":-5,\"tipOnlyCurlPinky\":0,\"tipTwistPinky\":0,\"wristBend\":0,\"wristSplay\":-1.8,\"wristRotation\":0,\"modelRotX\":0,\"modelRotY\":0,\"modelRotZ\":0,\"baseRotationX\":6,\"baseRotationY\":6,\"baseRotationZ\":0,\"hideWrist\":78,\"poseOffsetX\":15.9,\"poseOffsetY\":-13.7,\"poseOffsetZ\":-6.4,\"poseScale\":1,\"elbowBend\":0,\"elbowSideBend\":0,\"forearmTwist\":0,\"forearmBendOffX\":0,\"forearmBendOffY\":0,\"forearmBendOffZ\":0,\"forearmTwistOffX\":0,\"forearmTwistOffY\":0,\"forearmTwistOffZ\":0,\"wristOffX\":0,\"wristOffY\":0,\"wristOffZ\":0}],\"groupOrder\":[\"BIG OPEN PALM\",\"CLOSED FLOWER\",\"SINGLE GESTURES\",\"WAITING HORIZONTAL TAP\"]}",
     "sliderTweenT": 0,
     "sliderTweenFrameCount": 10,
     "textExportFramePrefix": "tween",
@@ -241,16 +241,16 @@
     "checkboxCameraMaxExtentsEnabled": false,
     "listPickerCameras": "{\"items\":[{\"name\":\"45 FOV - 30 ZOOM - 30 Y - TOP\",\"x\":0,\"y\":30,\"z\":0.00007322507026485617,\"fov\":45,\"tx\":0,\"ty\":0,\"tz\":0,\"zoom\":30,\"group\":\"45 FOV - 30 ZOOM - 30 Y\"},{\"name\":\"45 FOV - 30 ZOOM - 30 Y - FRONT\",\"x\":0,\"y\":1.8369701987264917e-15,\"z\":30.0000000000892,\"fov\":45,\"tx\":0,\"ty\":0,\"tz\":0,\"zoom\":30,\"group\":\"45 FOV - 30 ZOOM - 30 Y\"},{\"name\":\"45 FOV - 30 ZOOM - 30 Y - BACK\",\"x\":3.673940397452983e-15,\"y\":1.8369701987264917e-15,\"z\":-30.0000000000892,\"fov\":45,\"tx\":0,\"ty\":0,\"tz\":0,\"zoom\":30,\"group\":\"45 FOV - 30 ZOOM - 30 Y\"},{\"name\":\"45 FOV - 30 ZOOM - 30 Y - LEFT\",\"x\":30.0000000000892,\"y\":1.8369701987264917e-15,\"z\":1.8369701987264917e-15,\"fov\":45,\"tx\":0,\"ty\":0,\"tz\":0,\"zoom\":30,\"group\":\"45 FOV - 30 ZOOM - 30 Y\"},{\"name\":\"45 FOV - 30 ZOOM - 30 Y - RIGHT\",\"x\":-30.0000000000892,\"y\":1.8369701987264917e-15,\"z\":1.8369701987264917e-15,\"fov\":45,\"tx\":0,\"ty\":0,\"tz\":0,\"zoom\":30,\"group\":\"45 FOV - 30 ZOOM - 30 Y\"},{\"name\":\"45 FOV - 30 ZOOM - 30 Y - BOTTOM\",\"x\":3.6739403984157796e-21,\"y\":-30.000000000073744,\"z\":-0.000030000000007951024,\"fov\":45,\"tx\":0,\"ty\":0,\"tz\":0,\"zoom\":30,\"group\":\"45 FOV - 30 ZOOM - 30 Y\"}],\"groupOrder\":[\"45 FOV - 30 ZOOM - 30 Y\"]}",
     "checkboxPreviewCameraEnabled": true,
-    "sliderPreviewCameraX": -5.5,
-    "sliderPreviewCameraY": -17,
-    "sliderPreviewCameraZ": 50.5,
+    "sliderPreviewCameraX": -56.5,
+    "sliderPreviewCameraY": 6,
+    "sliderPreviewCameraZ": 3.5,
     "sliderPreviewCameraFov": 45,
     "sliderPreviewCameraZoom": 55.5,
     "checkboxLockPreviewCameraPan": false,
     "checkboxLockPreviewCameraZoom": false,
     "checkboxLockPreviewCameraRotate": false,
-    "sliderPreviewCameraYaw": -3,
-    "sliderPreviewCameraPitch": -11,
+    "sliderPreviewCameraYaw": -82,
+    "sliderPreviewCameraPitch": 13,
     "listPickerPreviewCameraPresets": "{\"items\":[{\"name\":\"Preview Camera 1\",\"x\":26.82662267913813,\"y\":4.674397019595411,\"z\":8.484174879023488,\"fov\":45,\"zoom\":30.000000000089123},{\"name\":\"Preview Camera 2\",\"x\":-11.12761807925916,\"y\":-16.106498684197746,\"z\":-7.505941004652178,\"fov\":45,\"zoom\":20.96621888532212},{\"name\":\"TOP FINGERS\",\"x\":0.2934290134801162,\"y\":12.09836296565812,\"z\":1.4491501348333924,\"fov\":45,\"zoom\":11.916429553782084}],\"groupOrder\":[]}",
     "sliderKeyAzimuth": 267,
     "sliderKeyElevation": 46,
@@ -4541,6 +4541,22 @@
                 {
                   "type": "group",
                   "section": {
+                    "key": "desktop:Saved Poses",
+                    "items": [
+                      {
+                        "type": "row",
+                        "key": "listPickerPoses"
+                      }
+                    ],
+                    "rowKeys": [
+                      "listPickerPoses"
+                    ],
+                    "subgroups": []
+                  }
+                },
+                {
+                  "type": "group",
+                  "section": {
                     "key": "desktop:ROTATION",
                     "items": [
                       {
@@ -4920,22 +4936,6 @@
                 {
                   "type": "group",
                   "section": {
-                    "key": "desktop:Saved Poses",
-                    "items": [
-                      {
-                        "type": "row",
-                        "key": "listPickerPoses"
-                      }
-                    ],
-                    "rowKeys": [
-                      "listPickerPoses"
-                    ],
-                    "subgroups": []
-                  }
-                },
-                {
-                  "type": "group",
-                  "section": {
                     "key": "desktop:MIRROR",
                     "items": [
                       {
@@ -5033,6 +5033,19 @@
               ],
               "rowKeys": [],
               "subgroups": [
+                {
+                  "key": "desktop:Saved Poses",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "listPickerPoses"
+                    }
+                  ],
+                  "rowKeys": [
+                    "listPickerPoses"
+                  ],
+                  "subgroups": []
+                },
                 {
                   "key": "desktop:ROTATION",
                   "items": [
@@ -5382,19 +5395,6 @@
                     "slidermidOnlyCurlPinky",
                     "slidertipOnlyCurlPinky",
                     "slidertipTwistPinky"
-                  ],
-                  "subgroups": []
-                },
-                {
-                  "key": "desktop:Saved Poses",
-                  "items": [
-                    {
-                      "type": "row",
-                      "key": "listPickerPoses"
-                    }
-                  ],
-                  "rowKeys": [
-                    "listPickerPoses"
                   ],
                   "subgroups": []
                 },
@@ -6363,6 +6363,22 @@
               {
                 "type": "group",
                 "section": {
+                  "key": "desktop:Saved Poses",
+                  "items": [
+                    {
+                      "type": "row",
+                      "key": "listPickerPoses"
+                    }
+                  ],
+                  "rowKeys": [
+                    "listPickerPoses"
+                  ],
+                  "subgroups": []
+                }
+              },
+              {
+                "type": "group",
+                "section": {
                   "key": "desktop:ROTATION",
                   "items": [
                     {
@@ -6742,22 +6758,6 @@
               {
                 "type": "group",
                 "section": {
-                  "key": "desktop:Saved Poses",
-                  "items": [
-                    {
-                      "type": "row",
-                      "key": "listPickerPoses"
-                    }
-                  ],
-                  "rowKeys": [
-                    "listPickerPoses"
-                  ],
-                  "subgroups": []
-                }
-              },
-              {
-                "type": "group",
-                "section": {
                   "key": "desktop:MIRROR",
                   "items": [
                     {
@@ -6855,6 +6855,19 @@
             ],
             "rowKeys": [],
             "subgroups": [
+              {
+                "key": "desktop:Saved Poses",
+                "items": [
+                  {
+                    "type": "row",
+                    "key": "listPickerPoses"
+                  }
+                ],
+                "rowKeys": [
+                  "listPickerPoses"
+                ],
+                "subgroups": []
+              },
               {
                 "key": "desktop:ROTATION",
                 "items": [
@@ -7204,19 +7217,6 @@
                   "slidermidOnlyCurlPinky",
                   "slidertipOnlyCurlPinky",
                   "slidertipTwistPinky"
-                ],
-                "subgroups": []
-              },
-              {
-                "key": "desktop:Saved Poses",
-                "items": [
-                  {
-                    "type": "row",
-                    "key": "listPickerPoses"
-                  }
-                ],
-                "rowKeys": [
-                  "listPickerPoses"
                 ],
                 "subgroups": []
               },
@@ -16798,17 +16798,17 @@
     "desktop:Saved Phone Poses": true,
     "desktop:HAND MODEL": false,
     "desktop:Field Layout": true,
-    "desktop:Pose": true,
+    "desktop:Pose": false,
+    "desktop:Saved Poses": false,
     "desktop:ROTATION": true,
-    "desktop:Whole-Hand Rotation at Base": true,
+    "desktop:Whole-Hand Rotation at Base": false,
     "desktop:Pose Offset": true,
     "desktop:THUMB": true,
-    "desktop:Wrist": true,
+    "desktop:Wrist": false,
     "desktop:Index": true,
     "desktop:Middle": true,
     "desktop:Ring": true,
     "desktop:Pinky": true,
-    "desktop:Saved Poses": true,
     "desktop:MIRROR": true,
     "desktop:ARM": true,
     "desktop:Tween": true,
@@ -16820,7 +16820,7 @@
     "desktop:Responsive Wrist Splay": true,
     "desktop:New Group": true,
     "desktop:Palm Facing": true,
-    "desktop:IK POSING": false,
+    "desktop:IK POSING": true,
     "desktop:IK Influence": false,
     "desktop:Saved IK Influence": false,
     "desktop:Saved IK Pairs": true,
