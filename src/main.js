@@ -193,6 +193,7 @@ const cfg = {
   // IK Influence (HANDO's CURRENT system, 2026-10-04 rewrite: one priority slider per existing pose slider + All, each with a hard
   // Min / Max window as a range bar -- see ikInfluence() / solveIkHandPose()). Defaults as in HANDO: whole-hand offset/rotation and the
   // arm start at 0 (locked), fingers and wrist at 100. Range values are JSON strings like every other range-bar in this file.
+  ikMaxSolveHz: 20, // IK Max Solve Rate (Hz): upper limit on how often the live IK solver runs while its inputs keep changing (a rotating phone moves every source node every frame). 0 = solve every frame.
   ikWarmStart: false, // IK Warm Start: false (default) = every live solve starts from the default (base) pose; true = start from the previous solve's result (faster, but the result depends on the path the sliders took)
   ikRotationWeight: 8, // IK Rotation Weight (x): how strongly the solver matches each pair's ORIENTATION vs its position (0 = position only) -- see solveIkHandPose()
   // Ported from HANDO 2026-10-09 with its per-axis / per-finger-set granularity: Finger Curl / Finger Twist / Finger Splay (ikInfluenceFingers/ikRangeFingers
@@ -3786,10 +3787,23 @@ function updateIkHandPose() {
   const pairs = getActiveIkPairs()
   const sig = ikSignature(pairs)
   if (sig === ikLastSignature) return false
+  // SOLVE-RATE LIMIT (2026-10-13, direct report: responsive rotation "isn't running smoothly" with IK posing on). A rotating phone changes every source node's
+  // world matrix EVERY frame, so the signature changes every frame and a full solve (many finite-difference pose evaluations) ran every frame -- measured in Node
+  // with 5 pairs: median 46 ms per solve, so a phone several times slower than a desktop stalls each frame for 100+ ms and the whole scene (the phone's own
+  // rotation included) drops to a few fps. Now a new solve waits until BOTH (a) 1/ikMaxSolveHz has passed since the last one ended and (b) at least TWICE as long as the
+  // last solve took has passed since it ended (so the solver never uses more than ~a third of the main thread). The signature is NOT consumed when a solve is skipped, so
+  // the newest inputs are always solved next, and a frame is requested so the loop stays alive until that happens (on-demand rendering would otherwise go idle).
+  const nowMs = performance.now()
+  const minGap = Math.max(cfg.ikMaxSolveHz > 0 ? 1000 / cfg.ikMaxSolveHz : 0, ikLastSolveMs * 2) // x2 = the solver uses at most ~1/3 of the main thread (a judgment call, not a measurement)
+  if (ikLastSolveEnd > 0 && nowMs - ikLastSolveEnd < minGap) { requestRender(); return false }
   ikLastSignature = sig
+  const t0 = performance.now()
   solveIkHandPose(pairs)
+  ikLastSolveEnd = performance.now()
+  ikLastSolveMs = ikLastSolveEnd - t0
   return true
 }
+let ikLastSolveEnd = 0, ikLastSolveMs = 0
 
 // ---------------- pairs: state, persistence, picking ----------------
 // PER-PAIR ROTATION WEIGHT (2026-10-11, direct request: "Provide each pair with its own rotational weight slider as opposed to a single global slider"). Each pair's
@@ -4233,6 +4247,8 @@ function renderIkPosingGroup(handModelContent) {
   addRow(content, { id: 'checkboxIkWarmStart', label: 'IK Warm Start (Faster, Path-Dependent)', type: 'checkbox' })
   document.getElementById('checkboxIkWarmStart').checked = cfg.ikWarmStart
   wireCheckbox('checkboxIkWarmStart', (v) => { cfg.ikWarmStart = v; ikLastSignature = null })
+  addRow(content, { id: 'sliderIkMaxSolveHz', label: 'IK Max Solve Rate (Hz, 0 = Every Frame)', type: 'slider', min: 0, max: 60, step: 1, value: cfg.ikMaxSolveHz })
+  wireSlider('sliderIkMaxSolveHz', (v) => { cfg.ikMaxSolveHz = v; requestRender() })
   // (The single global IK Rotation Weight slider was replaced by a Rotation Weight slider inside every pair, 2026-10-11.)
   ikStatusEl = document.createElement('div')
   ikStatusEl.style.cssText = 'font-size:11px; opacity:0.85; margin:2px 0 6px;'
