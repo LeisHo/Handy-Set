@@ -8806,6 +8806,12 @@ passed on both devPanel.js and main.js.
   - NOT browser-verified (project rule) -- node --check passed. If the preview still looks offset, the first thing to check is the panel
     border/titlebar offset in getBoundingClientRect of .preview-camera-viewport.
 
+2026-10-12 -- Preview Camera: releasing the mouse now ends a panel drag (main.js v=248)
+  - Direct report: after click-dragging a preview panel, releasing the click did not stop the drag.
+  - Cause: my own earlier change (v=247) made the panel stopPropagation() for pointerup, so a release over the panel never reached the
+    window-level pointerup listener that ends startPreviewCameraDrag(). Fix: pointerup removed from the panel's stop list, and the drag's
+    move/up listeners are now capture-phase on window with a pointercancel handler too. Not browser-verified (project rule); node --check passed.
+
 --------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
