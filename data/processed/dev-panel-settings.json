@@ -26,7 +26,7 @@
     "textIkRangeFingerTwist": "{\"min\":-13,\"max\":20}",
     "textIkRangeFingers": "{\"min\":-50,\"max\":50}",
     "textIkRangeOffX": "{\"min\":-100,\"max\":100}",
-    "textIkRangeOffY": "{\"min\":-120,\"max\":100}",
+    "textIkRangeOffY": "{\"min\":-55,\"max\":50}",
     "textIkRangeOffZ": "{\"min\":-100,\"max\":100}",
     "textIkRangeRotX": "{\"min\":-101,\"max\":96}",
     "textIkRangeRotY": "{\"min\":-81,\"max\":73}",
