@@ -8812,6 +8812,17 @@ passed on both devPanel.js and main.js.
     window-level pointerup listener that ends startPreviewCameraDrag(). Fix: pointerup removed from the panel's stop list, and the drag's
     move/up listeners are now capture-phase on window with a pointercancel handler too. Not browser-verified (project rule); node --check passed.
 
+2026-10-12 -- IK pair picking works inside Preview Camera panels; IK nodes no longer drawn inside the recursive render (main.js v=249)
+  - Direct request: (1) when setting IK pairs, allow selecting nodes inside the preview panels too; (2) only show IK nodes in the actual main
+    model, not within the recursive renders.
+  - (1) findIkNodeNearPointer() now takes an optional camera + screen rect (defaults: main camera + canvas, so the main-view behavior is
+    unchanged). New attachIkPickToPreview(entry), called from createPreviewCamera(), listens for a click (pointerdown/up within 8px, so an
+    orbit/pan drag still doesn't count) on that panel's viewport and picks the nearest node to the click using THAT panel's camera and viewport
+    rect. The shared pick-completion code moved to completeIkPick(), used by both the canvas and the panels. Target picks still only accept hand nodes.
+  - (2) renderVirtualScreen() hides the IK node spheres + axes batches for every recursive capture pass and restores their previous visibility
+    afterwards, so the nested screen images never contain IK nodes. The main view and the preview panels still show them.
+  - NOT browser-verified (project rule); node --check passed.
+
 --------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
