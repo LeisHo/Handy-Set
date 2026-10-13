@@ -8833,6 +8833,21 @@ passed on both devPanel.js and main.js.
     source; with the source turned 90 deg about Z, Source Node Axes mode puts the offset on world Y (0.600) while World mode keeps it on world X
     (0.600). NOT browser-verified (project rule).
 
+2026-10-13 -- IK solve-rate limit: responsive phone rotation no longer stalls behind a full IK solve every frame (main.js v=251)
+  - Direct report: with the latest settings and Responsive Displace OFF, responsive rotation isn't smooth while the hand is IK-posed.
+  - Cause (MEASURED in Node, real solver + real Draco hand, 5 overlap pairs on thumb/index/middle/ring/pinky, all influences open, source nodes
+    turning rigidly 1.5 deg per step): a cold solve takes min 29 / median 46 / max 78 ms; warm start median 31 ms. Rotating the phone moves every
+    source node's world matrix every frame, so ikSignature() changes every frame and updateIkHandPose() ran a full solve every frame. A phone CPU
+    several times slower than this desktop (a ratio I did not measure) turns 46 ms into 100+ ms per frame, which also stalls the phone's own rotation.
+  - Fix: updateIkHandPose() now waits until both 1/IK Max Solve Rate (new slider, default 20 Hz, 0 = every frame) and TWICE the last solve's
+    duration have passed since the previous solve ended (so the solver uses at most ~1/3 of the main thread; the x2 is a judgment call). A skipped
+    solve does not consume the signature, so the newest inputs are solved next, and requestRender() keeps the on-demand loop alive until then.
+    The phone renders every frame with the hand holding its last solved pose in between.
+  - LIMIT, stated plainly: each solve still blocks the main thread for its whole duration, so this reduces how OFTEN the stall happens, not how
+    long each one lasts. Fully smooth motion needs the solve time-sliced across frames (the trial poses it evaluates would need hiding/restoring
+    between slices) -- a larger change, not done. Cheaper solves also come from fewer free DOFs (influence 0 on unneeded ones) and fewer pairs.
+  - NOT verified on a phone (project rule / no device); node --check passed.
+
 --------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
