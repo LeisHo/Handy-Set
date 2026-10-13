@@ -2691,19 +2691,25 @@ function requestMotionPermissionIfNeeded() {
   const requests = []
   if (orientationPermission) {
     try {
-      requests.push(DeviceOrientationEvent.requestPermission().catch(() => 'denied'))
+      requests.push(DeviceOrientationEvent.requestPermission().catch(() => 'error'))
     } catch (_) {
-      requests.push(Promise.resolve('denied'))
+      requests.push(Promise.resolve('error'))
     }
   }
   if (motionPermission) {
     try {
-      requests.push(DeviceMotionEvent.requestPermission().catch(() => 'denied'))
+      requests.push(DeviceMotionEvent.requestPermission().catch(() => 'error'))
     } catch (_) {
-      requests.push(Promise.resolve('denied'))
+      requests.push(Promise.resolve('error'))
     }
   }
   Promise.all(requests).then((states) => {
+    // A request can be attempted during startup, outside a user gesture.
+    // Allow a later real control gesture to retry if every request errored.
+    if (states.every((state) => state === 'error')) {
+      motionPermissionRequested = false
+      return
+    }
     // Attach if at least one requested stream was granted. If only one was
     // granted, the other event stream will simply remain silent on iOS.
     if (states.some((state) => state === 'granted')) attachMotionListeners()
