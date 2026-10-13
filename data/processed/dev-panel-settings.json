@@ -16859,7 +16859,7 @@
     "mobile:RECURSIVE RENDER": true,
     "mobile:RESPONSIVE BEHAVIOUR - PHONE": false,
     "mobile:Responsive Rotation": false,
-    "mobile:ROTATION - X AXIS": true,
+    "mobile:ROTATION - X AXIS": false,
     "mobile:ROTATION - Y AXIS": true,
     "mobile:ROTATION - Z AXIS": true,
     "mobile:RESPONSIVE DISPLACE": true,
