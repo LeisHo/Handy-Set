@@ -2089,7 +2089,7 @@ function createPreviewCamera() {
   viewportEl.addEventListener('pointerdown', () => setActivePreviewCamera(id))
   // The panel is a sibling of the canvas, so its events cannot reach the main OrbitControls through the DOM -- these stops also keep
   // them away from any window-level gesture listener (double-tap reset, tap picking) so a preview never acts on the main view.
-  ;['pointerdown', 'pointerup', 'wheel', 'touchstart', 'touchend', 'dblclick', 'click'].forEach((t) => panel.addEventListener(t, (e) => e.stopPropagation()))
+  ;['pointerdown', 'wheel', 'touchstart', 'touchend', 'dblclick', 'click'].forEach((t) => panel.addEventListener(t, (e) => e.stopPropagation()))
   closeBtn.addEventListener('click', () => removePreviewCamera(id))
 
   if (typeof ResizeObserver !== 'undefined') {
@@ -2153,12 +2153,16 @@ function startPreviewCameraDrag(entry, downEvent) {
     requestRender() // on-demand rendering: without this the preview pixels stayed where the panel WAS until something else happened to render
   }
   function onUp() {
-    window.removeEventListener('pointermove', onMove)
-    window.removeEventListener('pointerup', onUp)
+    window.removeEventListener('pointermove', onMove, true)
+    window.removeEventListener('pointerup', onUp, true)
+    window.removeEventListener('pointercancel', onUp, true)
     requestRender()
   }
-  window.addEventListener('pointermove', onMove)
-  window.addEventListener('pointerup', onUp)
+  // Capture phase: the release must end the drag no matter what element it lands on or whether anything stops propagation
+  // (the panel's own stopPropagation list used to include pointerup, so releasing over the panel never reached window -- 2026-10-12 report).
+  window.addEventListener('pointermove', onMove, true)
+  window.addEventListener('pointerup', onUp, true)
+  window.addEventListener('pointercancel', onUp, true)
 }
 
 // Mirrors syncCameraPanelFromLive() for whichever preview panel is
