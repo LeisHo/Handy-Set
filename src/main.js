@@ -2079,6 +2079,7 @@ function createPreviewCamera() {
     locks: { pan: false, zoom: false, rotate: false },
   }
   previewCameras.push(entry)
+  attachIkPickToPreview(entry) // IK pair node picking works inside preview panels too
 
   pcControls.addEventListener('change', () => { setActivePreviewCamera(id); requestRender() })
   titlebar.addEventListener('pointerdown', (e) => {
@@ -3952,14 +3953,14 @@ function cancelIkPick() {
   requestRender()
 }
 function setIkPickStatus(msg) { if (ikPickStatusEl) ikPickStatusEl.textContent = msg }
-function findIkNodeNearPointer(clientX, clientY, ownerFilter) {
-  const rect = renderer.domElement.getBoundingClientRect()
+// cam/rect default to the main camera + canvas; a Preview Camera panel passes its own camera and viewport rect so nodes can be picked there too.
+function findIkNodeNearPointer(clientX, clientY, ownerFilter, cam = camera, rect = renderer.domElement.getBoundingClientRect()) {
   const v = new THREE.Vector3()
   let best = null
   ikNodes.forEach((n) => {
     if (ownerFilter && n.owner !== ownerFilter) return
-    v.setFromMatrixPosition(n.object3d.matrixWorld).project(camera)
-    if (v.z > 1) return
+    v.setFromMatrixPosition(n.object3d.matrixWorld).project(cam)
+    if (v.z > 1 || v.z < -1) return
     const d = Math.hypot(rect.left + (v.x * 0.5 + 0.5) * rect.width - clientX, rect.top + (-v.y * 0.5 + 0.5) * rect.height - clientY)
     if (d < 36 && (!best || d < best.d)) best = { n, d }
   })
@@ -3976,9 +3977,28 @@ function attachIkPickListeners() {
     const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y)
     down = null
     if (moved > 8) return // a drag (orbit/pan), not a click
+    completeIkPick(e.clientX, e.clientY, camera, renderer.domElement.getBoundingClientRect())
+  })
+}
+// Pick a node by clicking inside a Preview Camera panel (2026-10-12, direct request). Attached to each panel's viewport element by
+// createPreviewCamera(); uses THAT panel's camera and viewport rect, so what you click is what that panel shows.
+function attachIkPickToPreview(entry) {
+  let down = null
+  entry.viewportEl.addEventListener('pointerdown', (e) => { down = { x: e.clientX, y: e.clientY } })
+  entry.viewportEl.addEventListener('pointerup', (e) => {
+    if (!ikPicking || !down) return
+    const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y)
+    down = null
+    if (moved > 8) return // a drag (orbit/pan), not a click
+    completeIkPick(e.clientX, e.clientY, entry.camera, entry.viewportEl.getBoundingClientRect())
+  })
+}
+function completeIkPick(clientX, clientY, cam, rect) {
+  if (!ikPicking) return
+  {
     const pair = ikPairs.find((p) => p.id === ikPicking.pairId)
     if (!pair) { cancelIkPick(); return }
-    const node = findIkNodeNearPointer(e.clientX, e.clientY, ikPicking.role === 'target' ? 'hand' : null)
+    const node = findIkNodeNearPointer(clientX, clientY, ikPicking.role === 'target' ? 'hand' : null, cam, rect)
     if (!node) { setIkPickStatus('No ' + (ikPicking.role === 'target' ? 'hand ' : '') + 'IK node near that spot — click closer to a node, or press Pick again to cancel.'); return }
     if (ikPicking.role === 'target') pair.targetId = node.id; else pair.sourceId = node.id
     ikPairPresetMismatches.delete(pair.id) // manually fixed -- clear any stale preset-mismatch highlight
@@ -3987,7 +4007,8 @@ function attachIkPickListeners() {
     setIkPickStatus('Set: ' + node.label)
     persistIkPairs()
     renderIkPairsUI()
-  })
+  }
+  requestRender()
 }
 
 // ---------------- pairs: UI ----------------
@@ -6763,6 +6784,11 @@ function renderVirtualScreen() {
   if (!phoneScreenRenderMaterial) phoneScreenRenderMaterial = new THREE.MeshBasicMaterial()
   if (!phoneScreenWhiteMaterial) phoneScreenWhiteMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff })
   phoneScreenRenderMaterial.color.setScalar(cfg.screenEmissionIntensity ?? 1)
+  // IK node spheres/axes belong to the MAIN view (and the preview panels) only -- never inside the recursive render
+  // (2026-10-12, direct request). Hidden for every capture pass, restored right after.
+  const ikSpheresWasVisible = ikSpheres ? ikSpheres.visible : false, ikAxesWasVisible = ikAxes ? ikAxes.visible : false
+  if (ikSpheres) ikSpheres.visible = false
+  if (ikAxes) ikAxes.visible = false
   for (let i = 0; i < levels; i++) {
     if (i === 0) {
       // CORRECTED 2026-09-29, direct report: "for the last screen face
@@ -6803,6 +6829,8 @@ function renderVirtualScreen() {
   applyScreenTextureTransform(phoneScreenRenderMaterial.map, true, 1, levels)
   phoneScreenMeshes.forEach((mesh) => { mesh.visible = true; mesh.material = phoneScreenRenderMaterial })
   renderer.setRenderTarget(null)
+  if (ikSpheres) ikSpheres.visible = ikSpheresWasVisible
+  if (ikAxes) ikAxes.visible = ikAxesWasVisible
 }
 
 const tiltTarget = new THREE.Vector3()
