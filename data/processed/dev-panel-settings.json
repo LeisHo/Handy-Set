@@ -17914,7 +17914,7 @@
     "ambientGroundColor": "#ffffff"
   },
   "defaultToon": {
-    "toonSteps": 8,
+    "toonSteps": 4,
     "toonStepThreshold": 4,
     "toonShadowFloor": 0,
     "toonLightCeiling": 71,
