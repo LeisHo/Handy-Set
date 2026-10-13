@@ -2087,6 +2087,9 @@ function createPreviewCamera() {
     startPreviewCameraDrag(entry, e)
   })
   viewportEl.addEventListener('pointerdown', () => setActivePreviewCamera(id))
+  // The panel is a sibling of the canvas, so its events cannot reach the main OrbitControls through the DOM -- these stops also keep
+  // them away from any window-level gesture listener (double-tap reset, tap picking) so a preview never acts on the main view.
+  ;['pointerdown', 'pointerup', 'wheel', 'touchstart', 'touchend', 'dblclick', 'click'].forEach((t) => panel.addEventListener(t, (e) => e.stopPropagation()))
   closeBtn.addEventListener('click', () => removePreviewCamera(id))
 
   if (typeof ResizeObserver !== 'undefined') {
@@ -2147,10 +2150,12 @@ function startPreviewCameraDrag(entry, downEvent) {
     const maxTop = window.innerHeight - 24
     panel.style.left = Math.max(-panel.offsetWidth + 40, Math.min(maxLeft, nextLeft)) + 'px'
     panel.style.top = Math.max(0, Math.min(maxTop, nextTop)) + 'px'
+    requestRender() // on-demand rendering: without this the preview pixels stayed where the panel WAS until something else happened to render
   }
   function onUp() {
     window.removeEventListener('pointermove', onMove)
     window.removeEventListener('pointerup', onUp)
+    requestRender()
   }
   window.addEventListener('pointermove', onMove)
   window.addEventListener('pointerup', onUp)
@@ -2199,17 +2204,19 @@ function applyPreviewCameraLockState() {
 // render-target) is the chosen approach.
 function renderPreviewCameraViewports() {
   if (previewCameras.length === 0) return
+  // WebGLRenderer.setScissor()/setViewport() take CSS pixels and multiply by the pixel ratio themselves. The first version passed
+  // DEVICE pixels (rect * pixelRatio), so on any display with devicePixelRatio > 1 the preview was drawn at the wrong place and twice the
+  // size -- it landed outside the panel and over the main view instead of inside the panel (2026-10-12 report). Everything here is CSS px.
   const canvasRect = renderer.domElement.getBoundingClientRect()
-  const pixelRatio = renderer.getPixelRatio()
-  const canvasPixelHeight = renderer.domElement.height
+  const cssH = canvasRect.height
   previewCameras.forEach((pc) => {
     const rect = pc.viewportEl.getBoundingClientRect()
     if (rect.width < 2 || rect.height < 2) return
-    const x = Math.round((rect.left - canvasRect.left) * pixelRatio)
-    const yTop = Math.round((rect.top - canvasRect.top) * pixelRatio)
-    const w = Math.round(rect.width * pixelRatio)
-    const h = Math.round(rect.height * pixelRatio)
-    const y = canvasPixelHeight - yTop - h // WebGL viewport/scissor origin is bottom-left; DOM rects are top-left
+    const x = Math.round(rect.left - canvasRect.left)
+    const yTop = Math.round(rect.top - canvasRect.top)
+    const w = Math.round(rect.width)
+    const h = Math.round(rect.height)
+    const y = Math.round(cssH) - yTop - h // WebGL viewport/scissor origin is bottom-left; DOM rects are top-left
     renderer.setScissorTest(true)
     renderer.setScissor(x, y, w, h)
     renderer.setViewport(x, y, w, h)
@@ -2217,7 +2224,7 @@ function renderPreviewCameraViewports() {
     renderer.render(scene, pc.camera)
   })
   renderer.setScissorTest(false)
-  renderer.setViewport(0, 0, renderer.domElement.width, canvasPixelHeight)
+  renderer.setViewport(0, 0, Math.round(canvasRect.width), Math.round(cssH))
 }
 
 const hemiLight = new THREE.HemisphereLight(cfg.ambientSkyColor, cfg.ambientGroundColor, cfg.ambientIntensity)
@@ -11291,6 +11298,7 @@ function renderDebugExtras() {
   sensorLogEl = document.createElement('div')
   sensorLogEl.className = 'dev-mouse-log'
   sensorSub.appendChild(sensorLogEl)
+  if (window.makeLogBoxCollapsible) window.makeLogBoxCollapsible(sensorLogEl, 'Log')
 
   // Phone Model Log -- direct request 2026-09-28: logs the Phone Model's
   // own position/rotation, at the same rate as the Sensors log above
@@ -11378,6 +11386,7 @@ function renderDebugExtras() {
   displaceLogEl = document.createElement('div')
   displaceLogEl.className = 'dev-mouse-log'
   displaceLogSub.appendChild(displaceLogEl)
+  if (window.makeLogBoxCollapsible) window.makeLogBoxCollapsible(displaceLogEl, 'Log')
   restartDisplaceLogTimer()
 
   // Object Axes -- ported from 3JS ENGINE's own Debug/Diagnostics

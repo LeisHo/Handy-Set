@@ -8765,6 +8765,48 @@ Tested on the real solver and hand (run9.mjs; one pair, position ignored, desire
 12/12/12 -> 0.0 / 0.0 / 0.0. main.js ?v=245. Not browser-verified (project rule).
 
 --------------------------------------------------------------------------------
+2026-10-12 -- 4 dev-panel engine features ported from the canonical TEMPLATE_DEV_PANEL.html
+
+Direct request: "apply all those things to Hando, Handy Dandies, and Handyset" -- the 4 features just added to the shared
+.claude/TEMPLATE_DEV_PANEL.html template this session. devPanel.js is a near-verbatim copy of the template, so this was a
+structural port (same function names, same class naming) rather than a translation.
+1. All log-type text boxes (Mouse Log in devPanel.js; Sensors Log and Displace Log in main.js) are now inherently
+   collapsible via a new shared makeLogBoxCollapsible(logEl, label) helper (devPanel.js, exposed as window.makeLogBoxCollapsible
+   for main.js's own 2 log widgets to reuse) -- independent of the group's own collapse, so collapsing the log output
+   leaves the rest of that group's controls visible.
+2. Verified (structurally, by direct code read -- not re-tested live, matching this project's standing no-sandbox-
+   verification rule) that drag-to-reorder is gated purely by the .dev-group-drag-handle/.dev-row-drag-handle icons,
+   same as the template.
+3. Locking a group now also freezes nested subgroups from being dragged/nested/regrouped, not just rows --
+   setupDragReorder()'s pointerdown gate now walks ancestor .dev-section elements for a dragged .dev-section (group)
+   item too, mirroring the existing .dev-row check. A directly-locked group still moves as a whole; only its contents
+   (at any depth) are frozen until the ancestor is unlocked.
+4. Slider min/max bound labels now show a lock/unlock toggle whenever being edited; locking clamps a later value-
+   overshoot to that bound instead of the normal CLAUDE.md Section 12h +-20% auto-expand, with a red highlight on the
+   locked bound. New lockedSliderBounds state persists through Copy/Save/Reset/Undo the same way lockedGroups already
+   does.
+Separately verified: every list-picker's own nested groups (Saved Poses/Cameras/Lighting/Toon Shading/Tween Sequences/
+Phone Poses/IK Influence, all migrated onto devPanel.js's generic list-picker engine 2026-10-11) already default to
+collapsed on every build (entry.expandedGroups starts as a fresh empty Set, never populated from restored state) -- no
+change needed for "item selector groups collapsed on startup."
+index.html bumped: style.css ?v=15, main.js ?v=246, devPanel.js ?v=24. Not browser-verified (project rule) -- node --check
+passed on both devPanel.js and main.js.
+
+2026-10-12 -- Preview Camera: preview now draws INSIDE its panel, follows the panel instantly, and can't touch the main view (main.js v=247)
+  - Direct report: (1) the preview doesn't show within the moveable panel, (2) moving the panel makes the image take a second or two to follow,
+    (3) the preview camera moves the main camera image; it should only overlay the rendered screen space inside its panel.
+  - Cause of (1) and (3): renderPreviewCameraViewports() passed DEVICE pixels (rect * renderer.getPixelRatio()) to renderer.setScissor() /
+    setViewport(), which take CSS pixels and apply the pixel ratio themselves (three.js r169, WebGLRenderer). On any display with
+    devicePixelRatio > 1 the preview was drawn at the wrong offset and DPR-times too large, i.e. spilling over the main view instead of sitting in
+    the panel. All rects are now CSS px (canvas rect height used for the bottom-left origin flip, viewport reset uses the canvas CSS size).
+  - Cause of (2): the scene renders on demand and the panel drag only moved the DOM node, so the old preview pixels stayed until something else
+    requested a frame. startPreviewCameraDrag() now calls requestRender() on every pointermove and on release.
+  - (3) hardening: the panel stops pointerdown/pointerup/wheel/touch/click/dblclick propagation so no window-level gesture listener (double-tap
+    reset, picking) can act on the main view from a preview interaction. The preview's sliders/OrbitControls already only touched the preview camera.
+  - NOT browser-verified (project rule) -- node --check passed. If the preview still looks offset, the first thing to check is the panel
+    border/titlebar offset in getBoundingClientRect of .preview-camera-viewport.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
