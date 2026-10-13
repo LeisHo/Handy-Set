@@ -19252,5 +19252,6 @@
       "ambientSkyColor": "#ffffff",
       "ambientGroundColor": "#ffffff"
     }
-  ]
+  ],
+  "defaultPhoneModel": "data/processed/SMARTPHONE MODELS/Iphone17MaxPro-XIn.glb"
 }
