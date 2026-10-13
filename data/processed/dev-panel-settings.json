@@ -16856,9 +16856,9 @@
     "mobile:PHONE MODEL": false,
     "mobile:OFFSET": true,
     "mobile:PHONE ROTATION": true,
-    "mobile:RECURSIVE RENDER": false,
-    "mobile:RESPONSIVE BEHAVIOUR - PHONE": true,
-    "mobile:Responsive Rotation": true,
+    "mobile:RECURSIVE RENDER": true,
+    "mobile:RESPONSIVE BEHAVIOUR - PHONE": false,
+    "mobile:Responsive Rotation": false,
     "mobile:ROTATION - X AXIS": true,
     "mobile:ROTATION - Y AXIS": true,
     "mobile:ROTATION - Z AXIS": true,
@@ -17888,7 +17888,8 @@
       "sliderPreviewCameraPitch": 67,
       "sliderIkInfluenceMaster": 100,
       "sliderIkInfluenceFingerCurl": 100,
-      "sliderIkInfluenceFingerTwist": 2
+      "sliderIkInfluenceFingerTwist": 2,
+      "sliderPhoneRotationDamping": 0.58
     },
     "landscape": {}
   },
