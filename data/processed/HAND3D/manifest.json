@@ -7,6 +7,30 @@
     {
       "file": "Hand2.glb",
       "name": "Hand2"
+    },
+    {
+      "file": "HS-500.glb",
+      "name": "HS-500"
+    },
+    {
+      "file": "HS-1K.glb",
+      "name": "HS-1K"
+    },
+    {
+      "file": "HS-3K.glb",
+      "name": "HS-3K"
+    },
+    {
+      "file": "HS-5K.glb",
+      "name": "HS-5K"
+    },
+    {
+      "file": "HS-8K.glb",
+      "name": "HS-8K"
+    },
+    {
+      "file": "HS-12K.glb",
+      "name": "HS-12K"
     }
   ]
 }

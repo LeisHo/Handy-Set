@@ -165,7 +165,13 @@ const HAND_MODEL_DIR = 'data/processed/HAND3D'
 const HAND_MODEL_MANIFEST_URL = '/api/upload-phone-model?kind=hand'
 const HAND_MODEL_OPTIONS = [
   { value: 'data/processed/HAND3D/HandiBonesB-IK.glb', text: 'HandiBonesB-IK' },
-  { value: 'data/processed/HAND3D/Hand2.glb', text: 'Hand2' }
+  { value: 'data/processed/HAND3D/Hand2.glb', text: 'Hand2' },
+  { value: 'data/processed/HAND3D/HS-500.glb', text: 'HS-500' },
+  { value: 'data/processed/HAND3D/HS-1K.glb', text: 'HS-1K' },
+  { value: 'data/processed/HAND3D/HS-3K.glb', text: 'HS-3K' },
+  { value: 'data/processed/HAND3D/HS-5K.glb', text: 'HS-5K' },
+  { value: 'data/processed/HAND3D/HS-8K.glb', text: 'HS-8K' },
+  { value: 'data/processed/HAND3D/HS-12K.glb', text: 'HS-12K' }
 ]
 let handModelDefaultFile = null // set via "Set as Default" (settings.defaultHandModel), marks the row with a star
 let phoneModelDefaultFile = null // same, settings.defaultPhoneModel

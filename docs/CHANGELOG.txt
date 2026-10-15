@@ -8865,6 +8865,16 @@ passed on both devPanel.js and main.js.
   - LIMIT, stated plainly (not measured on a phone): smoothing does not shorten a solve -- a frame that contains a solve still takes as long as the solve. It only spreads the
     hand's movement across the frames in between, at the price of the hand trailing the phone by roughly the smoothing time. NOT browser/phone verified (project rule).
 
+2026-10-15 -- Imported six lighter hand models HS-500 / HS-1K / HS-3K / HS-5K / HS-8K / HS-12K (main.js v=253)
+  - Direct request: import the new hand models added to data/processed/HAND3D/. Added to HAND_MODEL_OPTIONS (main.js) and HAND3D/manifest.json (what the Hand Model Item
+    Selector lists), and committed the six .glb files (33,812 to 145,316 bytes each; all Draco-compressed).
+  - CHECKED by parsing each GLB's JSON chunk: all six have the SAME rig as HandiBonesB-IK.glb -- identical 23 skin joints, identical node-name set (zero missing, zero extra),
+    the same IK Target Points layer with 62 IK nodes, 1 skinned mesh. Vertex / triangle counts: HS-500 668 / 1,088; HS-1K 1,220 / 2,100; HS-3K 4,180 / 7,784; HS-5K 5,420 /
+    10,120; HS-8K 8,520 / 16,036; HS-12K 12,946 / 24,448 (HS-12K has the same counts as HandiBonesB-IK: 12,946 / 24,448).
+  - Does a lighter model make IK faster? MEASURED in Node (real solver, 5 overlap pairs thumb/index/middle/ring/pinky, cold solves, median ms): HandiBonesB-IK 31, HS-500 32,
+    HS-1K 35, HS-3K 32, HS-12K 36 -- no difference. IK works on the 23-bone skeleton plus a few skin influences per IK node, never on the whole mesh, so vertex count does not
+    enter the solve. A lighter mesh only helps the rendering side (GPU skinning, outline pass), not the IK cost. NOT browser-verified (project rule).
+
 --------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
