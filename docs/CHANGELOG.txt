@@ -8875,6 +8875,21 @@ passed on both devPanel.js and main.js.
     HS-1K 35, HS-3K 32, HS-12K 36 -- no difference. IK works on the 23-bone skeleton plus a few skin influences per IK node, never on the whole mesh, so vertex count does not
     enter the solve. A lighter mesh only helps the rendering side (GPU skinning, outline pass), not the IK cost. NOT browser-verified (project rule).
 
+2026-10-15 -- IK solver: cheaper trial-pose evaluations, identical results (main.js v=254)
+  - Request: look into making each IK evaluation cheaper (follow-up to "a lighter hand model does not speed up IK").
+  - PROFILED (Node --cpu-prof, real solver, 5 pairs, cold solves, HS-3K): of the solver's runLM time, ~86% is pairResiduals, and ~72% of runLM is ikApplyPose (re-posing the hand
+    for one trial pose). Inside that, applyCurlToSkeleton (all 5 fingers, every trial) is ~42% of runLM and three.js world-matrix updates ~34%, mostly the
+    h.wrapper.updateWorldMatrix(true, true) over the whole subtree (incl. the 62 IK node empties a trial never reads). ikAttachedWorldMatrix ~12%, solveDense ~2%.
+  - Changes (solver-only; the pose finally applied and every per-frame path still use the unchanged full ikApplyPose): (1) ikApplyPose(extraSplay, fast) with fast=true updates
+    world matrices only for the skeleton's own root-bone trees + their parent chain (ikUpdateBoneWorld). (2) pairResiduals() tracks the slider vector last realised in the skeleton;
+    when only FINGER sliders changed (IK_FINGER_OWN_KEY, built from the exact FINGER_*_KEY tables, no name guessing) it re-poses only those fingers (ikApplyFingers) instead of the
+    whole hand; any wrist / arm / model / base-rotation slider change falls back to the full pose.
+  - VERIFIED IDENTICAL: 6 cold solves over a moving 5-pair source, every pose slider value AND every fingertip world position compared against the pre-change code: max difference
+    0.00e+0 on both HS-3K and HandiBonesB-IK.
+  - MEASURED (30 solves, same scenario, A/B vs the previous main.js, 3 rounds each): mean 44.9 / 40.3 / 38.7 ms before -> 30.1 / 30.4 / 30.4 ms after (about 26% less). Only 9 of the 21
+    free sliders in this scenario are finger sliders; with a configuration where most free sliders are fingers the saving is larger, with mostly wrist / arm sliders it is smaller.
+    Desktop Node numbers, not phone numbers. NOT browser-verified (project rule).
+
 --------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 

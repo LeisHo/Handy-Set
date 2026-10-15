@@ -3524,7 +3524,7 @@ function ikRegWeight(key) {
 }
 // The same pipeline applyPoseValuesToHand() runs, minus the wrist-crop refresh (the solver runs
 // this dozens of times per solve; the crop is refreshed once afterwards).
-function ikApplyPose(extraSplay) {
+function ikApplyPose(extraSplay, fast = false) {
   hands.forEach((h) => {
     h.currentBaseQuat.copy(computeBaseQuatFromValues(cfg))
     applyModelRootTransform(h, cfg) // also resets applyBaseArmRotation()'s tracker, so the call below applies Base Rotation from the plain pose every time (stateless)
@@ -3537,7 +3537,42 @@ function ikApplyPose(extraSplay) {
     applyArmPoseToSkeleton(skel, cfg)
     applyWristPoseToSkeleton(skel, cfg, extraSplay)
     FINGER_NAMES.forEach((name) => applyCurlToSkeleton(name, skel, h.currentBaseQuat, curlExcludeQuatForHand(h), cfg))
-    h.wrapper.updateWorldMatrix(true, true)
+    if (fast) ikUpdateBoneWorld(h)
+    else h.wrapper.updateWorldMatrix(true, true)
+  })
+}
+// SOLVER SPEED-UPS (2026-10-15, direct request: "look into" making each IK evaluation cheaper). Profiled in Node (5 pairs, 23-bone rig, cold solves): ~86% of a solve is
+// re-posing the hand once per trial pose, split roughly 42% re-applying ALL FIVE fingers' curl/splay and 34% three.js updating world matrices for the whole hand subtree
+// (including the 62 IK node empties, which a trial pose never reads). Two changes, both used ONLY by the solver's trial evaluations (the pose finally applied to the hand and
+// every normal per-frame path still go through the unchanged ikApplyPose(extraSplay) with the full update):
+//  1. fast = true updates world matrices only for the skeleton's own bone tree (plus the parent chain above it) instead of the whole wrapper subtree.
+//  2. When only finger sliders changed since the previous trial (the common case: most solver DOFs are finger sliders), only the fingers whose sliders changed are re-posed.
+//     Each finger's pose is a pure function of its own sliders (applyCurlToSkeleton resets that finger's bones to rest first) plus the wrist / arm / model state, which
+//     did not change, so the result is identical.
+// A trial that changes any non-finger slider (wrist, arm, model rotation / offset, base rotation, ...) falls back to the full pose, exactly as before.
+const IK_FINGER_OWN_KEY = (() => {
+  const m = {}
+  FINGER_NAMES.forEach((n) => {
+    ;[FINGER_CURL_KEY, FINGER_SPLAY_KEY, FINGER_SPLAY2_KEY, FINGER_CURL_BIAS_KEY, FINGER_BASE_ONLY_CURL_KEY, FINGER_MID_ONLY_CURL_KEY, FINGER_TIP_ONLY_CURL_KEY, FINGER_TIP_TWIST_KEY]
+      .forEach((table) => { if (table[n]) m[table[n]] = n })
+  })
+  return m
+})()
+function ikRootBones(h) {
+  if (!h.ikRootBones) h.ikRootBones = h.skinnedMesh.skeleton.bones.filter((b) => !(b.parent && b.parent.isBone))
+  return h.ikRootBones
+}
+function ikUpdateBoneWorld(h) {
+  ikRootBones(h).forEach((b) => b.updateWorldMatrix(true, true))
+}
+function ikApplyFingers(names) {
+  hands.forEach((h) => {
+    const skel = h.skinnedMesh.skeleton
+    names.forEach((name) => {
+      applyCurlToSkeleton(name, skel, h.currentBaseQuat, curlExcludeQuatForHand(h), cfg)
+      const first = skel.getBoneByName(FINGER_JOINTS[name][0])
+      if (first) first.updateWorldMatrix(false, true)
+    })
   })
 }
 function solveDense(A, b) {
@@ -3651,9 +3686,22 @@ function solveIkHandPose(pairs) {
     return b + IK_PRIORITY_RHO * (b / 0.15) * (1 / Math.max(ikInfluence(k), 0.01) - 1)
   })
   // Applies the pose for x and returns the pair residuals only (position, then rotation, per pair).
+  let appliedX = null // the slider vector currently realised in the skeleton by the last trial (null = unknown -> full pose)
   const pairResiduals = (x) => {
     dofKeys.forEach((k, i) => { cfg[k] = x[i] })
-    ikApplyPose(extraSplay)
+    let fingers = null
+    if (appliedX) {
+      fingers = new Set()
+      for (let i = 0; i < x.length; i++) {
+        if (x[i] === appliedX[i]) continue
+        const f = IK_FINGER_OWN_KEY[dofKeys[i]]
+        if (!f) { fingers = null; break } // a wrist / arm / model slider changed -> full pose
+        fingers.add(f)
+      }
+    }
+    if (!fingers) ikApplyPose(extraSplay, true)
+    else if (fingers.size) ikApplyFingers([...fingers])
+    appliedX = x.slice()
     const r = []
     pairs.forEach((p, idx) => {
       const first = r.length
