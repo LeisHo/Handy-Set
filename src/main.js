@@ -942,6 +942,8 @@ Object.assign(POSE_KEY_DEFAULTS, {
   wristBend: 0, wristSplay: 0, wristRotation: 0, modelRotX: 0, modelRotY: 0, modelRotZ: 0,
   baseRotationX: 0, baseRotationY: 0, baseRotationZ: 0,
   hideWrist: 0, poseOffsetX: 0, poseOffsetY: 0, poseOffsetZ: 0, poseScale: 1,
+  // Pose Local Offset X/Y/Z (2026-10-18, ported from HANDO): a pose offset along the hand MESH's own axes - see applyModelRootTransform()
+  poseLocalOffsetX: 0, poseLocalOffsetY: 0, poseLocalOffsetZ: 0,
   // Arm joints + bone offsets (ported from HANDO's arm pose, 2026-10-04): the IK solver's arm DOFs. See applyArmPoseToSkeleton().
   elbowBend: 0, elbowSideBend: 0, forearmTwist: 0,
   forearmBendOffX: 0, forearmBendOffY: 0, forearmBendOffZ: 0, forearmTwistOffX: 0, forearmTwistOffY: 0, forearmTwistOffZ: 0, wristOffX: 0, wristOffY: 0, wristOffZ: 0
@@ -1563,6 +1565,7 @@ const _rotatedScaledPivot = new THREE.Vector3()
 // which axes are mirrored, the same guarantee the uniform-scale-only
 // version already gave for scale/rotation alone.
 const _mirrorScaleVec = new THREE.Vector3()
+const _poseLocalOffsetVec = new THREE.Vector3()
 function applyModelRootTransform(h, poseValues) {
   h.clone.quaternion.copy(h.currentBaseQuat)
   const scale = computeBaseScale() * (poseValues.poseScale ?? 1)
@@ -1606,6 +1609,7 @@ function applyModelRootTransform(h, poseValues) {
   // rotation too, just without the frame-repeated compounding that
   // made the reactive case visually catastrophic.
   h.lastBaseArmQuat = null
+  h.lastPoseLocalOffset = null // this function rewrote h.clone.position from scratch (applyBaseArmRotation() adds the Pose Local Offset again, see there)
 }
 
 // Single entry point: apply a full pose-values object to every hand in
@@ -1803,6 +1807,10 @@ function applyBaseArmRotation(extraX = 0, poseValues = cfg, skipFingerBake = fal
   hands.forEach((h) => {
     const baseBone = h.skinnedMesh.skeleton.getBoneByName('rForearmBend')
     if (!baseBone) return
+    // Pose Local Offset X/Y/Z (2026-10-18, ported from HANDO): the previous call's offset is taken out of h.clone.position first, so the pivot and the delta below act on the hand WITHOUT it (HANDO adds it after the
+    // pivot math too); the new one is added at the end of this block along the FINAL hand axes. Doing it before the Base Rotation does not work here: the rotation pivots on the arm-base bone's CURRENT position, so an
+    // offset added earlier moves the pivot with it and is never turned by the Base Rotation (measured: Local Z 6 under Base Rotation X 135 stayed on world Z).
+    if (h.lastPoseLocalOffset) { h.clone.position.sub(h.lastPoseLocalOffset); h.lastPoseLocalOffset = null }
 
     const baseWorldPos = new THREE.Vector3()
     baseBone.getWorldPosition(baseWorldPos)
@@ -1846,6 +1854,14 @@ function applyBaseArmRotation(extraX = 0, poseValues = cfg, skipFingerBake = fal
     h.clone.quaternion.multiplyQuaternions(deltaQuat, h.clone.quaternion).normalize()
     h.currentBaseQuat.multiplyQuaternions(deltaQuat, h.currentBaseQuat).normalize() // keep the curl-axis reference in sync -- see this function's own comment above
     h.lastBaseArmQuat.copy(desiredQuat)
+    {
+      const plx = poseValues.poseLocalOffsetX || 0, ply = poseValues.poseLocalOffsetY || 0, plz = poseValues.poseLocalOffsetZ || 0
+      if (plx || ply || plz) {
+        // the vector is in the hand mesh's own axes (getHandMeshFrameQuat) -> h.wrapper's frame through the hand's final quaternion (h.clone.quaternion, Base Rotation included). Not scaled by Pose Scale.
+        h.lastPoseLocalOffset = _poseLocalOffsetVec.set(plx, ply, plz).applyQuaternion(getHandMeshFrameQuat(h)).applyQuaternion(h.clone.quaternion).clone()
+        h.clone.position.add(h.lastPoseLocalOffset)
+      }
+    }
     // Re-bake finger curl/splay immediately using the now-updated
     // baseQuat -- otherwise the actual bone quaternions stay stale
     // (computed from the OLD axis reference) until something ELSE
@@ -9335,6 +9351,10 @@ function renderPoseGroup(content) {
 
   const subOffset = addSubgroup(content, 'Pose Offset')
   ;[['poseOffsetX', -20, 20, 'Pose Offset X (World Units)'], ['poseOffsetY', -20, 20, 'Pose Offset Y (World Units)'], ['poseOffsetZ', -20, 20, 'Pose Offset Z (World Units)']].forEach(([k, mn, mx, label]) => {
+    addRow(subOffset, { id: 'slider' + k, label, type: 'slider', min: mn, max: mx, step: 0.1, value: cfg[k] })
+    wireSlider('slider' + k, (v) => { cfg[k] = v; applyPoseValuesToHand(cfg) })
+  })
+  ;[['poseLocalOffsetX', -20, 20, 'Pose Local Offset X (World Units, Hand Axes)'], ['poseLocalOffsetY', -20, 20, 'Pose Local Offset Y (World Units, Hand Axes)'], ['poseLocalOffsetZ', -20, 20, 'Pose Local Offset Z (World Units, Hand Axes)']].forEach(([k, mn, mx, label]) => {
     addRow(subOffset, { id: 'slider' + k, label, type: 'slider', min: mn, max: mx, step: 0.1, value: cfg[k] })
     wireSlider('slider' + k, (v) => { cfg[k] = v; applyPoseValuesToHand(cfg) })
   })
