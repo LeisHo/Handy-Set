@@ -8891,6 +8891,52 @@ passed on both devPanel.js and main.js.
     Desktop Node numbers, not phone numbers. NOT browser-verified (project rule).
 
 --------------------------------------------------------------------------------
+2026-10-15 -- Retired the old per-field global "Set as Default" mechanism for the 4 migrated list-pickers (main.js v=255)
+  - Follow-up to the 2026-10-11 migration of Saved Poses/Cameras/Lighting/Toon Shading (and 3 other pickers) onto devPanel.js's own generic type:'list-picker' control, which by
+    then already had a native per-item Default (Set Default button, star marker, "Default: X" indicator -- ported from TEMPLATE_DEV_PANEL.html earlier this session). That native
+    Default made the OLD bolted-on button block inside renderPresetPicker() (a separate type:'button' control calling saveFieldAsDefault() against a flat top-level settings-JSON
+    field: defaultPose/defaultCamera/defaultLighting/defaultToon) fully redundant for these 4 pickers -- removed from renderPresetPicker() entirely.
+  - Added migrateLegacyDefaultField(fieldKey, listPickerId, applyFn) as a one-time bridge: on startup, if the list-picker already has its own native default
+    (window.getListPickerDefaultName), it's a no-op; otherwise it fetches the OLD global field (if any real user ever set one) and both (a) applies it visually for continuity and
+    (b) seeds it into the list-picker as a real named item ("Migrated Default") via window.migrateListPickerDefault, so it becomes the native default going forward. Idempotent --
+    re-running it after the native default is set is a silent no-op, so there's no exact-sequencing requirement between this and a user's own Sync click.
+  - Replaced the 4 loadFieldDefaultIfSaved() calls in runHandFirstLoadTail() with migrateLegacyDefaultField() calls (listPickerPoses/listPickerCameras/listPickerLighting/
+    listPickerToon -- derived from each picker's own storageKey per renderPresetPicker()'s id convention). loadFieldDefaultIfSaved() itself had no remaining callers afterward and
+    was deleted (not left as dead code).
+  - Saved Phone Poses (defaultFieldKey: defaultPhonePose) was already NOT in the startup auto-load list before this change (a pre-existing, documented gap) -- left that way, not
+    touched by this pass.
+  - Explicitly OUT OF SCOPE, disclosed rather than silently decided: the 2 custom Hand Model Selector / Phone Model Selector rows (defaultHandModel/defaultPhoneModel) are NOT
+    list-pickers at all (no captureCurrent/onUse/named-item concept) and stay on the OLD saveFieldAsDefault()/global-field mechanism unchanged -- saveFieldAsDefault() itself is
+    kept for exactly this reason (it still has 2 real callers).
+  - NOT browser-verified (project rule) -- confirmed via node --check and by re-reading every renderPresetPicker() call site's own storageKey to confirm the derived list-picker
+    ids (listPicker + StorageKey, capitalized) match what migrateLegacyDefaultField() was given.
+
+--------------------------------------------------------------------------------
+2026-10-19 -- Item selectors: multi-select drag-reorder, group export checkboxes, Ctrl+click, nested grouped dropdown (main.js/devPanel.js/index.html v=25/v=16)
+  - Direct requests across several messages in the same cross-project session: "if i select mulptiple items, then click and drag one of their icons to reorder, it will reorder all
+    the selected items with it"; "provide the left side checkboxes for all groups as well. so i can select a group, then export the whole group"; "make sure I can use CTRL to
+    multi select as well"; "if there are nested groups, show the groups as expandable instances within the drop down itself." All 4 built and live-verified in the canonical
+    .claude/TEMPLATE_DEV_PANEL.html first (real PointerEvent sequences, a browser pane), then ported here as a direct, byte-for-byte-anchor-matched port -- HANDYSET's devPanel.js
+    was confirmed still in sync with the template at every edit point before applying it.
+  - Multi-select drag-reorder: setupDragReorder() gained an optional getMoveGroup(item) 5th param, omitted by every caller except the list-picker row drag, so every other drag
+    context (groups, rows, list-picker groups) is byte-for-byte unaffected. The row-drag call now passes getMoveGroup: if the grabbed row's own item is part of a real (size > 1)
+    entry.multiSelected, every other selected row (in current relative DOM order) moves together with it. listEl.__lpEntry = entry added so the callback can find its own entry via
+    .closest('.dev-list-picker').
+  - Group export checkbox (buildLpGroupHeader()): new per-group checkbox (ctrl.exportable-gated, same as the existing per-item one), purely derived tri-state over
+    entry.exportChecked via lpItemsUnderGroup() (recursive path-prefix match, same matcher the already-fixed 2026-10-11 group-delete cascade uses); lpRefreshGroupExportCheckbox()/
+    lpRefreshExportCheckboxAncestors() keep every nesting level in sync after any item- or group-level change.
+  - Ctrl/Cmd-click multi-select: added to the item row's own click handler -- toggles just the clicked item's own membership in entry.multiSelected without touching the rest, and
+    becomes the new shift-click anchor. Shift-click's own pre-existing range-select behavior is completely unchanged.
+  - buildGroupedDropdownWidget() (new function, ported from the template): a collapsible-group dropdown with real recursive nesting ("/"-joined LP_GROUP_PATH_SEP, same convention
+    list-pickers already use), item rows showing plain names only (no group prefix). Added as a standalone, portable utility (same {el, value, setValue} contract as the template's
+    own) -- NOT yet wired into any existing project-specific select control here, since (per a quick check) HANDYSET has no current select control drawing from grouped
+    list-picker data the way HANDO's Tween Poses rows do. Available for a future control that needs it.
+  - Group-delete nested-subgroup cascade safety (moving an item out of a group, then deleting the group): already fixed here on 2026-10-11 -- confirmed unchanged, no new fix needed.
+  - NOT browser-verified (project rule, standing instruction since 2026-09-29: this project skips sandbox verification entirely) -- confirmed via node --check on devPanel.js, a CSS
+    brace-balance check on style.css, and a direct byte-for-byte diff of every edited anchor point against the exact same logic already live-verified with real PointerEvents in the
+    canonical template.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================

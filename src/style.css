@@ -1012,6 +1012,17 @@ html, body {
         margin-top: 4px;
     }
     .dev-mouse-log-empty { opacity: 0.6; }
+    /* Generic collapsible log-box header - ported from
+       TEMPLATE_DEV_PANEL.html 2026-10-11. Independent of the group's
+       own collapse - only hides the log's own scrollable output. */
+    .dev-log-box-header {
+        display: flex; align-items: center; gap: 4px; cursor: pointer;
+        margin-top: 4px; opacity: 0.75; user-select: none;
+        font: 10px/1.3 ui-monospace, Consolas, monospace;
+        color: var(--dev-panel-non-title-text-color, #aaa);
+    }
+    .dev-log-box-header:hover { opacity: 1; }
+    .dev-log-collapsed { display: none !important; }
 
     /* ============================================================
        [CSS-9] CONTROLS — SLIDERS, COLORS, SELECTS, TEXT INPUTS
@@ -1053,6 +1064,17 @@ html, body {
     .dev-slider-bound { font-size: calc(var(--dev-value-font-size-px, 10) * 1px); opacity: 0.6; flex-shrink: 0; }
     .dev-slider-bound-editable { cursor: text; }
     .dev-slider-bound-editable:hover { outline: 1px solid var(--dev-accent-color, #0ff); opacity: 1; }
+    /* Locked-bound highlight + the in-edit lock toggle, ported from
+       TEMPLATE_DEV_PANEL.html 2026-10-11. */
+    .dev-slider-bound-locked {
+        opacity: 1; color: #ff4d4d; font-weight: bold;
+        text-shadow: 0 0 3px rgba(255, 77, 77, 0.6);
+    }
+    .dev-slider-bound-lock-toggle {
+        display: inline-flex; align-items: center; gap: 2px;
+        margin-left: 3px; cursor: pointer; font-size: 10px; vertical-align: middle;
+    }
+    .dev-slider-bound-lock-toggle input { margin: 0; cursor: pointer; }
     /* Standalone action buttons (CLAUDE.md §12n) previously had NO
        styling at all — plain unstyled browser buttons. Matches the
        template's own established button visual language (same as
@@ -1100,6 +1122,34 @@ html, body {
        including selects without the .dev-select class (e.g. the Tween pose rows). */
     .dev-panel select, .dev-panel .dev-select { color: #fff; }
     .dev-panel select option, .dev-panel .dev-select option { color: #fff; background: #222; }
+
+    /* Recursive grouped/expandable dropdown (buildGroupedDropdownWidget) --
+       panel renders IN-FLOW directly below the trigger, never floating/
+       absolutely-positioned, so it can't be clipped by the dev panel's own
+       scrollable ancestors (same constraint every other popover here
+       respects). .dev-grouped-dropdown-body indenting itself (not just its
+       direct -option children) is what makes nesting compound correctly at
+       any depth, since a body nests inside another body one level per
+       subgroup. */
+    .dev-grouped-dropdown { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+    .dev-grouped-dropdown-trigger {
+        width: 100%; text-align: left; background: #222; color: #fff;
+        border: 1px solid var(--dev-accent-color, #0ff); border-radius: 3px;
+        padding: 4px; font-family: var(--dev-panel-font-family, monospace); font-size: 10px;
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer;
+    }
+    .dev-grouped-dropdown-panel {
+        margin-top: 2px; background: #222; border: 1px solid var(--dev-accent-color, #0ff);
+        border-radius: 3px; max-height: 220px; overflow-y: auto;
+    }
+    .dev-grouped-dropdown-option, .dev-grouped-dropdown-header {
+        padding: 3px 6px; font-family: var(--dev-panel-font-family, monospace); font-size: 10px;
+        color: #fff; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .dev-grouped-dropdown-option:hover, .dev-grouped-dropdown-header:hover { background: rgba(0, 255, 255, 0.12); }
+    .dev-grouped-dropdown-header { display: flex; gap: 4px; align-items: center; font-weight: 600; }
+    .dev-grouped-dropdown-header .arrow { flex: 0 0 auto; font-size: 8px; }
+    .dev-grouped-dropdown-body { padding-left: 14px; }
 
     /* ============================================================
        [CSS-10] CAPITALIZE-TEXT TOGGLES
@@ -1204,6 +1254,9 @@ html, body {
         cursor: pointer;
     }
     .dev-list-picker-actions button:hover { filter: brightness(1.3); }
+    /* "Default: X" / "No default set" indicator, ported from
+       TEMPLATE_DEV_PANEL.html 2026-10-15. */
+    .dev-list-picker-default-indicator { font-size: 10px; opacity: 0.6; margin-top: 3px; }
 
     /* ============================================================
        [CSS-12] CURVE EDITOR CONTROL TYPE

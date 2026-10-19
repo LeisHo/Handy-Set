@@ -13,7 +13,7 @@
         if (isDevAllowed) document.documentElement.classList.add('dev-mode');
     })();
 </script>
-<link rel="stylesheet" href="src/style.css?v=15">
+<link rel="stylesheet" href="src/style.css?v=16">
 <script type="importmap">
 {
   "imports": {
@@ -71,18 +71,17 @@
                 <span class="dev-search-count" id="devSearchCount"></span>
             </div>
 
+            <!-- CORRECTED 2026-10-15 (ported from TEMPLATE_DEV_PANEL.html):
+                 migrated off a bespoke <select> + 5 onclick-wired functions
+                 onto the SAME generic type:'list-picker' control every
+                 Saved Poses/Cameras/etc. already uses
+                 (buildSavedDevSettingsListPicker(), devPanel.js) - gets
+                 Rename, multi-select Delete, and the runtime Default for
+                 free. The empty content div below is populated by that
+                 function at init time. -->
             <div class="dev-section">
                 <div class="dev-section-title" id="devSavedSettingsGroupTitle" onclick="toggleSection(this)">▼ Saved Dev Settings</div>
-                <div class="dev-section-content">
-                    <select class="dev-select" id="devSavedStatesSelect" style="width:100%; margin-bottom:5px;"></select>
-                    <div class="dev-buttons">
-                        <button onclick="saveNamedDevPanelState()">SAVE</button>
-                        <button onclick="useNamedDevPanelState()">USE</button>
-                        <button onclick="deleteNamedDevPanelState()">DELETE</button>
-                        <button onclick="setNamedDevPanelStateAsDefault()">SET DEFAULT</button>
-                        <button onclick="exportDevPanelSettings()">EXPORT</button>
-                    </div>
-                </div>
+                <div class="dev-section-content" id="devSavedSettingsGroupContent"></div>
             </div>
 
             <div class="dev-tabs">
@@ -146,7 +145,7 @@
          groups, none of this project's own). devPanel.js's top-level
          functions/consts still land in the shared global scope either way,
          reachable from main.js at call time regardless of definition order. -->
-    <script type="module" src="src/main.js?v=254"></script>
-    <script src="src/devpanel/devPanel.js?v=24" defer></script>
+    <script type="module" src="src/main.js?v=255"></script>
+    <script src="src/devpanel/devPanel.js?v=25" defer></script>
 </body>
 </html>

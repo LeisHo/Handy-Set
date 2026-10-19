@@ -87,6 +87,18 @@
         withPreservedTitleCheckbox(titleEl, () => {
             titleEl.textContent = content.classList.contains('collapsed') ? '▶ ' + titleEl.textContent.slice(2) : '▼ ' + titleEl.textContent.slice(2);
         });
+        // Ported from TEMPLATE_DEV_PANEL.html 2026-10-15: a curve editor
+        // built while its own group is still collapsed bakes a wrong
+        // marker counter-scale into its first redraw() - pokes any curve
+        // editor inside the section the instant it's actually expanded
+        // and has a real size to measure (the width-poll above also
+        // self-corrects within ~400ms either way, this just makes it
+        // instant for this specific trigger).
+        if (!content.classList.contains('collapsed')) {
+            content.querySelectorAll('.dev-curve-editor-svg').forEach(svgEl => {
+                if (svgEl.__curveEditorRedraw) svgEl.__curveEditorRedraw();
+            });
+        }
     }
 
     // `tab` ('desktop' | 'mobile' | 'landscape') decides which kind of
@@ -1560,8 +1572,20 @@
     // dragged row could never be interleaved with groups.
     const REORDERABLE_SIBLING_SELECTOR = ':scope > .dev-section, :scope > .dev-row, :scope > .dev-lp-group, :scope > .dev-lp-row';
     let sectionJustDragged = false;
-    function setupDragReorder(handleSelector, itemSelector, onDrop, crossContainerSelector) {
+    function setupDragReorder(handleSelector, itemSelector, onDrop, crossContainerSelector, getMoveGroup) {
         let dragging = null;
+        // Multi-select-aware drag (2026-10-19, list-picker rows only --
+        // every OTHER caller omits getMoveGroup, so dragSet is always
+        // exactly [dragging] there, making every dragSet-based line below
+        // a no-op-equivalent rewrite of the original single-item logic).
+        // `dragging` stays the single "anchor" element the handle was
+        // grabbed on (used for all position/threshold math, unchanged);
+        // `dragSet` is the full set of elements that actually move
+        // together, always including `dragging`, in their ORIGINAL
+        // relative DOM order (captured once at drag-start, then always
+        // re-inserted in that same order on every crossing, so a
+        // multi-item drag never scrambles the selection's own ordering).
+        let dragSet = [];
         let startY = 0;
         let moved = false;
         // BUG (found live on Clicko, direct report: "when i clcik and drag
@@ -1605,13 +1629,28 @@
             if (!item) return;
             // Refuses to even START a drag on a .dev-row whose own group is
             // locked (ported from Clicko - see lockedGroups' own comment).
-            // Never gates a .dev-section (group) itself, only a .dev-row
-            // (setting) - a locked group can still be dragged/reordered/
-            // nested as a whole, only its own contents are frozen.
+            // A locked group's OWN position is unaffected - it can still be
+            // dragged/reordered/nested as a whole; only its contents are
+            // frozen.
             if (item.matches('.dev-row')) {
                 const ownSection = item.closest('.dev-section');
                 const ownTitle = ownSection && ownSection.querySelector(':scope > .dev-section-title');
                 if (ownTitle && lockedGroups.has(getSectionKey(ownTitle))) return;
+            } else if (item.matches('.dev-section')) {
+                // Ported from TEMPLATE_DEV_PANEL.html 2026-10-11: locking
+                // already cascades lockedGroups onto every nested subgroup
+                // (see addGroupLockIcon's own comment), but until now that
+                // only blocked .dev-row drags above - a nested .dev-section
+                // (subgroup) itself could still be dragged out from under a
+                // locked ancestor. Walks ANCESTOR sections only (never the
+                // item itself) so a directly-locked group still moves as a
+                // whole unit, unchanged.
+                let sec = item.parentElement ? item.parentElement.closest('.dev-section') : null;
+                while (sec) {
+                    const title = sec.querySelector(':scope > .dev-section-title');
+                    if (title && lockedGroups.has(getSectionKey(title))) return;
+                    sec = sec.parentElement ? sec.parentElement.closest('.dev-section') : null;
+                }
             }
 
             // See capturedHandle's own top-of-function comment - routes
@@ -1622,6 +1661,14 @@
             try { handle.setPointerCapture(e.pointerId); } catch (err) { /* best-effort only */ }
             capturedHandle = handle;
 
+            // Computed once per drag, at grab time: the anchor item always
+            // moves; getMoveGroup (list-picker rows only) can additionally
+            // include every OTHER currently multi-selected row, in their
+            // existing relative DOM order -- defensive unshift in case a
+            // caller's getMoveGroup forgets to include the anchor itself.
+            const moveGroup = (getMoveGroup ? getMoveGroup(item) : [item]).filter(Boolean);
+            if (!moveGroup.includes(item)) moveGroup.unshift(item);
+
             if (e.pointerType === 'touch') {
                 const startX0 = e.clientX, startY0 = e.clientY, pointerId = e.pointerId;
                 cancelPendingTouch();
@@ -1631,15 +1678,17 @@
                         if (!pendingTouch || pendingTouch.pointerId !== pointerId) return;
                         pendingTouch = null;
                         dragging = item;
+                        dragSet = moveGroup;
                         startY = startY0;
                         moved = true;
-                        dragging.classList.add('dev-reorder-dragging');
+                        dragSet.forEach(el => el.classList.add('dev-reorder-dragging'));
                     }, TOUCH_HOLD_MS),
                 };
                 return;
             }
 
             dragging = item;
+            dragSet = moveGroup;
             startY = e.clientY;
             moved = false;
         });
@@ -1653,7 +1702,7 @@
             if (!dragging) return;
             if (!moved && Math.abs(e.clientY - startY) > THRESHOLD) {
                 moved = true;
-                dragging.classList.add('dev-reorder-dragging');
+                dragSet.forEach(el => el.classList.add('dev-reorder-dragging'));
             }
             if (!moved) return;
             e.preventDefault();
@@ -1704,19 +1753,27 @@
                 // just its own ("no prioritization in terms of settings
                 // area lways above groups or anyting liek that"). See
                 // REORDERABLE_SIBLING_SELECTOR's own comment.
-                const targetSiblings = Array.from(targetContainer.querySelectorAll(REORDERABLE_SIBLING_SELECTOR)).filter(el => el !== dragging);
+                // Excludes every element in dragSet, not just the anchor —
+                // for a plain single-item drag (dragSet === [dragging])
+                // this is identical to the old `el !== dragging` filter.
+                const targetSiblings = Array.from(targetContainer.querySelectorAll(REORDERABLE_SIBLING_SELECTOR)).filter(el => !dragSet.includes(el));
                 const before = targetSiblings.find(sib => e.clientY < sib.getBoundingClientRect().top + sib.getBoundingClientRect().height / 2);
-                if (before) targetContainer.insertBefore(dragging, before);
-                else targetContainer.appendChild(dragging);
+                // Re-inserting the whole dragSet in its captured relative
+                // order, one at a time, keeps that order intact: each
+                // subsequent insertBefore(el, before) lands immediately
+                // after the previously-inserted element and before
+                // `before` itself.
+                if (before) dragSet.forEach(el => targetContainer.insertBefore(el, before));
+                else dragSet.forEach(el => targetContainer.appendChild(el));
                 return;
             }
-            const siblings = Array.from(dragging.parentElement.querySelectorAll(REORDERABLE_SIBLING_SELECTOR)).filter(el => el !== dragging);
+            const siblings = Array.from(dragging.parentElement.querySelectorAll(REORDERABLE_SIBLING_SELECTOR)).filter(el => !dragSet.includes(el));
             for (const sib of siblings) {
                 const rect = sib.getBoundingClientRect();
                 const mid = rect.top + rect.height / 2;
                 const draggingIsBefore = !!(dragging.compareDocumentPosition(sib) & Node.DOCUMENT_POSITION_FOLLOWING);
-                if (e.clientY < mid && !draggingIsBefore) { sib.parentElement.insertBefore(dragging, sib); break; }
-                else if (e.clientY >= mid && draggingIsBefore) { sib.parentElement.insertBefore(dragging, sib.nextSibling); break; }
+                if (e.clientY < mid && !draggingIsBefore) { dragSet.forEach(el => sib.parentElement.insertBefore(el, sib)); break; }
+                else if (e.clientY >= mid && draggingIsBefore) { const ref = sib.nextSibling; dragSet.forEach(el => sib.parentElement.insertBefore(el, ref)); break; }
             }
         }, { passive: false });
 
@@ -1736,17 +1793,19 @@
             if (pendingTouch && e.pointerId === pendingTouch.pointerId) cancelPendingTouch();
             releaseCapturedHandle(e);
             if (!dragging) return;
-            dragging.classList.remove('dev-reorder-dragging');
+            dragSet.forEach(el => el.classList.remove('dev-reorder-dragging'));
             if (moved) { sectionJustDragged = true; if (onDrop) onDrop(); }
             dragging = null;
+            dragSet = [];
             moved = false;
         });
         document.addEventListener('pointercancel', (e) => {
             if (pendingTouch && e.pointerId === pendingTouch.pointerId) cancelPendingTouch();
             releaseCapturedHandle(e);
             if (!dragging) return;
-            dragging.classList.remove('dev-reorder-dragging');
+            dragSet.forEach(el => el.classList.remove('dev-reorder-dragging'));
             dragging = null;
+            dragSet = [];
             moved = false;
         });
     }
@@ -3262,6 +3321,144 @@
         }
         return row;
     }
+    // Recursive grouped/expandable dropdown — direct request 2026-10-19:
+    // "For drop down selectors, if the selection shares the same data as
+    // an item selector, if items are within groups, or there are nested
+    // groups, show the groups as expandable instances within the drop
+    // down itself. I dont want each item in the drop down to have its
+    // group names in its row." A trigger button shows just the selected
+    // item's own name (never a flattened "Group/Item" label); clicking it
+    // opens a panel in-flow directly below the trigger (never floating/
+    // absolutely-positioned, so it can't get clipped by the dev panel's
+    // own scrollable ancestors). Ungrouped options render first, flat;
+    // each group renders as its own collapsible header (▶/▼, starts
+    // collapsed) and can itself contain NESTED subgroups to any depth, via
+    // the exact same "/"-joined group-path convention the list-picker
+    // control already uses (LP_GROUP_PATH_SEP) — a group whose own path is
+    // "A/B" renders as a sub-header inside "A"'s own body, never a second
+    // top-level header. Generalizes HANDO's own real, already-shipped
+    // `buildGroupedDropdown()` (src/devpanel/devPanel.js, built for its
+    // Tween Poses rows) from flat single-level groups to full recursion —
+    // same calling convention, so a project already using that pattern can
+    // adopt this version as a direct drop-in upgrade.
+    //
+    // getOptions(): () => an array of plain strings (ungrouped) or
+    // {name, group} objects — `group` a flat OR "/"-joined nested path,
+    // the exact shape every list-picker options() function in this
+    // codebase family already returns. initialValue: the starting
+    // selection — falls back to the first real option (flattened across
+    // every group) if it's no longer present, the same validity rule
+    // every other select/restore path in this file already follows.
+    // onSelect(name): fires only for a real, later, user-driven pick —
+    // never during construction or an external setValue() call.
+    //
+    // Returns { el, value, setValue(v) } — `value` is the resolved
+    // initial selection; setValue() lets an external restore (Reset/
+    // Undo/Sync load) update the trigger's own displayed text without
+    // re-firing onSelect, the same "push a value in without echoing it
+    // back out" contract syncValue() already uses project-wide.
+    function buildGroupedDropdownWidget(getOptions, initialValue, onSelect) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'dev-grouped-dropdown';
+        const trigger = document.createElement('button');
+        trigger.type = 'button';
+        trigger.className = 'dev-grouped-dropdown-trigger';
+        const panel = document.createElement('div');
+        panel.className = 'dev-grouped-dropdown-panel';
+        panel.hidden = true;
+        wrapper.append(trigger, panel);
+
+        function display(v) {
+            wrapper.dataset.value = v || '';
+            trigger.textContent = v || '(none)';
+        }
+        function close() {
+            panel.hidden = true;
+            document.removeEventListener('pointerdown', onOutsidePointerDown, true);
+        }
+        function onOutsidePointerDown(e) {
+            if (!wrapper.contains(e.target)) close();
+        }
+        function choose(name) {
+            display(name);
+            close();
+            onSelect(name);
+        }
+        // `node` = {items: [name,...], children: Map<leafSegment, node>} —
+        // recurses into children for nested subgroups, any depth.
+        function renderLevel(container, node) {
+            node.items.forEach(name => {
+                const opt = document.createElement('div');
+                opt.className = 'dev-grouped-dropdown-option';
+                opt.textContent = name;
+                opt.addEventListener('click', () => choose(name));
+                container.appendChild(opt);
+            });
+            node.children.forEach((childNode, leaf) => {
+                const arrow = document.createElement('span');
+                arrow.className = 'arrow';
+                arrow.textContent = '▶';
+                const header = document.createElement('div');
+                header.className = 'dev-grouped-dropdown-header';
+                const label = document.createElement('span');
+                label.textContent = leaf;
+                header.append(arrow, label);
+                const body = document.createElement('div');
+                body.className = 'dev-grouped-dropdown-body';
+                body.hidden = true;
+                header.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    body.hidden = !body.hidden;
+                    arrow.textContent = body.hidden ? '▶' : '▼';
+                });
+                renderLevel(body, childNode);
+                container.append(header, body);
+            });
+        }
+        function buildTree(options) {
+            const root = { items: [], children: new Map() };
+            function ensureNode(segs) {
+                let node = root;
+                segs.forEach(seg => {
+                    if (!node.children.has(seg)) node.children.set(seg, { items: [], children: new Map() });
+                    node = node.children.get(seg);
+                });
+                return node;
+            }
+            options.forEach(opt => {
+                const name = typeof opt === 'string' ? opt : opt.name;
+                const group = typeof opt === 'string' ? null : opt.group;
+                if (!group) { root.items.push(name); return; }
+                ensureNode(group.split(LP_GROUP_PATH_SEP)).items.push(name);
+            });
+            return root;
+        }
+        function renderPanel() {
+            panel.innerHTML = '';
+            let options = [];
+            try { options = getOptions() || []; } catch (err) { options = []; }
+            renderLevel(panel, buildTree(options));
+        }
+        trigger.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (panel.hidden) {
+                renderPanel();
+                panel.hidden = false;
+                document.addEventListener('pointerdown', onOutsidePointerDown, true);
+            } else {
+                close();
+            }
+        });
+
+        let opts = [];
+        try { opts = getOptions() || []; } catch (err) { opts = []; }
+        const names = opts.map(o => typeof o === 'string' ? o : o.name);
+        const resolved = names.includes(initialValue) ? initialValue : (names[0] || null);
+        display(resolved);
+
+        return { el: wrapper, value: resolved, setValue: display };
+    }
+
     // {id, label, options: [{value, text}]}
     function buildSelectRow(ctrl) {
         const row = document.createElement('div');
@@ -3401,11 +3598,10 @@
     //   value            - items array (see the live-array contract
     //                      below — this is a real, mutated reference,
     //                      not a one-time seed).
-    //   defaultName      - optional; pre-selects the item with this
-    //                      .name on initial build, so Use/Overwrite/
-    //                      Rename/Delete work without clicking a row
-    //                      first. Initial build only — never reapplied
-    //                      on a later Reset/Undo/Sync restore.
+    //   defaultName      - optional; seeds the INITIAL selection (so Use/
+    //                      Overwrite/Rename/Delete work without clicking a
+    //                      row first) AND the initial value of the real,
+    //                      runtime-settable default described next.
     //   captureCurrent() - REQUIRED. Returns a plain object snapshotting
     //                      whatever this picker represents right now.
     //   onUse(item)      - REQUIRED. Applies a saved item back to live
@@ -3415,13 +3611,32 @@
     //   importable       - true adds "Import" (clipboard/paste JSON,
     //                      merged by name — same-name overwrites in
     //                      place, everything else untouched).
+    // DEFAULT (added 2026-10-15, direct request, ported from
+    // TEMPLATE_DEV_PANEL.html: "for all item selectors that have an
+    // default selction, always indicate which is the current default").
+    // A "Set Default" button marks whichever item is currently selected
+    // as entry.defaultName — just a NAME, not a separate raw snapshot, so
+    // it's displayable ("Default: X" under the list, a ★ on the row) and
+    // rides this control's OWN items/groupOrder persistence for free.
+    // "Default just means the saving set on startup" (direct
+    // clarification) — the named item is auto-applied via onUse on this
+    // control's FIRST real restore after a page load ONLY
+    // (entry.defaultAutoApplyDone, see the hidden input's own 'input'
+    // listener), never again on a later Reset/Undo or on switching Saved
+    // Dev Settings sets via Use. "Active"/"in use" is a SEPARATE,
+    // independent concept that doesn't have to match the default. This is
+    // what makes a default "specific to the saved dev setting set, not
+    // global": since captureFullDevPanelState() already captures every
+    // registered control's value, list-pickers included, each named Saved
+    // Dev Settings snapshot naturally carries its own independent
+    // defaultName per list-picker with no extra plumbing.
     // Never device-mirrored (a saved-preset list isn't a per-device
     // value) — buildListPickerRow sets ctrl.skipDeviceCheckbox itself,
     // no need to pass it. Rides Copy/Save/Reset/Undo automatically: its
     // state lives in a hidden <input id=ctrl.id> whose .value is the
-    // JSON-serialized {items, groupOrder}, exactly like a slider's own
-    // numeric .value — no special-casing needed in the capture/apply
-    // pipeline (captureAllRegisteredControlValues()/applyControlValues()).
+    // JSON-serialized {items, groupOrder, defaultName}, exactly like a
+    // slider's own numeric .value — no special-casing needed in the
+    // capture/apply pipeline (captureAllRegisteredControlValues()/applyControlValues()).
     //
     // LIVE-ARRAY CONTRACT (changed 2026-10-11, no opt-in — this is now
     // the only behavior): `value` is not a one-time seed the control
@@ -3463,8 +3678,46 @@
 
     function lpCommit(entry) {
         const hidden = document.getElementById(entry.ctrl.id);
-        if (hidden) hidden.value = JSON.stringify({ items: entry.items, groupOrder: entry.groupOrder || [] });
+        if (hidden) hidden.value = JSON.stringify({ items: entry.items, groupOrder: entry.groupOrder || [], defaultName: entry.defaultName || null });
     }
+    // Updates the "Default: X" / "No default set" text under a list-picker
+    // — called after every mutation that could change which item is
+    // default and after every restore.
+    function lpRefreshDefaultIndicator(entry) {
+        if (entry.defaultIndicatorEl) {
+            entry.defaultIndicatorEl.textContent = entry.defaultName ? ('Default: ' + entry.defaultName) : 'No default set';
+        }
+    }
+    // Bridge helpers for main.js's own one-time legacy-default migration
+    // (2026-10-15: replacing the OLD saveFieldAsDefault()/global
+    // defaultPose-style fields with this control's own native Default).
+    // lpEntries itself is this closure's private state (not `window.*`-
+    // exposed, unlike e.g. window.ensureDevPanelBuilt) - these 2 small
+    // functions are the deliberate, narrow bridge instead of exposing the
+    // whole entry object.
+    window.getListPickerDefaultName = function (ctrlId) {
+        const entry = lpEntries[ctrlId];
+        return entry ? entry.defaultName : null;
+    };
+    // Injects a new item under `name` (or overwrites an existing item of
+    // that same name) and marks it as this list-picker's own default -
+    // used ONLY by the one-time legacy migration, never by normal UI
+    // flow (which goes through the real Save/Set Default buttons).
+    window.migrateListPickerDefault = function (ctrlId, name, data) {
+        const entry = lpEntries[ctrlId];
+        if (!entry) return false;
+        const existing = entry.items.find(it => it.name === name);
+        if (existing) {
+            lpSetItems(entry, entry.items.map(it => it === existing ? Object.assign({ name }, data, it.group ? { group: it.group } : {}) : it));
+        } else {
+            lpSetItems(entry, entry.items.concat([Object.assign({ name }, data)]));
+        }
+        entry.defaultName = name;
+        lpCommit(entry);
+        renderLpRows(entry);
+        lpRefreshDefaultIndicator(entry);
+        return true;
+    };
 
     // Replaces entry.items' CONTENTS in place rather than reassigning
     // entry.items to a new array object — see the live-array contract in
@@ -3513,15 +3766,38 @@
                         }
                     });
                 }
+                // Keep every ancestor group's own derived tri-state
+                // checkbox in sync, including when a multi-select cascade
+                // above just touched rows spanning multiple groups at once.
+                lpRefreshExportCheckboxAncestors(row);
+                if (entry.multiSelected.size > 1 && entry.multiSelected.has(item)) {
+                    entry.listEl.querySelectorAll('.dev-lp-row').forEach(r => {
+                        if (entry.multiSelected.has(r.__item)) lpRefreshExportCheckboxAncestors(r);
+                    });
+                }
             });
             row.appendChild(cb);
         }
         const label = document.createElement('span');
         label.className = 'dev-lp-row-label';
-        label.textContent = item.name;
+        // Star marks the current default (ported from TEMPLATE_DEV_PANEL.html
+        // 2026-10-15).
+        label.textContent = (entry.defaultName && item.name === entry.defaultName ? '★ ' : '') + item.name;
         row.appendChild(label);
         row.addEventListener('click', (e) => {
-            if (e.shiftKey && entry.selectedItem) {
+            // Ctrl/Cmd-click (direct request 2026-10-19: "make sure I can
+            // use CTRL to multi select as well") toggles just THIS item's
+            // own membership, leaving every other already-selected item
+            // untouched — standard OS file-manager semantics, distinct
+            // from Shift-click's contiguous RANGE select below. Becomes
+            // the new shift-click anchor (entry.selectedItem), same as a
+            // plain click already does, so a later Shift-click ranges
+            // from wherever the most recent Ctrl/plain click landed.
+            if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
+                if (entry.multiSelected.has(item)) entry.multiSelected.delete(item);
+                else entry.multiSelected.add(item);
+                entry.selectedItem = item;
+            } else if (e.shiftKey && entry.selectedItem) {
                 const ordered = Array.from(entry.listEl.querySelectorAll('.dev-lp-row')).map(r => r.__item);
                 const a = ordered.indexOf(entry.selectedItem), b = ordered.indexOf(item);
                 if (a >= 0 && b >= 0) entry.multiSelected = new Set(ordered.slice(Math.min(a, b), Math.max(a, b) + 1));
@@ -3537,6 +3813,39 @@
         return row;
     }
 
+    // Group-level export checkbox (direct request 2026-10-19: "provide
+    // the left side checkboxes for all groups as well. so i can select a
+    // group, then export the whole group"). A group has no export state
+    // of its own — it's purely a derived tri-state view over every
+    // descendant item's own entry.exportChecked membership (recursive,
+    // same path-prefix match as the group-delete cascade above), so
+    // there's nothing new to persist.
+    function lpItemsUnderGroup(entry, path) {
+        const prefix = path + LP_GROUP_PATH_SEP;
+        return entry.items.filter(it => it.group === path || (it.group && it.group.startsWith(prefix)));
+    }
+    function lpRefreshGroupExportCheckbox(groupEl) {
+        const cb = groupEl.querySelector(':scope > .dev-lp-group-header > .dev-lp-group-export-checkbox');
+        if (!cb) return;
+        const picker = groupEl.closest('.dev-list-picker');
+        const entry = picker && picker.__lpEntry;
+        if (!entry) return;
+        const items = lpItemsUnderGroup(entry, groupEl.__groupName);
+        const checkedCount = items.filter(it => entry.exportChecked.has(it)).length;
+        cb.indeterminate = checkedCount > 0 && checkedCount < items.length;
+        cb.checked = items.length > 0 && checkedCount === items.length;
+    }
+    // Walks every ANCESTOR group of a row/group that just changed (never
+    // the element itself) so a parent's tri-state stays correct no
+    // matter how deep the edit happened.
+    function lpRefreshExportCheckboxAncestors(el) {
+        let g = el.parentElement ? el.parentElement.closest('.dev-lp-group') : null;
+        while (g) {
+            lpRefreshGroupExportCheckbox(g);
+            g = g.parentElement ? g.parentElement.closest('.dev-lp-group') : null;
+        }
+    }
+
     // One group's header — click toggles collapse (tracked in
     // entry.expandedGroups so a re-render preserves it); the title
     // renames (cascading to every descendant path); "x" removes the
@@ -3549,6 +3858,24 @@
         handle.className = 'dev-lp-group-handle';
         handle.textContent = '⠿';
         header.appendChild(handle);
+        if (entry.ctrl.exportable) {
+            const exportCb = document.createElement('input');
+            exportCb.type = 'checkbox';
+            exportCb.className = 'dev-lp-export-checkbox dev-lp-group-export-checkbox';
+            exportCb.addEventListener('click', (e) => e.stopPropagation());
+            exportCb.addEventListener('change', () => {
+                const items = lpItemsUnderGroup(entry, path);
+                items.forEach(it => { if (exportCb.checked) entry.exportChecked.add(it); else entry.exportChecked.delete(it); });
+                const groupEl = header.closest('.dev-lp-group');
+                groupEl.querySelectorAll('.dev-lp-row').forEach(r => {
+                    const rowCb = r.querySelector('.dev-lp-export-checkbox');
+                    if (rowCb) rowCb.checked = exportCb.checked;
+                });
+                groupEl.querySelectorAll('.dev-lp-group').forEach(g => lpRefreshGroupExportCheckbox(g));
+                lpRefreshExportCheckboxAncestors(groupEl);
+            });
+            header.appendChild(exportCb);
+        }
         const arrow = document.createElement('span');
         arrow.textContent = '▼';
         header.appendChild(arrow);
@@ -3712,6 +4039,15 @@
             return g;
         }
         topOrder.forEach(name => entry.listEl.appendChild(renderGroup(name, root.children.get(name))));
+        // Group export checkboxes are purely derived (never persisted) --
+        // recomputed in one pass now that every group is actually
+        // attached to entry.listEl (lpRefreshGroupExportCheckbox() needs
+        // a live .closest('.dev-list-picker') to find `entry`, which
+        // isn't true yet while renderGroup() is still building a detached
+        // subtree). Order doesn't matter -- each call reads straight from
+        // entry.items/exportChecked, never from a sibling/child
+        // checkbox's own DOM state.
+        if (entry.ctrl.exportable) entry.listEl.querySelectorAll('.dev-lp-group').forEach(g => lpRefreshGroupExportCheckbox(g));
     }
 
     // Item/group drag-reorder, set up ONCE globally (setupDragReorder
@@ -3740,6 +4076,21 @@
         setupDragReorder('.dev-lp-row-handle', '.dev-lp-row', lpSyncAllVisibleEntries, (tabRoot, dragging) => {
             const picker = dragging.closest('.dev-list-picker');
             return picker ? Array.from(picker.querySelectorAll('.dev-lp-group-body, .dev-lp-ungrouped-body')) : [];
+        }, (item) => {
+            // Multi-select drag (direct request 2026-10-19: "if i select
+            // mulptiple items, then click and drag one of their icons to
+            // reorder, it will reorder all the selected items with it").
+            // Only kicks in when the grabbed row's own item is itself part
+            // of a real (size > 1) multi-selection — grabbing an
+            // UNselected row's handle while other rows happen to be
+            // selected still drags just that one row, matching how a
+            // plain click elsewhere already clears/reassigns the
+            // selection in every other control in this file.
+            const picker = item.closest('.dev-list-picker');
+            const entry = picker && picker.__lpEntry;
+            if (!entry || entry.multiSelected.size <= 1 || !entry.multiSelected.has(item.__item)) return [item];
+            const ordered = Array.from(entry.listEl.querySelectorAll('.dev-lp-row'));
+            return ordered.filter(r => entry.multiSelected.has(r.__item));
         });
     }
 
@@ -3778,7 +4129,9 @@
         const renameBtn = mkBtn('Rename');
         const deleteBtn = mkBtn('Delete');
         const addGroupBtn = mkBtn('+ Group');
-        btnRow.append(saveBtn, overwriteBtn, useBtn, renameBtn, deleteBtn, addGroupBtn);
+        // "Set Default" — ported from TEMPLATE_DEV_PANEL.html 2026-10-15.
+        const defaultBtn = mkBtn('Set Default');
+        btnRow.append(saveBtn, overwriteBtn, useBtn, renameBtn, deleteBtn, defaultBtn, addGroupBtn);
         let exportBtn = null, importBtn = null;
         // Export/Import wrapped together in their own non-splitting
         // group (as ONE flex item of btnRow) — direct report 2026-09-28
@@ -3795,6 +4148,10 @@
         bodyWrap.appendChild(listEl);
         bodyWrap.appendChild(btnRow);
 
+        const defaultIndicatorEl = document.createElement('div');
+        defaultIndicatorEl.className = 'dev-list-picker-default-indicator';
+        bodyWrap.appendChild(defaultIndicatorEl);
+
         // Hidden input carries this control's serialized state so it
         // rides the generic el.value-based Copy/Save/Reset/Undo pipeline
         // exactly like any other control — no special-casing needed
@@ -3810,24 +4167,48 @@
         // section's own top comment. ctrl.value itself becomes
         // entry.items, mutated in place for the control's whole life.
         const initialItems = ctrl.value || [];
-        hidden.value = JSON.stringify({ items: initialItems, groupOrder: [] });
+        const initialDefaultName = ctrl.defaultName || null;
+        hidden.value = JSON.stringify({ items: initialItems, groupOrder: [], defaultName: initialDefaultName });
         row.appendChild(hidden);
 
         const entry = {
             ctrl, listEl, items: initialItems, groupOrder: [],
             selectedItem: null, multiSelected: new Set(), expandedGroups: new Set(),
             pendingGroups: [], exportChecked: new Set(),
+            defaultName: initialDefaultName, defaultIndicatorEl,
+            // "Default just means the saving set on startup" (direct
+            // clarification 2026-10-15) — auto-apply fires at most ONCE
+            // per page load, never again for the rest of the session.
+            defaultAutoApplyDone: false,
         };
         lpEntries[ctrl.id] = entry;
+        listEl.__lpEntry = entry; // lets any .dev-lp-row/.dev-lp-group find its own entry via .closest('.dev-list-picker').__lpEntry
 
         hidden.addEventListener('input', () => {
             let parsed;
             try { parsed = JSON.parse(hidden.value || '{}'); } catch (err) { parsed = {}; }
             lpSetItems(entry, Array.isArray(parsed.items) ? parsed.items : []);
             entry.groupOrder = Array.isArray(parsed.groupOrder) ? parsed.groupOrder : [];
+            entry.defaultName = typeof parsed.defaultName === 'string' ? parsed.defaultName : null;
             entry.selectedItem = null;
             entry.multiSelected = new Set();
             renderLpRows(entry);
+            lpRefreshDefaultIndicator(entry);
+            // Auto-applies the named default on this control's FIRST real
+            // restore only (ported from TEMPLATE_DEV_PANEL.html 2026-10-15,
+            // corrected same day: "Default just means the saving set on
+            // startup... there will be a default and a current in use
+            // item, they don't have to be the same"). A later Reset/Undo,
+            // or switching Saved Dev Settings sets via Use, still
+            // correctly restores this control's own items/defaultName/
+            // star/indicator (above) but no longer re-triggers onUse.
+            if (!entry.defaultAutoApplyDone) {
+                entry.defaultAutoApplyDone = true;
+                if (entry.defaultName && ctrl.onUse) {
+                    const defItem = entry.items.find(it => it.name === entry.defaultName);
+                    if (defItem) ctrl.onUse(defItem);
+                }
+            }
         });
 
         saveBtn.addEventListener('click', () => {
@@ -3865,8 +4246,18 @@
             if (!name || name === target.name) return;
             lpSetItems(entry, entry.items.map(it => it === target ? Object.assign({}, it, { name }) : it));
             entry.selectedItem = entry.items.find(it => it.name === name && it.group === target.group) || null;
+            // The default follows a rename of the item it points at.
+            if (entry.defaultName === target.name) entry.defaultName = name;
             lpCommit(entry);
             renderLpRows(entry);
+            lpRefreshDefaultIndicator(entry);
+        });
+        defaultBtn.addEventListener('click', () => {
+            if (!entry.selectedItem) return;
+            entry.defaultName = entry.selectedItem.name;
+            lpCommit(entry);
+            renderLpRows(entry);
+            lpRefreshDefaultIndicator(entry);
         });
         deleteBtn.addEventListener('click', () => {
             // Multi-delete (2026-10-11, direct request) -- shift-click
@@ -3877,11 +4268,15 @@
             // Delete still works exactly as before.
             const toRemove = entry.multiSelected.size > 0 ? entry.multiSelected : new Set(entry.selectedItem ? [entry.selectedItem] : []);
             if (toRemove.size === 0) return;
+            // Clears the default rather than leaving it pointing at a
+            // name that no longer exists.
+            if (entry.defaultName && Array.from(toRemove).some(it => it.name === entry.defaultName)) entry.defaultName = null;
             lpSetItems(entry, entry.items.filter(it => !toRemove.has(it)));
             entry.selectedItem = null;
             entry.multiSelected = new Set();
             lpCommit(entry);
             renderLpRows(entry);
+            lpRefreshDefaultIndicator(entry);
         });
         // Shift-click one or more rows first (renderLpItemRow above), then
         // +Group drops them straight into the new group already populated.
@@ -3952,9 +4347,11 @@
         // Overwrite/Rename/Delete work immediately without the user first
         // clicking a row, matching this project's own hand-built picker's
         // original behavior (CLAUDE.md §12r). Only affects the INITIAL
-        // build; never re-applied on a later restore.
+        // selection; entry.defaultName (above) is the real, runtime-
+        // settable, persisted default — this just seeds it.
         if (ctrl.defaultName) entry.selectedItem = entry.items.find(it => it.name === ctrl.defaultName) || null;
         renderLpRows(entry);
+        lpRefreshDefaultIndicator(entry);
         return row;
     }
     // {id, label, defaultPoints, defaultMethod?, caption?, maxPoints?,
@@ -4320,6 +4717,25 @@
             const rect = svg.getBoundingClientRect();
             return { x: clamp01(px / (rect.width || W)), y: clamp01(1 - py / (rect.height || H)) };
         };
+        // Ported from TEMPLATE_DEV_PANEL.html 2026-10-15: the SVG's height
+        // is fixed (120px, matching viewBox H) but its width is
+        // responsive with preserveAspectRatio="none", so once the
+        // rendered width differs from the 240-unit viewBox, X and Y scale
+        // by different factors - a circle/rect drawn with equal width/
+        // height in viewBox UNITS renders as an ellipse/rectangle on
+        // screen. Fixed by wrapping every node/handle MARKER shape (never
+        // the curve path or handle connector lines, which are SUPPOSED to
+        // stretch with the track) in its own <g> with an inverse-X-scale
+        // transform, so the marker's own screen-space size stays
+        // isotropic regardless of how far the track has stretched.
+        let scaleX = 1;
+        function updateScaleX() {
+            const rect = svg.getBoundingClientRect();
+            scaleX = (rect.width || W) / W;
+        }
+        function markerTransform(x, y) {
+            return 'translate(' + x + ',' + y + ') scale(' + (1 / scaleX) + ',1)';
+        }
         let circles = [];
         let handleEls = [];
 
@@ -4360,6 +4776,7 @@
             window.addEventListener('pointerup', onUp);
         }
         function redraw() {
+            updateScaleX();
             let d = '';
             for (let i = 0; i <= CURVE_SAMPLES; i++) {
                 const x = i / CURVE_SAMPLES;
@@ -4384,28 +4801,12 @@
                 // curve (startHandleDrag(), unchanged) — purely visual
                 // until then, so the active interpolation method above
                 // still governs the curve exactly as before.
-                const canHaveH1 = i < points.length - 1, canHaveH2 = i > 0;
-                [['h1', canHaveH1], ['h2', canHaveH2]].forEach(([kind, canHave]) => {
-                    if (!canHave) return;
-                    const isReal = !!p[kind];
-                    const offset = p[kind] || { x: kind === 'h1' ? 0.08 : -0.08, y: 0 };
-                    const px = toPx(p);
-                    const hx = toPx({ x: p.x + offset.x, y: p.y + offset.y });
-                    const line = document.createElementNS(svgNS, 'line');
-                    line.setAttribute('x1', px.x); line.setAttribute('y1', px.y); line.setAttribute('x2', hx.x); line.setAttribute('y2', hx.y);
-                    line.setAttribute('stroke', isReal ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.15)'); line.setAttribute('stroke-width', '1');
-                    svg.appendChild(line);
-                    handleEls.push(line);
-                    const marker = document.createElementNS(svgNS, 'rect');
-                    marker.setAttribute('x', hx.x - 3.5); marker.setAttribute('y', hx.y - 3.5); marker.setAttribute('width', 7); marker.setAttribute('height', 7);
-                    marker.setAttribute('fill', '#e0a030');
-                    marker.setAttribute('fill-opacity', isReal ? '1' : '0.35');
-                    marker.style.cursor = 'grab';
-                    marker.addEventListener('pointerdown', downEv => startHandleDrag(p, i, kind, downEv));
-                    svg.appendChild(marker);
-                    handleEls.push(marker);
-                });
                 const px = toPx(p);
+                // Both the hit target and the visible dot sit at the same
+                // point, so they share one counter-scaled <g> (ported from
+                // TEMPLATE_DEV_PANEL.html 2026-10-15) rather than two.
+                const pointG = document.createElementNS(svgNS, 'g');
+                pointG.setAttribute('transform', markerTransform(px.x, px.y));
                 // Bigger invisible hit target UNDER the small visible dot
                 // — a plain 5px dot is too small to reliably tap on
                 // mobile (direct report 2026-09-28). The dot itself is
@@ -4413,7 +4814,7 @@
                 // interaction routes through this larger circle
                 // regardless of its own visual size.
                 const hit = document.createElementNS(svgNS, 'circle');
-                hit.setAttribute('cx', px.x); hit.setAttribute('cy', px.y); hit.setAttribute('r', hitRadius);
+                hit.setAttribute('cx', 0); hit.setAttribute('cy', 0); hit.setAttribute('r', hitRadius);
                 hit.setAttribute('fill', 'transparent');
                 hit.style.cursor = 'grab';
                 let dragged = false;
@@ -4466,16 +4867,53 @@
                     }
                 }
                 hit.addEventListener('contextmenu', ctxEv => { ctxEv.preventDefault(); ctxEv.stopPropagation(); deletePointIfRemovable(); });
-                svg.appendChild(hit);
-                circles.push(hit);
+                pointG.appendChild(hit);
                 const dot = document.createElementNS(svgNS, 'circle');
-                dot.setAttribute('cx', px.x); dot.setAttribute('cy', px.y); dot.setAttribute('r', 5);
+                dot.setAttribute('cx', 0); dot.setAttribute('cy', 0); dot.setAttribute('r', 5);
                 // Red, per direct request 2026-09-28 (was the accent
                 // color, blending in with the curve's own line/handles).
                 dot.setAttribute('fill', '#ff3b3b');
                 dot.style.pointerEvents = 'none';
-                svg.appendChild(dot);
-                circles.push(dot);
+                pointG.appendChild(dot);
+                svg.appendChild(pointG);
+                circles.push(pointG);
+            });
+            // Handle lines/markers are built in a SEPARATE pass, AFTER
+            // every node above, ported from TEMPLATE_DEV_PANEL.html
+            // 2026-10-15 ("make sure that if a bezier handle is very
+            // close to a node, a click and drag will prioritize the
+            // bezier handle"). SVG hit-testing favors whatever's painted
+            // LAST for overlapping shapes - building every handle only
+            // after every node (not interleaved per-point, which would
+            // only protect a handle from ITS OWN node and leave it losing
+            // to a DIFFERENT, later-painted point's node) guarantees a
+            // handle marker always wins hit-testing against ANY node's
+            // hit circle underneath it, without needing any distance math.
+            points.forEach((p, i) => {
+                const canHaveH1 = i < points.length - 1, canHaveH2 = i > 0;
+                const px = toPx(p);
+                [['h1', canHaveH1], ['h2', canHaveH2]].forEach(([kind, canHave]) => {
+                    if (!canHave) return;
+                    const isReal = !!p[kind];
+                    const offset = p[kind] || { x: kind === 'h1' ? 0.08 : -0.08, y: 0 };
+                    const hx = toPx({ x: p.x + offset.x, y: p.y + offset.y });
+                    const line = document.createElementNS(svgNS, 'line');
+                    line.setAttribute('x1', px.x); line.setAttribute('y1', px.y); line.setAttribute('x2', hx.x); line.setAttribute('y2', hx.y);
+                    line.setAttribute('stroke', isReal ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.15)'); line.setAttribute('stroke-width', '1');
+                    svg.appendChild(line);
+                    handleEls.push(line);
+                    const markerG = document.createElementNS(svgNS, 'g');
+                    markerG.setAttribute('transform', markerTransform(hx.x, hx.y));
+                    const marker = document.createElementNS(svgNS, 'rect');
+                    marker.setAttribute('x', -3.5); marker.setAttribute('y', -3.5); marker.setAttribute('width', 7); marker.setAttribute('height', 7);
+                    marker.setAttribute('fill', '#e0a030');
+                    marker.setAttribute('fill-opacity', isReal ? '1' : '0.35');
+                    marker.style.cursor = 'grab';
+                    marker.addEventListener('pointerdown', downEv => startHandleDrag(p, i, kind, downEv));
+                    markerG.appendChild(marker);
+                    svg.appendChild(markerG);
+                    handleEls.push(markerG);
+                });
             });
         }
         function tryAddPointAt(clientX, clientY) {
@@ -4548,6 +4986,28 @@
         });
 
         redraw();
+        // Ported from TEMPLATE_DEV_PANEL.html 2026-10-15. The very first
+        // redraw() above can run before the panel/row has settled into
+        // its FINAL layout width - requestAnimationFrame was tried first
+        // and confirmed, live, NOT to fire soon enough for this;
+        // setTimeout self-corrects it shortly after, without waiting for
+        // any user interaction.
+        setTimeout(() => redraw(), 0);
+        setTimeout(() => redraw(), 150);
+        // Keeps the marker counter-scale correct whenever the SVG's own
+        // rendered width changes (a panel-width drag, a group expanding,
+        // the panel being resized) - CONFIRMED LIVE that ResizeObserver
+        // does not reliably fire for either case (a display:none-ancestor
+        // -> visible transition, AND a genuine live width change on an
+        // already-visible element), so this polls instead, same pattern
+        // this project family already relies on elsewhere for "can't get
+        // a reliable event/observer hook" cases.
+        svg.__curveEditorRedraw = redraw;
+        let lastPollWidth = svg.getBoundingClientRect().width;
+        setInterval(() => {
+            const w = svg.getBoundingClientRect().width;
+            if (w !== lastPollWidth) { lastPollWidth = w; redraw(); }
+        }, 400);
         return row;
     }
     // {id, label, trackMin, trackMax, unit?, defaultValue} — a dual-
@@ -5142,6 +5602,28 @@
     // ================================================================
     // [JS-8] CLICK-TO-EDIT VALUES
     // ================================================================
+    // Slider bound locking - ported from TEMPLATE_DEV_PANEL.html
+    // 2026-10-11 ("when I click a min max number to edit it, provide a
+    // toggle to lock or unlock the number... even if I set the toggle
+    // value beyond, it will just clamp the toggle value to the min
+    // max"). Keyed "sliderId:min"/"sliderId:max", same Set-of-keys
+    // pattern as lockedGroups. Persisted the same way lockedGroups is
+    // (captureFullDevPanelState/applyFullDevPanelState below).
+    let lockedSliderBounds = new Set();
+    function isSliderBoundLocked(sliderId, kind) { return lockedSliderBounds.has(sliderId + ':' + kind); }
+    function setSliderBoundLocked(sliderId, kind, locked) {
+        const key = sliderId + ':' + kind;
+        if (locked) lockedSliderBounds.add(key); else lockedSliderBounds.delete(key);
+        refreshSliderBoundLockDisplay(sliderId, kind);
+    }
+    function refreshSliderBoundLockDisplay(sliderId, kind) {
+        const sel = sliderId
+            ? '.dev-slider-bound-editable[data-slider-id="' + sliderId + '"][data-bound="' + kind + '"]'
+            : '.dev-slider-bound-editable[data-slider-id]';
+        document.querySelectorAll(sel).forEach(el => {
+            el.classList.toggle('dev-slider-bound-locked', isSliderBoundLocked(el.dataset.sliderId, el.dataset.bound));
+        });
+    }
     // Click-to-type exact value (CLAUDE.md Section 12h) — click a
     // slider's own value readout to type an exact number, including one
     // outside the slider's current range (auto-expands the crossed
@@ -5188,15 +5670,26 @@
                 let val = parseFloat(input.value);
                 if (isNaN(val)) val = parseFloat(slider.value);
                 const min = parseFloat(slider.min), max = parseFloat(slider.max);
+                // Locked bound (ported from TEMPLATE_DEV_PANEL.html
+                // 2026-10-11): clamp to it instead of the normal ±20%
+                // auto-expand (CLAUDE.md §12h).
                 if (val > max) {
-                    slider.max = String(val + Math.abs(val) * 0.2);
-                    const maxLabelEl = document.querySelector('.dev-slider-bound-editable[data-slider-id="' + slider.id + '"][data-bound="max"]');
-                    if (maxLabelEl) maxLabelEl.textContent = slider.max;
+                    if (isSliderBoundLocked(slider.id, 'max')) {
+                        val = max;
+                    } else {
+                        slider.max = String(val + Math.abs(val) * 0.2);
+                        const maxLabelEl = document.querySelector('.dev-slider-bound-editable[data-slider-id="' + slider.id + '"][data-bound="max"]');
+                        if (maxLabelEl) maxLabelEl.textContent = slider.max;
+                    }
                 }
                 if (val < min) {
-                    slider.min = String(val - Math.abs(val) * 0.2);
-                    const minLabelEl = document.querySelector('.dev-slider-bound-editable[data-slider-id="' + slider.id + '"][data-bound="min"]');
-                    if (minLabelEl) minLabelEl.textContent = slider.min;
+                    if (isSliderBoundLocked(slider.id, 'min')) {
+                        val = min;
+                    } else {
+                        slider.min = String(val - Math.abs(val) * 0.2);
+                        const minLabelEl = document.querySelector('.dev-slider-bound-editable[data-slider-id="' + slider.id + '"][data-bound="min"]');
+                        if (minLabelEl) minLabelEl.textContent = slider.min;
+                    }
                 }
                 // FIXED 2026-09-29 -- a plain `slider.value = val` was
                 // silently rounding the typed value to the nearest
@@ -5258,6 +5751,29 @@
             input.value = kind === 'min' ? slider.min : slider.max;
             boundEl.textContent = '';
             boundEl.appendChild(input);
+            // Lock/unlock toggle - ported from TEMPLATE_DEV_PANEL.html
+            // 2026-10-11, always shown while editing a bound, regardless
+            // of its current lock state. Toggling takes effect
+            // immediately, independent of whether the numeric edit
+            // itself is committed or cancelled.
+            const lockLabel = document.createElement('label');
+            lockLabel.className = 'dev-slider-bound-lock-toggle';
+            const lockCb = document.createElement('input');
+            lockCb.type = 'checkbox';
+            lockCb.checked = isSliderBoundLocked(slider.id, kind);
+            lockLabel.appendChild(lockCb);
+            lockLabel.appendChild(document.createTextNode('🔒'));
+            lockLabel.title = 'Lock: clamp the value to this bound instead of expanding it';
+            boundEl.appendChild(lockLabel);
+            lockLabel.addEventListener('click', (ev) => ev.stopPropagation());
+            // Clicking the checkbox would otherwise steal focus from
+            // `input` first, firing its 'blur' -> commit() -> wiping
+            // boundEl's own children (including this checkbox) via
+            // textContent before the click/change events even reach it.
+            // preventDefault() on mousedown blocks the focus-steal
+            // without blocking the click/change that follows.
+            lockLabel.addEventListener('mousedown', (ev) => ev.preventDefault());
+            lockCb.addEventListener('change', () => setSliderBoundLocked(slider.id, kind, lockCb.checked));
             input.focus();
             input.select();
 
@@ -6189,6 +6705,7 @@
             devTextOverrides: { ...devTextOverrides },
             devTextOverridesManual: Array.from(devTextOverridesManual),
             lockedGroups: Array.from(lockedGroups),
+            lockedSliderBounds: Array.from(lockedSliderBounds),
             textEditModeEnabled,
             // Dynamic Mobile/Landscape visibility/independence state
             // ([JS-4b0] above) - NOT covered by `controls` above (a
@@ -6232,6 +6749,8 @@
         applyDevTextOverrides();
         if (state.lockedGroups) lockedGroups = new Set(state.lockedGroups);
         if (devPanelBuilt) injectGroupLockIcons();
+        if (state.lockedSliderBounds) lockedSliderBounds = new Set(state.lockedSliderBounds);
+        if (devPanelBuilt) refreshSliderBoundLockDisplay();
         if (typeof state.textEditModeEnabled === 'boolean') textEditModeEnabled = state.textEditModeEnabled;
         // Pushes everything just reassigned above (devPanelStyle/mobile/
         // landscape, textEditModeEnabled) into the CONTROLS' own DOM -
@@ -6360,98 +6879,118 @@
     }
 
     // ================================================================
-    // [JS-13b] NAMED SETTING STATES (SAVE / USE / DELETE / SET AS DEFAULT)
+    // [JS-13b] NAMED SETTING STATES (SAVE / USE / RENAME / DELETE / SET DEFAULT)
     // ================================================================
     // Multiple named, full-panel-state snapshots to switch between
     // without losing your actual synced settings - direct request
     // ("I want to try different UI settings but dont want to overwrite
     // old settings... Refer to Hando project for this Save Use Delete
-    // Set Default functionality"). Generalizes Hando's own
-    // buildListPickerRow() (Save/Use/Rename/Delete for ONE named-item
-    // control, e.g. its Camera/Pose presets - see devPanel.js) up to the
-    // WHOLE PANEL's state instead - "different setting states" (plural,
-    // whole states), not a per-control preset list, so this reuses
-    // captureFullDevPanelState()/applyFullDevPanelState() (the exact
-    // snapshot Copy/Sync/Reset already use) as what gets saved/restored.
-    // Uses a plain <select> instead of Hando's own custom scrollable
-    // list widget - simpler for a generic template with no Rename
-    // requested here; swap in Hando's own richer widget on top if a
-    // project wants Rename too.
+    // Set Default functionality"). Generalizes buildListPickerRow()
+    // (Save/Use/Rename/Delete for ONE named-item control, e.g. Saved
+    // Poses/Cameras) up to the WHOLE PANEL's state instead - "different
+    // setting states" (plural, whole states), not a per-control preset
+    // list, so this reuses captureFullDevPanelState()/
+    // applyFullDevPanelState() (the exact snapshot Copy/Sync/Reset
+    // already use) as what gets saved/restored.
     //
-    // Save: prompts for a name, snapshots captureFullDevPanelState()
-    // under it - asks before overwriting an existing name (the same fix
-    // Hando's own picker needed after a real duplicate-name bug, see its
-    // own comment: saving under a name that already existed used to
-    // silently create a 2nd, separate item instead of updating it).
-    // Use: applies the selected saved state to the live panel/game
-    // WITHOUT touching whatever Sync/Reset would restore - a reversible
-    // "try it", exactly the ask. Delete: removes the selected saved
-    // state only. Set as Default: applies the selected state, THEN runs
-    // it straight through saveDevPanelSettings() - THAT's what actually
-    // replaces what Reset/a fresh load restores; Use alone never does.
-    const DEV_PANEL_SAVED_STATES_KEY = 'devPanelSavedStates';
-    function getSavedDevPanelStates() {
+    // CORRECTED 2026-10-15, ported from TEMPLATE_DEV_PANEL.html, direct
+    // request ("allow me to rename the saved settings... Indicate the
+    // setting set in use and the default one... for all item selectors
+    // with a delete button, allow me to select multiple items then click
+    // delete"). Was a bespoke <select> + 5 onclick-wired functions with
+    // none of Rename/multi-delete/Default - rebuilt as a REAL
+    // type:'list-picker' registered control
+    // (buildSavedDevSettingsListPicker() below), reusing the exact same
+    // generic engine every Saved Poses/Cameras/etc. instance already
+    // does. Already shared across all 3 tabs and already above the tab
+    // buttons (this group sits outside #desktopTabContent/etc. entirely)
+    // - both were free consequences of this group's existing placement.
+    //
+    // Default: "Default just means the saving set on startup" (direct
+    // clarification) - auto-applies on this list-picker's FIRST real
+    // restore only, never again on a later Reset/Undo (see
+    // buildListPickerRow's own entry.defaultAutoApplyDone). "Active" (a
+    // SEPARATE, independent concept - the two don't have to match) is
+    // tracked here via the onUse wrapper below, updated whenever a set
+    // is actually Used.
+    //
+    // SELF-REFERENCE GUARD: captureCurrent() strips this control's OWN id
+    // out of the controls blob it captures, or saving a settings-set
+    // would recursively embed every previously-saved set inside itself,
+    // growing unboundedly on each further Save.
+    //
+    // KNOWN NARROW EDGE CASE, disclosed not fixed: this project restores
+    // LOCAL localStorage first (ensureDevPanelBuilt()'s own
+    // applyDevPanelStateWithExtra(loadDevPanelSettings()) call), then
+    // REMOTE git-tracked settings on top (main.js's own
+    // loadRemoteSettingsOnStartup()) - "once per page load" for the
+    // startup default means whichever of those two restores happens to
+    // dispatch this control's first real 'input' event. On a brand-new
+    // browser with no local cache yet, that's correctly the remote
+    // restore (the local one is a no-op with nothing saved). On a
+    // RETURNING visitor whose local cache's own marked default differs
+    // from the remote's, the local (possibly stale) one wins the
+    // one-shot. Narrow and not solved here - would need restructuring
+    // this project's own local-then-remote restore sequencing, out of
+    // scope for this port.
+    let SAVED_DEV_SETTINGS_ITEMS = [];
+    let activeDevSettingsSetName = null;
+    function updateActiveDevSettingsIndicator() {
+        const el = document.getElementById('devSavedSettingsActiveIndicator');
+        if (el) el.textContent = activeDevSettingsSetName ? ('Active: ' + activeDevSettingsSetName) : 'Active: (unsaved/custom)';
+    }
+    // One-time migration from the OLD bespoke storage key (devPanelSavedStates)
+    // so an existing user's already-saved settings-sets aren't silently
+    // lost by this rebuild. Safe to leave in indefinitely - a no-op once
+    // migrated.
+    function migrateLegacySavedDevPanelStates() {
+        if (SAVED_DEV_SETTINGS_ITEMS.length > 0) return;
         try {
-            const raw = localStorage.getItem(DEV_PANEL_SAVED_STATES_KEY);
-            return raw ? JSON.parse(raw) : {};
-        } catch (e) { return {}; }
+            const raw = localStorage.getItem('devPanelSavedStates');
+            if (!raw) return;
+            const old = JSON.parse(raw);
+            Object.entries(old).forEach(([name, data]) => {
+                if (data && typeof data === 'object') SAVED_DEV_SETTINGS_ITEMS.push(Object.assign({ name }, data));
+            });
+        } catch (e) { /* ignore - nothing to migrate */ }
     }
-    function setSavedDevPanelStates(states) {
-        // Silently no-ops on a storage failure (full/unavailable) - same
-        // tolerance as saveDevPanelSettings()'s own try/catch.
-        try { localStorage.setItem(DEV_PANEL_SAVED_STATES_KEY, JSON.stringify(states)); } catch (e) { /* ignore */ }
-    }
-    function renderSavedDevPanelStatesList() {
-        const select = document.getElementById('devSavedStatesSelect');
-        if (!select) return;
-        const states = getSavedDevPanelStates();
-        const prevValue = select.value;
-        select.innerHTML = '';
-        Object.keys(states).forEach(name => {
-            const opt = document.createElement('option');
-            opt.value = name;
-            opt.textContent = name;
-            select.appendChild(opt);
-        });
-        if (states[prevValue]) select.value = prevValue;
-    }
-    function saveNamedDevPanelState() {
-        const name = prompt('Save current settings as:');
-        if (!name) return;
-        const states = getSavedDevPanelStates();
-        if (states[name] && !confirm('"' + name + '" already exists. Overwrite it?')) return;
-        states[name] = captureFullDevPanelState();
-        setSavedDevPanelStates(states);
-        renderSavedDevPanelStatesList();
-        const select = document.getElementById('devSavedStatesSelect');
-        if (select) select.value = name;
-    }
-    function useNamedDevPanelState() {
-        const select = document.getElementById('devSavedStatesSelect');
-        const name = select && select.value;
-        if (!name) return;
-        const states = getSavedDevPanelStates();
-        if (states[name]) applyFullDevPanelState(states[name]);
-    }
-    function deleteNamedDevPanelState() {
-        const select = document.getElementById('devSavedStatesSelect');
-        const name = select && select.value;
-        if (!name) return;
-        if (!confirm('Delete "' + name + '"?')) return;
-        const states = getSavedDevPanelStates();
-        delete states[name];
-        setSavedDevPanelStates(states);
-        renderSavedDevPanelStatesList();
-    }
-    function setNamedDevPanelStateAsDefault() {
-        const select = document.getElementById('devSavedStatesSelect');
-        const name = select && select.value;
-        if (!name) return;
-        const states = getSavedDevPanelStates();
-        const state = states[name];
-        if (!state) return;
-        applyFullDevPanelState(state);
-        saveDevPanelSettings();
+    let savedDevSettingsListPickerBuilt = false;
+    function buildSavedDevSettingsListPicker() {
+        if (savedDevSettingsListPickerBuilt) return;
+        const container = document.getElementById('devSavedSettingsGroupContent');
+        if (!container) return;
+        savedDevSettingsListPickerBuilt = true;
+        migrateLegacySavedDevPanelStates();
+        const activeIndicator = document.createElement('div');
+        activeIndicator.id = 'devSavedSettingsActiveIndicator';
+        activeIndicator.className = 'dev-list-picker-default-indicator';
+        container.appendChild(activeIndicator);
+        const ctrl = {
+            tab: 'desktop', group: 'Saved Dev Settings', id: 'listPickerSavedDevSettings',
+            type: 'list-picker', label: 'Settings Set:', itemLabel: 'Settings Set',
+            value: SAVED_DEV_SETTINGS_ITEMS,
+            captureCurrent: () => {
+                const full = captureFullDevPanelState();
+                if (full.controls) delete full.controls['listPickerSavedDevSettings'];
+                return full;
+            },
+            onUse: (item) => {
+                applyFullDevPanelState(item);
+                activeDevSettingsSetName = item.name;
+                updateActiveDevSettingsIndicator();
+            },
+        };
+        const row = buildUniformControlRow(ctrl);
+        container.appendChild(row);
+        registerDevControlArray('savedDevSettingsControls', [ctrl]);
+        const exportCurrentBtn = document.createElement('button');
+        exportCurrentBtn.type = 'button';
+        exportCurrentBtn.textContent = 'Export Current Settings';
+        exportCurrentBtn.className = 'dev-action-button';
+        exportCurrentBtn.style.marginTop = '4px';
+        exportCurrentBtn.addEventListener('click', exportDevPanelSettings);
+        container.appendChild(exportCurrentBtn);
+        updateActiveDevSettingsIndicator();
     }
 
     // ================================================================
@@ -6695,6 +7234,27 @@
             });
         }, mouseLogPositionIntervalMs);
     }
+    // Generic collapsible log box - ported from TEMPLATE_DEV_PANEL.html
+    // 2026-10-11 ("all log type text boxes are inherently collapsible").
+    // Inserts a small chevron header directly before `logEl` and toggles
+    // `.dev-log-collapsed` on it - separate from the group's own collapse
+    // (toggleSection()), so collapsing the log output leaves the rest of
+    // that group's controls visible and usable. Exposed on window so
+    // main.js's own log widgets (Sensors Log, Displace Log) can reuse it
+    // too, matching every other cross-file helper in this project
+    // (window.findGroupContent, window.ensureDevPanelBuilt, etc.).
+    function makeLogBoxCollapsible(logEl, label) {
+        const header = document.createElement('div');
+        header.className = 'dev-log-box-header';
+        header.textContent = '▼ ' + label;
+        logEl.parentElement.insertBefore(header, logEl);
+        header.addEventListener('click', () => {
+            const collapsed = logEl.classList.toggle('dev-log-collapsed');
+            header.textContent = (collapsed ? '▶ ' : '▼ ') + label;
+        });
+        return header;
+    }
+    window.makeLogBoxCollapsible = makeLogBoxCollapsible;
     function buildMouseLogWidget() {
         const debugContent = findGroupContent('desktop', 'Debug', 'buildMouseLogWidget', 'mouseLogWidget');
         if (!debugContent || mouseLogEl) return;
@@ -6776,6 +7336,7 @@
         mouseLogEl = document.createElement('div');
         mouseLogEl.className = 'dev-mouse-log';
         content.appendChild(mouseLogEl);
+        makeLogBoxCollapsible(mouseLogEl, 'Log');
         clearMouseLog();
         logMouseLogContext('start');
     }
@@ -7135,10 +7696,11 @@
         applyDevPanelOwnStyling('desktop');
         // Static/eager, same as the Copy/Sync/Reset row above it - not
         // gated behind ensureDevPanelBuilt()'s lazy build.
-        renderSavedDevPanelStatesList();
+        buildSavedDevSettingsListPicker();
         ensureStaticGroupCascadeCheckboxes();
         ensureStaticGroupUndockButtons();
         injectGroupLockIcons();
+        refreshSliderBoundLockDisplay();
 
         setupPanelResizeHandle(devPanel, document.getElementById('devPanelResizeTop'), null, 'top');
         setupPanelResizeHandle(devPanel, document.getElementById('devPanelResizeBottom'), null, 'bottom');

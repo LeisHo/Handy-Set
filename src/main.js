@@ -758,7 +758,7 @@ const DEFAULT_LIGHTING_NAME = 'FLABOVE'
 // which still live at this OLD custom storage location, into the new
 // control's standard storage location on first load. Remote (git-synced)
 // restore happens separately, asynchronously, alongside the other
-// loadFieldDefaultIfSaved() calls.
+// migrateLegacyDefaultField() calls.
 loadListPickerItemsFromLocalStorage('poses', SAVED_POSES)
 loadListPickerItemsFromLocalStorage('cameras', SAVED_CAMERAS)
 loadListPickerItemsFromLocalStorage('lighting', SAVED_LIGHTING)
@@ -7474,18 +7474,19 @@ let handFirstLoadTailDone = false
 async function runHandFirstLoadTail() {
   setTimeout(() => { ikStartupSettled = true; ikLastSignature = null; requestRender() }, 3000) // IK baseline may only be captured once the saved pose / Sync restore has landed
   applyDefaultSelections()
-  // "Set as Default" overrides -- applied AFTER the hardcoded literal
+  // Legacy-default migration -- applied AFTER the hardcoded literal
   // defaults above, matching Hando's own boot order (its own
   // loadDefaultXIfSaved() calls run after the runtime objects they write
   // into exist, and intentionally override whatever the normal restore
   // already set). A fresh project with nothing ever set-as-default is a
-  // silent no-op (loadFieldDefaultIfSaved only applies when the fetched
-  // settings actually contain that field).
+  // silent no-op (migrateLegacyDefaultField only applies when the
+  // fetched settings actually contain that OLD global field, and skips
+  // entirely once the list-picker has its own native default).
   await Promise.all([
-    loadFieldDefaultIfSaved('defaultPose', applyPosePreset),
-    loadFieldDefaultIfSaved('defaultCamera', applyCameraPreset),
-    loadFieldDefaultIfSaved('defaultLighting', applyLightingPreset),
-    loadFieldDefaultIfSaved('defaultToon', applyToonPreset)
+    migrateLegacyDefaultField('defaultPose', 'listPickerPoses', applyPosePreset),
+    migrateLegacyDefaultField('defaultCamera', 'listPickerCameras', applyCameraPreset),
+    migrateLegacyDefaultField('defaultLighting', 'listPickerLighting', applyLightingPreset),
+    migrateLegacyDefaultField('defaultToon', 'listPickerToon', applyToonPreset)
   ])
   scheduleDeviceAwareApply(300, true) // the Set-as-Default presets above overwrite cfg: a phone's own Mobile / Landscape values win again
   loadingEl.classList.add('hidden')
@@ -9176,25 +9177,16 @@ function renderPresetPicker(content, title, items, defaultName, applyFn, capture
     captureCurrent: captureFn,
     onUse: (item) => { applyFn(item); requestRender() },
   }, (opts && opts.exportable) ? { exportable: true } : {}, (opts && opts.importable) ? { importable: true } : {}))
-  // "Set as Default" — a sibling control AFTER the list-picker, not part
-  // of it (matches Hando exactly: it's a separate `type: 'button'` DEV_GROUPS
-  // entry, never one of buildListPickerRow's own buttons). Captures LIVE
-  // current state (the same captureFn the list-picker's own Save button
-  // uses), not whatever's merely selected in the list — "save what's
-  // tuned right now as the default," per Hando's saveToonAsDefault() etc.
-  // Omitted when opts.defaultFieldKey isn't passed (Tween Sequences has
-  // no default mechanism in Hando either — confirmed by direct source
-  // inspection, not assumed).
-  if (opts && opts.defaultFieldKey) {
-    const btnRow = document.createElement('div')
-    btnRow.className = 'dev-buttons'
-    const defaultBtn = document.createElement('button')
-    defaultBtn.type = 'button'
-    defaultBtn.textContent = 'Set as Default'
-    btnRow.appendChild(defaultBtn)
-    sub.appendChild(btnRow)
-    defaultBtn.addEventListener('click', () => saveFieldAsDefault(opts.defaultFieldKey, captureFn, defaultBtn))
-  }
+  // CORRECTED 2026-10-15: the bolted-on "Set as Default" button (a
+  // sibling control calling saveFieldAsDefault() against a SEPARATE
+  // global settings field) is REMOVED — the list-picker control itself
+  // now has its own native "Set Default" button (ported from
+  // TEMPLATE_DEV_PANEL.html, see devPanel.js's buildListPickerRow), which
+  // marks a NAMED ITEM in THIS list as default instead of a raw global
+  // snapshot — this is what makes it specific to a Saved Dev Settings
+  // set rather than global, per direct request. opts.defaultFieldKey is
+  // now read by runHandFirstLoadTail()'s own one-time legacy migration
+  // (migrateLegacyDefaultField(), below) instead of by this function.
 }
 
 function renderPoseGroup(content) {
@@ -11818,12 +11810,31 @@ async function saveFieldAsDefault(fieldKey, captureFn, btn) {
     return false
   }
 }
-async function loadFieldDefaultIfSaved(fieldKey, useFn) {
+// One-time bridge from the OLD per-field global default (defaultPose/
+// defaultCamera/defaultLighting/defaultToon — saveFieldAsDefault's own
+// flat settings-JSON fields) onto the NEW native per-item list-picker
+// Default (devPanel.js's own buildListPickerRow, ported from
+// TEMPLATE_DEV_PANEL.html — see CLAUDE.md's 2026-10-11 migration note).
+// Skips entirely once the list-picker already has its own native
+// default (window.getListPickerDefaultName), so a stale old global
+// field can never clobber a default the user has since set natively —
+// this makes the migration idempotent/self-correcting rather than a
+// one-shot cutover that needs exact sequencing. Still ALWAYS applies
+// the fetched value visually (applyFn), dev mode or not, for continuity
+// with every existing visitor — matching loadFieldDefaultIfSaved's own
+// behavior above, which this supersedes for the 4 renderPresetPicker()
+// call sites below (NOT for the 2 custom Hand/Phone Model selectors,
+// which stay on the old global mechanism — see CLAUDE.md's own
+// disclosed scope boundary).
+async function migrateLegacyDefaultField(fieldKey, listPickerId, applyFn) {
+  if (window.getListPickerDefaultName && window.getListPickerDefaultName(listPickerId)) return
   try {
     const resp = await fetch(SAVE_SETTINGS_ENDPOINT, { cache: 'no-store' })
     const body = await resp.json().catch(() => ({}))
     if (resp.ok && body.ok === true && body.settings && body.settings[fieldKey]) {
-      useFn(body.settings[fieldKey])
+      const data = body.settings[fieldKey]
+      applyFn(data)
+      if (window.migrateListPickerDefault) window.migrateListPickerDefault(listPickerId, 'Migrated Default', data)
     }
   } catch (err) { /* offline/unreachable/not-yet-deployed -- keep whatever's already applied */ }
 }
