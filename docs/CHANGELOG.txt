@@ -8937,6 +8937,29 @@ passed on both devPanel.js and main.js.
     canonical template.
 
 --------------------------------------------------------------------------------
+2026-10-25 -- "+ Add Group" placement rules ported for both the top-level panel and every list-picker (devPanel.js, from TEMPLATE_DEV_PANEL.html)
+  - Ported, byte-for-byte-anchor-matched, from the canonical .claude/TEMPLATE_DEV_PANEL.html's own 2026-10-25 rework. HANDYSET's devPanel.js carried the OLDER 2026-09-20 version
+    of this feature (devSelectionAncestorGroupChain()/findDevSelectionCommonAncestorGroup(), "nest in the deepest group common to every selected item") -- both removed, not left
+    alongside the new code.
+  - Top-level "+ Add Group" (addDevGroup(tab)): WITH a selection (Shift-click or right-click-armed multi-select), the new empty group now inserts directly BEFORE the
+    first-selected item, in that item's OWN current parent (same nesting depth/order slot as the first selected item) -- simpler than, and replacing, the old
+    "deepest common ancestor" computation. WITHOUT a selection, the new group goes to the TOP of whichever group/subgroup was most recently "interacted with" this session,
+    tracked via a new lastInteractedDevGroup[tab] + recordDevGroupInteraction()/setupDevGroupInteractionTracking() (2 triggers only: expanding a group -- never collapsing,
+    toggleSection()'s own expand branch -- or changing any setting that lives inside a group, one delegated input/change listener on the whole panel). Falls back to the
+    pre-existing Debug -> Dev Panel -> position-0 top-of-list placement when nothing has been interacted with yet, or the tracked group no longer exists.
+    setupDevGroupInteractionTracking() is now called once from the init sequence, alongside setupDevGroupSelection() (same "always on" reasoning).
+  - HANDYSET has no built-in "UI" group yet (a separate, later CLAUDE.md §12 addition, also dated 2026-10-25 in the template) -- the fallback chain's own "UI" anchor check was
+    deliberately NOT ported along with it, since adding that group is a different, unrelated feature outside this task's scope; the fallback here is Debug -> Dev Panel ->
+    position-0 only, matching what HANDYSET's devPanel.js already had before this change.
+  - List-picker's own "+Group" button (renderPresetPicker()'s shared button-row wiring, used by every one of this project's list-pickers): the SAME 2 rules, adapted to this
+    engine's array/Map-based group ordering (entry.groupOrder/entry.pendingGroups/item.group path strings) instead of raw DOM position -- WITH a selection, nests the new group as
+    a sibling of the first selected item's own immediate containing group (top-level if ungrouped); WITHOUT one, nests under a new entry.lastInteractedGroupPath if it still
+    names a real group. entry.lastInteractedGroupPath is updated in exactly the 2 matching places: renderLpItemRow()'s own click handler (only for a grouped item -- a
+    top-level/ungrouped click leaves it untouched) and buildLpGroupHeader()'s own header-click expand branch (never on collapse).
+  - NOT browser-verified (project rule, standing instruction since 2026-09-29: this project skips sandbox verification entirely) -- confirmed via node --check on devPanel.js and
+    a direct, line-by-line comparison of every edited anchor point against the template's own already-shipped source.
+
+--------------------------------------------------------------------------------
 <next entry follows the same divider + dated-header pattern>
 
 ================================================================================
